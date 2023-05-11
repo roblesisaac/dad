@@ -1,0 +1,51 @@
+:root {
+  /* Red colors */
+  --darkest-red: #590000;
+  --dark-red: #b80000;
+  --red: #ff2600;
+  --light-red: #ff8c86;
+  --lightest-red: #ffdbd9;
+
+  /* Orange colors */
+  --darkest-orange: #803500;
+  --dark-orange: #c35300;
+  --orange: #ff9c26;
+  --light-orange: #ffc799;
+  --lightest-orange: #ffe6d9;
+
+  /* Yellow colors */
+  --darkest-yellow: #967f00;
+  --dark-yellow: #cea500;
+  --yellow: #ffcc33;
+  --light-yellow: #fff1a6;
+  --lightest-yellow: #fffbd9;
+
+  /* Green colors */
+  --darkest-green: #1f5d1f;
+  --dark-green: #3e783e;
+  --green: #67b267;
+  --light-green: #c2eac2;
+  --lightest-green: #e6ffe6;
+
+  /* Blue colors */
+  --darkest-blue: #1e4a5e;
+  --dark-blue: #366e9f;
+  --blue: #0078ff;
+  --light-blue: #99c7ff;
+  --lightest-blue: #e6f2ff;
+
+  /* Purple colors */
+  --darkest-purple: #472147;
+  --dark-purple: #7d4295;
+  --purple: #ac6bbd;
+  --light-purple: #e2c5e8;
+  --lightest-purple: #f7e8fa;
+
+  /* Neutral colors */
+  --f1: #ffffff;
+  --f2: #fafafa;
+  --f3: #f2f2f2;
+  --gray: #cccccc;
+  --dark-gray: #999999;
+  --black: #000000;
+}

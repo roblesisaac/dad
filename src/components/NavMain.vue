@@ -1,0 +1,45 @@
+<template>
+    <nav class="grid topNav bgF1 shadow">
+        <div class="cell-1-3 text-left bold">
+            <img id="logo" src="../assets/icon.svg" height="30" />
+        </div>
+        <div class="cell-2-3 text-right">
+            <router-link 
+                v-for="link in userViews" 
+                :to="link.path || link"
+                class="proper">
+                {{ link.name || link }}
+            </router-link>
+            <a class="proper" href="/logout">logout</a>
+        </div>
+    </nav>
+    </template>
+    
+    <script setup>
+    import { onMounted, ref } from 'vue';
+    
+   import { useAppStore } from '../stores/app';
+    const { sticky } = useAppStore();
+    
+    onMounted(() => {
+        sticky.stickify('.topNav');
+    });
+    
+    const userViews = ref([
+        { name: 'Home', path: '/'}, 
+        'swiper',
+        'login'
+    ]);
+    
+    </script>
+    
+    <style>
+    .topNav {
+        padding: 20px 10px;
+        transition: all .3s;
+    }
+    
+    .topNav.is-sticky {
+        padding: 10px 10px;
+    }
+    </style>

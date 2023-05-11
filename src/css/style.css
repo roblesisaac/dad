@@ -1,0 +1,121 @@
+:root {
+  font-family: "Avenir Next W01", "Avenir Next", Helvetica, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  text-align: center;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
+
+button {
+  background-color: var(--blue);
+  line-height: 1.1em;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.3s ease-in-out;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: bold;
+  font-family: inherit;
+  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+}
+
+
+button > *:nth-child(n) {
+  vertical-align: middle;
+}
+
+button:hover {
+  background-color: var(--dark-blue);
+  color: #fff;
+}
+
+button.bgDarkBlue:hover {
+  background-color: var(--blue);
+}
+
+/* Style fieldsets */
+fieldset {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+  text-align: left;
+}
+
+input {
+  display: block;
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  line-height: 1.1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: none;
+  box-sizing: border-box;
+  transition: all 0.3s ease-in-out;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus {
+  outline: none;
+  border: 1px solid #0078ff;
+  box-shadow: 0 0 8px rgba(0, 120, 255, 0.2);
+}
+
+legend {
+  font-size: 1.2em;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: inline-block;
+}
+
+nav a:before {
+  content: '​';
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+  a:hover {
+    color: #747bff;
+  }
+}

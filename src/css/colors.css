@@ -1,0 +1,255 @@
+.bgDarkestRed {
+    background-color: var(--darkest-red);
+}
+
+.bgDarkRed {
+    background-color: var(--dark-red);
+}
+
+.bgRed {
+    background-color: var(--red);
+}
+
+.bgLightRed {
+    background-color: var(--light-red);
+}
+
+.bgDarkestOrange {
+    background-color: var(--darkest-orange);
+}
+
+.bgDarkOrange {
+    background-color: var(--dark-orange);
+}
+
+.bgOrange {
+    background-color: var(--orange);
+}
+
+.bgLightOrange {
+    background-color: var(--light-orange);
+}
+
+.bgDarkestYellow {
+    background-color: var(--darkest-yellow);
+}
+
+.bgDarkYellow {
+    background-color: var(--dark-yellow);
+}
+
+.bgYellow {
+    background-color: var(--yellow);
+}
+
+.bgLightYellow {
+    background-color: var(--light-yellow);
+}
+
+.bgDarkestGreen {
+    background-color: var(--darkest-green);
+}
+
+.bgDarkGreen {
+    background-color: var(--dark-green);
+}
+
+.bgGreen {
+    background-color: var(--green);
+}
+
+.bgLightGreen {
+    background-color: var(--light-green);
+}
+
+.bgDarkestBlue {
+    background-color: var(--darkest-blue);
+}
+
+.bgDarkBlue {
+    background-color: var(--dark-blue);
+}
+
+.bgBlue {
+    background-color: var(--blue);
+}
+
+.bgLightBlue {
+    background-color: var(--light-blue);
+}
+
+.bgDarkestPurple {
+    background-color: var(--darkest-purple);
+} 
+
+.bgDarkPurple {
+    background-color: var(--dark-purple);
+}
+
+.bgPurple {
+    background-color: var(--purple);
+}
+
+.bgLightPurple {
+    background-color: var(--light-purple);
+}
+
+.bgBleach {
+    background-color: #fff;
+}
+
+.bgJet {
+    background-color: #000;
+}
+
+.bgF1 {
+    background-color: var(--f1);
+}
+
+.bgF2{
+    background-color: var(--f2);
+}
+
+.bgF3 {
+    background-color: var(--f3);
+}
+
+.bgGray {
+    background-color: var(--gray);
+}
+
+.bgDarkGray {
+    background-color: var(--dark-gray);
+}
+
+.bgBlack {
+    background-color: var(--black);
+}
+
+.colorDarkestRed {
+    color: var(--darkest-red)
+}
+
+.colorDarkRed {
+    color: var(--dark-red);
+}
+
+.colorRed {
+    color: var(--red);
+}
+
+.colorLightRed {
+    color: var(--light-red);
+}
+
+.colorDarkestOrange {
+    color: var(--darkest-orange)
+}
+
+.colorDarkOrange {
+    color: var(--dark-orange);
+}
+
+.colorOrange {
+    color: var(--orange);
+}
+
+.colorLightOrange {
+    color: var(--light-orange);
+}
+
+.colorDarkestYellow {
+    color: var(--darkest-yellow)
+}
+
+.colorDarkYellow {
+    color: var(--dark-yellow);
+}
+
+.colorYellow {
+    color: var(--yellow);
+}
+
+.colorLightYellow {
+    color: var(--light-yellow);
+}
+
+.colorDarkestGreen {
+    color: var(--darkest-green)
+}
+
+.colorDarkGreen {
+    color: var(--dark-green);
+}
+
+.colorGreen {
+    color: var(--green);
+}
+
+.colorLightGreen {
+    color: var(--light-green);
+}
+
+.colorDarkestBlue {
+    color: var(--darkest-blue)
+}
+
+.colorDarkBlue {
+    color: var(--dark-blue);
+}
+
+.colorBlue {
+    color: var(--blue);
+}
+
+.colorLightBlue {
+    color: var(--light-blue);
+}
+
+.colorDarkestPurple {
+    color: var(--darkest-purple)
+}  
+
+.colorDarkPurple {
+    color: var(--dark-purple);
+}
+
+.colorPurple {
+    color: var(--purple);
+}
+
+.colorLightPurple {
+    color: var(--light-purple);
+}
+
+.colorBleach {
+    color: #fff;
+}
+
+.colorJet {
+    color: #000;
+}
+
+.colorF1 {
+    color: var(--f1);
+}
+
+.colorF2{
+    color: var(--f2);
+}
+
+.colorF3 {
+    color: var(--f3);
+}
+
+.colorGray {
+    color: var(--gray);
+}
+
+.colorDarkGray {
+    color: var(--dark-gray);
+}
+
+.colorBlack {
+    color: var(--black);
+}
