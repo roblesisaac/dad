@@ -6,12 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "commit": "git add -A; git commit -m \"cloud update\"; git push;",
     "preview": "vite preview",
-    "ampt:build": "npm run build"
+    "ampt:build": "npm run build",
+    "ampt:commit": "npm run commit"
   },
   "dependencies": {
     "@ampt/data": "^0.0.1-beta.10",
-    "@ampt/sdk": "^0.0.1-beta.40",
+    "@ampt/sdk": "^0.0.1-beta.41",
     "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
     "express-rate-limit": "^6.7.0",

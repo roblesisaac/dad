@@ -60,11 +60,15 @@ async function siftOutLabelAndFetch(schema, filter, collectionName, metadata={})
 
   // const response = await data.get(labelValue, metadata);
 
+  console.log({
+    labelNumber, labelValue, metadata
+  })
+
   const response = await data.getByLabel(labelNumber, labelValue, metadata) || {};
 
-  console.log({
-    response, nexter: response.next?.toString()
-  });
+  // console.log({
+  //   response, nexter: response.next?.toString()
+  // });
 
   return response;
 }
