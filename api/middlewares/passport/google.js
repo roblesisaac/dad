@@ -37,9 +37,7 @@ async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     };
   
     if(existingUser) {
-        const tester = await Users.update({ email }, user);
-        console.log({ tester });
-        return done(null, tester);
+        return done(null, await Users.update({ email }, user));
     }
 
     const newUser = await Users.save(user);
