@@ -18,19 +18,17 @@ async function email(to, payload) {
       auth: {
         user: GMAIL_USERNAME,
         pass: GMAIL_SECRET,
-      },
+      }
     });
 
     const app = createSSRApp({
       template,
-      setup() {
-        return data || {}
-      },
+      setup: () => data || {}
     });
     
     const html = await renderToString(app);
 
-    transporter.use("compile", inlineBase64());
+    transporter.use('compile', inlineBase64());
     
     const mailOptions = {
       from: `${ proper(APP_NAME) }  <${ GMAIL_USERNAME }>`,
@@ -39,12 +37,12 @@ async function email(to, payload) {
       html
     };
 
-    const sent = await transporter.sendMail(mailOptions);
+    await transporter.sendMail(mailOptions);
   } catch (error) {
     console.error(error);
   }
 }
 
 export default {
-    email
+  email
 }

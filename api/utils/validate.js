@@ -13,21 +13,15 @@ function err(message) {
 }
 
 function isMeta(str) {
-  const labels = Array.from(
-      { length: 5 }, 
-      (_, i) => `label${i + 1}`
-  );
-  const metas = [
-    ...labels, 
+  return [
+    ...Array.from({ length: 5 }, (_, i) => `label${i + 1}`), 
     'meta', 
     'overwrite', 
     'ttl', 
     'limit',
     'reverse',
     'start'
-  ];
-
-  return metas.includes(str);
+  ].includes(str);
 }
 
 function siftLabels(schema, filter, collectionName) {
@@ -54,32 +48,25 @@ function siftLabels(schema, filter, collectionName) {
 
 async function siftOutLabelAndFetch(schema, filter, collectionName, metadata={}) {
   const { labelNumber, labelValue } = siftLabels(schema, filter, collectionName);
+  const meta = { meta: true, ...metadata };
 
   // metadata.label = labelNumber;
   // console.log({ labelNumber, labelValue, metadata });
 
   // const response = await data.get(labelValue, metadata);
 
-  console.log({
-    labelNumber, labelValue, metadata
-  })
+  console.log({ labelNumber, labelValue, meta });
 
-  const response = await data.getByLabel(labelNumber, labelValue, metadata) || {};
-
-  // console.log({
-  //   response, nexter: response.next?.toString()
-  // });
-
-  return response;
+  return await data.getByLabel(labelNumber, labelValue, meta) || {};
 }
 
-async function validate(schema, input = {}, collectionName, isUpdate) {
+async function validate(schema, body = {}, collectionName, isUpdate) {
   const validated = {};
   const metadata = {};
   const key = buildSchemaId(collectionName);
 
   for (const key in schema) {
-    const subjectType = typeof input[key];
+    const subjectType = typeof body[key];
     const schemaType = schema[key].value || schema[key];
 
     if (isMeta(key)) {
@@ -88,56 +75,56 @@ async function validate(schema, input = {}, collectionName, isUpdate) {
     }
 
     if (schema[key].unique) {
-      if (!input[key]) {
+      if (!body[key]) {
         err(`Please provide a valid value for '${key}'.`);
       }
 
-      const duplicate = await siftOutLabelAndFetch(schema, input, collectionName);
+      const duplicate = await siftOutLabelAndFetch(schema, body, collectionName);
 
       if (!isUpdate && (duplicate?.key || duplicate?.items?.length)) {
-        err(`A duplicate item was found with ${key}=${input[key]}`);
+        err(`A duplicate item was found with ${key}=${body[key]}`);
       }
     }
 
     if (schemaType === subjectType || schemaType === '*') {
-      validated[key] = input[key];
+      validated[key] = body[key];
       continue;
     }
 
-    if (schema[key].required && !input.hasOwnProperty(key)) {
+    if (schema[key].required && !body.hasOwnProperty(key)) {
       err(`Missing required property ${key}.`);
     }
 
-    if (schema[key].default && !input[key]) {
+    if (schema[key].default && !body[key]) {
       validated[key] = schema[key].default;
       continue;
     }
 
-    if (input[key] && typeof schemaType === 'string') {
+    if (body[key] && typeof schemaType === 'string') {
       console.warn(
-        `Invalid type for property ${key}. Expected ${schemaType} but got '${input[key]}' which is a ${subjectType}`
+        `Invalid type for property ${key}. Expected ${schemaType} but got '${body[key]}' which is a ${subjectType}`
       );
     }
 
     if (Array.isArray(schemaType)) {
-      validated[key] = input[key]
-        ? input[key].map(itm => validate(schemaType[0], itm).validated)
+      validated[key] = body[key]
+        ? body[key].map(itm => validate(schemaType[0], itm).validated)
         : schemaType.map(_ => validate(schemaType[0], {}).validated);
       continue;
     }
 
     if (typeof schemaType === 'object') {
-      validated[key] = validate(schema[key], input[key]).validated;
+      validated[key] = validate(schema[key], body[key]).validated;
       continue;
     }
 
     const types = {
-      string: () => String(input[key] || ''),
-      number: () => Number(input[key] || 0),
-      '*': () => input[key],
-      boolean: () => typeof input[key] === 'boolean'
-        ? input[key]
-        : input[key] === 'true'
+      string: () => String(body[key] || ''),
+      number: () => Number(body[key] || 0),
+      '*': () => body[key],
+      boolean: () => typeof body[key] === 'boolean'
+        ? body[key]
+        : body[key] === 'true'
         ? true
         : false
     };
@@ -149,7 +136,7 @@ async function validate(schema, input = {}, collectionName, isUpdate) {
     }
 
     try {
-      validated[key] = await validator(input, validated);
+      validated[key] = await validator(body, validated);
     } catch (error) {
       err(`Error validating ${key}: <br/>'${error.message}'`);
     }
@@ -159,13 +146,13 @@ async function validate(schema, input = {}, collectionName, isUpdate) {
     const meta = metadata[key];
     const readable = meta.name || meta;
     const metaValue = meta.value || meta;
-    const setValue = value => `${collectionName}:${readable}_${value}`
+    const setValue = value => `${collectionName}:${readable}_${value}`;
 
     if(!readable) {
       return;
     }
 
-    if(typeof readable === 'string') {
+    if(typeof readable === 'string' && typeof metaValue === 'string') {
       return metadata[key] = setValue(validated[readable] || meta);
     }
 
@@ -174,7 +161,7 @@ async function validate(schema, input = {}, collectionName, isUpdate) {
     }
 
     try {
-      metadata[key] = setValue(metaValue(input, validated));
+      metadata[key] = setValue(metaValue(body, validated));
     } catch(error) {
       err(`Error validating ${key}: <br/>'${error.message}'`);
     }

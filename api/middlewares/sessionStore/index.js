@@ -16,7 +16,7 @@ export default function customSessions() {
     genid: req => req.sessionID,
     secret: SESSION_ID,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     store,
     cookie: {
       secure: true,

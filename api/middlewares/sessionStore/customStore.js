@@ -33,7 +33,6 @@ export default function(connect) {
         }
   
         async set(sid, session, callback) {
-            console.log({ sid });
             try {
                 const id = `sessions:${sid}`;
                 const payload = JSON.stringify(session);

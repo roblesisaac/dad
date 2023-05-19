@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { Strategy } from 'passport-google-oauth20';
-import Users from '../../models/users';
+import Users from '../../records/users';
 
 const {
     GOOGLE_ID,
@@ -18,31 +18,32 @@ const GoogleConfig = {
     passReqToCallback: true
 };
 
-function isValidClientHost(clientHost, validHost) {
-    return clientHost === validHost;
+function isValidClientHost(req) {
+    const clientHost = '.'+req.headers.host;
+    return clientHost === domain;
 }
 
 async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
-    if(!isValidClientHost('.'+req.headers.host, domain)) {
+    if(!isValidClientHost(req)) {
       return done(new Error('Invalid hostname'));
     }
-  
-    const userData = profile._json;
-  
-    userData.accessToken = accessToken;
-  
-    const { email } = userData,
-          existingUser = await Users.find({ email })
-  
-    if(!existingUser) {
-      const newUser = await Users.save({ email, ...userData });
-  
-      return done(null, newUser);
-    }
+
+    const { email } = profile._json;  
+    const existingUser = await Users.find({ email });
     
-    await Users.save({ email }, userData);
+    const user = { 
+        accessToken,
+        ...profile._json 
+    };
   
-    return done(null, existingUser);
+    if(existingUser) {
+        const tester = await Users.update({ email }, user);
+        console.log({ tester });
+        return done(null, tester);
+    }
+
+    const newUser = await Users.save(user);
+    return done(null, newUser);
 }
 
 export const GoogleStrategy = new Strategy(GoogleConfig, authGoogleUser);

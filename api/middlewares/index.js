@@ -18,7 +18,7 @@ export const rateLimiter = rateLimit({
 export async function recaptcha(req, res, next) {
     const params = `secret=${RECAPTCHA_KEY}&response=${req.body.recaptchaToken}`;
     const url = 'https://www.google.com/recaptcha/api/siteverify?'+params;
-  
+
     const response = await fetch(url, { method: 'POST' });
     const { score, success } = await response.json();
     

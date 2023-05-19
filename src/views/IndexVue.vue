@@ -12,6 +12,21 @@
       <p id="vanP">
         <img alt="Vue logo" id="van" src="../assets/icon.svg" height="100" />
       </p>
+      <p v-for="car in cars" v-bind:key="car._id">
+        {{  car.year }}-{{  car.make }}-{{  car.model }}
+      </p>
+      <br />
+      <input type="text" placeholder="year" v-model="car.year" />
+      <br />
+      <input type="text" placeholder="make" v-model="car.make" />
+      <br />
+      <input type="text" placeholder="model" v-model="car.model" />
+      <br />
+      <input type="text" placeholder="submodel" v-model="car.submodel" />
+      <br />
+      <input type="text" placeholder="engine" v-model="car.engine" />
+      <br />
+      <button @click="addCar(car)">Add Car</button>
       <p>
         The information below is being fetched from your Serverless Cloud API:
       </p>
@@ -132,6 +147,16 @@ const stickys = [
   }
 ];
 
+const emptyCar = () => ({  
+  year: '',
+  make: '',
+  model: '',
+  submodel: ''
+});
+
+const cars = ref([]);
+const car = ref(emptyCar());
+
 onMounted(async () => {
   sticky.stickify(stickys);
 
@@ -139,6 +164,10 @@ onMounted(async () => {
     users.value = response;
     loading.value = false;
   }).catch(e => loading.value=false);
+
+  await api.get('/cars/data').then(fetchedCars => {
+    cars.value = fetchedCars;
+  });
 });
 
 onUnmounted(() => {
@@ -156,6 +185,14 @@ function addUser() {
   for(var i=0; i<=100; i++) usrs.push(anotherUser)
 
   users.value = users.value.concat(usrs);
+}
+
+async function addCar(newCar) {
+  const carAdded = await api.post('/cars/data', newCar);
+  console.log({ carAdded });
+  cars.value = cars.value.concat(newCar);
+
+  car.value = emptyCar();
 }
 </script>
 

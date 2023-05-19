@@ -143,7 +143,7 @@ async function loginNative() {
     delete method.retype;
   }
   
-  const url =  `/${method}/native`;
+  const url =  `/api/${method}/native`;
   const body = { recaptchaToken, ...login.value };
   const settings = { freshRedirect: true };
 

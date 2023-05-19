@@ -1,29 +1,23 @@
 <template>
     <div class="grid p30">
-        <Transition>
-        <div v-if="isLoggedIn" class="cell-1">
-            <VerifyForm />
-        </div>
-        </Transition>
-        <Transition>
-        <div v-if="!isLoggedIn" class="cell-1">
-            <b>Please login first.</b>
-            <LoginForm />
-        </div>
-        </Transition>
+        <VerifyForm />
     </div>
 </template>
 
 <script setup>
-    import { ref, onMounted } from 'vue';
+    import { onMounted } from 'vue';
     import VerifyForm from '../components/VerifyForm.vue';
-    import LoginForm from '../components/LoginForm.vue';
-    const isLoggedIn = ref(true);
 
     onMounted(async () => {
-        const loginCheck = await fetch('/login/check');
-        const user = await loginCheck.json();
+        const checkAuth = await fetch('/login/check');
+        const user = await checkAuth.json();
 
-        isLoggedIn.value = user.isLoggedIn;
+        if(!user.isLoggedIn) {
+            return window.location = '/login';
+        }
+
+        if(user.email_verified) {
+            return window.location = '/';
+        }
     });
 </script>

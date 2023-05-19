@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
-import Users from '../models/users';
+import Users from '../records/users';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
 
@@ -133,8 +133,13 @@ export async function resendVerificationCode (req, res) {
 }
 
 export function isLoggedIn(req, res) {
-    console.log(req.sessionID);
-    res.json({ isLoggedIn: !!req.user });
+  const { user } = req;
+  const { email_verified } = user || {};
+  
+  res.json({ 
+    isLoggedIn: !!user,
+    email_verified
+  });
 }
 
 export function logoutUser(req, res) {

@@ -17,9 +17,9 @@ const users = records('users', {
     },
     email_verified: '*',
     password: {
-        required: true,
         value: async input => {
             const { password } = input;
+            if(!password) return;
             const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
             const isAlreadyHashed = bcryptRegex.test(password);
 
@@ -41,7 +41,7 @@ const users = records('users', {
 
 users.authLocalUser = async (email, password, done) => {
     const errorMessage = `The username or password you provided is incorrect.`;
-  
+
     if (!email || !password) {
       return done(`Missing 'email' or 'password' properties.`, false);
     }

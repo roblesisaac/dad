@@ -9,19 +9,19 @@ function buildUrlKey(collectionName, filter) {
         : `${collectionName}:${filter}`;
 }
 
-function select(item, selection) {
-    if(!selection) {
+function select(item, selectedKeys) {
+    if(!selectedKeys) {
         return item;
     }
 
     const selectedFields = {};
 
     Object.entries(item).forEach(([field, value]) => {
-        if (selection.includes(`-${field}`)) {
+        if (selectedKeys.includes(`-${field}`)) {
             return;
         }
 
-        if (selection.includes(`${field}`) || selection.includes('-'))  {
+        if (selectedKeys.includes(`${field}`) || selectedKeys.includes('-'))  {
             selectedFields[field] = value;
         }
     });
@@ -29,43 +29,35 @@ function select(item, selection) {
     return selectedFields;
 }
 
-function respond(response, selection) {
+function respond(response, selectedKeys, _id) {
     if(!response) {
         return null;
     }
 
     const { items, key, value } = response;
-    const selector = itm => select(itm, selection);
+    const selection = itm => select(itm, selectedKeys);
 
     if(value) {
-        return selector({ _id:key, ...value });
+        const item = selection({ _id:key, ...value });
+
+        return _id ? item : [item];
     }
 
-    if (!items || items.length===0) {
-        return null;
+    if (!items) {
+        return [];
     }
 
-    if (items.length > 1) {
-        return items.map(itm => selector({ _id: itm.key, ...itm.value }));
-    }
-
-    const item = items[0];
-    const { value:val } = item;
-
-    return selector({
-        _id: item.key, 
-        ...val
-    });
+    return items.map(itm => selection({ _id: itm.key, ...itm.value }));
 }
 
 function sift(filter={}) {
     const { _id } = filter;
     const query = {};
     const metadata = {};
-    let selection;
+    let selectedKeys;
     const methods = {
         reverse: n => metadata.reverse = n === 'true' ? true : false,
-        select: n => selection = n,
+        select: n => selectedKeys = n,
         limit: n => metadata.limit = Number(n)
     };
 
@@ -83,7 +75,7 @@ function sift(filter={}) {
         query[key] = filter[key];
     });
 
-    return { _id, query, metadata, selection };
+    return { _id, query, metadata, selectedKeys };
 }
 
 export default function(collectionName, schema) {
@@ -98,13 +90,14 @@ export default function(collectionName, schema) {
     }
 
     const find = async (filter) => {
-        const { _id, query, metadata, selection } = sift(filter);
+        const { _id, query, metadata, selectedKeys } = sift(filter);
       
         if(_id || isEmptyObject(query)) {
             const key = buildUrlKey(collectionName, _id || '*');
-            const response = await data.get(key, metadata);
+            const meta = { meta: true, ...metadata };
+            const response = await data.get(key, meta);
 
-            return respond(response, selection);
+            return respond(response, selectedKeys, _id);
         }
       
         const response = await siftOutLabelAndFetch(
@@ -114,23 +107,25 @@ export default function(collectionName, schema) {
             metadata
         );
 
-        return respond(response, selection);
+        return respond(response, selectedKeys);
     };
       
     const update = async (filter, body) => {   
-        const found = await find(filter);
+        const results = await find(filter) || [];
+        const found = results[0];
 
         if(!found || !found._id) {
             return { error: `${JSON.stringify(filter)} does not exist` };
         }
 
+        const { _id } = found;
         const newItem = { ...found, ...body };
 
         const { validated, metadata } = await validate(schema, newItem, collectionName, true);
 
-        const response = await data.set(newItem._id, validated, metadata);
+        const response = await data.set(_id, validated, metadata);
         const updated = { 
-            _id: validated._id,
+            _id,
             ...response
         }
         
@@ -152,9 +147,9 @@ export default function(collectionName, schema) {
     }
 
     return { 
-        get: data.get,
-        set: data.set,
-        remove: data.remove,
+        get: data.get.bind(data),
+        set: data.set.bind(data),
+        remove: data.remove.bind(data),
         save,
         find, 
         update, 

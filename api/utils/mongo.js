@@ -5,11 +5,11 @@ import { validate } from "./validate.js";
 
 export default new Aid({
   data: { 
-    url: `https://data.mongodb-api.com/app/${params.DB_ID}/endpoint/data/v1/action/`
+    url: `https://data.mongodb-api.com/app/${params('DB_ID')}/endpoint/data/v1/action/`
   },
   steps: {
     fetch: function() {
-      const { collection, options, filter, next, url } = this;
+      const { collection, options, next, url } = this;
         
       const body = {
         collection,
@@ -21,7 +21,7 @@ export default new Aid({
       const headers = {
         "Content-Type": "application/json",
         "Access-Control-Request-Headers": "*",
-        "api-key": params.DB_TOKEN
+        "api-key": params('DB_TOKEN')
       };
       
       const clientRequest = {
@@ -29,6 +29,8 @@ export default new Aid({
         body: JSON.stringify(body),
         headers
       };
+
+      
       
       fetch(url, clientRequest).then(res => res.json())
         .then(next)
@@ -118,7 +120,10 @@ export default new Aid({
     },
     isSpecial: function() {
       const { collection, next } = this,
-            specials = ["users", "permits"];
+            specials = [
+              // "users", 
+              // "permits"
+            ];
 
       next(specials.includes(collection));
     },

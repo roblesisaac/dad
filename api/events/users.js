@@ -3,7 +3,7 @@ import fs from "fs";
 
 import notify from "../utils/notify";
 import { proper, randomNumber } from "../../src/utils";
-import users from "../models/users";
+import Users from "../records/users";
 
 const { 
     APP_NAME,
@@ -33,9 +33,9 @@ const template = `
 
             <p v-if="message" v-html="message"></p>
 
-            <b v-if="email_verified">Please login and use the code below to verify your account.</b>
-            <h1 v-if="email_verified" style="fontWeight:bold;">{{ email_verified }}</h1>
-            Login <a href="${AMPT_URL}/verify">here</a> if your not already logged in.
+            <b v-if="email_verified!==true">Please login and use the code below to verify your account.</b>
+            <h1 v-if="email_verified!==true" style="fontWeight:bold;">{{ email_verified }}</h1>
+            Start by logging in <a href="${AMPT_URL}/verify">here</a>.
           </td>
         </tr>
       </table>
@@ -51,6 +51,7 @@ const template = `
     </div>
   </body>
 </html>`;
+
 const accountRemovedTemplate = `
 <!DOCTYPE html>
 <html>
@@ -74,7 +75,7 @@ export async function sendVerificationCode(email, { subject, data }) {
     ...data
   };  
 
-  await users.update({ email }, { email_verified });
+  await Users.update({ email }, { email_verified });
   
   return notify.email(email, {
     subject: subject || "Here is your verification code",
@@ -86,7 +87,7 @@ export async function sendVerificationCode(email, { subject, data }) {
 async function fetchUserFromEvent(body, eventName) {
   const { email } = body;
   
-  const user = await users.find({ email });
+  const user = await Users.find({ email });
 
   if(!user) {
     console.log(`${email} not found while running '${eventName}' event.`);
@@ -121,7 +122,7 @@ async function finalCheck({ body }) {
 
   const { email } = user;
 
-  await users.remove({ email });
+  await Users.remove({ email });
   await notify.email(email, {
     subject: `Your ${appName} Account Has Been Removed`,
     template: accountRemovedTemplate
@@ -131,24 +132,23 @@ async function finalCheck({ body }) {
 }
 
 async function userJoined(body, events) {
-    console.log('a new user was saved...', { body });
-    const { email, email_verified } = body;
+  const { email, email_verified } = body;
 
-    if(email_verified === true) {
+  if(email_verified === true) {
     const message = 'Congratulations! Your account has been successfully created.';
 
     return notify.email(email, {
         subject: 'Thanks for signing up!',
-        data: { message },
+        data: { email_verified, message },
         template
     });
-    }
+  }
 
-    await sendVerificationCode(email, {
-    subject: 'Thank you for signing up! Here is your verification code.'
-    });
+  await sendVerificationCode(email, {
+  subject: 'Thank you for signing up! Here is your verification code.'
+  });
 
-    events.publish('user.firstCheck', { after: '24 hours' }, body);
+  events.publish('user.firstCheck', { after: '24 hours' }, body);
 }
 
 export async function userEvents(events) {
