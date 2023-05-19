@@ -1,9 +1,9 @@
-import records from '../utils/records';
+import Record from '../utils/recordJS';
 import users from './users';
 
-const cars = records('cars', {
+const cars = Record('cars', {
     year: 'number',
-    make: 'string',
+    make: String,
     model: 'string',
     submodel: 'string',
     engine: 'string',

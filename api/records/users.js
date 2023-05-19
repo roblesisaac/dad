@@ -1,8 +1,8 @@
-import records from '../utils/records';
+import Record from '../utils/recordJS';
 import bcrypt from 'bcryptjs';
 import { isValidEmail } from '../../src/utils';
 
-const users = records('users', {
+const users = Record('users', {
     email: {
         unique: true,
         required: true,

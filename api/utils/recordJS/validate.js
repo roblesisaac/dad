@@ -1,5 +1,9 @@
-import { data } from '@ampt/data';
-import { buildId } from '../../src/utils';
+import { buildId } from '../../../src/utils';
+import { 
+  isMeta, 
+  siftLabels, 
+  siftOutLabelAndFetch 
+} from './utils';
 
 function buildSchemaId(collectionName) {
   return collectionName 
@@ -12,55 +16,13 @@ function err(message) {
   throw new Error(message);
 }
 
-function isMeta(str) {
-  return [
-    ...Array.from({ length: 5 }, (_, i) => `label${i + 1}`), 
-    'meta', 
-    'overwrite', 
-    'ttl', 
-    'limit',
-    'reverse',
-    'start'
-  ].includes(str);
-}
-
-function siftLabels(schema, filter, collectionName) {
-  let labelNumber, labelValue;
-
-  Object.keys(schema).forEach(labelName => {
-    if(labelNumber || !isMeta(labelName)) {
-        return;
-    }
-
-    const label = schema[labelName];
-    const readable = label.name || label;
-
-    if(!filter.hasOwnProperty(readable)) {
-      return;
-    }
-
-    labelNumber = labelName;
-    labelValue = `${collectionName}:${readable}_${filter[readable]}`;
-  });
-  
-  return { labelNumber, labelValue };
-}
-
-async function siftOutLabelAndFetch(schema, filter, collectionName, metadata={}) {
-  const { labelNumber, labelValue } = siftLabels(schema, filter, collectionName);
-  const meta = { meta: true, ...metadata };
-
-  // metadata.label = labelNumber;
-  // console.log({ labelNumber, labelValue, metadata });
-
-  // const response = await data.get(labelValue, metadata);
-
-  console.log({ labelNumber, labelValue, meta });
-
-  return await data.getByLabel(labelNumber, labelValue, meta) || {};
-}
-
-async function validate(schema, body = {}, collectionName, isUpdate) {
+export default async function (
+  schema, 
+  body = {}, 
+  collectionName, 
+  isUpdate
+) 
+{
   const validated = {};
   const metadata = {};
   const key = buildSchemaId(collectionName);
@@ -169,5 +131,3 @@ async function validate(schema, body = {}, collectionName, isUpdate) {
 
   return { key, validated, metadata };
 }
-
-export { siftLabels, siftOutLabelAndFetch, isMeta, validate };

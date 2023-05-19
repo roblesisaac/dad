@@ -1,7 +1,8 @@
-import { data } from "@ampt/data";
+import { data } from '@ampt/data';
 import { events } from '@ampt/sdk';
-import { isEmptyObject } from "../../src/utils";
-import { isMeta, validate, siftOutLabelAndFetch } from "../utils/validate";
+import { isEmptyObject } from '../../../src/utils';
+import validate from './validate';
+import { isMeta, siftOutLabelAndFetch } from './utils';
 
 function buildUrlKey(collectionName, filter) {
     return filter.includes(':') 

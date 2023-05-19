@@ -1,7 +1,7 @@
 import { params } from "@ampt/sdk";
 import { Aid } from "./aidkit";
 import fetch from "node-fetch";
-import { validate } from "./validate.js";
+import { Validate } from "./recordJS";
 
 export default new Aid({
   data: { 
@@ -130,8 +130,8 @@ export default new Aid({
     returnOnlyDocuments: function(last) {
       const { next } = this;
       const data = Object.keys(last).length 
-                    ? last.document || last.documents || last 
-                    : last;
+        ? last.document || last.documents || last 
+        : last;
       
       next(data);
     },
@@ -143,7 +143,7 @@ export default new Aid({
         age: Number
       };
 
-      data = await validate(userSchema, data);
+      data = await Validate(userSchema, data);
 
       next(data.validated);
 
