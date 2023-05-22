@@ -6,8 +6,7 @@ const users = Record('users', {
     email: {
         unique: true,
         required: true,
-        value: input => {
-            const { email } = input;
+        value: email => {
             if(!isValidEmail(email)) {
                 throw new Error('Invalid email');
             }
@@ -17,8 +16,7 @@ const users = Record('users', {
     },
     email_verified: '*',
     password: {
-        value: async input => {
-            const { password } = input;
+        value: async password => {
             if(!password) return;
             const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
             const isAlreadyHashed = bcryptRegex.test(password);

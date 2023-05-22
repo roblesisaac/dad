@@ -36,10 +36,10 @@ function respond(response, selectedKeys, _id) {
     }
 
     const { items, key, value } = response;
-    const selection = itm => select(itm, selectedKeys);
+    const getSelection = itm => select(itm, selectedKeys);
 
     if(value) {
-        const item = selection({ _id:key, ...value });
+        const item = getSelection({ _id:key, ...value });
 
         return _id ? item : [item];
     }
@@ -48,7 +48,10 @@ function respond(response, selectedKeys, _id) {
         return [];
     }
 
-    return items.map(itm => selection({ _id: itm.key, ...itm.value }));
+    return items.map(
+        itm => 
+        getSelection({ _id: itm.key, ...itm.value })
+    );
 }
 
 function sift(filter={}) {

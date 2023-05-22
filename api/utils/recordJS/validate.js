@@ -1,7 +1,6 @@
 import { buildId } from '../../../src/utils';
 import { 
-  isMeta, 
-  siftLabels, 
+  isMeta,
   siftOutLabelAndFetch 
 } from './utils';
 
@@ -16,7 +15,7 @@ function err(message) {
   throw new Error(message);
 }
 
-export default async function (
+async function validate(
   schema, 
   body = {}, 
   collectionName, 
@@ -98,9 +97,9 @@ export default async function (
     }
 
     try {
-      validated[key] = await validator(body, validated);
+      validated[key] = await validator(body[key], body, validated);
     } catch (error) {
-      err(`Error validating ${key}: <br/>'${error.message}'`);
+      err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
     }
   }
 
@@ -125,9 +124,11 @@ export default async function (
     try {
       metadata[key] = setValue(metaValue(body, validated));
     } catch(error) {
-      err(`Error validating ${key}: <br/>'${error.message}'`);
+      err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
     }
   });
 
   return { key, validated, metadata };
 }
+
+export default validate;
