@@ -8,8 +8,10 @@
     import { onMounted } from 'vue';
     import VerifyForm from '../components/VerifyForm.vue';
 
+    const baseUrl = '/api';
+
     onMounted(async () => {
-        const checkAuth = await fetch('/login/check');
+        const checkAuth = await fetch(baseUrl+'/login/check');
         const user = await checkAuth.json();
 
         if(!user.isLoggedIn) {

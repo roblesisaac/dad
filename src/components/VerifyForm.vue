@@ -41,6 +41,7 @@
     let user = ref(state.user);
     const code = ref(['', '', '', '', '', '']);
     const notification = ref(false);
+    const baseUrl = '/api';
 
     const getInputEl = (index) => {
         const id = 'code'+index;
@@ -88,14 +89,14 @@
     }
 
     const sendAnotherCode = () => {
-        api.post('/signup/resend').then(notify);
+        api.post(baseUrl+'/signup/resend').then(notify);
     }
   
     const submitCode = (codeValue) => {
         const code = codeValue.slice().join('');
         const body = { code };
 
-        api.post('/signup/verify', body).then(notify);
+        api.post(baseUrl+'/signup/verify', body).then(notify);
     };
 
     onMounted(async () => {

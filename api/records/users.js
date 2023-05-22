@@ -46,12 +46,8 @@ users.authLocalUser = async (email, password, done) => {
   
     const user = await users.find({ email });
   
-    if (!user) {
+    if (!user || !user.password) {
       return done(errorMessage, false);
-    }
-  
-    if(!user.password) {
-      return done(`Incorrect login information. Please try again.`, false);
     }
   
     const isCorrectPassword = await bcrypt.compare(password, user.password);

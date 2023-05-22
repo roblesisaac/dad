@@ -1,11 +1,8 @@
 import {
     recaptcha,
     checkLoggedIn,
-    checkVerified,
     rateLimiter
 } from '../middlewares';
-
-import db from '../controllers/db';
 
 import {
     resendVerificationCode,
@@ -27,13 +24,13 @@ export default (api, baseUrl) => {
     );
 
     api.get(
-        '/login/auth/google', 
+        baseUrl + '/login/auth/google', 
         rateLimiter, 
         loginGoogle
     );
 
     api.get(
-        '/login/auth/google/callback',
+        baseUrl + '/login/auth/google/callback',
         googleCallback
     );
 
@@ -45,7 +42,7 @@ export default (api, baseUrl) => {
     );
 
     api.post(
-        '/signup/verify',
+        baseUrl + '/signup/verify',
         rateLimiter,
         checkLoggedIn, 
         verifyUser
@@ -58,7 +55,7 @@ export default (api, baseUrl) => {
     );
 
     api.get(
-        '/login/check',
+        baseUrl + '/login/check',
         isLoggedIn
     );
 
@@ -67,18 +64,4 @@ export default (api, baseUrl) => {
         checkLoggedIn,
         logoutUser
     );
-    
-    const endpoint = '/:component/db/';
-    const endpointWithId = endpoint+':id';    
-
-    api.get(endpoint, checkVerified, (req, res) => db.find(req, res));
-    api.get(endpointWithId, (req, res) => db.findOne(req, res));
-    
-    api.put(endpointWithId, (req, res) => db.updateOne(req, res));
-    api.put(endpoint, (req, res) => db.updateMany(req, res));
-    
-    api.post(endpoint, (req, res) => db.insert(req, res));
-    
-    api.delete(endpointWithId, (req, res) => db.deleteOne(req, res));
-    api.delete(endpoint, (req, res) => db.deleteMany(req, res));
 }

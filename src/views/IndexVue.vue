@@ -160,14 +160,14 @@ const car = ref(emptyCar());
 onMounted(async () => {
   sticky.stickify(stickys);
 
-  await api.get('/users/db').then(response => {
+  await api.get('/api/cars').then(fetchedCars => {
+    cars.value = fetchedCars;
+  });
+
+  await api.get('/db/users').then(response => {
     users.value = response;
     loading.value = false;
   }).catch(e => loading.value=false);
-
-  await api.get('/cars/data').then(fetchedCars => {
-    cars.value = fetchedCars;
-  });
 });
 
 onUnmounted(() => {
@@ -188,7 +188,7 @@ function addUser() {
 }
 
 async function addCar(newCar) {
-  const carAdded = await api.post('/cars/data', newCar);
+  const carAdded = await api.post('/api/cars', newCar);
   console.log({ carAdded });
   cars.value = cars.value.concat(newCar);
 

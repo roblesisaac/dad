@@ -87,6 +87,7 @@ const login = ref({
 let action = ref('login');
 let notification = ref('');
 
+const baseUrl = '/api';
 const siteKey = import.meta.env.VITE_RECAPTCHA_KEY;
 let recaptcha,
     recaptchaToken,
@@ -99,6 +100,7 @@ function changeAction(changeTo) {
     action.value = changeTo;
   });
 }
+
 function notify(message) {
   if(!message) {
     return;
@@ -111,6 +113,7 @@ function notify(message) {
     notification.value = false;
   }, 4000);
 }
+
 async function loginNative() {
   loginLoading.value = true;
 
@@ -143,15 +146,16 @@ async function loginNative() {
     delete method.retype;
   }
   
-  const url =  `/api/${method}/native`;
+  const url =  baseUrl + `/${method}/native`;
   const body = { recaptchaToken, ...login.value };
   const settings = { freshRedirect: true };
 
   await api.post(url, body, settings).then(notify);
   loginLoading.value = false;
 }
+
 function loginWithGoogle() {
-  window.location = '/login/auth/google';
+  window.location = baseUrl+'/login/auth/google';
 }
 
 onMounted(async () => {

@@ -3,6 +3,7 @@ import { Router } from 'express';
 
 import address from './address';
 import dataApi from './data';
+import db from './db';
 import users from './users';
 
 export default (app) => {
@@ -10,11 +11,14 @@ export default (app) => {
 
     [
         address, 
-        dataApi, 
+        dataApi,
+        db,
         users
-    ].forEach(route => route(api, '/:collection'));
+    ].forEach(route => route(api, '/api'));
 
-    api.use(async (req, res) => {
+
+    // Serve index.html on all 404s
+    api.use(async (_, res) => {
         const stream = await http.readStaticFile('index.html');
         const decoder = new TextDecoder('utf-8');
         let htmlContent = '';

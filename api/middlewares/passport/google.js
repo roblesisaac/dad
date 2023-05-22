@@ -14,7 +14,7 @@ const domain = '.'+hostName;
 const GoogleConfig = {
     clientID: GOOGLE_ID,
     clientSecret: GOOGLE_SECRET,
-    callbackURL: `${AMPT_URL}/login/auth/google/callback`,
+    callbackURL: `${AMPT_URL}/api/login/auth/google/callback`,
     passReqToCallback: true
 };
 
