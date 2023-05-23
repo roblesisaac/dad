@@ -72,7 +72,7 @@ export function checkVerified(req, res, next) {
 }
 
 export { 
-    passport,
-    SessionStore,
-    xss
+  passport,
+  SessionStore,
+  xss
 };
