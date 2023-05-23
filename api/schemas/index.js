@@ -2,7 +2,7 @@ import Record from '../utils/recordJS';
 import users from './users';
 
 const cars = Record('cars', {
-    year: 'number',
+    year: Number,
     make: String,
     model: 'string',
     submodel: 'string',
