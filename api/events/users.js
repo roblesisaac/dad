@@ -3,7 +3,7 @@ import fs from "fs";
 
 import notify from "../utils/notify";
 import { proper, randomNumber } from "../../src/utils";
-import Users from "../records/users";
+import Users from "../schemas/users";
 
 const { 
     APP_NAME,
@@ -87,7 +87,7 @@ export async function sendVerificationCode(email, { subject, data }) {
 async function fetchUserFromEvent(body, eventName) {
   const { email } = body;
   
-  const user = await Users.find({ email });
+  const user = await Users.findOne({ email });
 
   if(!user) {
     console.log(`${email} not found while running '${eventName}' event.`);

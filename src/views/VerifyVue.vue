@@ -11,14 +11,14 @@
     const baseUrl = '/api';
 
     onMounted(async () => {
-        const checkAuth = await fetch(baseUrl+'/login/check');
+        const checkAuth = await fetch(baseUrl+'/login/check/auth');
         const user = await checkAuth.json();
 
         if(!user.isLoggedIn) {
             return window.location = '/login';
         }
 
-        if(user.email_verified) {
+        if(user.email_verified === true) {
             return window.location = '/';
         }
     });

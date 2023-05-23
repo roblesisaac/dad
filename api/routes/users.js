@@ -55,7 +55,7 @@ export default (api, baseUrl) => {
     );
 
     api.get(
-        baseUrl + '/login/check',
+        baseUrl + '/login/check/auth',
         isLoggedIn
     );
 

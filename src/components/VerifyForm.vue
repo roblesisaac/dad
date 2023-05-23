@@ -10,9 +10,7 @@
                 <div class="cell-1">
                     <input type="number" max="9" 
                         :id="'code'+index"
-                        v-model="code[index-1]" 
-                        @input="moveToNextInput($event, index)" 
-                        @keydown="deleteAndOrGoBack($event, index)">
+                        @keydown="handleKeydown($event, index)">
                 </div>
             </div>
         </div>
@@ -48,37 +46,55 @@
         return document.getElementById(id);
     }
 
-    const deleteAndOrGoBack = (event, index) => {
+    const handleKeydown = (event, index) => {
+        const pressedKey = event.data || event.key;
         const keyCode = event.keyCode || event.which;
-        const isBackSpace = keyCode === 8 || keyCode === 46;
 
-        if(isBackSpace && index > 1) {
-            const input = getInputEl(index-1);
-            const goBack = () => input.focus();
+        const isBackSpace = event.code === 'Backspace' || [8,46].includes(keyCode);
+        const isLeftArrow = event.code === 'ArrowLeft' || keyCode === 37;
+        const isRightArrow = event.code === 'ArrowRight' || keyCode === 39
 
-            event.target.value = code.value[index-1] = '';
-            setTimeout(goBack, 10);
+        const $prevInput = getInputEl(index-1);
+        const $nextInput = getInputEl(index+1);
+
+        if(isLeftArrow) {
+            return $prevInput.focus();
         }
-    }
 
-    const moveToNextInput = (event, index) => {
-        const value = event.target.value;
+        if(isRightArrow) {
+            return $nextInput.focus();
+        }
+        
+        if(isBackSpace && event.target.value === '') {
+            if(index > 1) {
+                setTimeout(() => $prevInput.focus(), 40);
+            }
+            return;
+        }
 
-        if(value > 9) {
+        if(isBackSpace) {
             event.target.value = '';
             code.value[index-1] = '';
+            return;
         }
 
-        if(index === code.value.length) {
-            return submitCode(code.value)
+        if(isNaN(pressedKey)) {
+            return;
+        }
+        
+        setTimeout(() => {
+            getInputEl(index).value = pressedKey;    
+        }, 40);
+
+        code.value[index-1] = pressedKey;
+        
+        if(index<code.value.length) {
+            setTimeout(() => $nextInput.focus(), 50);
+            return;
         }
 
-        const input = getInputEl(index+1);
-
-        if (value && input) {
-            input.focus();
-        }
-    };
+        submitCode(code.value);
+    }
 
     const notify = (message) => {
         notification.value = message;
@@ -100,8 +116,8 @@
     };
 
     onMounted(async () => {
-        const firstInput = getInputEl(1);
-        firstInput.focus();
+        const $firstInput = getInputEl(1);
+        $firstInput.focus();
     });
 </script>
 

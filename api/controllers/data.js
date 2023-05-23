@@ -1,4 +1,4 @@
-import models from '../records';
+import models from '../schemas';
 
 function handleError(res, error) {
     console.error(error);

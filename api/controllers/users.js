@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
-import Users from '../records/users';
+import Users from '../schemas/users';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
 
@@ -34,7 +34,7 @@ function loginUser(req, res, user) {
 
 export async function getUserByEmail(req, res) {
     const { email } = req.body;
-    const user = await Users.find({ email });
+    const user = await Users.findOne({ email });
     const error = (errorMessage) => res.status(500).json(errorMessage);
 
     if(!email) {
@@ -91,7 +91,7 @@ export async function verifyUser(req, res) {
     const { email } = user;
     const { code } = req.body;
   
-    const dbUser = await Users.find({ email });
+    const dbUser = await Users.findOne({ email });
   
     if(!dbUser) {
       return res

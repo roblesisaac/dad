@@ -44,7 +44,7 @@ users.authLocalUser = async (email, password, done) => {
       return done(`Missing 'email' or 'password' properties.`, false);
     }
   
-    const user = await users.find({ email });
+    const user = await users.findOne({ email });
   
     if (!user || !user.password) {
       return done(errorMessage, false);

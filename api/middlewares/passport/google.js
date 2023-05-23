@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { Strategy } from 'passport-google-oauth20';
-import Users from '../../records/users';
+import Users from '../../schemas/users';
 
 const {
     GOOGLE_ID,
@@ -29,7 +29,7 @@ async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     }
 
     const { email } = profile._json;  
-    const existingUser = await Users.find({ email });
+    const existingUser = await Users.findOne({ email });
     
     const user = { 
         accessToken,

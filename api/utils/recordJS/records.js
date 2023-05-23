@@ -113,6 +113,12 @@ export default function(collectionName, schema) {
 
         return respond(response, selectedKeys);
     };
+
+    const findOne = async(filter) => {
+        const results = await find(filter) || [];
+
+        return results[0];
+    };
       
     const update = async (filter, body) => {   
         const results = await find(filter) || [];
@@ -155,7 +161,8 @@ export default function(collectionName, schema) {
         set: data.set.bind(data),
         remove: data.remove.bind(data),
         save,
-        find, 
+        find,
+        findOne,
         update, 
         erase
     };
