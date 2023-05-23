@@ -1,6 +1,6 @@
 import Record from '../utils/recordJS';
 
-const addressSchema = Record({
+const addressSchema = Record('addresses', {
     userId: String,
     fullName: { type: String, required: true },
     address: { type: String, required: true },
