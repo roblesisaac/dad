@@ -1,7 +1,7 @@
 import Record from '../utils/recordJS';
 
 const addressSchema = Record({
-    user: 'string',
+    userId: String,
     fullName: { type: String, required: true },
     address: { type: String, required: true },
     city: { type: String, required: true },
@@ -10,3 +10,5 @@ const addressSchema = Record({
     phoneNumber: { type: String, required: true },
     isDefault: { type: Boolean, default: false },
 });
+
+export default addressSchema;

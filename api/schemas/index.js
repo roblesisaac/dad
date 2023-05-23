@@ -1,5 +1,6 @@
 import Record from '../utils/recordJS';
 import users from './users';
+import address from './address';
 
 const cars = Record('cars', {
     year: Number,
@@ -17,4 +18,4 @@ const cars = Record('cars', {
     }
 });
 
-export default { cars, users };
+export default { address, cars, users };

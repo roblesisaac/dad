@@ -1,5 +1,7 @@
 import { http } from '@ampt/sdk';
 import { Router } from 'express';
+import { isLoggedIn } from '../controllers/users';
+import data from '../controllers/data';
 
 import address from './address';
 import dataApi from './data';
@@ -15,7 +17,6 @@ export default (app) => {
         db,
         users
     ].forEach(route => route(api, '/api'));
-
 
     // Serve index.html on all 404s
     api.use(async (_, res) => {
