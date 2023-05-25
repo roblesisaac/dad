@@ -1,14 +1,11 @@
-import { checkVerified } from '../middlewares';
-import address from '../controllers/address';
+import defineRoute from '../utils/defineRoute';
+import data from '../controllers/data';
 
 export default (api) => {
-    api.get('/api/address/:addresskey', checkVerified, address.get);
+    const route = defineRoute(api, 'address', '/api/');
 
-    api.get('/api/addresses/:userkey', checkVerified, address.getAll);
-    
-    api.delete('/api/address/:addresskey', checkVerified, address.remove);
-    
-    api.post('/api/address/:userkey', checkVerified, address.save);
-    
-    api.put('/api/address/:addresskey', checkVerified, address.update);
+    route.post('address', data.save, ['admin']);
+    route.get('address', data.get, ['public']);
+    route.put('address/:key?', data.update, ['admin']);
+    route.delete('address/:key?', data.erase, ['admin']);
 };

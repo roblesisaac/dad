@@ -71,7 +71,23 @@ export function checkVerified(req, res, next) {
     redirect('/verify');
 }
 
-export { 
+export function permit(roles) {
+  return (req, res, next) => {
+    const { user } = req;
+    
+    if(roles.includes('public')) {
+      return next();
+    }
+
+    if(!user || !roles.includes(user.role)) {
+      return res.json('Permission denied...');
+    }
+
+    next();
+  }
+}
+
+export {
   passport,
   SessionStore,
   xss

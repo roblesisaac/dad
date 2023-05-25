@@ -11,9 +11,9 @@ export default (app) => {
 
     [
         address, 
-        dataApi,
         db,
-        users
+        users,
+        dataApi
     ].forEach(route => route(api, '/api'));
 
     // Serve index.html on all 404s

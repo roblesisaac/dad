@@ -161,6 +161,7 @@ onMounted(async () => {
   sticky.stickify(stickys);
 
   await api.get('/api/cars').then(fetchedCars => {
+    console.log({ fetchedCars });
     cars.value = fetchedCars;
   });
 
