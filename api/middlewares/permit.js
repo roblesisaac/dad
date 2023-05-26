@@ -41,4 +41,4 @@ export default (requiredRoles) => (req, res, next) => {
       requiredRoles,
       userRole
     });
-  }
+}
