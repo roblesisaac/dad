@@ -20,6 +20,10 @@ export function userHasAccess(requiredRoles, userRole) {
     }
   
     let minRole = allRoles.length;
+
+    requiredRoles = Array.isArray(requiredRoles) 
+      ? requiredRoles 
+      : [requiredRoles];
   
     requiredRoles.forEach(requiredRole => {
       const index = allRoles.indexOf(requiredRole);

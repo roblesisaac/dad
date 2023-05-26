@@ -22,7 +22,7 @@ export default (api, baseUrl) => {
         next();
     }, data.get);
 
-    protect.get('/allusers', ['admin'], data.get);
+    protect.get('/allusers', 'admin', data.get);
 
     api.post(
         baseUrl + '/login/native', 
