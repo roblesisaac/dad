@@ -1,7 +1,7 @@
 import { permit } from '../middlewares';
 
-const defineParam = (paramName) => (req, res, next) => {
-  req.params.collection = paramName;
+const defineParam = (collectionName) => (req, res, next) => {
+  req.params.collection = collectionName;
   next();
 };
 
