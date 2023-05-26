@@ -33,8 +33,13 @@ const users = Record('users', {
             return await bcrypt.hash(password, salt);
         }
     },
+    role: {
+        value: String,
+        default: 'member'
+    },
     label1: 'email',
-    label2: 'email_verified'
+    label2: 'email_verified',
+    label3: 'role'
 });
 
 users.authLocalUser = async (email, password, done) => {

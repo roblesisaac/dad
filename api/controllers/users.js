@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
-import Users from '../schemas/users';
+import Users from '../models/users';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
 

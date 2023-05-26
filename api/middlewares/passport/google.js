@@ -1,6 +1,6 @@
 import { params } from '@ampt/sdk';
 import { Strategy } from 'passport-google-oauth20';
-import Users from '../../schemas/users';
+import Users from '../../models/users';
 
 const {
     GOOGLE_ID,

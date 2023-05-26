@@ -1,9 +1,6 @@
-import {
-    recaptcha,
-    checkLoggedIn,
-    rateLimiter
-} from '../middlewares';
-
+import protectedRoute from '../utils/protectedRoute';
+import data from '../controllers/data';
+import { recaptcha, checkLoggedIn, rateLimiter } from '../middlewares';
 import {
     resendVerificationCode,
     signupUser, 
@@ -16,6 +13,17 @@ import {
 } from '../controllers/users';
 
 export default (api, baseUrl) => {
+    const protect = protectedRoute(api, 'users', baseUrl);
+
+    protect.get('/users', ['member'], function(req, _, next) {
+        const { email } = req.user;
+
+        req.query = { ...req.query, email };
+        next();
+    }, data.get);
+
+    protect.get('/allusers', ['admin'], data.get);
+
     api.post(
         baseUrl + '/login/native', 
         rateLimiter, 

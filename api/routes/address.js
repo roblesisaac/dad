@@ -1,11 +1,11 @@
-import defineRoute from '../utils/defineRoute';
+import protectedRoute from '../utils/protectedRoute';
 import data from '../controllers/data';
 
-export default (api) => {
-    const route = defineRoute(api, 'address', '/api/');
+export default (api, baseUrl) => {
+    const protect = protectedRoute(api, 'address', baseUrl);
 
-    route.post('address', data.save, ['admin']);
-    route.get('address', data.get, ['public']);
-    route.put('address/:key?', data.update, ['admin']);
-    route.delete('address/:key?', data.erase, ['admin']);
+    protect.post('/address', ['admin'], data.save);
+    protect.get('/address/:key?', ['member'], data.get);
+    protect.put('/address/:key?', ['member'], data.update);
+    protect.delete('/address/:key?', ['member'], data.erase);
 };

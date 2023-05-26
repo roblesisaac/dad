@@ -3,7 +3,7 @@ import fs from "fs";
 
 import notify from "../utils/notify";
 import { proper, randomNumber } from "../../src/utils";
-import Users from "../schemas/users";
+import Users from "../models/users";
 
 const { 
     APP_NAME,
