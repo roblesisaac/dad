@@ -6,8 +6,7 @@ import xss from 'xss-clean';
 
 import SessionStore from './sessionStore';
 import { passport } from './passport';
-
-import { userHasAccess } from '../utils/authUtils';
+import permit from './permit';
 
 const { RECAPTCHA_KEY } = params().list();
 
@@ -71,21 +70,6 @@ export function checkVerified(req, res, next) {
     }
   
     redirect('/verify');
-}
-
-const permit = (requiredRoles) => (req, res, next) => {
-  const { role:userRole } = req.user || {};
-
-  if(userHasAccess(requiredRoles, userRole)) {
-    return next()
-  }
-
-  res.status(403).json({
-    error: 'Access Denied',
-    message: 'You do not have permission to access this resource.',
-    requiredRoles,
-    userRole
-  });
 }
 
 export {

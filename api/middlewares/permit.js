@@ -1,4 +1,4 @@
-export function userHasAccess(requiredRoles, userRole) {
+function userHasAccess(requiredRoles, userRole) {
     if(Array.isArray(requiredRoles)) {
       return requiredRoles.includes(userRole);
     };
@@ -27,3 +27,18 @@ export function userHasAccess(requiredRoles, userRole) {
   
     return userRoleIndex >= minRole;
 }
+
+export default (requiredRoles) => (req, res, next) => {
+    const { role:userRole } = req.user || {};
+  
+    if(userHasAccess(requiredRoles, userRole)) {
+      return next()
+    }
+  
+    res.status(403).json({
+      error: 'Access Denied',
+      message: 'You do not have permission to access this resource.',
+      requiredRoles,
+      userRole
+    });
+  }
