@@ -1,4 +1,8 @@
 export function userHasAccess(requiredRoles, userRole) {
+    if(Array.isArray(requiredRoles)) {
+      return requiredRoles.includes(userRole);
+    };
+
     const allRoles = [
       'public',
       'guest',
@@ -19,19 +23,7 @@ export function userHasAccess(requiredRoles, userRole) {
       return false;
     }
   
-    let minRole = allRoles.length;
-
-    requiredRoles = Array.isArray(requiredRoles) 
-      ? requiredRoles 
-      : [requiredRoles];
-  
-    requiredRoles.forEach(requiredRole => {
-      const index = allRoles.indexOf(requiredRole);
-      
-      if (index !== -1 && index < minRole) {
-        minRole = index;
-      }
-    });
+    let minRole = allRoles.indexOf(requiredRoles);
   
     return userRoleIndex >= minRole;
 }

@@ -15,7 +15,7 @@ import {
 export default (api, baseUrl) => {
     const protect = protectedRoute(api, 'users', baseUrl);
 
-    protect.get('/users', ['member'], function(req, _, next) {
+    protect.get('/users', 'member', function(req, _, next) {
         const { email } = req.user;
 
         req.query = { ...req.query, email };
