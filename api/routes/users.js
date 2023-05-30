@@ -15,14 +15,14 @@ import {
 export default (api, baseUrl) => {
     const protect = protectedRoute(api, 'users', baseUrl);
 
-    protect.get('/users', 'member', function(req, _, next) {
+    protect('member').get('/users', function(req, _, next) {
         const { email } = req.user;
 
         req.query = { ...req.query, email };
         next();
     }, data.get);
 
-    protect.get('/allusers', 'admin', data.get);
+    protect('admin').get('/allusers', data.get);
 
     api.post(
         baseUrl + '/login/native', 

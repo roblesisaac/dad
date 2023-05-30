@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@ampt/data": "^0.0.1-beta.11",
-    "@ampt/sdk": "^0.0.1-beta.45",
+    "@ampt/sdk": "^0.0.1-beta.46",
     "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
     "express-rate-limit": "^6.7.0",

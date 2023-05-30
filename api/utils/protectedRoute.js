@@ -5,8 +5,8 @@ const defineParam = (collectionName) => (req, res, next) => {
   next();
 };
 
-const createRoute = (api, collectionName, baseUrl = '/') => {
-  const handle = (httpMethod) => (url, requiredRoles, ...middlewares) => {
+const createRoute = (api, collectionName, baseUrl = '/') => (requiredRoles) => {
+  const handle = (httpMethod) => (url, ...middlewares) => {
     const handler = middlewares[middlewares.length-1];
     const routeMiddlewares = [
       permit(requiredRoles),
@@ -22,7 +22,7 @@ const createRoute = (api, collectionName, baseUrl = '/') => {
     put: handle('put'),
     post: handle('post'),
     delete: handle('delete')
-  };
+  }
 };
 
 export default createRoute;
