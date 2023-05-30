@@ -18,8 +18,7 @@ function err(message) {
 async function validate(
   schema, 
   body = {}, 
-  collectionName, 
-  isUpdate
+  collectionName
 ) 
 {
   const validated = {};
@@ -40,9 +39,20 @@ async function validate(
         err(`Please provide a valid value for '${key}'.`);
       }
 
-      const duplicate = await siftOutLabelAndFetch(schema, body, collectionName);
+      const { 
+        key: duplicateKey, 
+        items
+      } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
 
-      if (!isUpdate && (duplicate?.key || duplicate?.items?.length)) {
+      const dupKey = duplicateKey
+        ? duplicateKey
+        : items 
+        ? items[0].key 
+        : null;
+
+      const isUpdate = body._id === dupKey;
+
+      if (!isUpdate && (dupKey || items)) {
         err(`A duplicate item was found with ${key}=${body[key]}`);
       }
     }

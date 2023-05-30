@@ -24,7 +24,7 @@ async function save(req, res) {
     }
 
     try {
-        const inserted = await model.save(req.body);
+        const inserted = await model.save(req.body, req);
         return res.json(inserted);
     } catch (error) {
         handleError(res, error);

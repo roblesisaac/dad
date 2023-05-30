@@ -1,7 +1,7 @@
 import Record from '../utils/recordJS';
 
 const addressSchema = Record('addresses', {
-    userId: String,
+    userId: { type: String, required: true, ref: 'users' },
     fullName: { type: String, required: true },
     address: { type: String, required: true },
     city: { type: String, required: true },

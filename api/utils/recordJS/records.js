@@ -131,7 +131,7 @@ export default function(collectionName, schema) {
         const { _id } = found;
         const newItem = { ...found, ...body };
 
-        const { validated, metadata } = await validate(schema, newItem, collectionName, true);
+        const { validated, metadata } = await validate(schema, newItem, collectionName);
 
         const response = await data.set(_id, validated, metadata);
         const updated = { 
