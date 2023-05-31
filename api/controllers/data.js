@@ -1,41 +1,41 @@
 import models from '../models';
 
-function handleError(req, res) {
-    const { collection } = req.params;
-    const error = `No schema found for '${collection}'...`;
-
+function handleError(res, error) {
     console.error(error);
-    res.status(400).json({ error: error.toString() });
+    if(error) res.status(400).json({ error: error.toString() });
 }
 
 function init(req) {
     const { collection } = req.params;
     const { query } = req;
     const model = models[collection];
+    const initError = !model ? `No schema found for '${collection}'...` : null;
 
-    return { model, query };
+    return { initError, model, query };
 }
 
 async function save(req, res) {
-    const { model } = init(req);
+    const { initError, model } = init(req);
+
     
-    if(!model) {
-        return handleError(req, res);
+    if(initError) {
+        return handleError(res, initError);
     }
 
     try {
         const inserted = await model.save(req.body, req);
         return res.json(inserted);
     } catch (error) {
+        console.log({ error });
         handleError(res, error);
     }
 }
 
 async function get(req, res) {
-    const { model, query } = init(req);
-
-    if(!model) {
-        return handleError(req, res);
+    const { model, query, initError } = init(req);
+    
+    if(initError) {
+        return handleError(res, initError);
     }
     
     const { key } = req.params;
@@ -49,11 +49,11 @@ async function get(req, res) {
 }
 
 async function update(req, res) {
-    const { model } = init(req);
+    const { initError, model } = init(req);
     const { key } = req.params;
 
-    if(!model) {
-        return handleError(req, res);
+    if(initError) {
+        return handleError(res, initError);
     }
 
     try {
@@ -65,11 +65,11 @@ async function update(req, res) {
 }
 
 async function erase(req, res) {
-    const { model } = init(req);
+    const { model, initError } = init(req);
     const { key } = req.params;
 
-    if(!model) {
-        return handleError(req, res);
+    if(initError) {
+        return handleError(res, initError);
     }
 
     try {

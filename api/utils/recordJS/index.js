@@ -1,6 +1,6 @@
 import Record from './records';
-import Validate from './validate';
+import Validator from './validator';
 
-export { Validate };
+export { Validator };
 
 export default Record;

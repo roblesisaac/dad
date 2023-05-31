@@ -5,9 +5,9 @@ import address from './address';
 const cars = Record('cars', {
     year: Number,
     make: String,
-    model: 'string',
-    submodel: 'string',
-    engine: 'string',
+    model: String,
+    submodel: String,
+    engine: String,
     label1: {
         name: 'ymm',
         value: input => input.year+input.make+input.model+input.submodel

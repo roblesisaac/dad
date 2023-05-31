@@ -1,7 +1,7 @@
 import { params } from "@ampt/sdk";
 import { Aid } from "./aidkit";
 import fetch from "node-fetch";
-import { Validate } from "./recordJS";
+// import { Validate } from "./recordJS";
 
 export default new Aid({
   data: { 
@@ -143,9 +143,9 @@ export default new Aid({
         age: Number
       };
 
-      data = await Validate(userSchema, data);
+      // data = await Validate(userSchema, data);
 
-      next(data.validated);
+      // next(data.validated);
 
       // const { user } = this.body;
       // user.password = hash(user.password);

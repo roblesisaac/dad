@@ -1,7 +1,7 @@
 import { data } from '@ampt/data';
 import { events } from '@ampt/sdk';
 import { isEmptyObject } from '../../../src/utils';
-import validate from './validate';
+import validator from './validator';
 import { isMeta, siftOutLabelAndFetch } from './utils';
 
 function buildUrlKey(collectionName, filter) {
@@ -83,11 +83,13 @@ function sift(filter={}) {
 }
 
 export default function(collectionName, schema) {
-    const save = async (body) => {
-        const { key, validated, metadata } = await validate(schema, body, collectionName);
+    const validate = validator(collectionName, schema);
 
-        await data.set(key, validated, metadata);
-        const savedItem = { _id:key, ...validated, ...metadata };
+    const save = async (body) => {
+        const { keyGen, validated, metadata } = await validate.save(body);
+
+        await data.set(keyGen, validated, metadata);
+        const savedItem = { _id:keyGen, ...validated, ...metadata };
 
         events.publish(`${collectionName}.saved`, savedItem);        
         return savedItem;
@@ -120,7 +122,7 @@ export default function(collectionName, schema) {
         return results[0];
     };
       
-    const update = async (filter, body) => {   
+    const update = async (filter, updates) => {   
         const results = await find(filter) || [];
         const found = results[0];
 
@@ -129,9 +131,9 @@ export default function(collectionName, schema) {
         }
 
         const { _id } = found;
-        const newItem = { ...found, ...body };
+        const newItem = { ...found, ...updates };
 
-        const { validated, metadata } = await validate(schema, newItem, collectionName);
+        const { validated, metadata } = await validate.update(newItem);
 
         const response = await data.set(_id, validated, metadata);
         const updated = { 

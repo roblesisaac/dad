@@ -11,23 +11,16 @@ function buildSchemaId(collectionName) {
 }
 
 function err(message) {
-  console.error(message);
   throw new Error(message);
 }
 
-async function validate(
-  schema, 
-  body = {}, 
-  collectionName
-) 
-{
+async function validate(collectionName, schema, body) {
   const validated = {};
   const metadata = {};
-  const key = buildSchemaId(collectionName);
 
   for (const key in schema) {
-    const subjectType = typeof body[key];
-    const schemaType = schema[key].value || schema[key];
+    const schemaKeyType = schema[key].value || schema[key];
+    const bodyHasKey = body.hasOwnProperty(key);
 
     if (isMeta(key)) {
       metadata[key] = schema[key];
@@ -40,76 +33,53 @@ async function validate(
       }
 
       const { 
-        key: duplicateKey, 
-        items: dupItems
+        key: duplicateKey,
+        items
       } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
 
       const dupKey = duplicateKey
         ? duplicateKey
-        : dupItems 
-        ? dupItems[0].key 
+        : items 
+        ? items[0].key 
         : null;
 
-      const isUpdate = body._id === dupKey;
-
-      if (!isUpdate && (dupKey || dupItems)) {
+      if (body._id !== dupKey && (dupKey || items)) {
         err(`A duplicate item was found with ${key}=${body[key]}`);
       }
     }
 
-    if (schemaType === subjectType || schemaType === '*') {
+    if (schemaKeyType === '*') {
       validated[key] = body[key];
       continue;
     }
 
-    if (schema[key].required && !body.hasOwnProperty(key)) {
+    if (schema[key].required && !bodyHasKey) {
       err(`Missing required property ${key}.`);
     }
 
-    if (schema[key].default && !body[key]) {
+    if (schema[key].default && !bodyHasKey) {
       validated[key] = schema[key].default;
       continue;
     }
 
-    if (body[key] && typeof schemaType === 'string') {
-      console.warn(
-        `Invalid type for property ${key}. Expected ${schemaType} but got '${body[key]}' which is a ${subjectType}`
-      );
+    if (Array.isArray(schemaKeyType)) {
+        const nestedSchema = schemaKeyType[0] || {};
+        
+        validated[key] = body[key]
+            ? body[key].map(itm => validate(collectionName, nestedSchema, itm).validated)
+            : schemaKeyType.map(_ => validate(collectionName, nestedSchema, {}).validated);
+            continue;
     }
 
-    if (Array.isArray(schemaType)) {
-      validated[key] = body[key]
-        ? body[key].map(itm => validate(schemaType[0], itm).validated)
-        : schemaType.map(_ => validate(schemaType[0], {}).validated);
-      continue;
-    }
-
-    if (typeof schemaType === 'object') {
-      validated[key] = validate(schema[key], body[key]).validated;
-      continue;
-    }
-
-    const types = {
-      string: () => String(body[key] || ''),
-      number: () => Number(body[key] || 0),
-      '*': () => body[key],
-      boolean: () => typeof body[key] === 'boolean'
-        ? body[key]
-        : body[key] === 'true'
-        ? true
-        : false
-    };
-
-    const validator = types[schemaType] || schemaType;
-
-    if (typeof validator !== 'function') {
+    if (typeof schemaKeyType === 'object') {
+      validated[key] = validate(collectionName, schema[key], body[key]).validated;
       continue;
     }
 
     try {
-      validated[key] = await validator(body[key], body, validated);
+        validated[key] = await schemaKeyType(body[key], body, validated);
     } catch (error) {
-      err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
+        err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
     }
   }
 
@@ -138,7 +108,21 @@ async function validate(
     }
   });
 
-  return { key, validated, metadata };
+  return { validated, metadata };
 }
 
-export default validate;
+const validator = (collectionName, schema) => ({
+    async save(body) {        
+        const keyGen = buildSchemaId(collectionName);
+        const { validated, metadata } = await validate(collectionName, schema, body);
+
+        return { keyGen, validated, metadata };
+    },
+    async update(body) {
+        const { validated, metadata } = await validate(collectionName, schema, body);
+
+        return { validated, metadata };    
+    }
+});
+
+export default validator;
