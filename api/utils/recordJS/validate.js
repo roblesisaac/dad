@@ -41,18 +41,18 @@ async function validate(
 
       const { 
         key: duplicateKey, 
-        items
+        items: dupItems
       } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
 
       const dupKey = duplicateKey
         ? duplicateKey
-        : items 
-        ? items[0].key 
+        : dupItems 
+        ? dupItems[0].key 
         : null;
 
       const isUpdate = body._id === dupKey;
 
-      if (!isUpdate && (dupKey || items)) {
+      if (!isUpdate && (dupKey || dupItems)) {
         err(`A duplicate item was found with ${key}=${body[key]}`);
       }
     }
