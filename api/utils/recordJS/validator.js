@@ -112,13 +112,13 @@ async function validate(collectionName, schema, body) {
 }
 
 const validator = (collectionName, schema) => ({
-    async save(body) {        
+    async forSave(body) {        
         const keyGen = buildSchemaId(collectionName);
         const { validated, metadata } = await validate(collectionName, schema, body);
 
         return { keyGen, validated, metadata };
     },
-    async update(body) {
+    async forUpdate(body) {
         const { validated, metadata } = await validate(collectionName, schema, body);
 
         return { validated, metadata };    

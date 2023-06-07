@@ -86,7 +86,7 @@ export default function(collectionName, schema) {
     const validate = validator(collectionName, schema);
 
     const save = async (body) => {
-        const { keyGen, validated, metadata } = await validate.save(body);
+        const { keyGen, validated, metadata } = await validate.forSave(body);
 
         await data.set(keyGen, validated, metadata);
         const savedItem = { _id:keyGen, ...validated, ...metadata };
@@ -133,7 +133,7 @@ export default function(collectionName, schema) {
         const { _id } = found;
         const newItem = { ...found, ...updates };
 
-        const { validated, metadata } = await validate.update(newItem);
+        const { validated, metadata } = await validate.forUpdate(newItem);
 
         const response = await data.set(_id, validated, metadata);
         const updated = { 
