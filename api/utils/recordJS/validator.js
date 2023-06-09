@@ -5,8 +5,18 @@ import {
 } from './utils';
 
 const validate = function() {
-  const err = (message) => {
-    throw new Error(message);
+  const applyMetaMethod = async ({ 
+      metadata, 
+      setValue,
+      metaValue, 
+      validated, 
+      body 
+    }, key) => {
+    try {
+      metadata[key] = setValue(await metaValue(body, validated));
+    } catch(error) {
+      err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
+    }
   }
 
   const applySchemaKeyType = async ({ 
@@ -25,14 +35,38 @@ const validate = function() {
     validated[key] = schema[key].default;
   }
 
-  const assignMeta = ({ metadata, schema }, key) => {
+  const assignMeta = (data, key) => {
+    const { collectionName, metadata } = data;
+    const meta = metadata[key];
+    const readable = meta.name || meta;
+
+    return {
+      ...data,
+      meta,
+      readable,
+      metaValue: meta.value || meta,
+      setValue: value => `${collectionName}:${readable}_${value}`
+    }
+  }
+
+  const assignMetaPlaceholder = ({ metadata, schema }, key) => {
     metadata[key] = schema[key];
   }
 
-  function buildSchemaId(collectionName) {
-    return collectionName 
-    ? `${collectionName}:${buildId()}` 
-    : undefined;
+  const assignMetaRef = ({ validated, readable, meta, setValue }, key) => {
+    metadata[key] = setValue(validated[readable] || meta);
+  }
+
+  const assignMetaValue = ({ metadata, setValue, metaValue }, key) => {
+    metadata[key] = setValue(metaValue);
+  }
+
+  const buildSchemaId = (collectionName) => collectionName 
+  ? `${collectionName}:${buildId()}` 
+  : undefined;
+
+  const err = (message) => {
+    throw new Error(message);
   }
 
   const handleArray = ({ collectionName, validated, body, schemaKeyType }, key) => {
@@ -41,36 +75,6 @@ const validate = function() {
     validated[key] = body[key]
         ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
         : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
-  }
-
-  const handleMeta = async ({
-      body,
-      collectionName,
-      metadata, 
-      validated 
-    }, key) => {
-    const meta = metadata[key];
-    const readable = meta.name || meta;
-    const metaValue = meta.value || meta;
-    const setValue = value => `${collectionName}:${readable}_${value}`;
-
-    if(!readable) {
-      return;
-    }
-
-    if(typeof readable === 'string' && typeof metaValue === 'string') {
-      return metadata[key] = setValue(validated[readable] || meta);
-    }
-
-    if(typeof metaValue !== 'function') {
-      return metadata[key] = setValue(metaValue);
-    }
-
-    try {
-      metadata[key] = setValue(await metaValue(body, validated));
-    } catch(error) {
-      err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
-    }
   }
 
   const handleObject = ({ collectionName, schema, body, validated }, key) => {
@@ -111,6 +115,12 @@ const validate = function() {
     schemaKeyType: null
   })
 
+  const isNotFunction = ({ metaValue }, key) => typeof metaValue !== 'function';
+
+  const isReferenceToBody = ({ readable, metaValue }, key) => {
+    return typeof readable === 'string' && typeof metaValue === 'string';
+  }
+
   const isType = ({ schemaKeyType }) => ({
     array: Array.isArray(schemaKeyType),
     object: typeof schemaKeyType === 'object'
@@ -138,7 +148,7 @@ const validate = function() {
         data = updateData(data, key);
 
         if(isMeta(key)) {
-          assignMeta(data, key);
+          assignMetaPlaceholder(data, key);
           continue;
         }
 
@@ -179,7 +189,21 @@ const validate = function() {
       }
 
       for(const metaKey in data.metadata) {
-        await handleMeta(data, metaKey);
+        data = assignMeta(data, metaKey);
+        
+        if(!data.readable) {
+          return;
+        }
+    
+        if(isReferenceToBody(data, metaKey)) {
+          return assignMetaRef(data, metaKey);
+        }
+
+        if(isNotFunction(data, metaKey)) {
+          return assignMetaValue(data, metaKey);
+        }
+
+        await applyMetaMethod(data, metaKey);
       }
 
       return data;
