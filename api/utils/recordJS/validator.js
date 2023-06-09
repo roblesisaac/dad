@@ -4,86 +4,51 @@ import {
   siftOutLabelAndFetch 
 } from './utils';
 
-function buildSchemaId(collectionName) {
-  return collectionName 
-  ? `${collectionName}:${buildId()}` 
-  : undefined;
-}
+const validate = function() {
+  const err = (message) => {
+    throw new Error(message);
+  }
 
-function err(message) {
-  throw new Error(message);
-}
-
-async function validate(collectionName, schema, body) {
-  const validated = {};
-  const metadata = {};
-
-  for (const key in schema) {
-    const schemaKeyType = schema[key].value || schema[key];
-    const bodyHasKey = body.hasOwnProperty(key);
-
-    if (isMeta(key)) {
-      metadata[key] = schema[key];
-      continue;
-    }
-
-    if (schema[key].unique) {
-      if (!body[key]) {
-        err(`Please provide a valid value for '${key}'.`);
-      }
-
-      const { 
-        key: duplicateKey,
-        items
-      } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
-
-      const dupKey = duplicateKey
-        ? duplicateKey
-        : items 
-        ? items[0].key 
-        : null;
-
-      if (body._id !== dupKey && (dupKey || items)) {
-        err(`A duplicate item was found with ${key}=${body[key]}`);
-      }
-    }
-
-    if (schemaKeyType === '*') {
-      validated[key] = body[key];
-      continue;
-    }
-
-    if (schema[key].required && !bodyHasKey) {
-      err(`Missing required property ${key}.`);
-    }
-
-    if (schema[key].default && !bodyHasKey) {
-      validated[key] = schema[key].default;
-      continue;
-    }
-
-    if (Array.isArray(schemaKeyType)) {
-        const nestedSchema = schemaKeyType[0] || {};
-        
-        validated[key] = body[key]
-            ? body[key].map(itm => validate(collectionName, nestedSchema, itm).validated)
-            : schemaKeyType.map(_ => validate(collectionName, nestedSchema, {}).validated);
-            continue;
-    }
-
-    if (typeof schemaKeyType === 'object') {
-      validated[key] = validate(collectionName, schema[key], body[key]).validated;
-      continue;
-    }
-
+  const applySchemaKeyType = async ({ 
+    body, 
+    validated,
+    schemaKeyType 
+  }, key) => {
     try {
-        validated[key] = await schemaKeyType(body[key], body, validated);
+      validated[key] = await schemaKeyType(body[key], body, validated);
     } catch (error) {
-        err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
+      err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
     }
   }
 
-  Object.keys(metadata).forEach(key => {
+  const assignDefaultProp = ({ validated, schema }, key) => {
+    validated[key] = schema[key].default;
+  }
+
+  const assignMeta = ({ metadata, schema }, key) => {
+    metadata[key] = schema[key];
+  }
+
+  function buildSchemaId(collectionName) {
+    return collectionName 
+    ? `${collectionName}:${buildId()}` 
+    : undefined;
+  }
+
+  const handleArray = ({ collectionName, validated, body, schemaKeyType }, key) => {
+    const nestedSchema = schemaKeyType[0] || {};
+        
+    validated[key] = body[key]
+        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
+        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
+  }
+
+  const handleMeta = async ({
+      body,
+      collectionName,
+      metadata, 
+      validated 
+    }, key) => {
     const meta = metadata[key];
     const readable = meta.name || meta;
     const metaValue = meta.value || meta;
@@ -102,27 +67,137 @@ async function validate(collectionName, schema, body) {
     }
 
     try {
-      metadata[key] = setValue(metaValue(body, validated));
+      metadata[key] = setValue(await metaValue(body, validated));
     } catch(error) {
       err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
     }
-  });
+  }
 
-  return { validated, metadata };
-}
+  const handleObject = ({ collectionName, schema, body, validated }, key) => {
+    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
+  }
 
-const validator = (collectionName, schema) => ({
-    async forSave(body) {        
+  const handleUnique = async ({ collectionName, schema, body }, key) => {
+    if (!body[key]) {
+      err(`Please provide a valid value for '${key}'.`);
+    }
+
+    const { 
+      key: duplicateKey,
+      items
+    } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
+
+    const dupKey = duplicateKey
+      ? duplicateKey
+      : items 
+      ? items[0].key 
+      : null;
+
+    if (body._id !== dupKey && (dupKey || items)) {
+      err(`A duplicate item was found with ${key}=${body[key]}`);
+    }
+  }
+
+  const handleWild = ({ validated, body }, key) => {
+    return validated[key] = body[key];
+  }
+
+  const initData = (collectionName, schema, body) => ({
+    collectionName,
+    schema,
+    body,
+    validated: {},
+    metadata: {},
+    schemaKeyType: null
+  })
+
+  const isType = ({ schemaKeyType }) => ({
+    array: Array.isArray(schemaKeyType),
+    object: typeof schemaKeyType === 'object'
+  })
+
+  const isUnique = ({ unique }) => !!unique;
+
+  const isWild = (symbol) => symbol === '*';
+
+  const updateData = (data, key) => {
+    const { schema } = data;
+
+    return { 
+      ...data,
+      key,
+      schemaKeyType: schema[key].value || schema[key]
+    };
+  }
+
+  return {
+    init: async (collectionName, schema, body) => {
+      let data = initData(collectionName, schema, body);
+
+      for(const key in schema) {
+        data = updateData(data, key);
+
+        if(isMeta(key)) {
+          assignMeta(data, key);
+          continue;
+        }
+
+        if(isUnique(schema[key])) {
+          await handleUnique(data, key);
+          continue;
+        }
+
+        if(isWild(data.schemaKeyType)) {
+          handleWild(data, key);
+          continue;
+        }
+
+        if(!body.hasOwnProperty(key)) {
+
+          if(schema[key].required) {
+            err(`Missing required property ${key}.`);
+          }
+
+          if(schema[key].default) {
+            assignDefaultProp(data, key);
+            continue;
+          }
+
+        }
+
+        if(isType(data).array) {
+          handleArray(data, key);
+          continue;
+        }
+
+        if(isType(data).object) {
+          handleObject(data, key);
+          continue;
+        }
+
+        await applySchemaKeyType(data, key);
+      }
+
+      for(const metaKey in data.metadata) {
+        await handleMeta(data, metaKey);
+      }
+
+      return data;
+    },
+    build: (collectionName, schema) => ({
+      async forSave(body) {        
         const keyGen = buildSchemaId(collectionName);
-        const { validated, metadata } = await validate(collectionName, schema, body);
+        const { validated, metadata } = await validate.init(collectionName, schema, body);
 
         return { keyGen, validated, metadata };
-    },
-    async forUpdate(body) {
-        const { validated, metadata } = await validate(collectionName, schema, body);
+      },
+      async forUpdate(body) {
+        const { validated, metadata } = await validate.init(collectionName, schema, body);
 
         return { validated, metadata };    
-    }
-});
+      }
+    })
+  }
+}();
 
-export default validator;
+export default validate;

@@ -83,7 +83,7 @@ function sift(filter={}) {
 }
 
 export default function(collectionName, schema) {
-    const validate = validator(collectionName, schema);
+    const validate = validator.build(collectionName, schema);
 
     const save = async (body) => {
         const { keyGen, validated, metadata } = await validate.forSave(body);
