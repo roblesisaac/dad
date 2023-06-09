@@ -115,7 +115,7 @@ const validate = function() {
     schemaKeyType: null
   })
 
-  const isNotFunction = ({ metaValue }, key) => typeof metaValue !== 'function';
+  const isFunction = ({ metaValue }, key) => typeof metaValue === 'function';
 
   const isReferenceToBody = ({ readable, metaValue }, key) => {
     return typeof readable === 'string' && typeof metaValue === 'string';
@@ -199,7 +199,7 @@ const validate = function() {
           return assignMetaReference(data, metaKey);
         }
 
-        if(isNotFunction(data, metaKey)) {
+        if(!isFunction(data, metaKey)) {
           return assignMetaValue(data, metaKey);
         }
 
