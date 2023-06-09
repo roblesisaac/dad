@@ -53,7 +53,7 @@ const validate = function() {
     metadata[key] = schema[key];
   }
 
-  const assignMetaRef = ({ validated, readable, meta, setValue }, key) => {
+  const assignMetaReference = ({ validated, readable, meta, setValue }, key) => {
     metadata[key] = setValue(validated[readable] || meta);
   }
 
@@ -196,7 +196,7 @@ const validate = function() {
         }
     
         if(isReferenceToBody(data, metaKey)) {
-          return assignMetaRef(data, metaKey);
+          return assignMetaReference(data, metaKey);
         }
 
         if(isNotFunction(data, metaKey)) {
