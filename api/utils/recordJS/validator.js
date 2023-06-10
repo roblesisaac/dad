@@ -53,7 +53,7 @@ const validate = function() {
     metadata[key] = schema[key];
   }
 
-  const assignMetaReference = ({ validated, readable, meta, setValue }, key) => {
+  const assignMetaReference = ({ metadata, validated, readable, meta, setValue }, key) => {
     metadata[key] = setValue(validated[readable] || meta);
   }
 
@@ -81,7 +81,7 @@ const validate = function() {
     validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
   }
 
-  const handleUnique = async ({ collectionName, schema, body }, key) => {
+  const handleUnique = async ({ schema, body, collectionName }, key) => {
     if (!body[key]) {
       err(`Please provide a valid value for '${key}'.`);
     }
