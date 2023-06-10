@@ -192,15 +192,17 @@ const validate = function() {
         data = assignMeta(data, metaKey);
         
         if(!data.readable) {
-          return;
+          continue;
         }
     
         if(isReferenceToBody(data)) {
-          return assignMetaReference(data, metaKey);
+          assignMetaReference(data, metaKey);
+          continue;
         }
 
         if(!isFunction(data)) {
-          return assignMetaValue(data, metaKey);
+          assignMetaValue(data, metaKey);
+          continue;
         }
 
         await applyMetaMethod(data, metaKey);

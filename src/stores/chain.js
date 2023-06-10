@@ -40,7 +40,7 @@ const api = function() {
   }
 
   return {
-    state,
+    ...state,
     get: async (url) => {
       buildUrl(url);
       await fetchCars();
