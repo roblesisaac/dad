@@ -65,23 +65,7 @@ const validate = function() {
   ? `${collectionName}:${buildId()}` 
   : undefined;
 
-  const err = (message) => {
-    throw new Error(message);
-  }
-
-  const handleArray = ({ collectionName, validated, body, schemaKeyType }, key) => {
-    const nestedSchema = schemaKeyType[0] || {};
-        
-    validated[key] = body[key]
-        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
-        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
-  }
-
-  const handleObject = ({ collectionName, schema, body, validated }, key) => {
-    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
-  }
-
-  const handleUnique = async ({ schema, body, collectionName }, key) => {
+  const checkForDuplicates = async ({ schema, body, collectionName }, key) => {
     if (!body[key]) {
       err(`Please provide a valid value for '${key}'.`);
     }
@@ -100,6 +84,22 @@ const validate = function() {
     if (body._id !== dupKey && (dupKey || items)) {
       err(`A duplicate item was found with ${key}=${body[key]}`);
     }
+  }
+
+  const err = (message) => {
+    throw new Error(message);
+  }
+
+  const handleArray = ({ collectionName, validated, body, schemaKeyType }, key) => {
+    const nestedSchema = schemaKeyType[0] || {};
+        
+    validated[key] = body[key]
+        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
+        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
+  }
+
+  const handleObject = ({ collectionName, schema, body, validated }, key) => {
+    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
   }
 
   const handleWild = ({ validated, body }, key) => {
@@ -153,8 +153,7 @@ const validate = function() {
         }
 
         if(isUnique(schema[key])) {
-          await handleUnique(data, key);
-          continue;
+          await checkForDuplicates(data, key);
         }
 
         if(isWild(data.schemaKeyType)) {
