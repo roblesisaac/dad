@@ -65,23 +65,6 @@ const validate = function() {
   ? `${collectionName}:${buildId()}` 
   : undefined;
 
-  const checkForDuplicates = async ({ schema, body, collectionName }, key) => {
-    const { 
-      key: duplicateKey,
-      items
-    } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
-
-    const dupKey = duplicateKey
-      ? duplicateKey
-      : items 
-      ? items[0].key 
-      : null;
-
-    if (body._id !== dupKey && (dupKey || items)) {
-      err(`A duplicate item was found with ${key}=${body[key]}`);
-    }
-  }
-
   const err = (message) => {
     throw new Error(message);
   }
@@ -100,6 +83,21 @@ const validate = function() {
 
   const handleWild = ({ validated, body }, key) => {
     return validated[key] = body[key];
+  }
+
+  const hasDuplicates = async ({ schema, body, collectionName }, key) => {
+    const { 
+      key: duplicateKey,
+      items
+    } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
+
+    const dupKey = duplicateKey
+      ? duplicateKey
+      : items 
+      ? items[0].key 
+      : null;
+
+    return body._id !== dupKey && (dupKey || items);
   }
 
   const initData = (collectionName, schema, body) => ({
@@ -153,7 +151,9 @@ const validate = function() {
             err(`Please provide a valid value for '${key}'.`);
           }
 
-          await checkForDuplicates(data, key);
+          if (await hasDuplicates(data, key)) {
+            err(`A duplicate item was found with ${key}=${body[key]}`);
+          }
         }
 
         if(isWild(data.schemaKeyType)) {
