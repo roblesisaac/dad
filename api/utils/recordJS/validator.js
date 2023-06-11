@@ -66,10 +66,6 @@ const validate = function() {
   : undefined;
 
   const checkForDuplicates = async ({ schema, body, collectionName }, key) => {
-    if (!body[key]) {
-      err(`Please provide a valid value for '${key}'.`);
-    }
-
     const { 
       key: duplicateKey,
       items
@@ -153,6 +149,10 @@ const validate = function() {
         }
 
         if(isUnique(schema[key])) {
+          if (!body[key]) {
+            err(`Please provide a valid value for '${key}'.`);
+          }
+
           await checkForDuplicates(data, key);
         }
 
