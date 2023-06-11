@@ -85,7 +85,16 @@ const validate = function() {
     return validated[key] = body[key];
   }
 
-  const hasDuplicates = async ({ schema, body, collectionName }, key) => {
+  const initData = (collectionName, schema, body) => ({
+    collectionName,
+    schema,
+    body,
+    validated: {},
+    metadata: {},
+    schemaKeyType: null
+  })
+
+  const isADuplicate = async ({ schema, body, collectionName }, key) => {
     const { 
       key: duplicateKey,
       items
@@ -99,15 +108,6 @@ const validate = function() {
 
     return body._id !== dupKey && (dupKey || items);
   }
-
-  const initData = (collectionName, schema, body) => ({
-    collectionName,
-    schema,
-    body,
-    validated: {},
-    metadata: {},
-    schemaKeyType: null
-  })
 
   const isFunction = ({ metaValue }) => typeof metaValue === 'function';
 
@@ -151,7 +151,7 @@ const validate = function() {
             err(`Please provide a valid value for '${key}'.`);
           }
 
-          if (await hasDuplicates(data, key)) {
+          if (await isADuplicate(data, key)) {
             err(`A duplicate item was found with ${key}=${body[key]}`);
           }
         }
