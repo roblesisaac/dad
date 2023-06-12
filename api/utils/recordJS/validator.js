@@ -5,13 +5,17 @@ import {
 } from './utils';
 
 const validate = function() {
-  const applyMetaMethod = async ({ 
+  let data = {};
+
+  const applyMetaMethod = async (key) => {
+    const { 
       metadata, 
       setValue,
       metaValue, 
       validated, 
       body 
-    }, key) => {
+    } = data;
+
     try {
       metadata[key] = setValue(await metaValue(body, validated));
     } catch(error) {
@@ -19,11 +23,13 @@ const validate = function() {
     }
   }
 
-  const applySchemaKeyType = async ({ 
-    body, 
-    validated,
-    schemaKeyType 
-  }, key) => {
+  const applySchemaKeyType = async (key) => {
+    const {
+      body, 
+      validated,
+      schemaKeyType
+    } = data;
+
     try {
       validated[key] = await schemaKeyType(body[key], body, validated);
     } catch (error) {
@@ -31,11 +37,12 @@ const validate = function() {
     }
   }
 
-  const assignDefaultProp = ({ validated, schema }, key) => {
+  const assignDefaultProp = (key) => {
+    const { validated, schema } = data;
     validated[key] = schema[key].default;
   }
 
-  const assignMeta = (data, key) => {
+  const assignMeta = (key) => {
     const { collectionName, metadata } = data;
     const meta = metadata[key];
     const readable = meta.name || meta;
@@ -49,15 +56,18 @@ const validate = function() {
     }
   }
 
-  const assignMetaPlaceholder = ({ metadata, schema }, key) => {
+  const assignMetaPlaceholder = (key) => {
+    const { metadata, schema } = data;
     metadata[key] = schema[key];
   }
 
-  const assignMetaReference = ({ metadata, validated, readable, meta, setValue }, key) => {
+  const assignMetaReference = (key) => {
+    const { metadata, validated, readable, meta, setValue } = data;
     metadata[key] = setValue(validated[readable] || meta);
   }
 
-  const assignMetaValue = ({ metadata, setValue, metaValue }, key) => {
+  const assignMetaValue = (key) => {
+    const { metadata, setValue, metaValue } = data;
     metadata[key] = setValue(metaValue);
   }
 
@@ -69,7 +79,8 @@ const validate = function() {
     throw new Error(message);
   }
 
-  const handleArray = ({ collectionName, validated, body, schemaKeyType }, key) => {
+  const handleArray = (key) => {
+    const { collectionName, validated, body, schemaKeyType } = data;
     const nestedSchema = schemaKeyType[0] || {};
         
     validated[key] = body[key]
@@ -77,11 +88,13 @@ const validate = function() {
         : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
   }
 
-  const handleObject = ({ collectionName, schema, body, validated }, key) => {
+  const handleObject = (key) => {
+    const { collectionName, schema, body, validated } = data;
     validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
   }
 
-  const handleWild = ({ validated, body }, key) => {
+  const handleWild = (key) => {
+    const { validated, body } = data;
     return validated[key] = body[key];
   }
 
@@ -94,7 +107,8 @@ const validate = function() {
     schemaKeyType: null
   })
 
-  const isADuplicate = async ({ schema, body, collectionName }, key) => {
+  const isADuplicate = async (key) => {
+    const { schema, body, collectionName } = data;
     const { 
       key: duplicateKey,
       items
@@ -124,7 +138,7 @@ const validate = function() {
 
   const isWild = (symbol) => symbol === '*';
 
-  const updateData = (data, key) => {
+  const updateData = (key) => {
     const { schema } = data;
 
     return { 
@@ -136,13 +150,13 @@ const validate = function() {
 
   return {
     init: async (collectionName, schema, body) => {
-      let data = initData(collectionName, schema, body);
+      data = initData(collectionName, schema, body);
 
       for(const key in schema) {
-        data = updateData(data, key);
+        data = updateData(key);
 
         if(isMeta(key)) {
-          assignMetaPlaceholder(data, key);
+          assignMetaPlaceholder(key);
           continue;
         }
 
@@ -151,13 +165,13 @@ const validate = function() {
             err(`Please provide a valid value for '${key}'.`);
           }
 
-          if (await isADuplicate(data, key)) {
+          if (await isADuplicate(key)) {
             err(`A duplicate item was found with ${key}=${body[key]}`);
           }
         }
 
         if(isWild(data.schemaKeyType)) {
-          handleWild(data, key);
+          handleWild(key);
           continue;
         }
 
@@ -168,43 +182,43 @@ const validate = function() {
           }
 
           if(schema[key].default) {
-            assignDefaultProp(data, key);
+            assignDefaultProp(key);
             continue;
           }
 
         }
 
         if(isType(data).array) {
-          handleArray(data, key);
+          handleArray(key);
           continue;
         }
 
         if(isType(data).object) {
-          handleObject(data, key);
+          handleObject(key);
           continue;
         }
 
-        await applySchemaKeyType(data, key);
+        await applySchemaKeyType(key);
       }
 
       for(const metaKey in data.metadata) {
-        data = assignMeta(data, metaKey);
+        data = assignMeta(metaKey);
         
         if(!data.readable) {
           continue;
         }
     
         if(isReferenceToBody(data)) {
-          assignMetaReference(data, metaKey);
+          assignMetaReference(metaKey);
           continue;
         }
 
         if(!isFunction(data)) {
-          assignMetaValue(data, metaKey);
+          assignMetaValue(metaKey);
           continue;
         }
 
-        await applyMetaMethod(data, metaKey);
+        await applyMetaMethod(metaKey);
       }
 
       return data;
