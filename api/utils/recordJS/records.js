@@ -4,84 +4,6 @@ import { isEmptyObject } from '../../../src/utils';
 import validator from './validator';
 import { isMeta, siftOutLabelAndFetch } from './utils';
 
-function buildUrlKey(collectionName, filter) {
-    return filter.includes(':') 
-        ? filter
-        : `${collectionName}:${filter}`;
-}
-
-function select(item, selectedKeys) {
-    if(!selectedKeys) {
-        return item;
-    }
-
-    const selectedFields = {};
-
-    Object.entries(item).forEach(([field, value]) => {
-        if (selectedKeys.includes(`-${field}`)) {
-            return;
-        }
-
-        if (selectedKeys.includes(`${field}`) || selectedKeys.includes('-'))  {
-            selectedFields[field] = value;
-        }
-    });
-  
-    return selectedFields;
-}
-
-function respond(response, selectedKeys, _id) {
-    if(!response) {
-        return null;
-    }
-
-    const { items, key, value } = response;
-    const getSelection = itm => select(itm, selectedKeys);
-
-    if(value) {
-        const item = getSelection({ _id:key, ...value });
-
-        return _id ? item : [item];
-    }
-
-    if (!items) {
-        return [];
-    }
-
-    return items.map(
-        itm => 
-        getSelection({ _id: itm.key, ...itm.value })
-    );
-}
-
-function sift(filter={}) {
-    const { _id } = filter;
-    const query = {};
-    const metadata = {};
-    let selectedKeys;
-    const methods = {
-        reverse: n => metadata.reverse = n === 'true' ? true : false,
-        select: n => selectedKeys = n,
-        limit: n => metadata.limit = Number(n)
-    };
-
-    delete filter._id;
-
-    Object.keys(filter).forEach(key => {
-        if(methods[key]) {
-            return methods[key](filter[key]);
-        }
-
-        if(isMeta(key)) {
-            return metadata[key] = filter[key];
-        }
-
-        query[key] = filter[key];
-    });
-
-    return { _id, query, metadata, selectedKeys };
-}
-
 export default function(collectionName, schema) {
     const validate = validator.build(collectionName, schema);
 
@@ -168,4 +90,88 @@ export default function(collectionName, schema) {
         update, 
         erase
     };
+}
+
+function buildUrlKey(collectionName, filter) {
+    return filter.includes(':') 
+        ? filter
+        : `${collectionName}:${filter}`;
+}
+
+function select(item, selectedKeys) {
+    if(!selectedKeys) {
+        return item;
+    }
+
+    const selectedFields = {};
+
+    Object.entries(item).forEach(([field, value]) => {
+        if (selectedKeys.includes(`-${field}`)) {
+            return;
+        }
+
+        if (selectedKeys.includes(`${field}`) || selectedKeys.includes('-'))  {
+            selectedFields[field] = value;
+        }
+    });
+  
+    return selectedFields;
+}
+
+function respond(response, selectedKeys, _id) {
+    if(!response) {
+        return null;
+    }
+
+    const { items, key, value, lastKey } = response;
+    const getSelection = itm => select(itm, selectedKeys);
+
+    if(value) {
+        console.log('valueasdljflksdjf')
+        const item = getSelection({ _id:key, ...value });
+
+        return _id ? item : [item];
+    }
+
+    if (!items) {
+        return [];
+    }
+
+    const selection = items.map(
+        itm => 
+        getSelection({ _id: itm.key, ...itm.value })
+    );
+
+    return lastKey ? {
+        lastKey,
+        items: selection
+    } : selection;
+}
+
+function sift(filter={}) {
+    const { _id } = filter;
+    const query = {};
+    const metadata = {};
+    let selectedKeys;
+    const methods = {
+        reverse: n => metadata.reverse = n === 'true' ? true : false,
+        select: n => selectedKeys = n,
+        limit: n => metadata.limit = Number(n)
+    };
+
+    delete filter._id;
+
+    Object.keys(filter).forEach(key => {
+        if(methods[key]) {
+            return methods[key](filter[key]);
+        }
+
+        if(isMeta(key)) {
+            return metadata[key] = filter[key];
+        }
+
+        query[key] = filter[key];
+    });
+
+    return { _id, query, metadata, selectedKeys };
 }
