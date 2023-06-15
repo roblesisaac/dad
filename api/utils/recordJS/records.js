@@ -7,8 +7,8 @@ import { isMeta, siftOutLabelAndFetch } from './utils';
 export default function(collectionName, schema) {
     const validate = validator.build(collectionName, schema);
 
-    const save = async (body) => {
-        const { keyGen, validated, metadata } = await validate.forSave(body);
+    const save = async (body, req) => {
+        const { keyGen, validated, metadata } = await validate.forSave(body, req);
 
         await data.set(keyGen, validated, metadata);
         const savedItem = { _id:keyGen, ...validated, ...metadata };
@@ -44,7 +44,7 @@ export default function(collectionName, schema) {
         return results[0];
     };
       
-    const update = async (filter, updates) => {   
+    const update = async (filter, updates, req) => {   
         const results = await find(filter) || [];
         const found = results[0];
 
@@ -55,7 +55,7 @@ export default function(collectionName, schema) {
         const { _id } = found;
         const newItem = { ...found, ...updates };
 
-        const { validated, metadata } = await validate.forUpdate(newItem);
+        const { validated, metadata } = await validate.forUpdate(newItem, req);
 
         const response = await data.set(_id, validated, metadata);
         const updated = { 
@@ -127,7 +127,6 @@ function respond(response, selectedKeys, _id) {
     const getSelection = itm => select(itm, selectedKeys);
 
     if(value) {
-        console.log('valueasdljflksdjf')
         const item = getSelection({ _id:key, ...value });
 
         return _id ? item : [item];

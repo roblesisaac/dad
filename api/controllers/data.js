@@ -16,14 +16,14 @@ function init(req) {
 
 async function save(req, res) {
     const { initError, model } = init(req);
-
+    const { body } = req;
     
     if(initError) {
         return handleError(res, initError);
     }
 
     try {
-        const inserted = await model.save(req.body, req);
+        const inserted = await model.save(body, req);
         return res.json(inserted);
     } catch (error) {
         console.log({ error });
@@ -33,7 +33,7 @@ async function save(req, res) {
 
 async function get(req, res) {
     const { model, query, initError } = init(req);
-    
+
     if(initError) {
         return handleError(res, initError);
     }
@@ -57,7 +57,7 @@ async function update(req, res) {
     }
 
     try {
-        let result = await model.update(key || req.query, req.body);
+        let result = await model.update(key || req.query, req.body, req);
         res.json(result);
     } catch (error) {
         handleError(res, error);

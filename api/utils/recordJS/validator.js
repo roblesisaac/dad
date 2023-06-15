@@ -13,11 +13,12 @@ const validate = function() {
       setValue,
       metaValue, 
       validated, 
-      body 
+      body,
+      req
     } = data;
 
     try {
-      metadata[key] = setValue(await metaValue(body, validated));
+      metadata[key] = setValue(await metaValue(body, validated, req));
     } catch(error) {
       err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
     }
@@ -27,11 +28,12 @@ const validate = function() {
     const {
       body, 
       validated,
+      req,
       schemaKeyType
     } = data;
 
     try {
-      validated[key] = await schemaKeyType(body[key], body, validated);
+      validated[key] = await schemaKeyType(body[key], body, req || validated);
     } catch (error) {
       err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
     }
@@ -98,12 +100,19 @@ const validate = function() {
     return validated[key] = body[key];
   }
 
-  const initData = (collectionName, schema, body) => ({
+  const hasDefault = (key) => {
+    const { schema } = data;
+
+    return (schema[key]).hasOwnProperty('default');
+  }
+
+  const initData = (collectionName, schema, body, req) => ({
     collectionName,
     schema,
     body,
     validated: {},
     metadata: {},
+    req,
     schemaKeyType: null
   })
 
@@ -140,17 +149,18 @@ const validate = function() {
 
   const updateData = (key) => {
     const { schema } = data;
+    const { type, value } = schema[key] || {};
 
     return { 
       ...data,
       key,
-      schemaKeyType: schema[key].value || schema[key]
+      schemaKeyType: type || value || schema[key]
     };
   }
 
   return {
-    init: async (collectionName, schema, body) => {
-      data = initData(collectionName, schema, body);
+    init: async (collectionName, schema, body, req) => {
+      data = initData(collectionName, schema, body, req);
 
       for(const key in schema) {
         data = updateData(key);
@@ -181,7 +191,7 @@ const validate = function() {
             err(`Missing required property ${key}.`);
           }
 
-          if(schema[key].default) {
+          if(hasDefault(key)) {
             assignDefaultProp(key);
             continue;
           }
@@ -224,14 +234,14 @@ const validate = function() {
       return data;
     },
     build: (collectionName, schema) => ({
-      async forSave(body) {        
+      async forSave(body, req) {        
         const keyGen = buildSchemaId(collectionName);
-        const { validated, metadata } = await validate.init(collectionName, schema, body);
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req);
 
         return { keyGen, validated, metadata };
       },
-      async forUpdate(body) {
-        const { validated, metadata } = await validate.init(collectionName, schema, body);
+      async forUpdate(body, req) {
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req);
 
         return { validated, metadata };    
       }

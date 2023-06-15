@@ -5,8 +5,8 @@ const productSchema = Record('products', {
     description: String,
     price: Number,
     image: String,
-    brandId: { type: String, ref: 'brands' },
-    categoryId: { type: String, ref: 'categories' }
+    brandId: { type: 'key', ref: 'brands' },
+    categoryId: { type: 'key', ref: 'categories' }
 });
 
 export default productSchema;
