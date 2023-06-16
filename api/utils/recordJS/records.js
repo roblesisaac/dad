@@ -25,7 +25,7 @@ export default function(collectionName, schema) {
             const meta = { meta: true, ...metadata };
             const response = await data.get(key, meta);
 
-            return respond(response, selectedKeys, _id);
+            return await respond(response, selectedKeys, _id, schema);
         }
       
         const response = await siftOutLabelAndFetch(
@@ -35,7 +35,7 @@ export default function(collectionName, schema) {
             metadata
         );
 
-        return respond(response, selectedKeys);
+        return await respond(response, selectedKeys, null, schema);
     };
 
     const findOne = async(filter) => {
@@ -98,36 +98,40 @@ function buildUrlKey(collectionName, filter) {
         : `${collectionName}:${filter}`;
 }
 
-function select(item, selectedKeys) {
-    if(!selectedKeys) {
-        return item;
-    }
-
-    const selectedFields = {};
-
-    Object.entries(item).forEach(([field, value]) => {
-        if (selectedKeys.includes(`-${field}`)) {
-            return;
-        }
-
-        if (selectedKeys.includes(`${field}`) || selectedKeys.includes('-'))  {
-            selectedFields[field] = value;
-        }
-    });
-  
-    return selectedFields;
+function isSelected(selectedKeys='', field) {
+    return selectedKeys.includes('-') 
+    ? !selectedKeys.includes(`-${field}`)
+    : selectedKeys.includes(field) || !selectedKeys.length;
 }
 
-function respond(response, selectedKeys, _id) {
+async function select(item, selectedKeys, schema) {
+    const selected = {};
+  
+    for (const [field, value] of Object.entries(item)) {
+        if (!isSelected(selectedKeys, field)) {
+            continue;
+        }
+
+        const { ref } = schema[field] || {};
+
+        selected[field] = ref
+            ? await data.get(value)
+            : value;
+    }
+  
+    return selected;
+}  
+
+async function respond(response, selectedKeys, _id, schema) {
     if(!response) {
         return null;
     }
 
     const { items, key, value, lastKey } = response;
-    const getSelection = itm => select(itm, selectedKeys);
+    const getSelection = async (itm) => await select(itm, selectedKeys, schema);
 
     if(value) {
-        const item = getSelection({ _id:key, ...value });
+        const item = await getSelection({ _id:key, ...value });
 
         return _id ? item : [item];
     }
@@ -136,10 +140,10 @@ function respond(response, selectedKeys, _id) {
         return [];
     }
 
-    const selection = items.map(
-        itm => 
-        getSelection({ _id: itm.key, ...itm.value })
+    const selection = await Promise.all(
+        items.map(async (itm) => await getSelection({ _id: itm.key, ...itm.value }))
     );
+      
 
     return lastKey ? {
         lastKey,
