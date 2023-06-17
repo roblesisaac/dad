@@ -2,7 +2,7 @@ import Record from '../utils/recordJS';
 
 const addressSchema = Record('addresses', {
     userId: { 
-        value: (userid, address, req) => req.user._id,
+        type: (userid, address, req) => req.user._id,
         ref: 'users' 
     },
     fullName: { type: String, required: true },

@@ -19,7 +19,7 @@ export default function(collectionName, schema) {
 
     const find = async (filter) => {
         const { _id, query, metadata, selectedKeys } = sift(filter);
-      
+
         if(_id || isEmptyObject(query)) {
             const key = buildUrlKey(collectionName, _id || '*');
             const meta = { meta: true, ...metadata };
@@ -44,9 +44,10 @@ export default function(collectionName, schema) {
         return results[0];
     };
       
-    const update = async (filter, updates, req) => {   
+    const update = async (filter, updates, req) => {
         const results = await find(filter) || [];
-        const found = results[0];
+
+        const found = Array.isArray(results) ? results[0] : results;
 
         if(!found || !found._id) {
             return { error: `${JSON.stringify(filter)} does not exist` };
@@ -152,6 +153,10 @@ async function respond(response, selectedKeys, _id, schema) {
 }
 
 function sift(filter={}) {
+    if(typeof filter === 'string') {
+        return { _id: filter };
+    }
+
     const { _id } = filter;
     const query = {};
     const metadata = {};
