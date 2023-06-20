@@ -5,6 +5,10 @@ import validator from './validator';
 import { isMeta, siftOutLabelAndFetch } from './utils';
 
 export default function(collectionName, schema) {
+    if(typeof collectionName !== 'string') {
+        throw error(`Collection names for records should be a string`);
+    }
+
     const validate = validator.build(collectionName, schema);
 
     const save = async (body, req) => {
@@ -27,7 +31,7 @@ export default function(collectionName, schema) {
 
             return await respond(response, selectedKeys, _id, schema);
         }
-      
+
         const response = await siftOutLabelAndFetch(
             schema,
             query,
@@ -113,9 +117,11 @@ async function select(item, selectedKeys, schema) {
             continue;
         }
 
-        const { ref } = schema[field] || {};
+        const { ref, get } = schema[field] || {};
 
-        selected[field] = ref
+        selected[field] = get
+            ? await get(value)
+            : ref
             ? await data.get(value)
             : value;
     }

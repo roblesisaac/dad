@@ -5,6 +5,7 @@ import address from './address';
 import dataApi from './data';
 import db from './db';
 import users from './users';
+import messages from './messages';
 
 export default (app) => {
     const api = Router();      
@@ -12,8 +13,9 @@ export default (app) => {
     [
         address, 
         db,
+        messages,
         users,
-        dataApi
+        // dataApi
     ].forEach(route => route(api, '/api'));
 
     // Serve index.html on all 404s

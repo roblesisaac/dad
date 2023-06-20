@@ -18,7 +18,7 @@ const validate = function() {
     } = data;
 
     try {
-      metadata[key] = setValue(await metaValue(body, validated, req));
+      metadata[key] = setValue(await metaValue(validated, req));
     } catch(error) {
       err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
     }
@@ -35,7 +35,7 @@ const validate = function() {
     try {
       validated[key] = await schemaKeyType(body[key], body, req || validated);
     } catch (error) {
-      err(`Error validating ${key}: ${body[key]} <br/>'${error.message}'`);
+      err(`${key}: ${body[key]} <br/>'${error.message}'`);
     }
   }
 
@@ -65,7 +65,11 @@ const validate = function() {
 
   const assignMetaReference = (key) => {
     const { metadata, validated, readable, meta, setValue } = data;
-    metadata[key] = setValue(validated[readable] || meta);
+    const metaRef = validated.hasOwnProperty(readable)
+      ? validated[readable]
+      : meta;
+
+    metadata[key] = setValue(metaRef);
   }
 
   const assignMetaValue = (key) => {
