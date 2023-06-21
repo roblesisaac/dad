@@ -7,15 +7,17 @@ export default (api, baseUrl) => {
     const admin = protect('admin');
     const member = protect('member');
 
-    member.post('/address', db.save);
-    member.get('/address/:key?', concatUserid, db.get);
-    member.put('/address/:key?', authorizeUserAccess, db.update);
-    member.delete('/address/:key?', authorizeUserAccess, db.erase);
+    member.post('/addresses', db.save);
+    member.get('/addresses/:key?', concatUserid, db.get);
+    member.put('/addresses/:key?', authorizeUserAccess, db.update);
+    member.delete('/addresses/:key?', authorizeUserAccess, db.erase);
 
     admin.get('/alladdresses/:key?', db.get);
 
     function concatUserid(req, _, next) {
-        req.query.userid = req.user._id;
+        for (const key in req.query) {
+            req.query[key] = req.user._id + req.query[key];
+        }
         next();
     }
 

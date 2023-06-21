@@ -4,12 +4,12 @@ import { isEmptyObject } from '../../../src/utils';
 import validator from './validator';
 import { isMeta, siftOutLabelAndFetch } from './utils';
 
-export default function(collectionName, schema) {
+export default function(collectionName, schema, globalFormatting) {
     if(typeof collectionName !== 'string') {
         throw error(`Collection names for records should be a string`);
     }
 
-    const validate = validator.build(collectionName, schema);
+    const validate = validator.build(collectionName, schema, globalFormatting);
 
     const save = async (body, req) => {
         const { keyGen, validated, metadata } = await validate.forSave(body, req);

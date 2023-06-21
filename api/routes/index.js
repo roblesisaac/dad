@@ -2,7 +2,7 @@ import { http } from '@ampt/sdk';
 import { Router } from 'express';
 
 import address from './address';
-import dataApi from './data';
+// import dataApi from './data';
 import db from './db';
 import users from './users';
 import messages from './messages';

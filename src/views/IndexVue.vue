@@ -160,15 +160,10 @@ const car = ref(emptyCar());
 onMounted(async () => {
   sticky.stickify(stickys);
 
-  await api.get('/api/cars').then(fetchedCars => {
-    console.log({ fetchedCars });
-    cars.value = fetchedCars;
-  });
-
   await api.get('/db/users').then(response => {
     users.value = response;
     loading.value = false;
-  }).catch(e => loading.value=false);
+  }).catch(_ => loading.value=false);
 });
 
 onUnmounted(() => {

@@ -54,6 +54,7 @@ export function checkLoggedIn(req, res, next) {
 }
 
 export function checkVerified(req, res, next) {
+  console.log('checking verified...');
     const { user } = req;
   
     const redirect = Location => {
@@ -62,13 +63,18 @@ export function checkVerified(req, res, next) {
     }
   
     if(!req.isAuthenticated()) {
+      console.log('not authed')
       return redirect('/login');
     }
+
+    console.log('is authed');
   
     if(user.email_verified === true) {
+      console.log('is verified')
       return next()
     }
   
+    console.log('not verified');
     redirect('/verify');
 }
 

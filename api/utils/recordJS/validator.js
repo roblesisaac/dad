@@ -7,6 +7,24 @@ import {
 const validate = function() {
   let data = {};
 
+  const applyFormatting = (key) => {
+    const { schema, validKey } = data;
+    const { lowercase, uppercase } = schema[key];
+    const format = value => lowercase
+      ? value.toLowerCase()
+      : uppercase
+      ? value.toUpperCase()
+      : value;
+
+    data.validKey = format(validKey);
+  }
+
+  const applyGlobalFormatting = async (globalFormatting) => {
+    const { validKey } = data;
+
+    data.validKey = await globalFormatting(validKey);
+  }
+
   const applyMetaMethod = async (key) => {
     const { 
       metadata, 
@@ -18,32 +36,11 @@ const validate = function() {
     } = data;
 
     try {
-      metadata[key] = setValue(await metaValue(validated || body, req));
+      const validMeta = await metaValue(validated || body, req);
+
+      metadata[key] = setValue(validMeta);
     } catch(error) {
       err(`Failed to validate meta '${key}': ${body[key]} ↓↓↓
-      ${error.message}`);
-    }
-  }
-
-  const applySchemaKeyType = async (key) => {
-    const {
-      body, 
-      validated,
-      req,
-      schemaKeyType
-    } = data;
-
-    const parameters = {
-      value: body[key],
-      item: body,
-      validated,
-      req: req 
-    }
-
-    try {
-      validated[key] = await schemaKeyType(body[key], parameters);
-    } catch (error) {
-      err(`Failed to validate schema key '${key}': ${body[key]} ↓↓↓
       ${error.message}`);
     }
   }
@@ -99,11 +96,41 @@ const validate = function() {
     throw new Error(message);
   }
 
-  const hasDefault = (key) => {
+  const getValidKey = async (key) => {
+    const {
+      body, 
+      validated,
+      req,
+      schemaKeyType
+    } = data;
+
+    const parameters = {
+      value: body[key],
+      item: body,
+      validated,
+      req: req 
+    }
+
+    data.validKey = await schemaKeyType(body[key], parameters);
+  }
+
+  const hasDefault = key => {
     const { schema } = data;
 
     return (schema[key]).hasOwnProperty('default');
   }
+
+  const hasFormatting = key => {
+    const { schema } = data;
+
+    if(typeof schema[key] !== 'object' || Array.isArray(schema[key])) {
+      return;
+    }
+
+    const formats = ['lowercase', 'uppercase'];
+
+    return formats.some(format => schema[key].hasOwnProperty(format));
+  };
 
   const initData = (collectionName, schema, body, req) => ({
     collectionName,
@@ -172,7 +199,7 @@ const validate = function() {
   }
 
   return {
-    init: async (collectionName, schema, body, req) => {
+    init: async (collectionName, schema, body, req, globalFormatting) => {
       data = initData(collectionName, schema, body, req);
 
       for(const key in schema) {
@@ -221,7 +248,23 @@ const validate = function() {
           continue;
         }
 
-        await applySchemaKeyType(key);
+        try {
+          await getValidKey(key);
+
+          if(hasFormatting(key)) {
+            applyFormatting(key)
+          }
+  
+          if(globalFormatting) {
+            await applyGlobalFormatting(globalFormatting);
+          }
+  
+          data.validated[key] = data.validKey;
+
+        } catch(error) {
+          err(`Failed to validate schema '${key}': ${data.body[key]} ↓↓↓
+          ${error.message}`);
+        }
       }
 
       for(const metaKey in data.metadata) {
@@ -246,15 +289,15 @@ const validate = function() {
 
       return data;
     },
-    build: (collectionName, schema) => ({
+    build: (collectionName, schema, globalFormatting) => ({
       async forSave(body, req) {        
         const keyGen = buildSchemaId(collectionName);
-        const { validated, metadata } = await validate.init(collectionName, schema, body, req);
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting);
 
         return { keyGen, validated, metadata };
       },
       async forUpdate(body, req) {
-        const { validated, metadata } = await validate.init(collectionName, schema, body, req);
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting);
 
         return { validated, metadata };    
       }
