@@ -18,9 +18,10 @@ const validate = function() {
     } = data;
 
     try {
-      metadata[key] = setValue(await metaValue(validated, req));
+      metadata[key] = setValue(await metaValue(validated || body, req));
     } catch(error) {
-      err(`Error when validating ${key}: ${body[key]}<br/>'${error.message}'`);
+      err(`Failed to validate meta '${key}': ${body[key]} ↓↓↓
+      ${error.message}`);
     }
   }
 
@@ -32,11 +33,24 @@ const validate = function() {
       schemaKeyType
     } = data;
 
-    try {
-      validated[key] = await schemaKeyType(body[key], body, req || validated);
-    } catch (error) {
-      err(`${key}: ${body[key]} <br/>'${error.message}'`);
+    const parameters = {
+      value: body[key],
+      item: body,
+      validated,
+      req: req 
     }
+
+    try {
+      validated[key] = await schemaKeyType(body[key], parameters);
+    } catch (error) {
+      err(`Failed to validate schema key '${key}': ${body[key]} ↓↓↓
+      ${error.message}`);
+    }
+  }
+
+  const assignBodyKeyToValidated = (key) => {
+    const { validated, body } = data;
+    return validated[key] = body[key];
   }
 
   const assignDefaultProp = (key) => {
@@ -83,25 +97,6 @@ const validate = function() {
 
   const err = (message) => {
     throw new Error(message);
-  }
-
-  const handleArray = (key) => {
-    const { collectionName, validated, body, schemaKeyType } = data;
-    const nestedSchema = schemaKeyType[0] || {};
-        
-    validated[key] = body[key]
-        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
-        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
-  }
-
-  const handleObject = (key) => {
-    const { collectionName, schema, body, validated } = data;
-    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
-  }
-
-  const handleWild = (key) => {
-    const { validated, body } = data;
-    return validated[key] = body[key];
   }
 
   const hasDefault = (key) => {
@@ -151,6 +146,20 @@ const validate = function() {
 
   const isWild = (symbol) => symbol === '*';
 
+  const recursivelyHandleArray = (key) => {
+    const { collectionName, validated, body, schemaKeyType } = data;
+    const nestedSchema = schemaKeyType[0] || {};
+        
+    validated[key] = body[key]
+        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
+        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
+  }
+
+  const recursivelyHandleObject = (key) => {
+    const { collectionName, schema, body, validated } = data;
+    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
+  }
+
   const updateData = (key) => {
     const { schema } = data;
     const { type, value } = schema[key] || {};
@@ -185,7 +194,7 @@ const validate = function() {
         }
 
         if(isWild(data.schemaKeyType)) {
-          handleWild(key);
+          assignBodyKeyToValidated(key);
           continue;
         }
 
@@ -203,12 +212,12 @@ const validate = function() {
         }
 
         if(isType(data).array) {
-          handleArray(key);
+          recursivelyHandleArray(key);
           continue;
         }
 
         if(isType(data).object) {
-          handleObject(key);
+          recursivelyHandleObject(key);
           continue;
         }
 

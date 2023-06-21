@@ -8,7 +8,7 @@ const orderSchema = Record('orders', {
       qty: { type: Number, required: true },
       image: { type: String, required: true },
       price: { type: Number, required: true },
-      product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+      product: { type: String, ref: 'Product', required: true },
     },
   ],
   shippingAddress: {

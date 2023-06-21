@@ -2,7 +2,7 @@ import Record from '../utils/recordJS';
 
 const addressSchema = Record('addresses', {
     userid: { 
-        type: (userid, address, req) => req.user._id,
+        type: (_, { req }) => req.user._id,
         ref: 'users' 
     },
     fullName: {
@@ -14,7 +14,7 @@ const addressSchema = Record('addresses', {
     postalCode: { type: String, required: true },
     country: { type: String, required: true },
     phoneNumber: { 
-        value: phoneNum => phoneNum.replace(/\D/g, ''), 
+        value: itm => itm.replace(/\D/g, ''), 
         required: true 
     },
     isDefault: { type: Boolean, default: false },

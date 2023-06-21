@@ -11,11 +11,11 @@ const cars = Record('cars', {
     engine: String,
     label1: {
         name: 'ymm',
-        value: input => input.year+input.make+input.model+input.submodel
+        value: itm => itm.year+itm.make+itm.model+itm.submodel
     },
     label2: {
         name: 'mm',
-        value: input => input.make+input.model+input.submodel
+        value: itm => itm.make+itm.model+itm.submodel
     }
 });
 
