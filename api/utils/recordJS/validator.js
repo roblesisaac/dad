@@ -93,10 +93,11 @@ const validate = function() {
   : undefined;
 
   const concatMetaRefs = (key) => {
-    const { metaValue, metadata, validated, setValue } = data;
+    const { metadata, validated, setValue } = data;
+    const concatArray = metadata[key].concat;
     let concatedRefs = '';
 
-    metaValue.forEach(ref => {
+    concatArray.forEach(ref => {
       concatedRefs += validated[ref];
     });
 
@@ -152,6 +153,11 @@ const validate = function() {
     req,
     schemaKeyType: null
   })
+
+  const isAConcat = key => {
+    const { metadata } = data;
+    return metadata[key].hasOwnProperty('concat');
+  }
 
   const isADuplicate = async (key) => {
     const { schema, body, collectionName } = data;
@@ -292,7 +298,7 @@ const validate = function() {
           continue;
         }
 
-        if(Array.isArray(data.metaValue)) {
+        if(isAConcat(metaKey)) {
           concatMetaRefs(metaKey);
           continue;
         }

@@ -15,7 +15,7 @@ const addressSchema = Record('addresses', {
         label1: 'userid',
         label2: {
             name: 'fullName',
-            value: ['userid', 'fullName', 'phoneNumber']
+            concat: ['userid', 'fullName', 'phoneNumber']
         },
         label3: {
             name: 'phoneNumber',
