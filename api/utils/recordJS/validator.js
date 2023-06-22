@@ -83,7 +83,7 @@ const validate = function() {
     metadata[key] = setValue(metaValue);
   }
 
-  const bookmarkForLater = (key) => {
+  const bookmarkMetaForLater = (key) => {
     const { metadata, schema } = data;
     metadata[key] = schema[key];
   }
@@ -145,7 +145,7 @@ const validate = function() {
   const isADuplicate = async (key) => {
     const { schema, body, collectionName } = data;
     const query = { [key]: body[key] };
-    
+
     const { 
       key: duplicateKey,
       items
@@ -208,7 +208,7 @@ const validate = function() {
         data = updateData(key);
 
         if(isMeta(key)) {
-          bookmarkForLater(key);
+          bookmarkMetaForLater(key);
           continue;
         }
 
