@@ -92,6 +92,17 @@ const validate = function() {
   ? `${collectionName}:${buildId()}` 
   : undefined;
 
+  const concatMetaRefs = (key) => {
+    const { metaValue, metadata, validated, setValue } = data;
+    let concatedRefs = '';
+
+    metaValue.forEach(ref => {
+      concatedRefs += validated[ref];
+    });
+
+    metadata[key] = setValue(concatedRefs);
+  }
+
   const err = (message) => {
     throw new Error(message);
   }
@@ -278,6 +289,11 @@ const validate = function() {
     
         if(isReferenceToBody(data)) {
           assignMetaReference(metaKey);
+          continue;
+        }
+
+        if(Array.isArray(data.metaValue)) {
+          concatMetaRefs(metaKey);
           continue;
         }
 
