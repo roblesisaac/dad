@@ -69,11 +69,6 @@ const validate = function() {
     }
   }
 
-  const assignMetaPlaceholder = (key) => {
-    const { metadata, schema } = data;
-    metadata[key] = schema[key];
-  }
-
   const assignMetaReference = (key) => {
     const { metadata, validated, readable, meta, setValue } = data;
     const metaRef = validated.hasOwnProperty(readable)
@@ -88,6 +83,11 @@ const validate = function() {
     metadata[key] = setValue(metaValue);
   }
 
+  const bookmarkForLater = (key) => {
+    const { metadata, schema } = data;
+    metadata[key] = schema[key];
+  }
+
   const buildSchemaId = (collectionName) => collectionName 
   ? `${collectionName}:${buildId()}` 
   : undefined;
@@ -96,7 +96,7 @@ const validate = function() {
     throw new Error(message);
   }
 
-  const getValidKey = async (key) => {
+  const getValidatedValue = async (key) => {
     const {
       body, 
       validated,
@@ -111,7 +111,7 @@ const validate = function() {
       req: req 
     }
 
-    data.validKey = await schemaKeyType(body[key], parameters);
+    return await schemaKeyType(body[key], parameters);
   }
 
   const hasDefault = key => {
@@ -144,10 +144,12 @@ const validate = function() {
 
   const isADuplicate = async (key) => {
     const { schema, body, collectionName } = data;
+    const query = { [key]: body[key] };
+    
     const { 
       key: duplicateKey,
       items
-    } = await siftOutLabelAndFetch(schema, body, collectionName) || {};
+    } = await siftOutLabelAndFetch(schema, query, collectionName) || {};
 
     const dupKey = duplicateKey
       ? duplicateKey
@@ -173,20 +175,6 @@ const validate = function() {
 
   const isWild = (symbol) => symbol === '*';
 
-  const recursivelyHandleArray = (key) => {
-    const { collectionName, validated, body, schemaKeyType } = data;
-    const nestedSchema = schemaKeyType[0] || {};
-        
-    validated[key] = body[key]
-        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
-        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
-  }
-
-  const recursivelyHandleObject = (key) => {
-    const { collectionName, schema, body, validated } = data;
-    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
-  }
-
   const updateData = (key) => {
     const { schema } = data;
     const { type, value } = schema[key] || {};
@@ -198,6 +186,20 @@ const validate = function() {
     };
   }
 
+  const validateItemsInArray = (key) => {
+    const { collectionName, validated, body, schemaKeyType } = data;
+    const nestedSchema = schemaKeyType[0] || {};
+        
+    validated[key] = body[key]
+        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
+        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
+  }
+
+  const validateSubObject = (key) => {
+    const { collectionName, schema, body, validated } = data;
+    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
+  }
+
   return {
     init: async (collectionName, schema, body, req, globalFormatting) => {
       data = initData(collectionName, schema, body, req);
@@ -206,17 +208,17 @@ const validate = function() {
         data = updateData(key);
 
         if(isMeta(key)) {
-          assignMetaPlaceholder(key);
+          bookmarkForLater(key);
           continue;
         }
 
         if(isUnique(schema[key])) {
           if (!body[key]) {
-            err(`Please provide a valid value for '${key}'.`);
+            err(`Please provide a unique value for '${key}'.`);
           }
 
           if (await isADuplicate(key)) {
-            err(`A duplicate item was found with ${key}=${body[key]}`);
+            err(`A duplicate item was found with '${key}=${body[key]}'`);
           }
         }
 
@@ -239,17 +241,17 @@ const validate = function() {
         }
 
         if(isType(data).array) {
-          recursivelyHandleArray(key);
+          validateItemsInArray(key);
           continue;
         }
 
         if(isType(data).object) {
-          recursivelyHandleObject(key);
+          validateSubObject(key);
           continue;
         }
 
         try {
-          await getValidKey(key);
+          data.validKey = await getValidatedValue(key);
 
           if(hasFormatting(key)) {
             applyFormatting(key)
