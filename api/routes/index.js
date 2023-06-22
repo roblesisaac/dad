@@ -8,8 +8,14 @@ import users from './users';
 import messages from './messages';
 
 export default (app) => {
-    const api = Router();      
+    const api = Router();
 
+    // Api startpoint
+    api.get('/api', (_, res) => {
+        res.json(`You've reached the starting point of our API!`);
+    });
+
+    // Api routes
     [
         address, 
         db,
@@ -17,6 +23,11 @@ export default (app) => {
         users,
         // dataApi
     ].forEach(route => route(api, '/api'));
+    
+    // Api catch all
+    api.get('/api/*', (req, res) => {
+        res.json(`Collection named '${req.params[0]}' not found`);
+    });
 
     // Serve index.html on all 404s
     api.use(async (_, res) => {
