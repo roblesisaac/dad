@@ -72,6 +72,16 @@ export function checkVerified(req, res, next) {
     redirect('/verify');
 }
 
+export function concatUseridToReq(req, _, next) {
+  for (const key in req.query) {
+      if(key === 'select') {
+          continue;
+      }
+      req.query[key] = req.user._id + req.query[key];
+  }
+  next();
+}
+
 export {
   passport,
   SessionStore,
