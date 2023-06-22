@@ -7,16 +7,20 @@ import {
 const validate = function() {
   let data = {};
 
+  const applyFormat = (value, formats) => {
+    const { lowercase, uppercase } = formats;
+
+    return lowercase && value.toLowerCase
+    ? value.toLowerCase()
+    : uppercase && value.toUpperCase
+    ? value.toUpperCase()
+    : value;
+  }
+
   const applyFormatting = (key) => {
     const { schema, validKey } = data;
-    const { lowercase, uppercase } = schema[key];
-    const format = value => lowercase && value.toLowerCase
-      ? value.toLowerCase()
-      : uppercase && value.toUpperCase
-      ? value.toUpperCase()
-      : value;
 
-    data.validKey = format(validKey);
+    data.validKey = applyFormat(validKey, schema[key]);
   }
 
   const applyGlobalFormatting = async (globalFormatting) => {
@@ -24,14 +28,7 @@ const validate = function() {
     let formatted;
 
     if(typeof globalFormatting === 'object') {
-      const { lowercase, uppercase } = globalFormatting;
-      const format = value => lowercase && value.toLowerCase
-        ? value.toLowerCase()
-        : uppercase && value.toUpperCase
-        ? value.toUpperCase()
-        : value;
-
-      formatted = format(validKey);
+      formatted = applyFormat(validKey, globalFormatting);
     } else {
       formatted = await globalFormatting(validKey);
     }
