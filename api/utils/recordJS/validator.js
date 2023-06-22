@@ -10,9 +10,9 @@ const validate = function() {
   const applyFormatting = (key) => {
     const { schema, validKey } = data;
     const { lowercase, uppercase } = schema[key];
-    const format = value => lowercase
+    const format = value => lowercase && value.toLowerCase
       ? value.toLowerCase()
-      : uppercase
+      : uppercase && value.toUpperCase
       ? value.toUpperCase()
       : value;
 
@@ -22,7 +22,13 @@ const validate = function() {
   const applyGlobalFormatting = async (globalFormatting) => {
     const { validKey } = data;
 
-    data.validKey = await globalFormatting(validKey);
+    const formatted = await globalFormatting(validKey) || validKey;
+
+    if(!formatted) {
+      console.error(`Failed to format global formatting for ${data.collectionName}`);
+    }
+
+    data.validKey = formatted || validKey;
   }
 
   const applyMetaMethod = async (key) => {
