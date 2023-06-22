@@ -26,12 +26,8 @@ const addressSchema = Record('addresses', {
             value: itm => itm.userid+itm.city
         }
     }, 
-    value => { 
-        if(value.toLowerCase) {
-            return value.toLowerCase();
-        }
-
-        return value;
+    {
+        lowercase: true
     }
 );
 

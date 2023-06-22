@@ -20,12 +20,24 @@ const validate = function() {
   }
 
   const applyGlobalFormatting = async (globalFormatting) => {
-    const { validKey } = data;
+    const { key, validKey } = data;
+    let formatted;
 
-    const formatted = await globalFormatting(validKey) || validKey;
+    if(typeof globalFormatting === 'object') {
+      const { lowercase, uppercase } = globalFormatting;
+      const format = value => lowercase && value.toLowerCase
+        ? value.toLowerCase()
+        : uppercase && value.toUpperCase
+        ? value.toUpperCase()
+        : value;
 
-    if(!formatted) {
-      console.error(`Failed to format global formatting for ${data.collectionName}`);
+      formatted = format(validKey);
+    } else {
+      formatted = await globalFormatting(validKey);
+    }
+
+    if(!formatted && typeof formatted !== 'boolean') {
+      console.error(`Failed to format key '${key}' with global formatting for ${data.collectionName}`);
     }
 
     data.validKey = formatted || validKey;
