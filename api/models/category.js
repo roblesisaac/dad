@@ -7,6 +7,7 @@ const categorySchema = Record('categories', {
         unique: true
     },
     image: String,
+    caption: String,
     description: String,
 });
 

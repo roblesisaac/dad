@@ -9,7 +9,7 @@ const messageSchema = Record('messages', {
     },
     message: {
         value: encrypt,
-        get: decrypt, 
+        get: decrypt,
         required: true
     },
     recipient: { type: String, required: true },

@@ -4,7 +4,7 @@ const brandSchema = Record('brands', {
     name: { 
         type: String, 
         required: true, 
-        unique: true 
+        unique: true
     }
 });
 
