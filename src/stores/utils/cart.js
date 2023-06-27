@@ -1,33 +1,38 @@
 import { ref } from 'vue';
-import { Aid } from '../../../api/utils/aidkit';
 
-export default new Aid({
-    state: {
+const Cart = (function() {
+    const state = {
         items: ref([]),
-        total: (state) => {
-            let total = 0;
-
-            state.items.value.forEach(item => {
-                const { price, qty } = item;
-                total += price * qty;
-            });
-
-            return total;
+        total: () => {
+            return state.items.value
+            .reduce((acc, { price, qty }) => acc + price * qty, 0)
         }
-    },
-    instruct: {
-        addItem: (item) => [
-            { push: item, to: 'items.value' },
-            { log: 'items' }
-            //addItemToDb
-        ],
-        removeItem: (index) => [
-            { find: index, inside: 'items.value' },
-            { cartItem: '_output' },
-            { remove: index, from: 'items.value' },
-            { log: 'output' }
-            //removeItemFromDb
-        ],
+    };
+
+    const findItem = (sku, data) => {
+        const { value: items } = state.items;
+        const index = items.findIndex(item => item.sku === sku);
+
+        data.index = index;
+    };
+      
+
+    const pushItem = (item) => state.items.value.push(item);
+
+    const removeItem = ({ value: array }) => {
+        array.splice(index, 1);
+    };
+
+    return {
+        state,
+        addItem: (item) => {
+            pushItem(item);
+            console.log(state.items.value.length);
+        },
+        removeItem: (sku) => {
+            const index = findItem(sku);
+            removeItem(index, state.items);
+        },
         // changeQty: (item, qty) => [
         //     //updateItemInDb(item)
         // ],
@@ -37,4 +42,6 @@ export default new Aid({
         // ],
         // placeOrder: []
     }
-});
+})();
+
+export default Cart;

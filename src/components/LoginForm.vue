@@ -2,9 +2,9 @@
   <transition>
   <div v-if="action" class="grid p30">
     <div class="cell-1">
-      {{  cart.total }}
+      {{  cart.state.total() }}
       <br>
-      {{  cart.items }}
+      {{  cart.state.items }}
       <form @submit.prevent="loginNative" class="grid r10">         
         <fieldset class="cell-1">
             <div class="grid">
