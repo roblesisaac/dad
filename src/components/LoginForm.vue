@@ -148,7 +148,7 @@ async function loginNative() {
   
   const url =  baseUrl + `/${method}/native`;
   const body = { recaptchaToken, ...login.value };
-  const settings = { freshRedirect: true };
+  const settings = { reloadPage: true };
 
   await api.post(url, body, settings).then(notify);
   loginLoading.value = false;

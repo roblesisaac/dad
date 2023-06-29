@@ -3,10 +3,8 @@ import { ref } from 'vue';
 const Cart = (function() {
     const state = {
         items: ref([]),
-        total: () => {
-            return state.items.value
-            .reduce((acc, { price, qty }) => acc + price * qty, 0)
-        }
+        total: () => state.items.value
+        .reduce((acc, { price, qty }) => acc + price * qty, 0)
     };
 
     const findItem = (sku, data) => {
@@ -27,7 +25,7 @@ const Cart = (function() {
         state,
         addItem: (item) => {
             pushItem(item);
-            console.log(state.items.value.length);
+            console.log(state.items.value);
         },
         removeItem: (sku) => {
             const index = findItem(sku);

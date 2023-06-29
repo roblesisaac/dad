@@ -1,14 +1,12 @@
-import { Aid, convert } from '../../../api/utils/aidkit';
-
-export default new Aid({
-    state: {
+const Sticky = function() {
+    let state = {
         registered: {},
         scroll: {
             last: 0,
             direction: null
         },
         stuck: { height: 0 },
-        currentScreenSize: () => {
+        currentScreenSize() {
             const matches = (media) => window.matchMedia(media).matches;
 
             return matches("(max-width: 47.9375em)")
@@ -17,310 +15,335 @@ export default new Aid({
                 ? 'medium'
                 : 'large'
         }
-    },
-    steps: {
-        defineSelector() {
-            const { item, learn } = this;
+    };
 
-            let { selector, stickUnder, unstickWhen, screenSize } = item;
+    function buildBox(el) {
+        const { height, top, left, width } = el.getBoundingClientRect();
+        const { marginTop, marginLeft } = window.getComputedStyle(el);
+      
+        return {
+          currentTop: top,
+          top: el.offsetTop - parseFloat(marginTop),
+          height,
+          left: left - parseFloat(marginLeft),
+          width,
+        };
+    }
+      
 
-            const defaultSettings = { stickUnder, unstickWhen};
+    function buildHandleResize(data) {    
+        let prevWindowSize = window.innerWidth;
 
-            learn({ 
-                selector: selector || item, 
-                validScreenSizes: screenSize,
-                defaultSettings
-            });
-        },
-        deregister() {
-            const { selector, registered } = this;
-
-            const item = registered[selector];
-            
-            if(!item) return;
-
-            const { handlers } = item;
-
-            for(let eventName in handlers) {
-                const method = handlers[eventName];
-                
-                if(eventName === 'resize') method({ deRegistering: true });
-                window.removeEventListener(eventName, method);
+        return ({ deRegistering }) => {
+            if(deRegistering) {
+                return makeUnsticky(data);
             }
             
-            delete registered[selector];
-        },
-        findElement() {
-            const { selector, learn } = this;
+            const currentWindowSize = window.innerWidth;
+            const sizeDifference = Math.abs(prevWindowSize - currentWindowSize);
 
+            prevWindowSize = currentWindowSize;
+            if (sizeDifference > 1) {
+                makeUnsticky(data);
+            }
+        }
+    }
+
+    function buildPlaceHolder(box) {
+        const { height, width } = box;
+        const elem = document.createElement('div');
+        const { style } = elem;
+        
+        style.height = height+'px';
+        style.width = width+'px';
+        style.visibility = 'hidden';
+
+        return elem;
+    }
+
+    function buildScrollHandler(instanceData) {
+        const { el, selector, validScreenSizes } = instanceData;
+        const { stuck } = state;
+
+        const data = {
+            box: null,
+            isSticky: false,
+            initialStyle: el.getAttribute('style'),
+            ...instanceData
+        };
+
+        return () => {
+            if(!screenIsValid(validScreenSizes)) return;
+            
+            data.box = data.box || buildBox(el);
+
+            const settings = currentSettings(data);
+            const { stickUnder, unstickWhen } = settings;
+
+            const Stuck = () => stuck[selector];
+            const StickUnder = stuck[stickUnder];
+            const Top = data.box.top;
+            const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
+
+            const stickingPoint = Stuck()
+                ? Stuck().stickingPoint
+                : StickUnder
+                ? Top - StickUnder.height - StickUnder.top
+                : Top - stuck.height;
+
+            setScrollDirection(currentScroll);
+
+            if(currentScroll <= stickingPoint) {
+                return makeUnsticky(data);
+            }
+
+            makeSticky(stickingPoint, data);
+
+            if(!unstickWhen) return;
+
+            const topOfUnstick = unstickingEl(el, settings).top;
+
+            if(topOfUnstick < Stuck().bottom) {
+                slideUp(data, settings);
+            }
+        }
+    }
+
+    function convertToArray (items) {
+        return Array.isArray(items) ? items : [items];
+    }
+
+    function currentSettings({ defaultSettings, sticky }) {
+        const presets = sticky[state.currentScreenSize()] || {};                
+        
+        Object.keys(defaultSettings).forEach(name => {
+            presets[name] = presets[name] || defaultSettings[name];
+        });
+        
+        return presets;
+    }
+
+    function defineSelectorInfo(sticky) {
+        let { selector, stickUnder, unstickWhen, screenSize } = sticky;
+
+        return {
+            selector: selector || sticky, 
+            validScreenSizes: screenSize,
+            defaultSettings: { stickUnder, unstickWhen }
+        };
+    }
+
+    function deregister(selector) {
+        const { registered } = state;
+
+        const item = registered[selector];
+        
+        if(!item) return;
+
+        const { handlers } = item;
+
+        for(const eventName in handlers) {
+            const method = handlers[eventName];
+            
+            if(eventName === 'resize') method({ deRegistering: true });
+            window.removeEventListener(eventName, method);
+        }
+
+        delete registered[selector];
+    }
+
+    function isAlreadyRegistered (selector) {
+        return !!state.registered[selector];
+    }
+
+    function makeSticky (stickingPoint, data) {
+        if(data.isSticky) {
+            return;
+        }
+
+        data.isSticky = true;
+
+        const { el, box, selector } = data;
+        const { stuck } = state;
+        let { top, left, height, width } = box;
+
+        top = top - stickingPoint;
+
+        const stickyStyle = {
+            top: top+'px',
+            left: left+'px',
+            width: width+'px',
+            zIndex: 100 + stuck.height
+        };
+
+        //Make sticky
+        el.classList.add('stickify');
+        Object.assign(el.style, stickyStyle);
+
+        //Add placeholder to dom
+        data.placeholder = data.placeholder || buildPlaceHolder(box);
+        el.parentNode.insertBefore(data.placeholder, el.nextSibling);
+
+        //Add data to state
+        const bottom = top + box.height;
+        stuck[selector] = { height, stickingPoint, top, bottom };
+        stuck.height += height;
+    }
+
+    function makeUnsticky(data) {
+        const { box, el, initialStyle, placeholder, selector } = data;
+
+        if(!box) {
+            return;
+        }
+
+        const { stuck } = state;
+        const { height } = box;
+
+        el.style = initialStyle;
+        el.classList.remove('stickify');
+        data.box = buildBox(el);
+
+        if(!data.isSticky) return;
+
+        data.isSticky = false;
+        stuck.height -= height;
+        delete stuck[selector];
+
+        if (el.nextSibling === placeholder) {
+            el.parentNode.removeChild(placeholder);
+        }
+    }
+
+    function registerElement(handlerData) {
+        const { selector, handlers } = handlerData;
+
+        const options = { passive: true };
+
+        for (let name in handlers) {
+            window.addEventListener(name, handlers[name], options);
+        }
+
+        state.registered[selector] = { handlers };
+    }
+
+    function screenIsValid(validScreenSizes) {
+        if(!validScreenSizes) {
+            return true;
+        }
+
+        let screens = convertToArray(validScreenSizes),
+            negates;
+
+        screens.forEach(size => negates = negates || size.includes('-'));
+
+        if(negates) {
+            const defaults = ['small', 'medium', 'large'];
+            screens = screens.concat(defaults);
+        }
+
+        return screens.includes(state.currentScreenSize())
+            && !screens.includes('-'+state.currentScreenSize());
+    }
+
+    function setScrollDirection(currentScroll) {
+        const { scroll } = state;
+
+        if(currentScroll > scroll.last) {
+            scroll.direction = 'down';
+        }
+
+        if(currentScroll < scroll.last) {
+            scroll.direction = 'up';
+        }
+
+        // For Mobile or negative scrolling
+        scroll.last = currentScroll <= 0 ? 0 : currentScroll;
+    }
+
+    function slideUp(data, settings) {
+        const { el, box } = data;
+        let currentTop = unstickingEl(el, settings).top
+
+        if(state.scroll.direction === 'down') {
+            --currentTop;
+        }
+        el.style.top = currentTop - box.height +'px';
+        el.style.zIndex = 99;
+    }
+
+    function stuckHeight(selector) {
+        const stuckEl = state.stuck[selector];
+        
+        return state.stuck.height -= stuckEl?.height || 0;
+    }
+
+    function unstickingEl(el, settings) {
+        const { stuck } = state;
+        const { unstickWhen } = settings;
+        const { touching, isSticky, reachesTop } = unstickWhen;
+
+        const selector = touching || isSticky || reachesTop;
+        const elem = document.querySelector(selector);
+        const box = buildBox(elem);                
+        let point;
+
+        if(touching) {
+            point = box.top + box.height;
+        }
+
+        if(isSticky) {
+            point = stuck[isSticky] 
+                ? stuck[isSticky].top 
+                : document.body.scrollHeight + 1;
+        }
+
+        if(reachesTop) {
+            point = box.top - el.height;
+        }
+
+        return { point, top: box.currentTop };
+    }
+
+    return { 
+        state,
+        _register(sticky) {            
+            const selectorInfo = defineSelectorInfo(sticky);
+            const { selector } = selectorInfo;
+
+            if(isAlreadyRegistered(selector)) {
+                return;
+            }
+            
             const el = document.querySelector(selector);
-
-            learn({ el });
-        },
-        initScrollHandler() {
-            const { next, el, stuck, selector, item, validScreenSizes, defaultSettings } = this;
-
-            let box,
-                settings,
-                placeholder,
-                initialStyle = el.getAttribute('style'),
-                isSticky = false;
-
-            const buildBox = (el) => {
-                const { height, top, left, width } = el.getBoundingClientRect();
-                const styles = window.getComputedStyle(el);
-                const marginTop = styles.getPropertyValue('margin-top');
-                const marginLeft = styles.getPropertyValue('margin-left');
-                
-                return {                    
-                    currentTop: top,
-                    top: el.offsetTop - parseFloat(marginTop),
-                    height,
-                    left: left - parseFloat(marginLeft),
-                    width,
-                };
-            };                  
-
-            const screenIsValid = () => {
-                if(!validScreenSizes) {
-                    return true;
-                }
-
-                let screens = convert.toArray(validScreenSizes),
-                    { currentScreenSize: current } = this,
-                    negates;
-
-                screens.forEach(size => negates = negates || size.includes('-'));
-
-                if(negates) {
-                    const defaults = ['small', 'medium', 'large'];
-                    screens = screens.concat(defaults);
-                }
-
-                return screens.includes(current)
-                    && !screens.includes('-'+current);
-            }
-
-            const unstickingEl = () => {
-                const { unstickWhen } = settings;
-                const { touching, isSticky, reachesTop } = unstickWhen;
-
-                const selector = touching || isSticky || reachesTop;
-                const elem = document.querySelector(selector);
-                const box = buildBox(elem);                
-                let point;
-
-                if(touching) {
-                    point = box.top + box.height;
-                }
-
-                if(isSticky) {
-                    point = stuck[isSticky] 
-                        ? stuck[isSticky].top 
-                        : document.body.scrollHeight + 1;
-                }
-
-                if(reachesTop) {
-                    point = box.top - el.height;
-                }
-
-                return { point, top: box.currentTop };
-            };
-
-            const buildPlaceHolder = (box) => {
-                const { height, width } = box;
-                const elem = document.createElement('div');
-                const { style } = elem;
-                
-                style.height = height+'px';
-                style.width = width+'px';
-                style.visibility = 'hidden';
-
-                return elem;
-            }
-
-            const currentSettings = () => {
-                const presets = item[this.currentScreenSize] || {};                
-                
-                Object.keys(defaultSettings).forEach(name => {
-                    presets[name] = presets[name] || defaultSettings[name];
-                });
-                
-                return presets;
-            }
-
-            const slideUp = () => {
-                let currentTop = unstickingEl().top
-
-                if(this.scroll.direction === 'down') {
-                    --currentTop;
-                }
-                el.style.top = currentTop - box.height +'px';
-                el.style.zIndex = 99;
-            }
-
-            const setScrollDirection = (currentScroll) => {
-                const { scroll } = this;
-
-                if(currentScroll > scroll.last) {
-                    scroll.direction = 'down';
-                }
-
-                if(currentScroll < scroll.last) {
-                    scroll.direction = 'up';
-                }
-
-                // For Mobile or negative scrolling
-                scroll.last = currentScroll <= 0 ? 0 : currentScroll;
-            }
-
-            const makeSticky = (stickingPoint) => {                
-                if(isSticky) {
-                    return;
-                }
-
-                let { top, left, height, width } = box;
-
-                isSticky = true;
-                top = top - stickingPoint;
-                const stickyStyle = {
-                    top: top+'px',
-                    left: left+'px',
-                    width: width+'px',
-                    zIndex: 100 + stuck.height
-                };
-
-                //Make sticky
-                el.classList.add('stickify');
-                Object.assign(el.style, stickyStyle);
-
-                //Add placeholder to dom
-                placeholder = placeholder || buildPlaceHolder(box);
-                el.parentNode.insertBefore(placeholder, el.nextSibling);
-
-                //Add data to state
-                const bottom = top + box.height;
-                stuck[selector] = { height, stickingPoint, top, bottom };
-                stuck.height += height;
-            };
-
-            const makeUnsticky = () => {
-                if(!box) return;
-
-                const { height } = box;
-                el.style = initialStyle;
-                el.classList.remove('stickify');
-                box = buildBox(el);
-
-                if(!isSticky) return;
-
-                isSticky = false;
-                stuck.height -= height;
-                delete stuck[selector];
-
-                if (el.nextSibling === placeholder) {
-                    el.parentNode.removeChild(placeholder);
-                }
-            }
-
-            const handleScroll = () => {
-                if(!screenIsValid()) return;
-
-                settings = currentSettings();
-                box = box || buildBox(el);
-
-                const { stickUnder, unstickWhen } = settings;
-
-                const Stuck = () => stuck[selector];
-                const StickUnder = stuck[stickUnder];
-                const Top = box.top;
-                const scroll = window.pageYOffset || document.documentElement.scrollTop;
-
-                const stickingPoint = Stuck()
-                    ? Stuck().stickingPoint
-                    : StickUnder
-                    ? Top - StickUnder.height - StickUnder.top
-                    : Top - stuck.height;
-
-                setScrollDirection(scroll);
-
-                if(scroll <= stickingPoint) {
-                    return makeUnsticky();
-                }
-
-                makeSticky(stickingPoint);
-
-                if(!unstickWhen) return;
-
-                if(unstickingEl().top < Stuck().bottom) {
-                    slideUp();
-                }
-            };
-
-            // Fixes resize glitch on mobile
-            let prevWindowSize = window.innerWidth;
-
-            const handleResize = ({ deRegistering }) => {
-                if(deRegistering) {
-                    return makeUnsticky();
-                }
-                
-                const currentWindowSize = window.innerWidth;
-                const sizeDifference = Math.abs(prevWindowSize - currentWindowSize);
-
-                prevWindowSize = currentWindowSize;
-                if (sizeDifference > 1) makeUnsticky();
-            }
+            const data = { el, ...selectorInfo, sticky };
 
             const handlers = {
-                resize: handleResize,
-                scroll: handleScroll
+                scroll: buildScrollHandler(data),
+                resize: buildHandleResize(data)
             }
-
-            next({ handlers });
+            
+            registerElement({ selector, handlers });
         },
-        isAlreadyRegistered() {
-            const { selector, registered, next } = this;
-
-            next(!!registered[selector]);
-        },
-        registerElement({ handlers }) {
-            const { selector, registered } = this;
-
-            const options = { passive: true };
-
-            for (let name in handlers) {
-                window.addEventListener(name, handlers[name], options);
+        stickify(sticks) {
+            for (const sticky of convertToArray(sticks)) {
+                Sticky._register(sticky);
             }
+        },
+        unstick(sticks) {
+            for(const sticky of convertToArray(sticks)) {
+                const selectorInfo = defineSelectorInfo(sticky);
 
-            registered[selector] = { handlers };
+                deregister(selectorInfo.selector);
+            }
+        },
+        unstickAll() {
+            for(const selector in state.registered) {
+                state.stuck.height -= stuckHeight(selector);
+                deregister(selector);
+            }
         }
-    },
-    instruct: {
-        _register: [
-            {
-                if: "isAlreadyRegistered",
-                false: [
-                    "findElement",
-                    "initScrollHandler",
-                    "registerElement"
-                ] 
-            }
-        ],
-        stickify: (stickys) => [
-            {
-                every: stickys,
-                async: [
-                    "defineSelector",
-                    "_register"
-                ]
-            }
-        ],
-        unstick: (stickys) => [
-            {
-                every: stickys,
-                run: ["defineSelector", "deregister"]
-            }
-        ]
-    }
-});
+    };
+}();
+
+export default Sticky;

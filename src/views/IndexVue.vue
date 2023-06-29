@@ -49,7 +49,7 @@
         developer sandbox by appending <code>/api</code> to the local dev server's
         localhost address.
       </p>
-      <div><b>{{  sticky.stuck.height }}</b></div>
+      <div>sticky.stuck.height</div>
       <div id="header"><b>Header</b></div>
       <h3>Edit this Vue.js app:</h3>
       <p>
@@ -160,14 +160,12 @@ const car = ref(emptyCar());
 onMounted(async () => {
   sticky.stickify(stickys);
 
-  await api.get('/db/users').then(response => {
-    users.value = response;
-    loading.value = false;
-  }).catch(_ => loading.value=false);
+  users.value = await api.get('/db/users');
+  loading.value = false;
 });
 
 onUnmounted(() => {
-  sticky.unstick(stickys);
+  sticky.unstickAll();
 });
 
 function addUser() {
@@ -181,14 +179,6 @@ function addUser() {
   for(var i=0; i<=100; i++) usrs.push(anotherUser)
 
   users.value = users.value.concat(usrs);
-}
-
-async function addCar(newCar) {
-  const carAdded = await api.post('/api/cars', newCar);
-  console.log({ carAdded });
-  cars.value = cars.value.concat(newCar);
-
-  car.value = emptyCar();
 }
 </script>
 
