@@ -10,8 +10,8 @@ export default (state) => {
         }
     });
 
-    const checkHuman = async ({ checkHuman }, body) => {
-        if(!checkHuman) return;
+    const checkHuman = async ({ checkHuman: shouldCheckHuman }, body) => {
+        if(!shouldCheckHuman) return;
         body.recaptchaToken = await fetchRecaptchaToken();
     };
 
@@ -31,14 +31,10 @@ export default (state) => {
     const handle = async (url, payload, settings) => {
         const response = await fetch(url, payload);
 
-        return await handleResponse(response, settings);
-    }
-
-    const handleResponse = async (response, settings) => {
-        const { redirected, url } = response;
+        const { redirected, url: redirectUrl } = response;
 
         if (redirected) {
-            redirectPath(settings, getPathName(url));
+            redirectPath(settings, getPathName(redirectUrl));
             return;
         }
 
@@ -55,19 +51,19 @@ export default (state) => {
         }
         
         return json;
-    };
+    }
 
-    const redirectPath = (settings, path) => {
-        if(!path) {
+    const redirectPath = (settings, newLocation) => {
+        if(!newLocation) {
             return;
         }
 
         if(settings?.reloadPage) {
-            window.location = path;
+            window.location = newLocation;
             return;
         }
         
-        router.push(path);
+        router.push(newLocation);
     }
     
     return {
