@@ -1,5 +1,5 @@
 import { encrypt, decrypt } from '../utils/helpers';
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const messageSchema = Record('messages', {
     userid: (_, { req }) => req.user._id,

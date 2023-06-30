@@ -1,4 +1,4 @@
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const cartSchema = Record('cart', {
     userid: (_, { req }) => req.user._id,

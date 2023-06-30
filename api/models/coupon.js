@@ -1,4 +1,4 @@
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const couponSchema = Record('coupons', {
     code: { type: String, required: true, unique: true },

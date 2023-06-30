@@ -1,4 +1,4 @@
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const categorySchema = Record('categories', {
     name: { 

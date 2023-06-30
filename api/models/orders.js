@@ -1,5 +1,5 @@
 import { data } from '@ampt/data';
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const orderSchema = Record('orders', {
     userid: (_, { req }) => req.user._id,

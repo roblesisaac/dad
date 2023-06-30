@@ -1,4 +1,4 @@
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 
 const reviewSchema = Record('reviews', {
     userid: (_, { req }) => req.user._id,

@@ -1,4 +1,4 @@
-import Record from '../utils/recordJS';
+import Record from '../utils/records';
 import bcrypt from 'bcryptjs';
 import { isValidEmail } from '../../src/utils';
 
