@@ -250,6 +250,10 @@
     color: var(--dark-gray);
 }
 
+.colorDarkestGray {
+    color: var(--darkest-gray);
+}
+
 .colorBlack {
     color: var(--black);
 }

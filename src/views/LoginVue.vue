@@ -1,6 +1,5 @@
 <template>
     <div class="grid">
-        <div class="cell-1"><AdminBar /></div>
         <div class="cell-1 cell-md-1-3"><LoginForm /></div>
         <div class="auto">{{ message }}</div>
     </div>
