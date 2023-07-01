@@ -19,15 +19,16 @@ import { load } from 'recaptcha-v3';
 import LoadingDots from './LoadingDots.vue';
 import { isValidEmail } from '../utils';
 import { useAppStore } from '../stores/app';
-const { api, cart } = useAppStore();
+const { api } = useAppStore();
+
+const { value:state } = ref({
+    email: null
+});
 
 const user = function() {
-    const state = ref({
-        email
-    });
+
 
     return {
-        state,
         sendPasswordReset: () => {
 
         }

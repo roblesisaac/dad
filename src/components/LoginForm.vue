@@ -120,7 +120,6 @@ const user = function() {
   }
 
   return {
-    state,
     changeAction(changeTo) {
       state.action = null;
 
@@ -179,7 +178,7 @@ const user = function() {
 
 onMounted(async () => {
   await user.initRecaptcha();
-  
+
   // if tried loading without recaptcha initialized, retry
   if(state.loginLoading) await user.loginNative();
 });
