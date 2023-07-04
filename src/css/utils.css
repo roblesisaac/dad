@@ -470,6 +470,10 @@
     position: fixed;  
 }
 
+.stretch-y {
+    height: 100vh;
+}
+
 .text-left, .left {
     text-align: left;
 }

@@ -27,15 +27,15 @@ export default (function() {
     },
     async find(req, res) {
       const collection = getCollectionName(req);
-      const filter = buildFilter(req, { _limit: 50 });  
+      const filter = buildFilter(req, { limit: 50 });  
       const data = await mongo.find(collection, filter);
 
       res.json(data)
     },
     async findOne(req, res) {
       const collection = getCollectionName(req);
-      const filter = buildFilter(req, { _id: req.params.id });  
-      const data = await mongo.findOne(collection, filter).then(next);
+      const filter = buildFilter(req, { id: req.params.id });  
+      const data = await mongo.findOne(collection, filter);
 
       res.json(data)
     },

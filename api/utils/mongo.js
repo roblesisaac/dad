@@ -4,108 +4,104 @@ import fetch from "node-fetch";
 
 const mongo = function() {
   const state = {
-    url: `https://data.mongodb-api.com/app/${params('DB_ID')}/endpoint/data/v1/action/`
+    baseUrl: `https://data.mongodb-api.com/app/${params('DB_ID')}/endpoint/data/v1/action/`
   };
-
-  function buildDeleteManyOptions(filter) {
+  
+  function buildDeleteManyOptions(collection, filter) {
     const options = { filter };
-      
-    return { options };
+    
+    return { collection, options };
   }
-
-  function buildDeleteOneOptions(id) {
+  
+  function buildDeleteOneOptions(collection, id) {
     const filter = { _id: { $oid: id } },
-        options = { filter };
-
-    return { options };
+    options = { filter };
+    
+    return { collection, options };
   }
-
-  function buildFindOptions(filter={}) {
+  
+  function buildFindOptions(collection, filter={}) {
     const options = {};
-
+    
     const formats = {
-      _id: (value) => {
+      id: (value) => {
         filter._id = { $oid: value };
       },
-      _limit: (value) => {
+      limit: (value) => {
         options.limit = Number(value);
-        delete filter._limit;
       },
-      _skip: (value) => {
+      skip: (value) => {
         options.skip = Number(value);
-        delete filter._skip;
       },
-      _select: (value) => {
+      select: (value) => {
         if(!value) return;
-
+        
         let projection = {};
-
+        
         value.split(" ").forEach(selection => {
           const hideProp = selection.includes("-");
-
+          
           selection = selection.replace("-", "");        
           projection[selection] = hideProp ? 0 : 1;
         });
-
+        
         options.projection = projection;
-        delete filter._select;
       }
     };
-      
+    
     const formatFilter = (prop) => {
-      if(prop in formats == "false") {
+      if(prop in formats === "false") {
         return;
       }
-
-      const currentValue = filter[prop],
-          format = formats[prop];
-
-      if(format) format(currentValue);
-    };
       
+      const currentValue = filter[prop],
+      format = formats[prop];
+      
+      if(format) format(currentValue);
+      delete filter[prop];
+    };
+    
     Object.keys(filter).forEach(formatFilter);
     
     options.filter = filter;
     
-    return options;
+    return { collection, options };
   }
-
-  function buildInsertOptions(data) {
+  
+  function buildInsertOptions(collection, data) {
     const propName = Array.isArray(data) ? "documents" : "document";
-
+    
     const options = { [propName]: data };
-
-    return options;
+    
+    return { collection, options };
   }
-
-  function buildUpdateOneOptions(id, body) {
+  
+  function buildUpdateOneOptions(collection, id, body) {
     const filter = { _id: { $oid: id } },
-      update = { $set: body };
-
-    return { filter, update };
+    update = { $set: body };
+    
+    return { collection, filter, update };
   }
-
-  async function exec(data, settings={}) {
-    const response = await fetchData(data);
-
+  
+  async function exec(action, data, settings={}) {
+    const response = await fetchData(action, data);
+    
     if(settings.verbose) {
       // return detailed response
       return;
     }
-
+    
     return returnOnlyDocuments(response);
   }
   
-  async function fetchData(data) {
-    const { collection, url, options } = data;
-      
+  async function fetchData(action, { collection, options }) {      
     const body = {
       collection,
       database: "plaza",
       dataSource: "peach",
       ...options
     };
-      
+    
     const headers = {
       "Content-Type": "application/json",
       "Access-Control-Request-Headers": "*",
@@ -118,29 +114,31 @@ const mongo = function() {
       headers
     };
     
-    const response = await fetch(url, clientRequest);
+    const endpoint = state.baseUrl + action;
+    
+    const response = await fetch(endpoint, clientRequest);
     
     return await response.json();
   }
-
+  
   function isSpecial(collection) {
     const specials = [
-            // "users", 
-            // "permits"
-          ];
-
+      // "users", 
+      // "permits"
+    ];
+    
     return specials.includes(collection);
   }
-
+  
   function returnOnlyDocuments(response) {
     return Object.keys(response).length 
     ? response.document || response.documents || response 
     : response;
   }
-
+  
   async function runSpecialfunction(collection) {
     // const specialStep = getSpecialStep();
-
+    
     // if(specialStep) {
     //   await specialStep(collection);
     // }
@@ -148,82 +146,74 @@ const mongo = function() {
   
   async function usersModel() {
     let { data, next } = this;
-
+    
     const userSchema = {
       name: String,
       age: Number
     };
-
+    
     // data = await Validate(userSchema, data);
-
+    
     // next(data.validated);
-
+    
     // const { user } = this.body;
     // user.password = hash(user.password);
   }
-
+  
   function permitsModel() {
     console.log("permits model");
     // const { user } = this.body;
     // user.password = hash(user.password);
   }
-
+  
   return {
     async deleteOne(collection, id, settings) {
-      const options = buildDeleteOneOptions(id);
-      const url = state.url + 'deleteOne';
+      const data = buildDeleteOneOptions(collection, id);
       
-      return await exec({ collection, options, url }, settings);
+      return await exec('deleteOne', data, settings);
     },
-
+    
     async deleteMany(collection, filter, settings) {
-      const options = buildDeleteManyOptions(filter);
-      const url = state.url + 'deleteMany';
+      const data = buildDeleteManyOptions(collection, filter);
       
-      return await exec({ collection, options, url }, settings);
+      return await exec('deleteMany', data, settings);
     },
-
+    
     async find (collection, filter, settings) {
-      const options = buildFindOptions(filter);
-      const url = state.url + 'find';
+      const data = buildFindOptions(collection, filter);
       
-      return await exec({ collection, options, url }, settings);
+      return await exec('find', data, settings);
     },
-
+    
     async findOne(collection, filter, settings) {
-      const options = buildFindOptions(filter);
-      const url = state.url + 'findOne';
+      const data = buildFindOptions(collection, filter);
       
-      return await exec({ collection, options, url }, settings);
+      return await exec('findOne', data, settings);
     },
-
-    async insert (collection, data, settings) {
+    
+    async insert (collection, item, settings) {
       await runSpecialfunction(collection);
-
-      const options = buildInsertOptions(data);
-      const action = Array.isArray(data) ? 'insertMany' : 'insertOne';
-      const url = state.url + action;
-
-      return await exec({ collection, options, url }, settings);
-    },
-
-    async updateOne (collection, id, body, settings) {
-      const options = buildUpdateOneOptions(collection, id, body);
-      const url = state.url + 'updateOne';
       
-      return await exec({ collection, options, url }, settings);
+      const data = buildInsertOptions(collection, item);
+      const action = Array.isArray(item) ? 'insertMany' : 'insertOne';
+      
+      return await exec(action, data, settings);
     },
-
+    
+    async updateOne (collection, id, body, settings) {
+      const data = buildUpdateOneOptions(collection, id, body);
+      
+      return await exec('updateOne', data, settings);
+    },
+    
     async updateMany (collection, options, settings) {
       if(options.filter || options.update) {
         throw error('Missing filter or update parameters');
       }
-
-      const url = state.url + 'updateMany';
-
-      return await exec({ collection, options, url }, settings);
+      
+      return await exec('updateMany', { collection, options }, settings);
     }
-
+    
   };
 }();
 

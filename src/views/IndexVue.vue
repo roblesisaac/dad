@@ -32,8 +32,8 @@
       </p>
       <button id="addUser" @click="addUser">Add A User</button>
       <div v-if="loading">Loading users...</div>
-      <div v-else-if="users.length == 0"><strong>No users found</strong></div>
-      <div v-else-if="users.message">{{  users.message }}</div>
+      <div v-else-if="users?.length == 0"><strong>No users found</strong></div>
+      <div v-else-if="users?.message">{{  users.message }}</div>
       <div v-else id="users">
         <div v-for="user in users" v-bind:key="user.id">
           <strong>{{ user.name }}: </strong>

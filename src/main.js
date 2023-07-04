@@ -3,7 +3,6 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { createPinia } from 'pinia';
 import App from './App.vue';
 
-
 const views = import.meta.glob('./views/*.vue');
 
 const routerPromise = new Promise((resolve) => {
@@ -40,7 +39,7 @@ routerPromise.then(routes => {
 
   const pinia = createPinia();
 
-  const app = createApp(App)
+  createApp(App)
     .use(router)
     .use(pinia)
     // .use(VueRecaptchaPlugin, {

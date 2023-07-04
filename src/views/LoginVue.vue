@@ -7,7 +7,6 @@
 
 <script setup>
 import LoginForm from "../components/LoginForm.vue";
-import AdminBar from "../components/AdminBar.vue";
 
-const message = "hello worlds";
+const message = "hello world";
 </script>

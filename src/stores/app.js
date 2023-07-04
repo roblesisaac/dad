@@ -8,8 +8,8 @@ import cart from './utils/cart';
 const state = ref({});
 
 export const useAppStore = defineStore('state', () => ({
-    api: api(state),
-    cart,
-    sticky,
-    state
+  api: api(state),
+  cart,
+  sticky,
+  state
 }));
