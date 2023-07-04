@@ -1,9 +1,8 @@
 import mongo from "../utils/mongo.js";
 
 export default (function() {
-  function buildFilter(req, defaults = {}) {
-    const { query } = req;
-    return { ...defaults, ...query };
+  function buildQuery(req, defaults = {}) {
+    return { ...defaults, ...req.query };
   }
 
   function getCollectionName(req) {
@@ -27,15 +26,15 @@ export default (function() {
     },
     async find(req, res) {
       const collection = getCollectionName(req);
-      const filter = buildFilter(req, { limit: 50 });  
-      const data = await mongo.find(collection, filter);
+      const query = buildQuery(req, { limit: 50 });  
+      const data = await mongo.find(collection, query);
 
       res.json(data)
     },
     async findOne(req, res) {
       const collection = getCollectionName(req);
-      const filter = buildFilter(req, { id: req.params.id });  
-      const data = await mongo.findOne(collection, filter);
+      const query = buildQuery(req, { id: req.params.id });  
+      const data = await mongo.findOne(collection, query);
 
       res.json(data)
     },

@@ -20,8 +20,9 @@ const mongo = function() {
     return { collection, options };
   }
   
-  function buildFindOptions(collection, filter={}) {
+  function buildFindOptions(collection, query={}) {
     const options = {};
+    const filter = {};
     
     const formats = {
       id: (value) => {
@@ -49,20 +50,16 @@ const mongo = function() {
       }
     };
     
-    const formatFilter = (prop) => {
-      if(prop in formats === "false") {
-        return;
-      }
+    Object.keys(query).forEach((prop) => {
+      const format = formats[prop];
       
-      const currentValue = filter[prop],
-      format = formats[prop];
-      
-      if(format) format(currentValue);
-      delete filter[prop];
-    };
-    
-    Object.keys(filter).forEach(formatFilter);
-    
+      if(format) {
+        return format(query[prop]);
+      };
+
+      filter[prop] = query[prop];
+    });
+
     options.filter = filter;
     
     return { collection, options };
@@ -179,14 +176,14 @@ const mongo = function() {
       return await exec('deleteMany', data, settings);
     },
     
-    async find (collection, filter, settings) {
-      const data = buildFindOptions(collection, filter);
+    async find (collection, query, settings) {
+      const data = buildFindOptions(collection, query);
       
       return await exec('find', data, settings);
     },
     
-    async findOne(collection, filter, settings) {
-      const data = buildFindOptions(collection, filter);
+    async findOne(collection, query, settings) {
+      const data = buildFindOptions(collection, query);
       
       return await exec('findOne', data, settings);
     },
