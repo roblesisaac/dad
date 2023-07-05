@@ -41,26 +41,26 @@ const { value:state } = ref({
 
 const app = function() {
 	const buildUrl = () => state.basePath+state.email;
-
+	
 	return {
 		async initRecaptcha() {
 			state.recaptcha = await load(state.siteKey);
 		},
 		requestPasswordReset: async () => {
 			state.loginLoading = true;
-
+			
 			if(!state.recaptcha) {
-        return;
-      }
+				return;
+			}
 			
 			if(!isValidEmail(state.email)) {
 				console.log('not valid email');
 				return;
 			}
-
+			
 			const url = buildUrl();
 			const response = await api.post(url, {}, { checkHuman: true });
-
+			
 			console.log(response);
 		}
 	}
