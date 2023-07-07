@@ -1,22 +1,38 @@
-const Sticky = function() {
-	let state = {
-		registered: {},
-		scroll: {
-			last: 0,
-			direction: null
-		},
-		stuck: { height: 0 },
-		currentScreenSize() {
-			const matches = (media) => window.matchMedia(media).matches;
-			
-			return matches("(max-width: 47.9375em)")
-			? 'small'
-			: matches("(min-width: 48em) and (max-width: 63.9375em)")
-			? 'medium'
-			: 'large'
-		}
-	};
+import { ref, watchEffect } from 'vue';
+
+const { value:state } = ref({
+	registered: {},
+	scroll: {
+		last: 0,
+		direction: null
+	},
+	stuck: { height: 0 },
+	currentScreenSize() {
+		const screenSize = ref('large');
+		const small = '(max-width: 47.9375em)';
+		const medium = '(min-width: 48em) and (max-width: 63.9375em)';
 	
+		const updateScreenSize = () => {
+			const matches = (media) => window.matchMedia(media).matches;
+	
+			screenSize.value = matches(small)
+				? 'small'
+				: matches(medium)
+				? 'medium'
+				: 'large';
+		};
+	
+		watchEffect(() => {
+			window.matchMedia(small).addEventListener('change', updateScreenSize);
+			window.matchMedia(medium).addEventListener('change', updateScreenSize);
+			updateScreenSize();
+		});
+	
+		return screenSize.value;
+	}
+});
+
+const Sticky = function() {	
 	function buildBox(el) {
 		const { height, top, left, width } = el.getBoundingClientRect();
 		const { marginTop, marginLeft } = window.getComputedStyle(el);

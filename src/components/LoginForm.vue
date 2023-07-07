@@ -60,11 +60,14 @@
           </Transition>
         </form>
       </div>
-      <div class="cell-1 center bold p20y">- OR -</div>
+      <div class="cell-1 center proper divider">
+        <hr>
+        <p class="divider-text">Or {{ state.action }} with Google</p>
+      </div>
       <div class="cell-1 center">
-        <button class="bgF3 colorDarkBlue expanded" @click="user.loginWithGoogle">
+        <button class="bgF3 bgBlack expanded" @click="user.loginWithGoogle">
           <img alt="Vue logo" src="../assets/google.svg" height="20" class="p10r" />
-          <span class="proper">{{ state.action }}</span> with Google
+          <span class="proper">{{ state.action }}</span>
         </button>
       </div>
     </div>

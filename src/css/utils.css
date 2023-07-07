@@ -10,6 +10,36 @@
     align-self: end;
 }
 
+.divider {
+    align-items: center;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+    padding-bottom: 32px;
+    padding-top: 16px;
+}
+
+.divider hr {
+    background-color: hsla(0,0%,10%,.1);
+    border: none;
+    height: 1px;
+    width: 100%;
+}
+
+.divider-text {
+    background-color: #ffffff;
+    left: 50%;
+    padding: 0 8px;
+    position: absolute;
+    -webkit-transform: translateX(-50%);
+    -ms-transform: translateX(-50%);
+    transform: translateX(-50%);
+    white-space: nowrap;
+    color: hsla(0,0%,10%,.5);
+}
+
 .expanded {
     width: 100%;
 }

@@ -23,7 +23,7 @@ const routerPromise = new Promise((resolve) => {
         routes.push({ path, component });
 
         if (Object.keys(views).length === routes.length) {
-            resolve(routes);
+          resolve(routes);
         }
     });
   }
@@ -42,10 +42,6 @@ routerPromise.then(routes => {
   createApp(App)
     .use(router)
     .use(pinia)
-    // .use(VueRecaptchaPlugin, {
-    //     v2SiteKey: import.meta.env.V2_SITE_KEY,
-    //     v3SiteKey: import.meta.env.V3_SITE_KEY
-    // })
     .mount('#app');
 });
 

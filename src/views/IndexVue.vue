@@ -2,6 +2,8 @@
   <div class="grid">
     <div class="cell-md-1-2">
       <h1>Alohas</h1>
+      <b>{{ sticky.state.currentScreenSize() }}</b>
+      <br />
       <p>
         Open your terminal to the project directory and run <code>npm i</code> to
         install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
@@ -49,7 +51,7 @@
         developer sandbox by appending <code>/api</code> to the local dev server's
         localhost address.
       </p>
-      <div>sticky.stuck.height</div>
+      <div>{{ sticky.state.stuck.height }}</div>
       <div id="header"><b>Header</b></div>
       <h3>Edit this Vue.js app:</h3>
       <p>
