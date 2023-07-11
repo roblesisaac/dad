@@ -14,21 +14,6 @@
       <p id="vanP">
         <img alt="Vue logo" id="van" src="../assets/icon.svg" height="100" />
       </p>
-      <p v-for="car in cars" v-bind:key="car._id">
-        {{  car.year }}-{{  car.make }}-{{  car.model }}
-      </p>
-      <br />
-      <input type="text" placeholder="year" v-model="car.year" />
-      <br />
-      <input type="text" placeholder="make" v-model="car.make" />
-      <br />
-      <input type="text" placeholder="model" v-model="car.model" />
-      <br />
-      <input type="text" placeholder="submodel" v-model="car.submodel" />
-      <br />
-      <input type="text" placeholder="engine" v-model="car.engine" />
-      <br />
-      <button @click="addCar(car)">Add Car</button>
       <p>
         The information below is being fetched from your Serverless Cloud API:
       </p>
@@ -53,63 +38,6 @@
       </p>
       <div>{{ sticky.state.stuck.height }}</div>
       <div id="header"><b>Header</b></div>
-      <h3>Edit this Vue.js app:</h3>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
-      <p>
-        Open your terminal to the project directory and run <code>npm i</code> to
-        install the Vue.js dependencies. Then run <code>cloud dev</code> to launch
-        the local Vue.js dev server. You can access the API on your personal
-        developer sandbox by appending <code>/api</code> to the local dev server's
-        localhost address.
-      </p>
     </div>
   </div>
 </template>

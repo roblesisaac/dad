@@ -14,6 +14,7 @@ const users = Record('users', {
             return email;
         }
     },
+    views: [String],
     email_verified: '*',
     password: {
         value: async password => {

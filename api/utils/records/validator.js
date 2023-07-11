@@ -1,12 +1,10 @@
-import { buildId } from '../../../src/utils';
+import { buildId, isEmptyObject } from '../../../src/utils';
 import { 
   isMeta,
   siftOutLabelAndFetch 
 } from './utils';
 
 const validate = function() {
-  let data = {};
-
   const applyFormat = (value, formats) => {
     const { lowercase, uppercase } = formats;
 
@@ -17,13 +15,13 @@ const validate = function() {
     : value;
   }
 
-  const applyFormatting = (key) => {
+  const applyFormatting = (data, key) => {
     const { schema, validKey } = data;
 
     data.validKey = applyFormat(validKey, schema[key]);
   }
 
-  const applyGlobalFormatting = async (globalFormatting) => {
+  const applyGlobalFormatting = async (data, globalFormatting) => {
     const { key, validKey } = data;
     let formatted;
 
@@ -40,7 +38,7 @@ const validate = function() {
     data.validKey = formatted || validKey;
   }
 
-  const applyMetaMethod = async (key) => {
+  const applyMetaMethod = async (data, key) => {
     const { 
       metadata, 
       setValue,
@@ -60,31 +58,30 @@ const validate = function() {
     }
   }
 
-  const assignBodyKeyToValidated = (key) => {
+  const assignBodyKeyToValidated = (data, key) => {
     const { validated, body } = data;
     return validated[key] = body[key];
   }
 
-  const assignDefaultProp = (key) => {
+  const assignDefaultProp = (data, key) => {
     const { validated, schema } = data;
     validated[key] = schema[key].default;
   }
 
-  const assignMeta = (key) => {
+  const assignMetaToData = (data, key) => {
     const { collectionName, metadata } = data;
     const meta = metadata[key];
     const readable = meta.name || meta;
 
-    return {
-      ...data,
+    Object.assign(data, {
       meta,
       readable,
       metaValue: meta.value || meta,
       setValue: value => `${collectionName}:${readable}_${value}`
-    }
+    });
   }
 
-  const assignMetaReference = (key) => {
+  const assignMetaReference = (data, key) => {
     const { metadata, validated, readable, meta, setValue } = data;
     const metaRef = validated.hasOwnProperty(readable)
       ? validated[readable]
@@ -93,12 +90,12 @@ const validate = function() {
     metadata[key] = setValue(metaRef);
   }
 
-  const assignMetaValue = (key) => {
+  const assignMetaValue = (data, key) => {
     const { metadata, setValue, metaValue } = data;
     metadata[key] = setValue(metaValue);
   }
 
-  const bookmarkMetaForLater = (key) => {
+  const bookmarkMetaForLater = (data, key) => {
     const { metadata, schema } = data;
     metadata[key] = schema[key];
   }
@@ -107,7 +104,7 @@ const validate = function() {
   ? `${collectionName}:${buildId()}` 
   : undefined;
 
-  const concatMetaRefs = (key) => {
+  const concatMetaRefs = (data, key) => {
     const { metadata, validated, setValue } = data;
     const concatArray = metadata[key].concat;
     let concatedRefs = '';
@@ -123,7 +120,7 @@ const validate = function() {
     throw new Error(message);
   }
 
-  const getValidatedValue = async (key) => {
+  const getValidatedValue = async (data, key) => {
     const {
       body, 
       validated,
@@ -141,13 +138,13 @@ const validate = function() {
     return await schemaKeyType(body[key], parameters);
   }
 
-  const hasDefault = key => {
+  const hasDefault = (data, key) => {
     const { schema } = data;
 
     return (schema[key]).hasOwnProperty('default');
   }
 
-  const hasFormatting = key => {
+  const hasFormatting = (data, key) => {
     const { schema } = data;
 
     if(typeof schema[key] !== 'object' || Array.isArray(schema[key])) {
@@ -159,22 +156,12 @@ const validate = function() {
     return formats.some(format => schema[key].hasOwnProperty(format));
   };
 
-  const initData = (collectionName, schema, body, req) => ({
-    collectionName,
-    schema,
-    body,
-    validated: {},
-    metadata: {},
-    req,
-    schemaKeyType: null
-  })
-
-  const isAConcat = key => {
+  const isAConcat = (data, key) => {
     const { metadata } = data;
     return metadata[key].hasOwnProperty('concat');
   }
 
-  const isADuplicate = async (key) => {
+  const isADuplicate = async (data, key) => {
     const { schema, body, collectionName } = data;
     const query = { [key]: body[key] };
 
@@ -191,6 +178,7 @@ const validate = function() {
 
     return body._id !== dupKey && (dupKey || items);
   }
+  
 
   const isFunction = ({ metaValue }) => typeof metaValue === 'function';
 
@@ -207,40 +195,72 @@ const validate = function() {
 
   const isWild = (symbol) => symbol === '*';
 
-  const updateData = (key) => {
-    const { schema } = data;
-    const { type, value } = schema[key] || {};
-
-    return { 
-      ...data,
-      key,
-      schemaKeyType: type || value || schema[key]
-    };
-  }
-
-  const validateItemsInArray = (key) => {
-    const { collectionName, validated, body, schemaKeyType } = data;
-    const nestedSchema = schemaKeyType[0] || {};
+  const validateItemsInArray = async (data, key) => {
+    const { collectionName, validated, body, schemaKeyType, req, globalFormatting } = data;
+    const nested = schemaKeyType[0] || {};
         
     validated[key] = body[key]
-        ? body[key].map(item => validate.init(collectionName, nestedSchema, item).validated)
-        : schemaKeyType.map(_ => validate.init(collectionName, nestedSchema, {}).validated);
+    ? await Promise.all(
+        body[key].map(async (itm) => {
+          return (await validate.init(
+            collectionName,
+            nested,
+            itm,
+            body,
+            req,
+            globalFormatting
+          )).validated;
+        })
+      )
+    : await Promise.all(
+        schemaKeyType.map(async (_) => {
+          return (await validate.init(
+            collectionName,
+            nested,
+            undefined,
+            body,
+            req,
+            globalFormatting
+          )).validated;
+        })
+      );
+  
   }
 
-  const validateSubObject = (key) => {
+  const validateSubObject = async (data, key) => {
     const { collectionName, schema, body, validated } = data;
-    validated[key] = validate.init(collectionName, schema[key], body[key]).validated;
+    validated[key] = await validate.init(collectionName, schema[key], body[key]).validated;
+  }
+
+  const validateSingleItem = (body, schema) => {
+    return !body ? body : schema(body);
   }
 
   return {
     init: async (collectionName, schema, body, req, globalFormatting) => {
-      data = initData(collectionName, schema, body, req);
+      const data = {
+        collectionName,
+        schema,
+        body,
+        validated: {},
+        metadata: {},
+        req,
+        globalFormatting
+      };
+
+      if(typeof schema == 'function') {
+        data.validated = validateSingleItem(body, schema);
+        return data;
+      }
 
       for(const key in schema) {
-        data = updateData(key);
+        const { type, value } = schema[key] || {};
+        const schemaKeyType = type || value || schema[key];
+
+        Object.assign(data, { key, schemaKeyType });
 
         if(isMeta(key)) {
-          bookmarkMetaForLater(key);
+          bookmarkMetaForLater(data, key);
           continue;
         }
 
@@ -249,13 +269,13 @@ const validate = function() {
             err(`Please provide a unique value for '${key}'.`);
           }
 
-          if (await isADuplicate(key)) {
+          if (await isADuplicate(data, key)) {
             err(`A duplicate item was found with '${key}=${body[key]}'`);
           }
         }
 
         if(isWild(data.schemaKeyType)) {
-          assignBodyKeyToValidated(key);
+          assignBodyKeyToValidated(data, key);
           continue;
         }
 
@@ -265,32 +285,32 @@ const validate = function() {
             err(`Missing required property ${key}.`);
           }
 
-          if(hasDefault(key)) {
-            assignDefaultProp(key);
+          if(hasDefault(data, key)) {
+            assignDefaultProp(data, key);
             continue;
           }
 
         }
 
         if(isType(data).array) {
-          validateItemsInArray(key);
+          await validateItemsInArray(data, key);
           continue;
         }
 
         if(isType(data).object) {
-          validateSubObject(key);
+          await validateSubObject(data, key);
           continue;
         }
 
         try {
-          data.validKey = await getValidatedValue(key);
+          data.validKey = await getValidatedValue(data, key);
 
-          if(hasFormatting(key)) {
-            applyFormatting(key)
+          if(hasFormatting(data, key)) {
+            applyFormatting(data, key)
           }
   
           if(globalFormatting) {
-            await applyGlobalFormatting(globalFormatting);
+            await applyGlobalFormatting(data, globalFormatting);
           }
   
           data.validated[key] = data.validKey;
@@ -302,28 +322,28 @@ const validate = function() {
       }
 
       for(const metaKey in data.metadata) {
-        data = assignMeta(metaKey);
+        assignMetaToData(data, metaKey);
         
         if(!data.readable) {
           continue;
         }
     
         if(isReferenceToBody(data)) {
-          assignMetaReference(metaKey);
+          assignMetaReference(data, metaKey);
           continue;
         }
 
-        if(isAConcat(metaKey)) {
-          concatMetaRefs(metaKey);
+        if(isAConcat(data, metaKey)) {
+          concatMetaRefs(data, metaKey);
           continue;
         }
 
         if(!isFunction(data)) {
-          assignMetaValue(metaKey);
+          assignMetaValue(data, metaKey);
           continue;
         }
 
-        await applyMetaMethod(metaKey);
+        await applyMetaMethod(data, metaKey);
       }
 
       return data;
