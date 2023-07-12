@@ -28,4 +28,8 @@ import NavMain from './components/NavMain.vue';
   background-color: rgba(0, 0, 0, .3);
   color: #fff;
 }
+
+.flip-list-move {
+  transition: transform 0.2s ease-out;
+}
 </style>

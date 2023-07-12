@@ -1,5 +1,5 @@
 <template>
-  <draggable class="grid" :animation="50" v-model="list">
+  <draggable class="grid" :animation="50" :touchStartThreshold="100" v-model="list">
     <div class="cell-1-3" v-for="view in state.views" :key="view+view.length">
       <div class="p5">
         <div class="bgGray pointer r3 p20y">
@@ -57,11 +57,4 @@
   }();
 
   app.init()
-
 </script>
-
-<style>
-.flip-list-move {
-  transition: transform 0.2s ease-out;
-}
-</style>
