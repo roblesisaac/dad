@@ -397,6 +397,10 @@
     text-transform: uppercase;
 }
 
+.pointer {
+    cursor: pointer;
+}
+
 .r1 {
     border-radius: 1px;
 }

@@ -16,13 +16,13 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { onMounted, reactive } from 'vue';
 
 import { useAppStore } from '../stores/app';
 const { sticky } = useAppStore();
 
-const { value: state } = ref({
-  userViews: []
+const state = reactive({
+  userViews: ['settings']
 });
 
 const app = function() {
@@ -30,7 +30,7 @@ const app = function() {
     return new Promise(resolve => setTimeout(resolve, s*1000));
   }
 
-  function getPublicViews() {
+  function getRoleViews() {
     state.userViews = state.userViews.concat([
       { name: 'Home', path: '/'}
     ]);
@@ -39,23 +39,26 @@ const app = function() {
   function getUserViews() {
     state.userViews = state.userViews.concat([
       'swiper',
-      'login'
+      'login',
     ]);
   }
 
   return {
     async getViews() {
-      getPublicViews();
+      getRoleViews();
       await delay(2);
       getUserViews();
+    },
+    init() {
+      onMounted(async () => {
+        sticky.stickify('.topNav');
+        await app.getViews();
+      });
     }
   };
 }();
 
-onMounted(async () => {
-  sticky.stickify('.topNav');
-  await app.getViews();
-});
+app.init();
 
 </script>
 

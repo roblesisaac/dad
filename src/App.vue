@@ -19,4 +19,13 @@ import NavMain from './components/NavMain.vue';
   font-weight: bold;
   padding: 20px;
 }
+
+.sortable-chosen {
+  background-color: rgba(0, 0, 0, .3);
+}
+
+.sortable-chosen div {
+  background-color: rgba(0, 0, 0, .3);
+  color: #fff;
+}
 </style>
