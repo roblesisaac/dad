@@ -1,5 +1,5 @@
 <template>
-  <draggable class="grid" :animation="50" :touchStartThreshold="100" v-model="list">
+  <draggable class="grid" v-model="list" v-bind="state.dragOptions">
     <div class="cell-1-3" v-for="view in state.views" :key="view+view.length">
       <div class="p5">
         <div class="bgGray pointer r3 p20y">
@@ -18,6 +18,10 @@
   const { api } = useAppStore();
 
   const state = reactive({
+    dragOptions: {
+      animation: 50,
+      touchStartThreshold: 100
+    },
     buttons: ['viewable pages'],
     views: []
   });
