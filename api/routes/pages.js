@@ -1,5 +1,5 @@
-import { loadPages } from '../controllers/pages';
+import pages from '../controllers/pages';
 
 export default (api, baseUrl) => {
-  api.get(baseUrl+'/pages', loadPages);
+  api.get(baseUrl+'/pages', pages.loadPages);
 }

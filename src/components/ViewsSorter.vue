@@ -57,31 +57,24 @@
   const state = reactive({
     active: 'roles',
     bg: document.documentElement.style,
-    buttons: ['viewable pages'],
+    showAdminTools: [],
     topNav: document.querySelector('.topNav').style,
     views: {
       visible: [],
-      hidden: ['bank']
+      hidden: []
     },
     user: null
   });
   
   const app = function() {
-    function addTools() {
-      return [...state.buttons, 'roles', 'users']
-    }
-
     function changeBgColor(color='#efeff5') {
-      state.topNav.backgroundColor = color;
-      state.bg.backgroundColor = color;
+      state.topNav.backgroundColor = state.bg.backgroundColor = color;
     }
 
     async function loadAllViews({ views }) {
-      // const users = await api.get('db/users');
-      // console.log({ users });
       const fetchedViews = await api.get('/api/pages');
-
-      views.visible = views.visible.concat(fetchedViews);
+      console.log('fetched views');
+      views.visible = fetchedViews;
     }
 
     async function saveSettingsToSite() {
@@ -94,6 +87,10 @@
       await api.post(`/api/users/${user._id}`, { views });
     }
 
+    function showAdminTools() {
+      state.adminTools = ['select user', 'select role'];
+    }
+
     function userIs(roles) {
       return roles.includes('user.role');
     }
@@ -103,10 +100,14 @@
         changeBgColor();
 
         if(userIs(['admin', 'owner'])) {
-          state.buttons = addTools();
+          state.showAdminTools = showAdminTools();
         }
 
         await loadAllViews(state);
+      },
+
+      resetBgColors() {
+        changeBgColor('');
       },
 
       async saveSettings() {
@@ -122,13 +123,13 @@
 
   app.init();
 
+
   onMounted(() => {
     sticky.stickify(stickys);
   });
 
   onBeforeUnmount(() => {
-    state.topNav.backgroundColor = '';
-    state.bg.backgroundColor = '';
+    app.resetBgColors();
   });
 
 </script>

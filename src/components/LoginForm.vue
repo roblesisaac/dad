@@ -42,7 +42,7 @@
           <div class="cell-1 p10t">
             <div class="grid">
               <div class="cell-1-2 text-left">
-                <a href="#" @click="router.push('passwordreset')" class="colorDarkestGray">Forgot Password</a>
+                <a href="#" @click="router.push('recover')" class="colorDarkestGray">Forgot Password</a>
               </div>
               <div class="cell-1-2 text-right">
                 <a href="#" v-if="data.action=='login'" @click="app.changeAction('signup')">
