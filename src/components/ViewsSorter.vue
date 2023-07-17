@@ -1,29 +1,69 @@
 <template>
-  <draggable class="grid" v-model="list" v-bind="state.dragOptions">
-    <div class="cell-1-3" v-for="view in state.views" :key="view+view.length">
-      <div class="p5">
-        <div class="bgGray pointer r3 p20y">
-          {{  view }}
+  <div class="grid p30">
+    <div class="cell-1 p30b">
+      <div class="grid">
+        <div class="cell-1-5">
+          <p class="sectionTitle left">{{ state.active }}</p>
+        </div>
+        <div class="cell-4-5">
+          <input type="text" class="searchUsers" />
         </div>
       </div>
     </div>
-  </draggable>
+    <div class="cell-1 p30b">
+      <div class="grid">
+        <div class="cell-1-5">
+          <div class="sectionTitle visibleViews">Visible Views</div>
+        </div>
+        <div class="cell-4-5">
+          <DraggerVue group="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+        </div>
+      </div>
+    </div>
+    <div class="cell-1">
+      <div class="grid">
+        <div class="cell-1-5">
+          <div class="sectionTitle hiddenViews">Hidden Views</div>
+        </div>
+        <div class="cell-4-5">
+          <DraggerVue group="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-  import { reactive } from 'vue';
+  import { reactive, onMounted, onBeforeUnmount } from 'vue';
   import { useAppStore } from '../stores/app';
-  import { VueDraggableNext as draggable } from 'vue-draggable-next';
+  import DraggerVue from './DraggerVue.vue';
 
-  const { api } = useAppStore();
+  const { api, sticky } = useAppStore();
+
+  const stickys = [
+    {
+      selector: '.visibleViews',
+      stickUnder: '.topNav',
+      unstickWhen: {
+        isSticky: '.hiddenViews'
+      }
+    },
+    {
+      selector: '.hiddenViews',
+      stickUnder: '.topNav'
+    }
+  ];
 
   const state = reactive({
-    dragOptions: {
-      animation: 50,
-      touchStartThreshold: 100
-    },
+    active: 'roles',
+    bg: document.documentElement.style,
     buttons: ['viewable pages'],
-    views: []
+    topNav: document.querySelector('.topNav').style,
+    views: {
+      visible: [],
+      hidden: ['bank']
+    },
+    user: null
   });
   
   const app = function() {
@@ -31,17 +71,27 @@
       return [...state.buttons, 'roles', 'users']
     }
 
-    async function loadAllViews() {
+    function changeBgColor(color='#efeff5') {
+      state.topNav.backgroundColor = color;
+      state.bg.backgroundColor = color;
+    }
+
+    async function loadAllViews({ views }) {
       // const users = await api.get('db/users');
       // console.log({ users });
+      const fetchedViews = await api.get('/api/pages');
 
-      state.views = state.views.concat([
-        'settings',
-        'profile',
-        'apps',
-        'store',
-        'inventory'
-      ]);
+      views.visible = views.visible.concat(fetchedViews);
+    }
+
+    async function saveSettingsToSite() {
+      await api.post(`/api/`);
+    }
+
+    async function saveSettingsToUser({ user }) {
+      const views = state.views.visible;
+
+      await api.post(`/api/users/${user._id}`, { views });
     }
 
     function userIs(roles) {
@@ -50,15 +100,54 @@
 
     return {
       async init() {
+        changeBgColor();
+
         if(userIs(['admin', 'owner'])) {
           state.buttons = addTools();
         }
 
-        await loadAllViews();
-        console.log('all done...');
+        await loadAllViews(state);
+      },
+
+      async saveSettings() {
+        if(state.user) {
+          await saveSettingsToUser(state);
+          return;
+        }
+
+        await saveSettingsToSite();
       }
     };
   }();
 
-  app.init()
+  app.init();
+
+  onMounted(() => {
+    sticky.stickify(stickys);
+  });
+
+  onBeforeUnmount(() => {
+    state.topNav.backgroundColor = '';
+    state.bg.backgroundColor = '';
+  });
+
 </script>
+
+<style scoped>
+.searchUsers {
+  border-radius: 10px;
+  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+}
+.sectionTitle {
+  text-transform: capitalize;
+  margin-right: 5px;
+  text-align: left;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
+.hiddenViews, .visibleViews {
+  padding-top: 5px;
+  background-color: #efeff5;
+}
+</style>

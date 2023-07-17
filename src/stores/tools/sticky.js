@@ -1,6 +1,6 @@
-import { ref, watchEffect } from 'vue';
+import { reactive, ref, watchEffect } from 'vue';
 
-const { value:state } = ref({
+const state = reactive({
 	registered: {},
 	scroll: {
 		last: 0,
@@ -81,10 +81,10 @@ const Sticky = function() {
 		const { el, selector, validScreenSizes } = instanceData;
 		const { stuck } = state;
 		
-		const data = {
+		let data = {
 			box: null,
 			isSticky: false,
-			initialStyle: el.getAttribute('style'),
+			initialStyle: null,
 			...instanceData
 		};
 		
@@ -93,19 +93,10 @@ const Sticky = function() {
 			
 			data.box = data.box || buildBox(el);
 			
-			const settings = currentSettings(data);
-			const { stickUnder, unstickWhen } = settings;
-			
-			const Stuck = () => stuck[selector];
-			const StickUnder = stuck[stickUnder];
-			const Top = data.box.top;
+			const settings = currentSettings(data);			
 			const currentScroll = window.pageYOffset || document.documentElement.scrollTop;
-			
-			const stickingPoint = Stuck()
-			? Stuck().stickingPoint
-			: StickUnder
-			? Top - StickUnder.height - StickUnder.top
-			: Top - stuck.height;
+			const Stuck = () => stuck[selector];
+			const stickingPoint = getStickingPoint(settings, Stuck, data);
 			
 			setScrollDirection(currentScroll);
 			
@@ -115,11 +106,11 @@ const Sticky = function() {
 			
 			makeSticky(stickingPoint, data);
 			
-			if(!unstickWhen) return;
+			if(!settings.unstickWhen) return;
 			
 			const topOfUnstick = unstickingEl(el, settings).top;
 			
-			if(topOfUnstick < Stuck().bottom) {
+			if(topOfUnstick <= Stuck().bottom) {
 				slideUp(data, settings);
 			}
 		}
@@ -167,6 +158,19 @@ const Sticky = function() {
 		
 		delete registered[selector];
 	}
+
+	function getStickingPoint(settings, Stuck, data) {
+		const { stuck } = state;
+		const { stickUnder } = settings;
+		const StickUnder = stuck[stickUnder];
+		const Top = data.box.top;
+
+		return Stuck()
+		? Stuck().stickingPoint
+		: StickUnder
+		? Top - StickUnder.height - StickUnder.top
+		: Top - stuck.height;
+	}
 	
 	function isAlreadyRegistered (selector) {
 		return !!state.registered[selector];
@@ -176,20 +180,20 @@ const Sticky = function() {
 		if(data.isSticky) {
 			return;
 		}
-		
-		data.isSticky = true;
-		
 		const { el, box, selector } = data;
+
+		data.initialStyle = el.getAttribute('style');		
+		data.isSticky = true;
 		const { stuck } = state;
 		let { top, left, height, width } = box;
 		
 		top = top - stickingPoint;
-		
+
 		const stickyStyle = {
 			top: top+'px',
 			left: left+'px',
 			width: width+'px',
-			zIndex: 100 + stuck.height
+			zIndex: Math.round(100 + stuck.height)
 		};
 		
 		//Make sticky
@@ -279,8 +283,7 @@ const Sticky = function() {
 	
 	function slideUp(data, settings) {
 		const { el, box } = data;
-		let currentTop = unstickingEl(el, settings).top
-		
+		let currentTop = unstickingEl(el, settings).top;
 		if(state.scroll.direction === 'down') {
 			--currentTop;
 		}

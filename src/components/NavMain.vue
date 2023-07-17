@@ -1,16 +1,16 @@
 <template>
-  <nav class="grid topNav bgF1 shadow">
+  <nav class="grid topNav shadow">
     <div class="cell-1-3 text-left bold">
       <img id="logo" src="../assets/icon.svg" height="30" />
     </div>
     <div class="cell-2-3 text-right">
-      <router-link 
+      <router-link @click="utils.changePath(link)"
       v-for="link in state.userViews" 
       :to="link.path || link"
-      class="proper">
+      class="proper colorBlack">
       {{ link.name || link }}
     </router-link>
-    <a class="proper" href="/logout">logout</a>
+    <a class="proper colorBlack" href="/logout">logout</a>
   </div>
 </nav>
 </template>
@@ -19,7 +19,7 @@
 import { onMounted, reactive } from 'vue';
 
 import { useAppStore } from '../stores/app';
-const { sticky } = useAppStore();
+const { utils, sticky } = useAppStore();
 
 const state = reactive({
   userViews: ['settings']
@@ -70,5 +70,10 @@ app.init();
 
 .topNav.is-sticky {
   padding: 10px 10px;
+}
+
+.topNav a {
+  font-weight: bold;
+  padding: 20px;
 }
 </style>

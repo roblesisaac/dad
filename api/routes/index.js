@@ -6,6 +6,7 @@ import address from './address';
 import db from './db';
 import users from './users';
 import messages from './messages';
+import pages from './pages';
 
 export default (app) => {
     const api = Router();
@@ -20,10 +21,11 @@ export default (app) => {
         address, 
         db,
         messages,
+        pages,
         users,
         // dataApi
     ].forEach(route => route(api, '/api'));
-    
+
     // Api catch all
     api.get('/api/*', (req, res) => {
         res.json(`Collection named '${req.params[0]}' not found`);

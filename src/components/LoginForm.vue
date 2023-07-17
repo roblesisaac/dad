@@ -1,18 +1,18 @@
 <template>
   <transition>
-    <div v-if="state.action && !state.forgotPassword" class="grid p30">
+    <div v-if="data.action && !data.forgotPassword" class="grid p30">
       <div class="cell-1">
-        <form @submit.prevent="user.loginNative" class="grid r10">         
+        <form @submit.prevent="app.loginNative" class="grid r10">         
           <fieldset class="cell-1">
             <div class="grid">
               <div class="cell-1">                
-                <legend class="proper left">{{ state.action }}</legend>
+                <legend class="proper left">{{ data.action }}</legend>
               </div>
               <div class="cell-1 p10b">
                 <div class="grid middle">
                   <div class="cell-1">
                     <label for="email">Email</label>
-                    <input id="email" v-model="state.login.email" autocomplete="email" type="text" />
+                    <input id="email" v-model="data.login.email" autocomplete="email" type="text" />
                   </div>
                 </div>
               </div>
@@ -20,15 +20,15 @@
                 <div class="grid">
                   <div class="cell-1">                  
                     <label for="password">Password</label>
-                    <input id="password" v-model="state.login.password" autocomplete="current-password" type="password" />
+                    <input id="password" v-model="data.login.password" autocomplete="current-password" type="password" />
                   </div>
                 </div>
               </div>
-              <div v-if="state.action=='signup'" class="cell-1 p30b">
+              <div v-if="data.action=='signup'" class="cell-1 p30b">
                 <div class="grid">
                   <div class="cell-1">                  
                     <label for="retype">Re-Type Password</label>
-                    <input id="retype" v-model="state.login.retype" autocomplete="current-password" type="password" />
+                    <input id="retype" v-model="data.login.retype" autocomplete="current-password" type="password" />
                   </div>
                 </div>
               </div>
@@ -36,7 +36,7 @@
           </fieldset>
           <div class="cell-1 p10b center">
             <button type="submit" class="expanded proper">
-              {{ state.action }} <LoadingDots v-if="state.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
+              {{ data.action }} <LoadingDots v-if="data.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
             </button>
           </div>
           <div class="cell-1 p10t">
@@ -45,10 +45,10 @@
                 <a href="#" @click="router.push('passwordreset')" class="colorDarkestGray">Forgot Password</a>
               </div>
               <div class="cell-1-2 text-right">
-                <a href="#" v-if="state.action=='login'" @click="user.changeAction('signup')">
+                <a href="#" v-if="data.action=='login'" @click="app.changeAction('signup')">
                   Signup
                 </a>
-                <a href="#" v-else @click="user.changeAction('login')">
+                <a href="#" v-else @click="app.changeAction('login')">
                   Login
                 </a>
               </div>
@@ -56,18 +56,18 @@
           </div>
           <br /><br />
           <Transition>
-            <div v-if="state.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="state.notification"></div>
+            <div v-if="data.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="data.notification"></div>
           </Transition>
         </form>
       </div>
       <div class="cell-1 center proper divider">
         <hr>
-        <p class="divider-text">Or {{ state.action }} with Google</p>
+        <p class="divider-text">Or {{ data.action }} with Google</p>
       </div>
       <div class="cell-1 center">
-        <button class="bgF3 bgBlack expanded" @click="user.loginWithGoogle">
+        <button class="bgF3 bgBlack expanded" @click="app.loginWithGoogle">
           <img alt="Vue logo" src="../assets/google.svg" height="20" class="p10r" />
-          <span class="proper">{{ state.action }}</span>
+          <span class="proper">{{ data.action }}</span>
         </button>
       </div>
     </div>
@@ -75,16 +75,15 @@
 </template>
 
 <script setup>
-import { ref, nextTick, onMounted } from 'vue';
-import { load } from 'recaptcha-v3';
+import { reactive, nextTick } from 'vue';
 
 import { router } from '../main';
 import LoadingDots from './LoadingDots.vue';
 import { isValidEmail } from '../utils';
 import { useAppStore } from '../stores/app';
-const { api } = useAppStore();
+const { api, utils } = useAppStore();
 
-const data = ref({
+const data = reactive({
   action: 'login',
   baseUrl: '/api',
   loginLoading: null,
@@ -99,12 +98,9 @@ const data = ref({
   siteKey: import.meta.env.VITE_RECAPTCHA_KEY
 });
 
-const state = data.value;
-
-const user = function() {
-  
+const app = function() {  
   function buildUrl() {
-    return state.baseUrl + `/${state.action}/native`
+    return data.baseUrl + `/${data.action}/native`
   }
   
   function notify(message) {
@@ -112,33 +108,30 @@ const user = function() {
       return;
     }
     
-    state.notification = message;
-    state.loginLoading = false;
+    data.notification = message;
+    data.loginLoading = false;
     
     setTimeout(() => {
-      state.notification = null;
+      data.notification = null;
     }, 4000);
   }
   
   return {
     changeAction(changeTo) {
-      state.action = null;
+      data.action = null;
       
       nextTick(() => {
-        state.action = changeTo;
+        data.action = changeTo;
       });
     },
-    async initRecaptcha() {
-      state.recaptcha = await load(state.siteKey);
+    init() {
+      utils.initRecaptcha();
     },
     async loginNative() {
-      state.loginLoading = true;
-      
-      if(!state.recaptcha) {
-        return;
-      }
-      
-      const { email, password, retype } = state.login;
+      data.loginLoading = true;
+  
+    
+      const { email, password, retype } = data.login;
       
       if(!email || !password) {
         return notify('Missing email or password');
@@ -148,7 +141,7 @@ const user = function() {
         return notify('Password must be at least 8 character.');
       }
       
-      const method = state.action;
+      const method = data.action;
       
       if(method == 'signup' && password !== retype) {
         return notify('Passwords must match.');
@@ -159,25 +152,20 @@ const user = function() {
       }
       
       if(method == 'login') {
-        delete state.login.retype;
+        delete data.login.retype;
       }
       
       const url = buildUrl();
       const settings = { reloadPage: true, checkHuman: true };
       
-      await api.post(url, state.login, settings).then(notify);
-      state.loginLoading = false;
+      await api.post(url, data.login, settings).then(notify);
+      data.loginLoading = false;
     },
     loginWithGoogle() {
-      window.location = state.baseUrl+'/login/auth/google';
+      window.location = data.baseUrl+'/login/auth/google';
     }
   }
 }();
 
-onMounted(async () => {
-  await user.initRecaptcha();
-  
-  // if tried loading without recaptcha initialized, retry
-  if(state.loginLoading) await user.loginNative();
-});
+app.init();
 </script>

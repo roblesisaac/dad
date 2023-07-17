@@ -1,5 +1,5 @@
-import { load } from 'recaptcha-v3';
 import { router } from '../../main';
+import { useAppStore } from '../app';
 
 export default function(state) {
   function buildPayload(method, body) {
@@ -14,11 +14,11 @@ export default function(state) {
   
   async function checkHuman({ checkHuman: shouldCheckHuman }, body) {
     if (!shouldCheckHuman) return;
-    
-    const siteKey = import.meta.env.VITE_RECAPTCHA_KEY;
-    const recaptcha = await load(siteKey);
 
-    body.recaptchaToken = await recaptcha.execute('login');
+    const { utils } = useAppStore();
+    await utils.initRecaptcha();
+
+    body.recaptchaToken = await state.recaptcha.execute('login');
   }
   
   function getPathName(url) {
@@ -40,7 +40,7 @@ export default function(state) {
     const { learn, redirect } = json || {};
     
     if (learn) {
-      Object.assign(state.value, learn);
+      Object.assign(state, learn);
     }
     
     if (redirect) {

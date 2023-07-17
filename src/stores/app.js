@@ -1,14 +1,18 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { reactive } from 'vue';
 
-import api from './utils/api';
-import sticky from './utils/sticky';
-import cart from './utils/cart';
+import api from './tools/api';
+import sticky from './tools/sticky';
+import cart from './tools/cart';
+import utils from './tools/utils';
 
-const state = ref({});
+const state = reactive({
+  recaptcha: null
+});
 
 export const useAppStore = defineStore('state', () => ({
   api: api(state),
+  utils: utils(state),
   cart,
   sticky,
   state
