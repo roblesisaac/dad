@@ -1,15 +1,33 @@
 <template>
   <div class="grid p30">
-    <div class="cell-1 p30b">
+    <div class="cell-1 p10b">
       <div class="grid">
-        <div class="cell-1-5">
-          <p class="sectionTitle left">{{ state.active }}</p>
+        <div v-for="tool in state.showAdminTools" class="cell shrink p30r proper">
+          <a href="#" class="colorBlack"
+          :class="{ underline : state.active === tool }"   
+          @click="state.active = tool">
+              {{ tool }}
+          </a>
         </div>
-        <div class="cell-4-5">
+      </div>
+    </div>
+
+    <Transition>
+    <div v-if="state.active=='select user'" class="cell-1 p30b">
+      <div class="grid">
+        <div class="cell-1">
           <input type="text" class="searchUsers" />
         </div>
       </div>
     </div>
+    </Transition>
+
+    <Transition>
+    <ScrollingContent v-if="state.active=='select role'" class="p30b">
+      <button class="item" v-for="item in [1,2,3,4,5,6]">{{  item }}</button>
+    </ScrollingContent>
+    </Transition>
+
     <div class="cell-1 p30b">
       <div class="grid">
         <div class="cell-1-5">
@@ -37,6 +55,7 @@
   import { reactive, onMounted, onBeforeUnmount } from 'vue';
   import { useAppStore } from '../stores/app';
   import DraggerVue from './DraggerVue.vue';
+  import ScrollingContent from './ScrollingContent.vue';
 
   const { api, sticky } = useAppStore();
 
@@ -55,7 +74,7 @@
   ];
 
   const state = reactive({
-    active: 'roles',
+    active: 'select role',
     bg: document.documentElement.style,
     showAdminTools: [],
     topNav: document.querySelector('.topNav').style,
@@ -73,7 +92,6 @@
 
     async function loadAllViews({ views }) {
       const fetchedViews = await api.get('/api/pages');
-      console.log('fetched views');
       views.visible = fetchedViews;
     }
 
@@ -88,11 +106,12 @@
     }
 
     function showAdminTools() {
-      state.adminTools = ['select user', 'select role'];
+      state.showAdminTools = ['select role', 'select user'];
     }
 
     function userIs(roles) {
-      return roles.includes('user.role');
+      return true;
+      // return roles.includes('user.role');
     }
 
     return {
@@ -100,7 +119,7 @@
         changeBgColor();
 
         if(userIs(['admin', 'owner'])) {
-          state.showAdminTools = showAdminTools();
+          showAdminTools();
         }
 
         await loadAllViews(state);
@@ -150,5 +169,11 @@
 .hiddenViews, .visibleViews {
   padding-top: 5px;
   background-color: #efeff5;
+}
+
+.item {
+  width: 200px;
+  background-color: lightgray;
+  margin-right: 10px;
 }
 </style>

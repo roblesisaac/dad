@@ -524,6 +524,10 @@
     align-self: start;
 }
 
+.underline {
+    text-decoration: underline;
+}
+
 .v-enter-active,
 .v-leave-active {
   transition: all .3s ease;

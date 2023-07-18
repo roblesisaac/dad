@@ -38,9 +38,9 @@ routerPromise.then(routes => {
   });
 
   const pinia = createPinia();
+  const app = createApp(App);
 
-  createApp(App)
-    .use(router)
+  app.use(router)
     .use(pinia)
     .mount('#app');
 });
