@@ -1,4 +1,4 @@
-function userHasAccess(requiredRoles, userRole) {
+export function userHasAccess(requiredRoles, userRole) {
     if(Array.isArray(requiredRoles)) {
       return requiredRoles.includes(userRole);
     };

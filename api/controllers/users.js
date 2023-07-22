@@ -1,5 +1,6 @@
 import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
+import { userHasAccess } from '../middlewares/permit';
 import Users from '../models/users';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
@@ -155,6 +156,32 @@ export function sendPasswordResetRequest(req, res) {
   res.json(`sending reset info to ${email}`);
 }
 
-export function resetTemporaryPassword(req, res) {
+export function resetTemporaryPassword(_, res) {
   res.send('Password has been reset');
+}
+
+export async function updateUser(req, res) {
+  const { 
+    body, 
+    params: { id: altEmail }, 
+    user: { email, role } 
+  } = req;
+
+  if(altEmail && !userHasAccess('admin', role)) {
+    const errMessage = 'You do not have permission to access this resource.'
+
+    res.status(403).json({
+      error: 'Access Denied',
+      message: errMessage,
+      requiredRoles,
+      userRole
+    });
+
+    throw Error(errMessage);
+  }
+
+  const filter = { email: altEmail || email };
+  const updated = await Users.update(filter, body);
+  
+  res.json(updated);
 }

@@ -11,20 +11,20 @@ import {
   loginGoogle,
   googleCallback,
   sendPasswordResetRequest,
-  resetTemporaryPassword
+  resetTemporaryPassword,
+  updateUser
 } from '../controllers/users';
 
 export default (api, baseUrl) => {
 const protect = protectedRoute(api, 'users', baseUrl);
-
-protect('member').get('/users', function(req, _, next) {
-  const { email } = req.user;
-
-  req.query = { ...req.query, email };
+const concatToQuery = (propName) => (req, _, next) => {
+  req.query = { ...req.query, [propName]: req.user[propName] };
   next();
-}, data.get);
+};
 
+protect('member').get('/users', concatToQuery('email'), data.get);
 protect('admin').get('/allusers', data.get);
+protect('member').put('/users/:id', updateUser);
 
 api.post(
   baseUrl + '/login/native', 

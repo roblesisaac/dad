@@ -33,17 +33,6 @@ const dragOptions = {
 </script>
 
 <style scoped>
-.viewButton {
-  border: 1px solid #ddd;
-  border-radius: 10px;
-  font-weight: 600;
-  width: 100%;
-  padding: 15px 0;
-  position: relative;
-  background-color: white;
-  color: #333;
-  box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
-}
 
 .sortable-chosen .viewButton {
   background-color: rgba(0, 0, 255, .4);

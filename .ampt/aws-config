@@ -1,0 +1,2 @@
+[profile ampt-sandbox]
+credential_process=${AMPT_SANDBOX_CREDENTIALS_PROCESS}
