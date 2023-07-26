@@ -1,43 +1,60 @@
 <template>
   <div class="grid p30">
+    <!-- Select Role or User Option -->
     <div class="cell-1 p10b">
       <div class="grid">
         <div v-for="setting in state.showAdminTools" class="cell shrink p30r proper">
           <a href="#" class="colorBlack selectSetting"
-          :class="{ underline : state.activeSetting === setting }"   
-          @click="state.activeSetting=setting">
+          :class="{ underline : state.selectedSetting === setting }"   
+          @click="state.selectedSetting=setting">
               {{ setting }}
           </a>
         </div>
       </div>
     </div>
 
-    <ScrollingContent v-if="state.activeSetting=='select role'" class="p30b">
+    <!-- Scrolling Select Role Buttons -->
+    <ScrollingContent v-if="state.selectedSetting=='select role'" class="p30b">
       <button class="role proper"
-      :class="{ active : state.activeRole === role }"
-      @click="state.activeRole=role" v-for="role in state.roles">
+      :class="{ active : state.selectedRole === role }"
+      @click="state.selectedRole=role" v-for="role in state.roles">
         {{ role }}
       </button>
     </ScrollingContent>
 
-    <div v-if="state.activeSetting=='select user'" class="cell-1 p10b">
+    <!-- Search Users Input -->
+    <div v-if="state.selectedSetting=='select user'" class="cell-1 p10b">
       <div class="grid">
         <div class="cell-1">
-          <input 
+          <div class="relative">
+            <input 
             type="text" 
             class="searchUsers" 
             placeholder="Enter Username"
             v-model="state.email" />
+            <!-- Conditional rendering for the clear button -->
+            <button v-if="state.email" @click="state.email=''" class="clearButton">
+              x
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
+    <!-- Selected User Button -->
     <Transition>
-      <div class="cell-1 p30b">
-        <ScrollingContent v-if="state.activeSetting=='select user' && state.potentialUsers.length">
+      <div v-if="state.selectedSetting=='select user' && app.isUserSelected()" class="cell-1 p30b left">
+        <button @click="state.email=''" class="email role active">{{ state.email }} <span class="mdi mdi-close-circle"></span></button>
+      </div>
+    </Transition>
+
+    <!-- Matching User Scrollable Buttons -->
+    <Transition>
+      <div v-if="state.selectedSetting=='select user' && state.matchingUsers.length && !app.isUserSelected() && state.email" class="cell-1 p30b">
+        <ScrollingContent>
           <button class="email role"
-            v-for="user in state.potentialUsers"            
-            v-if="user.email"
+            v-for="user in state.matchingUsers"
+            @click="state.email=user.email"
             :key="user.email">
               {{ user.email }}
           </button>
@@ -45,23 +62,30 @@
       </div>
     </Transition>
 
+    <!-- Draggable Visible -->
     <div class="cell-1 p30b">
       <div class="grid">
         <div class="cell-1-5">
           <div class="sectionTitle visibleViews">Visible Pages</div>
         </div>
         <div class="cell-4-5">
-          <DraggerVue group="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+          <Transition>
+            <DraggerVue v-if="state.showingViewButtons" group="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+          </Transition>
         </div>
       </div>
     </div>
+
+    <!-- Draggable Hidden Views -->
     <div class="cell-1">
       <div class="grid">
         <div class="cell-1-5">
           <div class="sectionTitle hiddenViews">Hidden Pages</div>
         </div>
         <div class="cell-4-5">
-          <DraggerVue group="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+          <Transition>
+            <DraggerVue v-if="state.showingViewButtons" group="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+          </Transition>
         </div>
       </div>
     </div>
@@ -69,7 +93,7 @@
 </template>
 
 <script setup>
-  import { reactive, onMounted, onBeforeUnmount, watch } from 'vue';
+  import { reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
   import { useAppStore } from '../stores/app';
   import DraggerVue from './DraggerVue.vue';
   import ScrollingContent from './ScrollingContent.vue';
@@ -91,11 +115,10 @@
   ];
 
   const state = reactive({
-    activeRole: 'public',
-    activeSetting: 'select role',
+    allViews: [],
     bodyBg: document.documentElement.style,
     email: '',
-    potentialUsers: [{ email: 'irobles1030@gmail.com' }],
+    matchingUsers: [],
     roles: [
       'public',
       'guest',
@@ -109,7 +132,10 @@
       'admin',
       'owner'
     ],
+    selectedRole: 'public',
+    selectedSetting: 'select role',
     showAdminTools: [],
+    showingViewButtons: false,
     topNavBg: document.querySelector('.topNav').style,
     typingTimer: null,
     views: {
@@ -123,8 +149,8 @@
       state.topNavBg.backgroundColor = state.bodyBg.backgroundColor = color;
     }
 
-    function isSavingRoleSettings({ activeSetting }) {
-      return activeSetting === 'select role';
+    function isSavingRoleSettings({ selectedSetting }) {
+      return selectedSetting === 'select role';
     }
 
     function fetchUsers(email) {
@@ -132,27 +158,54 @@
       return api.get(`api/allusers?email=${email}*`);
     }
 
-    async function loadAllViews({ views }) {
-      const fetchedViews = await api.get('/api/pages');
-      views.visible = fetchedViews;
+    function hideViewButtons() {
+      state.showingViewButtons = false;
+    }
+
+    async function loadAllViewsNames() {
+      state.allViews = await api.get('/api/pages');
     }
 
     async function saveSettingsToSite(state) {
-      const { activeRole, views: { visible } } = state;
-      const body = { views: { [activeRole] : visible } };
+      const { selectedRole, views: { visible } } = state;
+      const body = { views: { [selectedRole] : visible } };
 
-      console.log({ saved: body });
+      console.log({ body });
       // await api.post(`/api/updateSettings`, body);
     }
 
-    async function saveUserSettings(state) {
-      const { user, view: { visible }} = state;
+    async function saveUserSettings(user, { views }) {
+      await api.put(`/api/users/${user.email}`, { views: views.visible });
+    }
 
-      await api.post(`/api/users/${user._id}`, { views });
+    function selectedUser() {
+      return state.matchingUsers.filter(user => 
+          state.email === user.email
+      )[0];
+    }
+
+    function setViewsButtons(newViews) {
+      const { allViews, views } = state;
+
+      views.visible = newViews;
+      views.hidden = allViews.filter(view => !newViews.includes(view));
+
+      showViewButtons();
     }
 
     function showAdminTools() {
       state.showAdminTools = ['select role', 'select user'];
+    }
+
+    function showDefaultViewsButtons() {
+      state.views.visible = state.allViews;
+      state.views.hidden = [];
+
+      showViewButtons();
+    }
+
+    function showViewButtons() {
+      nextTick(() =>  state.showingViewButtons = true);
     }
 
     function userIs(roles) {
@@ -173,25 +226,49 @@
           showAdminTools();
         }
 
-        await loadAllViews(state);
+        await loadAllViewsNames();
+        await app.loadViewButtonsForUserOrRole();
       },
-      resetBgColors: function() {
-        changeBgColor('');
+      isUserSelected: () => {
+        return !!selectedUser();
       },
-      isMatchingUser: (user) => {
-        console.log(user);
-        return true;
+      loadViewButtonsForUserOrRole: async function() {
+        hideViewButtons();
+
+        if(isSavingRoleSettings(state)) {
+          // const roleSettings = site.views[state.selectedRole];
+          
+          // if(roleSettings) {
+          //   return setViewsButtons(roleSettings);
+          // }
+
+          return showDefaultViewsButtons();
+        }
+
+        const user = selectedUser();
+
+        if(!user) {
+          return showDefaultViewsButtons();
+        }
+
+        setViewsButtons(user.views);
       },
       lookupUsers: async function(email) {         
         if (!email) {
+          state.matchingUsers = [];
+          showDefaultViewsButtons();
           return;
         }
 
         waitUntilTypingStops(
           async () => {
-            state.potentialUsers = await fetchUsers(email);
+            state.matchingUsers = await fetchUsers(email);
+            app.loadViewButtonsForUserOrRole();
           }
         );
+      },
+      resetBgColors: function() {
+        changeBgColor('');
       },
       saveSettings: async function() {
         if(isSavingRoleSettings(state)) {
@@ -199,7 +276,13 @@
           return;
         }
 
-        await saveUserSettings(state);
+        const user = selectedUser();
+        
+        if(!user) {
+          return;
+        }
+
+        await saveUserSettings(user, state);
       }
     };
   }();
@@ -214,12 +297,27 @@
     app.resetBgColors();
   });
 
-  watch(() => state.views.visible, () => app.saveSettings());
+  watch(() => state.views.visible, app.saveSettings);
   watch(() => state.email, app.lookupUsers);
+  watch(() => state.selectedRole, app.loadViewButtonsForUserOrRole);
+  watch(() => state.selectedSetting, app.loadViewButtonsForUserOrRole);
 
 </script>
 
 <style>
+.clearButton {
+  position: absolute;
+  top: 50%;
+  right: 5px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  background-color: #fff;
+  box-shadow: none;
+  border: none;
+  font-size: 16px;
+  color: #999;
+}
+
 .searchUsers {
   border-radius: 10px;
   box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
@@ -243,10 +341,10 @@
 }
 
 .role {
-  background-color: rgba(0, 0, 0, 0.1);
+  background-color: white;
   font-weight: 600;
   color: black;
-  padding: 3px 30px;
+  padding: 3px 25px;
   margin-right: 10px;
 }
 
@@ -256,7 +354,6 @@
 }
 
 .viewButton {
-  border: 1px solid #ddd;
   border-radius: 10px;
   font-weight: 600;
   width: 100%;
