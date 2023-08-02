@@ -1,4 +1,4 @@
-import { encrypt, decrypt } from '../utils/helpers';
+import { encrypt, decrypt } from '../utils/encryption';
 import Record from '../utils/records';
 
 const messageSchema = Record('messages', {

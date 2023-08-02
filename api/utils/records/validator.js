@@ -1,4 +1,4 @@
-import { buildId, isEmptyObject } from '../../../src/utils';
+import { buildId } from '../../../src/utils';
 import { 
   isMeta,
   siftOutLabelAndFetch 
@@ -169,17 +169,16 @@ const validate = function() {
       key: duplicateKey,
       items
     } = await siftOutLabelAndFetch(schema, query, collectionName) || {};
-
+    
     const dupKey = duplicateKey
       ? duplicateKey
-      : items 
+      : items && items[0]
       ? items[0].key 
       : null;
 
-    return body._id !== dupKey && (dupKey || items);
+    return body._id !== dupKey && (dupKey || items?.length);
   }
   
-
   const isFunction = ({ metaValue }) => typeof metaValue === 'function';
 
   const isReferenceToBody = ({ readable, metaValue }) => {
@@ -265,6 +264,10 @@ const validate = function() {
         }
 
         if(isUnique(schema[key])) {
+          if(!body[key] && schema[key].default) {
+            body[key] = schema[key].default;
+          }
+          
           if (!body[key]) {
             err(`Please provide a unique value for '${key}'.`);
           }

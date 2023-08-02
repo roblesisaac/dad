@@ -2,11 +2,13 @@ import { http } from '@ampt/sdk';
 import { Router } from 'express';
 
 import address from './address';
+import auth from './auth';
 // import dataApi from './data';
 import db from './db';
-import users from './users';
 import messages from './messages';
 import pages from './pages';
+import sites from './sites';
+import users from './users';
 
 export default (app) => {
     const api = Router();
@@ -16,11 +18,15 @@ export default (app) => {
         res.json(`You've reached the starting point of our API!`);
     });
 
+    
+
     // Api routes
     [
-        address, 
+        address,
+        auth,
         db,
         messages,
+        sites,
         pages,
         users,
         // dataApi

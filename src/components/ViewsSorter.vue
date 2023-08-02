@@ -7,7 +7,7 @@
           <a href="#" class="colorBlack selectSetting"
           :class="{ underline : state.selectedSetting === setting }"   
           @click="state.selectedSetting=setting">
-              {{ setting }}
+            {{ setting }}
           </a>
         </div>
       </div>
@@ -70,7 +70,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue v-if="state.showingViewButtons" group="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+            <DraggerVue v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
           </Transition>
         </div>
       </div>
@@ -84,7 +84,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue v-if="state.showingViewButtons" group="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+            <DraggerVue v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
           </Transition>
         </div>
       </div>
@@ -117,6 +117,9 @@
   const state = reactive({
     allViews: [],
     bodyBg: document.documentElement.style,
+    defaultViews() {
+      return this.allowedViewsForSelectedRole('public') || this.allViews;
+    },
     email: '',
     matchingUsers: [],
     roles: [
@@ -133,7 +136,13 @@
       'owner'
     ],
     selectedRole: 'public',
+    allowedViewsForSelectedRole(roleName) {
+      const { selectedRole, site: { roles } } = this;
+      const role = roles.find(({ name }) => name === (roleName || selectedRole));
+      return role?.views;
+    },
     selectedSetting: 'select role',
+    site: null,
     showAdminTools: [],
     showingViewButtons: false,
     topNavBg: document.querySelector('.topNav').style,
@@ -149,13 +158,47 @@
       state.topNavBg.backgroundColor = state.bodyBg.backgroundColor = color;
     }
 
-    function isSavingRoleSettings({ selectedSetting }) {
-      return selectedSetting === 'select role';
+    function isSelectingRole() {
+      return state.selectedSetting === 'select role';
+    }
+
+    async function fetchSite() {
+      state.site = await api.get('api/sites');
     }
 
     function fetchUsers(email) {
       email = email.toLowerCase();
       return api.get(`api/allusers?email=${email}*`);
+    }
+
+    function findAndUpdateRole() {
+      const { 
+        site: { roles }, 
+        selectedRole, 
+        views: { visible } 
+      } = state;
+
+      const update = { name: selectedRole, views: visible };
+
+      if (!roles || !Array.isArray(roles)) {
+        throw new Error('Invalid input object or roles array is missing.');
+      }
+
+      let found = false;
+      const updatedRoles = roles.map(role => {
+        if (role.name === selectedRole) {
+          found = true;
+          return { ...update };
+        }
+
+        return { ...role };
+      });
+
+      if (!found) {
+        updatedRoles.push({ ...update });
+      }
+
+      state.site.roles = updatedRoles;
     }
 
     function hideViewButtons() {
@@ -166,22 +209,22 @@
       state.allViews = await api.get('/api/pages');
     }
 
-    async function saveSettingsToSite(state) {
-      const { selectedRole, views: { visible } } = state;
-      const body = { views: { [selectedRole] : visible } };
-
-      console.log({ body });
-      // await api.post(`/api/updateSettings`, body);
+    async function saveSettingsToSite() {
+      const { site } = state;
+      await api.put(`/api/sites/${site._id}`, site);
     }
 
-    async function saveUserSettings(user, { views }) {
-      await api.put(`/api/users/${user.email}`, { views: views.visible });
+    async function saveUserSettings(user) {
+      const { views: { visible } } = state;
+      const body = { views: visible, hideAllViews: !visible.length };
+
+      await api.put(`/api/users/${user.email}`, body);
     }
 
     function selectedUser() {
-      return state.matchingUsers.filter(user => 
-          state.email === user.email
-      )[0];
+      return state.matchingUsers.find(user => 
+        state.email === user.email
+      );
     }
 
     function setViewsButtons(newViews) {
@@ -197,13 +240,6 @@
       state.showAdminTools = ['select role', 'select user'];
     }
 
-    function showDefaultViewsButtons() {
-      state.views.visible = state.allViews;
-      state.views.hidden = [];
-
-      showViewButtons();
-    }
-
     function showViewButtons() {
       nextTick(() =>  state.showingViewButtons = true);
     }
@@ -213,6 +249,17 @@
       // return roles.includes('user.role');
     }
 
+    function userViews() {
+      const user = selectedUser();
+
+      return !user ?
+        state.defaultViews()
+        : user.views.length || user.hideAllViews
+        ? user.views
+        : state.allowedViewsForSelectedRole(user.role) 
+          || state.defaultViews()
+    }
+
     function waitUntilTypingStops(callback) {
       clearTimeout(state.typingTimer);
       state.typingTimer = setTimeout(callback, 500);
@@ -220,12 +267,21 @@
 
     return {
       init: async function() {
+        onMounted(() => sticky.stickify(stickys));
+        onBeforeUnmount(() => app.resetBgColors());
+
+        watch(() => state.selectedRole, app.loadViewButtonsForUserOrRole);
+        watch(() => state.views.visible, app.saveSettings);
+        watch(() => state.email, app.lookupUsers);
+        watch(() => state.selectedSetting, app.loadViewButtonsForUserOrRole);
+
         changeBgColor('#efeff5');
 
         if(userIs(['admin', 'owner'])) {
           showAdminTools();
         }
 
+        await fetchSite();
         await loadAllViewsNames();
         await app.loadViewButtonsForUserOrRole();
       },
@@ -235,28 +291,18 @@
       loadViewButtonsForUserOrRole: async function() {
         hideViewButtons();
 
-        if(isSavingRoleSettings(state)) {
-          // const roleSettings = site.views[state.selectedRole];
-          
-          // if(roleSettings) {
-          //   return setViewsButtons(roleSettings);
-          // }
+        if(isSelectingRole()) {
+          const allowed = state.allowedViewsForSelectedRole();
 
-          return showDefaultViewsButtons();
+          return setViewsButtons(allowed || state.defaultViews());
         }
-
-        const user = selectedUser();
-
-        if(!user) {
-          return showDefaultViewsButtons();
-        }
-
-        setViewsButtons(user.views);
+        
+        setViewsButtons(userViews());
       },
       lookupUsers: async function(email) {         
         if (!email) {
           state.matchingUsers = [];
-          showDefaultViewsButtons();
+          setViewsButtons(state.allViews);
           return;
         }
 
@@ -271,8 +317,13 @@
         changeBgColor('');
       },
       saveSettings: async function() {
-        if(isSavingRoleSettings(state)) {
-          await saveSettingsToSite(state);
+        if(!state.showingViewButtons) {
+          return;
+        }
+        
+        if(isSelectingRole()) {
+          findAndUpdateRole();
+          await saveSettingsToSite();
           return;
         }
 
@@ -282,25 +333,12 @@
           return;
         }
 
-        await saveUserSettings(user, state);
+        await saveUserSettings(user);
       }
     };
   }();
 
   app.init();
-
-  onMounted(() => {
-    sticky.stickify(stickys);
-  });
-
-  onBeforeUnmount(() => {
-    app.resetBgColors();
-  });
-
-  watch(() => state.views.visible, app.saveSettings);
-  watch(() => state.email, app.lookupUsers);
-  watch(() => state.selectedRole, app.loadViewButtonsForUserOrRole);
-  watch(() => state.selectedSetting, app.loadViewButtonsForUserOrRole);
 
 </script>
 

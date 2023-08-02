@@ -34,9 +34,9 @@
 <script setup>
     import { ref, onMounted } from 'vue';
     import { useAppStore } from '../stores/app';
-    const { state, api } = useAppStore();
+    const { State, api } = useAppStore();
   
-    let user = ref(state.user);
+    let user = ref(State.user);
     const code = ref(['', '', '', '', '', '']);
     const notification = ref(false);
     const baseUrl = '/api';

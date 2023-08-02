@@ -1,16 +1,19 @@
 <template>
-  <nav class="grid topNav shadow">
+  <nav class="grid topNav shadow middle">
     <div class="cell-1-3 text-left bold">
       <img id="logo" src="../assets/icon.svg" height="30" />
     </div>
-    <div class="cell-2-3 text-right">
+    <div v-if="State.currentScreenSize() !== 'small'" class="cell-2-3 text-right">
       <router-link @click="utils.changePath(link)"
       v-for="link in state.userViews" 
       :to="link.path || link"
       class="proper colorBlack">
-      {{ link.name || link }}
-    </router-link>
-    <a class="proper colorBlack" href="/logout">logout</a>
+        {{ link.name || link }}
+      </router-link>
+      <a class="proper colorBlack" href="/logout">logout</a>
+  </div>
+  <div v-if="State.currentScreenSize()==='small'" class="cell-2-3 text-right">
+    <span class="mdi mdi-menu p20x bold"></span>
   </div>
 </nav>
 </template>
@@ -19,40 +22,23 @@
 import { onMounted, reactive } from 'vue';
 
 import { useAppStore } from '../stores/app';
-const { utils, sticky } = useAppStore();
+const { State, api, utils, sticky } = useAppStore();
 
 const state = reactive({
-  userViews: ['settings']
+  userViews: []
 });
 
 const app = function() {
-  async function delay(s) {
-    return new Promise(resolve => setTimeout(resolve, s*1000));
-  }
 
-  function getRoleViews() {
-    state.userViews = state.userViews.concat([
-      { name: 'Home', path: '/'}
-    ]);
-  }
-
-  function getUserViews() {
-    state.userViews = state.userViews.concat([
-      'swiper',
-      'login',
-    ]);
+  async function getUserViews() {
+    state.userViews = (await api.get('/api/userviews')).views;
   }
 
   return {
-    async getViews() {
-      getRoleViews();
-      await delay(2);
-      getUserViews();
-    },
     init() {
       onMounted(async () => {
         sticky.stickify('.topNav');
-        await app.getViews();
+        await getUserViews();
       });
     }
   };
@@ -64,8 +50,9 @@ app.init();
 
 <style>
 .topNav {
-  padding: 20px 10px;
+  background: #fff;
   transition: all .3s;
+  border-bottom: 2px solid #000;
 }
 
 .topNav.is-sticky {
@@ -75,5 +62,12 @@ app.init();
 .topNav a {
   font-weight: bold;
   padding: 20px;
+  display: inline-block;
+  border-left: 2px solid #000;
+}
+
+#logo {
+  padding: 10px;
+  display: block;
 }
 </style>

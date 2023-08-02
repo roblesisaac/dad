@@ -38,6 +38,10 @@ const users = Record('users', {
         value: String,
         default: 'member'
     },
+    hideAllViews: {
+        value: Boolean,
+        default: false
+    },
     label1: 'email',
     label2: 'email_verified',
     label3: 'role'

@@ -12,8 +12,8 @@
     "ampt:commit": "npm run commit"
   },
   "dependencies": {
-    "@ampt/data": "^0.0.1-beta.15",
-    "@ampt/sdk": "^0.0.1-beta.54",
+    "@ampt/data": "^0.0.1-beta.16",
+    "@ampt/sdk": "^0.0.1-beta.55",
     "@mdi/font": "^7.2.96",
     "bcryptjs": "^2.4.3",
     "express": "^4.18.2",
@@ -43,7 +43,7 @@
   },
   "ampt": {
     "org": "irobles1030604253",
-    "app": "ampt"
+    "app": "dad"
   },
   "files": [
     "*"

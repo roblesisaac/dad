@@ -1,18 +1,18 @@
 <template>
   <transition>
-    <div v-if="data.action && !data.forgotPassword" class="grid p30">
+    <div v-if="state.action && !state.forgotPassword" class="grid p30">
       <div class="cell-1">
         <form @submit.prevent="app.loginNative" class="grid r10">         
           <fieldset class="cell-1">
             <div class="grid">
               <div class="cell-1">                
-                <legend class="proper left">{{ data.action }}</legend>
+                <legend class="proper left">{{ state.action }}</legend>
               </div>
               <div class="cell-1 p10b">
                 <div class="grid middle">
                   <div class="cell-1">
                     <label for="email">Email</label>
-                    <input id="email" v-model="data.login.email" autocomplete="email" type="text" />
+                    <input id="email" v-model="state.login.email" autocomplete="email" type="text" />
                   </div>
                 </div>
               </div>
@@ -20,15 +20,15 @@
                 <div class="grid">
                   <div class="cell-1">                  
                     <label for="password">Password</label>
-                    <input id="password" v-model="data.login.password" autocomplete="current-password" type="password" />
+                    <input id="password" v-model="state.login.password" autocomplete="current-password" type="password" />
                   </div>
                 </div>
               </div>
-              <div v-if="data.action=='signup'" class="cell-1 p30b">
+              <div v-if="state.action=='signup'" class="cell-1 p30b">
                 <div class="grid">
                   <div class="cell-1">                  
                     <label for="retype">Re-Type Password</label>
-                    <input id="retype" v-model="data.login.retype" autocomplete="current-password" type="password" />
+                    <input id="retype" v-model="state.login.retype" autocomplete="current-password" type="password" />
                   </div>
                 </div>
               </div>
@@ -36,7 +36,7 @@
           </fieldset>
           <div class="cell-1 p10b center">
             <button type="submit" class="expanded proper">
-              {{ data.action }} <LoadingDots v-if="data.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
+              {{ state.action }} <LoadingDots v-if="state.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
             </button>
           </div>
           <div class="cell-1 p10t">
@@ -45,7 +45,7 @@
                 <a href="#" @click="router.push('recover')" class="colorDarkestGray">Forgot Password</a>
               </div>
               <div class="cell-1-2 text-right">
-                <a href="#" v-if="data.action=='login'" @click="app.changeAction('signup')">
+                <a href="#" v-if="state.action=='login'" @click="app.changeAction('signup')">
                   Signup
                 </a>
                 <a href="#" v-else @click="app.changeAction('login')">
@@ -56,18 +56,18 @@
           </div>
           <br /><br />
           <Transition>
-            <div v-if="data.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="data.notification"></div>
+            <div v-if="state.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="state.notification"></div>
           </Transition>
         </form>
       </div>
       <div class="cell-1 center proper divider">
         <hr>
-        <p class="divider-text">Or {{ data.action }} with Google</p>
+        <p class="divider-text">Or {{ state.action }} with Google</p>
       </div>
       <div class="cell-1 center">
         <button class="bgF3 bgBlack expanded" @click="app.loginWithGoogle">
           <img alt="Vue logo" src="../assets/google.svg" height="20" class="p10r" />
-          <span class="proper">{{ data.action }}</span>
+          <span class="proper">{{ state.action }}</span>
         </button>
       </div>
     </div>
@@ -83,7 +83,7 @@ import { isValidEmail } from '../utils';
 import { useAppStore } from '../stores/app';
 const { api, utils } = useAppStore();
 
-const data = reactive({
+const state = reactive({
   action: 'login',
   baseUrl: '/api',
   loginLoading: null,
@@ -100,7 +100,7 @@ const data = reactive({
 
 const app = function() {  
   function buildUrl() {
-    return data.baseUrl + `/${data.action}/native`
+    return state.baseUrl + `/${state.action}/native`
   }
   
   function notify(message) {
@@ -108,30 +108,30 @@ const app = function() {
       return;
     }
     
-    data.notification = message;
-    data.loginLoading = false;
+    state.notification = message;
+    state.loginLoading = false;
     
     setTimeout(() => {
-      data.notification = null;
+      state.notification = null;
     }, 4000);
   }
   
   return {
     changeAction(changeTo) {
-      data.action = null;
+      state.action = null;
       
       nextTick(() => {
-        data.action = changeTo;
+        state.action = changeTo;
       });
     },
     init() {
       utils.initRecaptcha();
     },
     async loginNative() {
-      data.loginLoading = true;
+      state.loginLoading = true;
   
     
-      const { email, password, retype } = data.login;
+      const { email, password, retype } = state.login;
       
       if(!email || !password) {
         return notify('Missing email or password');
@@ -141,7 +141,7 @@ const app = function() {
         return notify('Password must be at least 8 character.');
       }
       
-      const method = data.action;
+      const method = state.action;
       
       if(method == 'signup' && password !== retype) {
         return notify('Passwords must match.');
@@ -152,17 +152,17 @@ const app = function() {
       }
       
       if(method == 'login') {
-        delete data.login.retype;
+        delete state.login.retype;
       }
       
       const url = buildUrl();
       const settings = { reloadPage: true, checkHuman: true };
       
-      await api.post(url, data.login, settings).then(notify);
-      data.loginLoading = false;
+      await api.post(url, state.login, settings).then(notify);
+      state.loginLoading = false;
     },
     loginWithGoogle() {
-      window.location = data.baseUrl+'/login/auth/google';
+      window.location = state.baseUrl+'/login/auth/google';
     }
   }
 }();

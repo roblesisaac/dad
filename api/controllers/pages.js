@@ -1,18 +1,27 @@
+import { data } from '@ampt/data';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
+// import Site from '../models/sites';
 
-export default (function () {
+const app = function () {
   const currentFilePath = fileURLToPath(import.meta.url);
   const viewsDirectory = `${dirname(currentFilePath)}/../../src/views`;
+
+  async function fetchSite() {
+    return (await data.get('sites:*')).items[0]?.value;
+  }
 
   function getFileNames(files) {
     return files.filter((file) => file.endsWith('.vue'));
   }
 
-  function handleError(res, err, message) {
-    console.error(err);
-    res.status(500).json({ error: message });
+  function pagesForRole(site, role) {
+    if(!site) {
+      return;
+    }
+
+    return site.roles.find(({ name }) => name === role);
   }
 
   function simplifyName(fullName) {
@@ -21,17 +30,32 @@ export default (function () {
   }
 
   return {
-    loadPages(_, res) {
-      fs.readdir(viewsDirectory, (err, files) => {
-        if (err) {
-          return handleError(res, err, 'Failed to load pages...');
-        }
-        
-        const fullFileNames = getFileNames(files);
-        const names = fullFileNames.map(simplifyName);
+    getPageNames() {
+      return new Promise((resolve, reject) => {
+        fs.readdir(viewsDirectory, (err, files) => {
+          if (err) {
+            return reject('Failed to load pages...');
+          }
 
-        res.json(names);
+          const fullFileNames = getFileNames(files);
+          const pageNames = fullFileNames.map(simplifyName);
+          resolve(pageNames);
+        });
       });
+    },
+    async getDefaultPages(role) {
+      const site = await fetchSite();
+
+      return pagesForRole(site, role) 
+        || pagesForRole(site, 'public') 
+        || await app.getPageNames();
+    },
+    async servePages(_, res) {
+      const pageNames = await app.getPageNames();
+
+      res.json(pageNames);
     }
   };
-})();
+}();
+
+export default app;

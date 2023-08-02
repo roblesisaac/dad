@@ -1,7 +1,7 @@
 import { router } from '../../main';
 import { useAppStore } from '../app';
 
-export default function(state) {
+export default function(State) {
   function buildPayload(method, body) {
     return {
       method,
@@ -18,7 +18,7 @@ export default function(state) {
     const { utils } = useAppStore();
     await utils.initRecaptcha();
 
-    body.recaptchaToken = await state.recaptcha.execute('login');
+    body.recaptchaToken = await State.recaptcha.execute('login');
   }
   
   function getPathName(url) {

@@ -17,7 +17,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 
 import { useAppStore } from '../stores/app';
 
-const { state } = useAppStore();
+const { State } = useAppStore();
 
 const props = defineProps({
   settings: {
@@ -36,7 +36,7 @@ const scrollingContainer = ref(null);
 const hasOverflowLeft = ref(false);
 const hasOverflowRight = ref(false);
 
-const screenSettings = () =>  props.settings[state.currentScreenSize()];
+const screenSettings = () =>  props.settings[State.currentScreenSize()];
 
 const getSettings = (settingsName) => screenSettings().hasOwnProperty(settingsName) 
   ? screenSettings()[settingsName]

@@ -1,5 +1,5 @@
 import { data } from '@ampt/data';
-import protectedRoute from '../utils/protectedRoute';
+import { protectedRoute } from '../middlewares/protectedRoute';
 import db from '../controllers/data';
 
 export default (api, baseUrl) => {

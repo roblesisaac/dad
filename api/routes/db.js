@@ -1,8 +1,6 @@
 import db from '../controllers/db';
 
-import { 
-    checkVerified
-} from '../middlewares';
+import { checkVerified } from '../middlewares/auth';
 
 export default (api) => {
     const endpoint = '/db/:component';

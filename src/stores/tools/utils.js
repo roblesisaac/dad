@@ -1,7 +1,7 @@
 import { router } from '../../main';
 import { load } from 'recaptcha-v3';
 
-export default function(state) {
+export default function(State) {
   function defineNewPath(link) {
     return link?.path || link;
   }
@@ -22,10 +22,10 @@ export default function(state) {
     async initRecaptcha() {
       showRecaptchaBadgeClass();
 
-      if(state.recaptcha) return;
+      if(State.recaptcha) return;
       
       const siteKey = import.meta.env.VITE_RECAPTCHA_KEY;
-      state.recaptcha = await load(siteKey);
+      State.recaptcha = await load(siteKey);
     }
   }
 };
