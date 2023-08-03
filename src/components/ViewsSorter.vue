@@ -31,6 +31,7 @@
             type="text" 
             class="searchUsers" 
             placeholder="Enter Username"
+            @keyup="app.lookupUsers(state.email, true)"
             v-model="state.email" />
             <!-- Conditional rendering for the clear button -->
             <button v-if="state.email" @click="state.email=''" class="clearButton">
@@ -54,7 +55,7 @@
         <ScrollingContent>
           <button class="email role"
             v-for="user in state.matchingUsers"
-            @click="state.email=user.email"
+            @click="app.selectUser(user.email)"
             :key="user.email">
               {{ user.email }}
           </button>
@@ -291,7 +292,6 @@
         watch(() => state.selectedRole, app.loadViewButtons);
         watch(() => state.selectedSetting, app.loadViewButtons);
         watch(() => state.views.visible, app.saveSettings);
-        watch(() => state.email, app.lookupUsers);
 
         changeBgColor('#efeff5');
 
@@ -316,14 +316,16 @@
         
         setViewsButtons(selectedUsersAllowedViews());
       },
-      lookupUsers: async function(email) {         
+      lookupUsers: async function(email, wait) {         
         if (!email) {
           state.matchingUsers = [];
           setViewsButtons(allowedRoleViews());
           return;
         }
 
-        waitUntilTypingStops(
+        const delay = wait ? waitUntilTypingStops : (fn) => fn();
+
+        delay(
           async () => {
             state.matchingUsers = await fetchUsers(email);
             app.loadViewButtons();
@@ -363,6 +365,10 @@
         }
 
         await saveUserSettings(user, body);
+      },
+      selectUser: (email) => {
+        state.email=email;
+        app.lookupUsers(email);
       }
     };
   }();
