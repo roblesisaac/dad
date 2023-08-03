@@ -34,7 +34,7 @@
             @keyup="app.lookupUsers(state.email, true)"
             v-model="state.email" />
             <!-- Conditional rendering for the clear button -->
-            <button v-if="state.email" @click="state.email=''" class="clearButton">
+            <button v-if="state.email" @click="app.selectUser('')" class="clearButton">
               x
             </button>
           </div>
