@@ -1,4 +1,4 @@
-import { protectedRoute } from '../middlewares/protectedRoute';
+import Protect from '../middlewares/protect';
 
 import { 
     concatUseridToReq,
@@ -8,7 +8,7 @@ import {
 import db from '../controllers/data';
 
 export default (api, baseUrl) => {
-    const protect = protectedRoute(api, 'address', baseUrl);
+    const protect = Protect.route(api, 'address', baseUrl);
     const admin = protect('admin');
     const member = protect('member');
 

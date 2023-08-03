@@ -17,6 +17,7 @@ export default function(collectionName, schema, globalFormatting) {
         await data.set(keyGen, validated, metadata);
         const savedItem = { _id:keyGen, ...validated, ...metadata };
 
+        console.log('event:', `${collectionName}.saved`);
         events.publish(`${collectionName}.saved`, savedItem);        
         return savedItem;
     }

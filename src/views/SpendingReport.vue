@@ -1,10 +1,10 @@
 <template>
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen()" class="grid middle">
+  <div v-if="state.isSmallScreen() && state.is('ready')" class="grid middle">
     <!-- Pickers -->
     <div class="cell-1">
       <div class="grid middle">
-        <div class="cell auto section b-bottom b-right">
+        <div class="cell auto section b-bottom b-right line50">
           <AccountSelector :state="state" />
         </div>
         <div class="cell auto section b-bottom line50">          
@@ -33,14 +33,19 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen()" class="grid middle">
+  <div v-if="!state.isSmallScreen() && state.is('ready')" class="grid middle">
     <div class="cell-shrink section b-right b-bottom">
     </div>
   </div>
 
-  <!-- When Loading -->
+  <!-- Loading -->
   <Transition>
-    <LoadingDots v-if="state.status=='loading'" />
+    <LoadingDots v-if="state.is('loading')"></LoadingDots>
+  </Transition>
+
+  <!-- DatePicker -->
+  <Transition>
+    <DatePicker v-if="state.is('date')"></DatePicker>
   </Transition>
 </template>
 
@@ -50,7 +55,6 @@
   import AccountSelector from '../components/AccountSelector.vue';
   import DatePicker from '../components/DatePicker.vue';
   import TotalCalc from '../components/TotalCalc.vue';
-
   import { useAppStore } from '../stores/app';
 
   const { State } = useAppStore();
@@ -63,8 +67,11 @@
       end: 'today'
     },
     state: [],
+    is(status) {
+      return this.status === status;
+    },
     isSmallScreen() {
-      return State.currentScreenSize() === 'small' && this.status !== 'loading';
+      return State.currentScreenSize() === 'small'
     },
     status: 'ready',
     topNav: document.querySelector('.topNav').style

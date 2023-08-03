@@ -63,9 +63,11 @@ const validate = function() {
     return validated[key] = body[key];
   }
 
-  const assignDefaultProp = (data, key) => {
-    const { validated, schema } = data;
-    validated[key] = schema[key].default;
+  const assignDefaultProp = async (data, key) => {
+    const { body, validated, schema } = data;
+    const { default: defaultValue } = schema[key];
+
+    validated[key] = typeof defaultValue === 'function' ? await defaultValue(body) : defaultValue;
   }
 
   const assignMetaToData = (data, key) => {
@@ -289,7 +291,7 @@ const validate = function() {
           }
 
           if(hasDefault(data, key)) {
-            assignDefaultProp(data, key);
+            await assignDefaultProp(data, key);
             continue;
           }
 

@@ -1,3 +1,19 @@
+import { validate } from 'uuid';
+
+export function arraysMatch(arr1, arr2) {
+    if (arr1.length !== arr2.length) {
+      return false;
+    }
+  
+    for (let i = 0; i < arr1.length; i++) {
+      if (arr1[i] !== arr2[i]) {
+        return false;
+      }
+    }
+  
+    return true;
+}
+
 export async function delay(s) {
     return new Promise(resolve => setTimeout(resolve, s*1000));
 }
@@ -36,22 +52,51 @@ export function randomNumber(length=6) {
     return randomNumber;
 }
 
-function todaysDate() {
-    const pacificTimezoneOffset = -7 * 60 * 60 * 1000; // UTC-8
-    const date = new Date(Date.now() + pacificTimezoneOffset);
-    const year = date.getUTCFullYear();
-    const format = (num, pad=2) => String(num).padStart(pad, '0');
+export const generateDate = (function() {
+    function format(num, pad = 2) {
+        return String(num).padStart(pad, '0');
+    }
 
-    const month = format(date.getUTCMonth() + 1);
-    const day = format(date.getUTCDate());
-    const hours = format(date.getUTCHours());
-    const minutes = format(date.getUTCMinutes());
-    const seconds = format(date.getUTCSeconds());
-    const milliseconds = format(date.getUTCMilliseconds(), 3);
-    const datetime = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}-${milliseconds}`;
+    function generateRandomTime() {
+        const hours = String(Math.floor(Math.random() * 24)).padStart(2, '0');
+        const mins = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+        const seconds = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+        return `-${hours}-${mins}-${seconds}`;
+    }
 
-    return datetime;
-}
+    function isMissingTime(date) {
+        return !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(date);
+    }
+
+    function pacificTimezoneOffset() { 
+        return -7 * 60 * 60 * 1000;
+    };
+
+    function validDate(inputDate) {
+        if (inputDate) {
+            const [year, month, day, hours, minutes, seconds] = inputDate.split('-');
+            return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+        } else {
+            return new Date(Date.now() + pacificTimezoneOffset());
+        }
+    }
+
+    return (inputDate) => {
+        if (inputDate && isMissingTime(inputDate)) {
+            inputDate += generateRandomTime();
+        }
+
+        const d = validDate(inputDate);           
+        const year = d.getUTCFullYear();        
+        const month = format(d.getUTCMonth() + 1);
+        const day = format(d.getUTCDate());
+        const hours = format(d.getUTCHours());
+        const minutes = format(d.getUTCMinutes());
+        const seconds = format(d.getUTCSeconds());
+        
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+    }
+})();
 
 export function isEmptyObject(obj) {
     if(!obj) return false;
@@ -59,10 +104,9 @@ export function isEmptyObject(obj) {
 }
   
 
-export function buildId(timestamp) {
-    // timestamp = timestamp || new Date().getTime().toString(16);
+export function buildId(yyyymmdd) {
     const random = Math.random().toString(16).substring(2);
-    return `${todaysDate()}_${random}`;
+    return `${generateDate(yyyymmdd)}_${random}`;
 }
 
 export function dateFromId(id) {

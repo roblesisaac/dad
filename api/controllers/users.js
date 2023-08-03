@@ -1,43 +1,64 @@
-import { userHasAccess } from '../middlewares/protectedRoute';
+import Protect from '../middlewares/protect';
 import Users from '../models/users';
 import page from '../controllers/pages';
 
-export async function updateUser(req, res) {
-  const { 
-    body, 
-    params: { id: altEmail }, 
-    user: { email, role } 
-  } = req;
+const app = function() {
+  function buildFilter(req) {
+    return { email: req.params.id || rapp.email }
+  }
 
-  if(altEmail && !userHasAccess('admin', role)) {
-    const errMessage = 'You do not have permission to access this resource.'
+  function getUserRole(user) {
+    return user?.role || 'public';
+  }
 
+  function handleError(res, errMessage) {
     res.status(403).json({
       error: 'Access Denied',
       message: errMessage,
-      requiredRoles,
-      userRole
+      userRole: req.user.role
     });
 
     throw Error(errMessage);
   }
 
-  const filter = { email: altEmail || email };
-  const updated = await Users.update(filter, body);
-  
-  res.json(updated);
-}
-
-export async function getUserPages(req, res) {
-  const { user } = req;
-
-  if(!user) {
-    return res.json(await page.getDefaultPages());
+  function hasSpecificUserViews(user) {
+    return user?.views?.length || user?.hideAllViews;
   }
 
-  const pages = !user.views.length && !user.hideAllViews
-    ? await page.getDefaultPages(user.role)
-    : { name: user.email, views: user.views};
+  function hasAccess(req) {
+    return req.params.id && Protect.userHasAccess('admin', req.user.role);
+  }
 
-  res.json(pages);
-}
+  return {
+    updateUser: async (req, res) => {    
+      if(!hasAccess(req)) {
+        handleError(res, 'You do not have permission to access this resource.');
+      }
+    
+      const filter = buildFilter(req);
+      const updated = await Users.update(filter, req.body);
+      
+      res.json(updated);
+    },
+    getUserPages: async(user) => {
+      if(hasSpecificUserViews(user)) {
+        return {
+          name: user.email,
+          views: user.views
+        }
+      }
+
+      const userRole = getUserRole(user);
+    
+      return await page.getDefaultPages(userRole);
+    },
+    serveAllRoleNames: (_, res) => {
+      res.json([...Protect.allRoles]);
+    },
+    serveUserPages: async (req, res) => {
+      res.json(await app.getUserPages(req.user));
+    }
+  }
+}();
+
+export default app;

@@ -2,7 +2,8 @@ import { data } from '@ampt/data';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import fs from 'fs';
-// import Site from '../models/sites';
+import protect from '../middlewares/protect';
+import Site from './sites';
 
 const app = function () {
   const currentFilePath = fileURLToPath(import.meta.url);
@@ -12,8 +13,37 @@ const app = function () {
     return (await data.get('sites:*')).items[0]?.value;
   }
 
+  function getClosestRole(allRoles, siteRoles, inputRole) {
+    if(siteRoles.includes(inputRole)) {
+      return inputRole;
+    }
+
+    const userRoleIndex = allRoles.indexOf(inputRole);
+    let highestRoleIndex = -1;
+    
+    for(const role of siteRoles) {
+      const roleIndex = allRoles.indexOf(role);
+
+      if(roleIndex > userRoleIndex) {
+        continue;
+      }
+
+      if(roleIndex > highestRoleIndex) highestRoleIndex = roleIndex;
+    }
+
+    return allRoles[highestRoleIndex];
+  }
+
   function getFileNames(files) {
     return files.filter((file) => file.endsWith('.vue'));
+  }
+
+  function getSiteRolesArray(site) {
+    if(!site.roles) {
+      throw new Error('Site is missing roles...');
+    }
+
+    return site.roles.map(role => role.name);
   }
 
   function pagesForRole(site, role) {
@@ -30,7 +60,7 @@ const app = function () {
   }
 
   return {
-    getPageNames() {
+    getPageNames: () => {
       return new Promise((resolve, reject) => {
         fs.readdir(viewsDirectory, (err, files) => {
           if (err) {
@@ -43,14 +73,20 @@ const app = function () {
         });
       });
     },
-    async getDefaultPages(role) {
-      const site = await fetchSite();
+    getDefaultPages: async (inputRole='public') => {
+      const site = await fetchSite() || await Site.createNew();
+      const pages = pagesForRole(site, inputRole);
 
-      return pagesForRole(site, role) 
-        || pagesForRole(site, 'public') 
-        || await app.getPageNames();
+      if(pages) {
+        return pages;
+      }
+
+      const siteRoles = getSiteRolesArray(site);
+      const closestRole = getClosestRole(protect.allRoles, siteRoles, inputRole);
+
+      return pagesForRole(site, closestRole);
     },
-    async servePages(_, res) {
+    serveAllPages: async (_, res) => {
       const pageNames = await app.getPageNames();
 
       res.json(pageNames);

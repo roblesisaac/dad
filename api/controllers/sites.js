@@ -4,7 +4,7 @@ const state = {
   siteKey: null
 }
 
-export default (function () {
+const app = function () {
   function emptySite() {
     return { name: null, roles:[{}] };
   }
@@ -16,6 +16,9 @@ export default (function () {
   }
 
   return {
+    createNew: async () => {
+      return await Site.save(emptySite());
+    },
     get: async (_, res) => {
       const site = await Site.findOne();
 
@@ -23,7 +26,7 @@ export default (function () {
         return res.json(site);
       };
 
-      res.json(await Site.save(emptySite()));
+      res.json(await app.createNew());
     },
     update: async (req, res) => {
       const { body, params: { _id } } = req;
@@ -35,4 +38,6 @@ export default (function () {
       res.json(await Site.update(_id, body));
     }
   }
-}());
+}();
+
+export default app;

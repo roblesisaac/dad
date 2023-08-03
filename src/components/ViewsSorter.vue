@@ -17,7 +17,7 @@
     <ScrollingContent v-if="state.selectedSetting=='select role'" class="p30b">
       <button class="role proper"
       :class="{ active : state.selectedRole === role }"
-      @click="state.selectedRole=role" v-for="role in state.roles">
+      @click="state.selectedRole=role" v-for="role in state.allRoles">
         {{ role }}
       </button>
     </ScrollingContent>
@@ -70,7 +70,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+            <DraggerVue :class="{ 'dashed': !state.views.visible.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
           </Transition>
         </div>
       </div>
@@ -84,7 +84,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+            <DraggerVue :class="{ 'dashed': !state.views.hidden.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
           </Transition>
         </div>
       </div>
@@ -97,6 +97,7 @@
   import { useAppStore } from '../stores/app';
   import DraggerVue from './DraggerVue.vue';
   import ScrollingContent from './ScrollingContent.vue';
+  import { arraysMatch } from '../utils';
 
   const { api, sticky } = useAppStore();
 
@@ -115,32 +116,12 @@
   ];
 
   const state = reactive({
+    allRoles: [],
     allViews: [],
     bodyBg: document.documentElement.style,
-    defaultViews() {
-      return this.allowedViewsForSelectedRole('public') || this.allViews;
-    },
     email: '',
     matchingUsers: [],
-    roles: [
-      'public',
-      'guest',
-      'member',
-      'bronze',
-      'silver',
-      'gold',
-      'platinum',
-      'diamond',
-      'moderator',
-      'admin',
-      'owner'
-    ],
     selectedRole: 'public',
-    allowedViewsForSelectedRole(roleName) {
-      const { selectedRole, site: { roles } } = this;
-      const role = roles.find(({ name }) => name === (roleName || selectedRole));
-      return role?.views;
-    },
     selectedSetting: 'select role',
     site: null,
     showAdminTools: [],
@@ -154,12 +135,26 @@
   });
   
   const app = function() {
+    function allowedRoleViews(roleName) {
+      roleName = roleName || state.selectedRole || 'public';
+
+      const siteRoles = getSiteRolesArray(state.site);
+      const closestRole = getClosestRole(state.allRoles, siteRoles, roleName);
+      const role = state.site.roles.find(({ name }) => name === (closestRole));
+
+      return role?.views;
+    }
+
     function changeBgColor(color) {
       state.topNavBg.backgroundColor = state.bodyBg.backgroundColor = color;
     }
 
     function isSelectingRole() {
       return state.selectedSetting === 'select role';
+    }
+
+    async function fetchAllRoles() {
+      state.allRoles = await api.get('/api/allroles');
     }
 
     async function fetchSite() {
@@ -201,6 +196,35 @@
       state.site.roles = updatedRoles;
     }
 
+    function getClosestRole(allRoles, siteRoles, inputRole) {
+      if(siteRoles.includes(inputRole)) {
+        return inputRole;
+      }
+
+      const userRoleIndex = allRoles.indexOf(inputRole);
+      let highestRoleIndex = -1;
+      
+      for(const role of siteRoles) {
+        const roleIndex = allRoles.indexOf(role);
+
+        if(roleIndex > userRoleIndex) {
+          continue;
+        }
+
+        if(roleIndex > highestRoleIndex) highestRoleIndex = roleIndex;
+      }
+
+      return allRoles[highestRoleIndex];
+    }
+
+    function getSiteRolesArray(site) {
+      if(!site.roles) {
+        throw new Error('Site is missing roles...');
+      }
+
+      return site.roles.map(role => role.name);
+    }
+
     function hideViewButtons() {
       state.showingViewButtons = false;
     }
@@ -214,11 +238,8 @@
       await api.put(`/api/sites/${site._id}`, site);
     }
 
-    async function saveUserSettings(user) {
-      const { views: { visible } } = state;
-      const body = { views: visible, hideAllViews: !visible.length };
-
-      await api.put(`/api/users/${user.email}`, body);
+    async function saveUserSettings({ email }, body) {
+      await api.put(`/api/users/${email}`, body);
     }
 
     function selectedUser() {
@@ -227,7 +248,15 @@
       );
     }
 
-    function setViewsButtons(newViews) {
+    function selectedUsersAllowedViews() {
+      const user = selectedUser();
+
+      return user?.views?.length || user?.hideAllViews
+        ? user?.views
+        : allowedRoleViews(user?.role);
+    }
+
+    function setViewsButtons(newViews=[]) {
       const { allViews, views } = state;
 
       views.visible = newViews;
@@ -249,17 +278,6 @@
       // return roles.includes('user.role');
     }
 
-    function userViews() {
-      const user = selectedUser();
-
-      return !user ?
-        state.defaultViews()
-        : user.views.length || user.hideAllViews
-        ? user.views
-        : state.allowedViewsForSelectedRole(user.role) 
-          || state.defaultViews()
-    }
-
     function waitUntilTypingStops(callback) {
       clearTimeout(state.typingTimer);
       state.typingTimer = setTimeout(callback, 500);
@@ -270,10 +288,10 @@
         onMounted(() => sticky.stickify(stickys));
         onBeforeUnmount(() => app.resetBgColors());
 
-        watch(() => state.selectedRole, app.loadViewButtonsForUserOrRole);
+        watch(() => state.selectedRole, app.loadViewButtons);
+        watch(() => state.selectedSetting, app.loadViewButtons);
         watch(() => state.views.visible, app.saveSettings);
         watch(() => state.email, app.lookupUsers);
-        watch(() => state.selectedSetting, app.loadViewButtonsForUserOrRole);
 
         changeBgColor('#efeff5');
 
@@ -282,34 +300,33 @@
         }
 
         await fetchSite();
+        await fetchAllRoles();
         await loadAllViewsNames();
-        await app.loadViewButtonsForUserOrRole();
+        await app.loadViewButtons();
       },
       isUserSelected: () => {
         return !!selectedUser();
       },
-      loadViewButtonsForUserOrRole: async function() {
+      loadViewButtons: async function() {
         hideViewButtons();
 
         if(isSelectingRole()) {
-          const allowed = state.allowedViewsForSelectedRole();
-
-          return setViewsButtons(allowed || state.defaultViews());
+          return setViewsButtons(allowedRoleViews());
         }
         
-        setViewsButtons(userViews());
+        setViewsButtons(selectedUsersAllowedViews());
       },
       lookupUsers: async function(email) {         
         if (!email) {
           state.matchingUsers = [];
-          setViewsButtons(state.allViews);
+          setViewsButtons(allowedRoleViews());
           return;
         }
 
         waitUntilTypingStops(
           async () => {
             state.matchingUsers = await fetchUsers(email);
-            app.loadViewButtonsForUserOrRole();
+            app.loadViewButtons();
           }
         );
       },
@@ -333,7 +350,19 @@
           return;
         }
 
-        await saveUserSettings(user);
+        const { views: { visible } } = state;
+
+        const body = {
+          views: visible,
+          hideAllViews: !visible.length
+        };
+
+        if(arraysMatch(visible, allowedRoleViews(user.role))) {
+          body.views = [];
+          body.hideAllViews = false;
+        }
+
+        await saveUserSettings(user, body);
       }
     };
   }();
@@ -354,6 +383,12 @@
   border: none;
   font-size: 16px;
   color: #999;
+}
+
+.dashed {
+  height: 50px;
+  border: 1px dashed #999;
+  border-radius: 3px;
 }
 
 .searchUsers {

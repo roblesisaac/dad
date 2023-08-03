@@ -16,7 +16,7 @@ const siteSchema = Record('sites', {
       },
       views: {
         value: [String],
-        default: await pages.getPageNames()
+        default: async () => await pages.getPageNames()
       }
      }
   ],

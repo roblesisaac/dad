@@ -1,8 +1,8 @@
 import site from '../controllers/sites';
-import { protectedRoute } from '../middlewares/protectedRoute';
+import Protect from '../middlewares/protect';
 
 export default function(api, baseUrl) {
-  const protect = protectedRoute(api, 'sites', baseUrl);
+  const protect = Protect.route(api, 'sites', baseUrl);
   const admin = protect('admin');
 
   api.get('/api/sites', site.get);

@@ -68,12 +68,13 @@ const accountRemovedTemplate = `
 </html>`;
 
 export async function sendVerificationCode(email, { subject, data }) {
+  console.log(`sending verification to ${email}`);
   const email_verified = randomNumber();
   const templateData = {
     email_verified,
     message: false,
     ...data
-  };  
+  };
 
   await Users.update({ email }, { email_verified });
   
@@ -132,6 +133,7 @@ async function finalCheck({ body }) {
 }
 
 async function userJoined(body, events) {
+  console.log('user joined....');
   const { email, email_verified } = body;
 
   if(email_verified === true) {
@@ -145,13 +147,14 @@ async function userJoined(body, events) {
   }
 
   await sendVerificationCode(email, {
-  subject: 'Thank you for signing up! Here is your verification code.'
+    subject: 'Thank you for signing up! Here is your verification code.'
   });
 
   events.publish('user.firstCheck', { after: '24 hours' }, body);
 }
 
-export async function userEvents(events) {
+export function userEvents(events) {
+  console.log('events intiated...');
   events.on("user.firstCheck", ({ body }) => firstCheck(body, events));  
   events.on("user.finalCheck", finalCheck);
   events.on("users.saved", ({ body }) => userJoined(body, events));

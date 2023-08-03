@@ -40,7 +40,7 @@ export default function(State) {
     const { learn, redirect } = json || {};
     
     if (learn) {
-      Object.assign(state, learn);
+      Object.assign(State, learn);
     }
     
     if (redirect) {

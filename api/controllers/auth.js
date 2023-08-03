@@ -2,6 +2,8 @@ import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
+import Users from '../models/users';
+import userApp from '../controllers/users';
 
 const { APP_NAME } = params().list();
 
@@ -24,7 +26,24 @@ export function logoutUser(req, res) {
 
 export const loginGoogle = passport.authenticate('google', { scope: ['email'] });
 
-export const googleCallback = passport.authenticate('google', { successRedirect: '/', failureRedirect: '/login' });
+export const googleCallback = (req, res, next) => {
+  passport.authenticate('google', (err, user) => {
+    if (err || !user) {
+      return res.redirect('/login');
+    }
+
+    req.logIn(user, async (err) => {
+      if (err) {
+        return res.redirect('/login');
+      }
+
+      const { views } = await userApp.getUserPages(user);
+      const redirectUrl = `/${views[0] || ''}`;
+
+      return res.redirect(redirectUrl);
+    });
+  })(req, res, next);
+};
 
 export function loginLocal(req, res, next) {
   const callback = async (err, user) => {
@@ -42,7 +61,7 @@ export function loginLocal(req, res, next) {
 function loginUser(req, res, user) {
   const { email, email_verified } = user;
   
-  req.logIn(user, (err) => {
+  req.logIn(user, async (err) => {
     if (err) { 
       console.log({ err });
       return res.status(400).json(err); 
@@ -60,8 +79,11 @@ function loginUser(req, res, user) {
         redirect: '/verify'
       });
     }
+
+    const { views } = await userApp.getUserPages(user);
+    const redirect = `/${views[0] || ''}`;
     
-    return res.json({ learn, redirect: '/' });
+    return res.json({ learn, redirect });
   });
 }
 
@@ -137,6 +159,9 @@ export async function verifyUser(req, res) {
   }
   
   await Users.update({ email }, { email_verified: true });
+
+  const { views } = await userApp.getUserPages(user);
+  const redirect = `/${views[0] || ''}`;
   
-  res.json({ redirect: '/' });
+  res.json({ redirect });
 }

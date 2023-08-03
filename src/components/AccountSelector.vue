@@ -1,27 +1,31 @@
 <template>
-  <div class="relative">
-    <small class="section-title">account #</small>
-    <br />
-    <div class="section-content">{{ accountName }}</div>
-  </div>
+  <a @click="app.selectAcct" href="#" class="section-content">{{ accountName }}</a>
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useAppStore } from '../stores/app';
-
 const { api } = useAppStore();
 
 const { state } = defineProps({
   state: 'object'
 });
 
+const accountName = computed(() => {
+  return state.account || 'Select Acct. »';
+});
+
 const app = function() {
+  function launchPlaid() {
+    
+  }
+
   return {
-    init: function() {
+    init: () => {
       console.log('app initiated...');
     },
-    showPlaidLoginScreen: function() {
-
+    selectAcct: () => {
+      launchPlaid();
     }
   }
 }();

@@ -4,6 +4,7 @@
 
 <script setup>
 import { reactive } from 'vue';
+import { generateDate } from '../utils'
 
 const { date, when } = defineProps({
   date: 'object',
@@ -14,31 +15,27 @@ const state = reactive({
   presets: {
     firstOfMonth() {
       const now = new Date();
-      const first = new Date(now.getFullYear(), now.getMonth(), 1);
-      return first.getTime();
+      return generateDate(`${now.getFullYear()}-${now.getMonth()+1}-01`);
     },
     today() {
-      return Date.now()
+      return generateDate();
     }
   }, 
-  readable(timestamp) {
-    if(isNaN(timestamp)) {
+  readable(input) {
+    if(!input) {
       return;
     }
 
-    const date = new Date(timestamp);
-  
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr',
-      'May', 'Jun', 'Jul', 'Aug',
-      'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
     ];
-    
-    const month = months[date.getMonth()];
-    const day = date.getDate();
-    const year = date.getFullYear();
-    
-    return `${month} ${day}, ${year}`;
+
+    const [year, month, day] = input.split('-');
+    const monthIndex = parseInt(month, 10) - 1;
+    const formattedMonth = months[monthIndex];
+
+    return `${formattedMonth} ${parseInt(day, 10)}, ${year}`;
   }
 });
 
@@ -47,7 +44,7 @@ const app = function() {
     return state.presets.hasOwnProperty(date[when]);
   }
 
-  function execPreset() {
+  function launcPreset() {
     const { presets } = state;
 
     date[when] = presets[date[when]]();
@@ -56,7 +53,7 @@ const app = function() {
   return {
     init: () => {
       if(dateIsAPreset()) {
-        execPreset();
+        launcPreset();
       }
     }
   }

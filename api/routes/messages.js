@@ -1,9 +1,9 @@
 import { data } from '@ampt/data';
-import { protectedRoute } from '../middlewares/protectedRoute';
+import Protect from '../middlewares/protect';
 import db from '../controllers/data';
 
 export default (api, baseUrl) => {
-    const protect = protectedRoute(api, 'messages', baseUrl);
+    const protect = Protect.route(api, 'messages', baseUrl);
     const member = protect('member');
 
     member.post('/messages', db.save);
