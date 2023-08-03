@@ -45,7 +45,7 @@
     <!-- Selected User Button -->
     <Transition>
       <div v-if="state.selectedSetting=='select user' && app.isUserSelected()" class="cell-1 p30b left">
-        <button @click="state.email=''" class="email role active">{{ state.email }} <span class="mdi mdi-close-circle"></span></button>
+        <button @click="app.selectUser('')" class="email role active">{{ state.email }} <span class="mdi mdi-close-circle"></span></button>
       </div>
     </Transition>
 
