@@ -5,41 +5,36 @@
     </div>
     <div v-if="State.currentScreenSize() !== 'small'" class="cell-2-3 text-right">
       <router-link @click="utils.changePath(link)"
-      v-for="link in state.userViews" 
+      v-for="link in State.userViews" 
       :to="link.path || link"
       class="proper colorBlack">
         {{ link.name || link }}
       </router-link>
-      <a class="proper colorBlack" href="/logout">logout</a>
   </div>
   <div v-if="State.currentScreenSize()==='small'" class="cell-2-3 text-right">
-    <span class="mdi mdi-menu p20x bold"></span>
+    <span @click="State.showingOffCanvasLinks=true" class="mdi mdi-menu p20x bold"></span>
   </div>
 </nav>
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue';
+import { onMounted } from 'vue';
 
 import { useAppStore } from '../stores/app';
-const { State, api, utils, sticky } = useAppStore();
-
-const state = reactive({
-  userViews: []
-});
+const { State, api, utils, sticky, User } = useAppStore();
 
 const app = function() {
-
   async function getUserViews() {
-    state.userViews = (await api.get('/api/userviews')).views;
+    State.userViews = State.userViews || (await api.get('/api/userviews')).views;
   }
 
   return {
-    init() {
-      onMounted(async () => {
+    init: function () {
+      onMounted(() => {
         sticky.stickify('.topNav');
-        await getUserViews();
       });
+
+      getUserViews();
     }
   };
 }();

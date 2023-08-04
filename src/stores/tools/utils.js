@@ -17,6 +17,10 @@ export default function(State) {
       hideRecaptchaBadgeClass();
       const newPath = defineNewPath(link);
 
+      if(newPath === 'logout') {
+        return window.location = '/logout';
+      }
+
       router.push(newPath);
     },
     async initRecaptcha() {

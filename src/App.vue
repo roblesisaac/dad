@@ -1,10 +1,20 @@
 <template>
-  <NavMain />
-  <router-view />
+  <NavMain v-if="!State.showingOffCanvasLinks" />
+  <Transition>
+  <OffCanvasLinks v-if="State.showingOffCanvasLinks" />
+  </Transition>
+
+  <router-view v-if="!State.showingOffCanvasLinks" />
 </template>
 
 <script setup>
 import NavMain from './components/NavMain.vue';
+import OffCanvasLinks from './components/OffCanvasLinks.vue';
+
+import { useAppStore } from './stores/app';
+const { State } = useAppStore();
+
+
 </script>
 
 <style>

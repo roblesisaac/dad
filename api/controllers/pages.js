@@ -75,16 +75,19 @@ const app = function () {
     },
     getDefaultPages: async (inputRole='public') => {
       const site = await fetchSite() || await Site.createNew();
-      const pages = pagesForRole(site, inputRole);
-
-      if(pages) {
-        return pages;
-      }
-
       const siteRoles = getSiteRolesArray(site);
       const closestRole = getClosestRole(protect.allRoles, siteRoles, inputRole);
+      const pages = pagesForRole(site, closestRole);
 
-      return pagesForRole(site, closestRole);
+      if(inputRole === 'public' && !pages.views.includes('login')) {
+        pages.views.push('login');
+      }
+
+      if(inputRole !== 'public' && !pages.views.includes('logout')) {
+        pages.views.push('logout');
+      }
+
+      return pages;
     },
     serveAllPages: async (_, res) => {
       const pageNames = await app.getPageNames();
