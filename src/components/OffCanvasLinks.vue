@@ -1,8 +1,10 @@
 <template>
-<div class="grid">
+<div class="grid off-canvas">
   <div class="cell-1">
-    <button class="linkButton" @click="State.showingOffCanvasLinks=false">x Close</button>
-    <button class="linkButton" @click="app.changePath(link)"
+    <button class="close-window" @click="State.showingOffCanvasLinks=false">      
+      <close-thick-icon />
+    </button>
+    <button class="link-button" @click="app.changePath(link)"
       v-for="link in State.userViews" 
       :to="link.path || link">
         {{ link.name || link }}
@@ -14,6 +16,7 @@
 <script setup>
 import { useAppStore } from '../stores/app';
 const { State, utils } = useAppStore();
+import CloseThickIcon from 'vue-material-design-icons/CloseThick.vue';
 
 const app = function() {
   async function getUserViews() {
@@ -36,17 +39,27 @@ app.init();
 </script>
 
 <style scoped>
-  .linkButton {
+  .close-window {
+    float: right;
+    text-align: right;
+    background-color: white;
+    color: black;
+    box-shadow: none;
+  }
+  .link-button {
+    box-shadow: none;
     display: inline-block;
     width: 100%;
     color: black;
     font-size: 1.5rem;
     text-transform: uppercase;
-    border-bottom: 1px dashed #000;
-    background-color: antiquewhite;
+    background-color: white;
     line-height: 1.1em;
     cursor: pointer;
     padding: 0.6em 0;
     font-weight: 700;
+  }
+  .off-canvas {
+    background-color: white;
   }
 </style>

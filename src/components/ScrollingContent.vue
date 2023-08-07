@@ -2,11 +2,11 @@
   <div class="scrolling-content" :class="{ 'hide-scrollbar': shouldHideScrollbar }" ref="scrollingContainer">
     <div class="scrolling-wrapper">
       <button v-if="shouldShowArrows && hasOverflowLeft" @click="scrollTo('left')" class="scroll-arrow left">
-        <span class="mdi mdi-chevron-left"></span>
+        <ChevronLeft />
       </button>
       <slot></slot>
       <button v-if="shouldShowArrows && hasOverflowRight" @click="scrollTo('right')" class="scroll-arrow right">      
-        <span class="mdi mdi-chevron-right"></span>
+        <ChevronRight />
       </button>
     </div>
   </div>
@@ -14,6 +14,8 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
+import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
+import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 
 import { useAppStore } from '../stores/app';
 

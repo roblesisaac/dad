@@ -1,8 +1,12 @@
 <template>
   <nav class="grid topNav shadow middle">
+    
+    <!-- logo -->
     <div class="cell-1-3 text-left bold">
       <img id="logo" src="../assets/icon.svg" height="30" />
     </div>
+
+    <!-- links -->
     <div v-if="State.currentScreenSize() !== 'small'" class="cell-2-3 text-right">
       <router-link @click="utils.changePath(link)"
       v-for="link in State.userViews" 
@@ -11,17 +15,23 @@
         {{ link.name || link }}
       </router-link>
   </div>
+
+  <!-- hamburger -->
   <div v-if="State.currentScreenSize()==='small'" class="cell-2-3 text-right">
-    <span @click="State.showingOffCanvasLinks=true" class="mdi mdi-menu p20x bold"></span>
+    <a href="#" class="menu-icon">
+      <MenuIcon @click="State.showingOffCanvasLinks=true" />
+    </a>
   </div>
+
 </nav>
 </template>
 
 <script setup>
 import { onMounted } from 'vue';
+import MenuIcon from 'vue-material-design-icons/Menu.vue';
 
 import { useAppStore } from '../stores/app';
-const { State, api, utils, sticky, User } = useAppStore();
+const { State, api, utils, sticky } = useAppStore();
 
 const app = function() {
   async function getUserViews() {
@@ -44,6 +54,10 @@ app.init();
 </script>
 
 <style>
+.menu-icon {
+  color: black;
+}
+
 .topNav {
   background: #fff;
   transition: all .3s;

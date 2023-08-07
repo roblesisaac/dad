@@ -23,6 +23,4 @@ const { State } = useAppStore();
 @import "css/utils.css";
 @import "css/colors.css";
 @import "css/style.css";
-@import "css/f-icons/foundation-icons.css";
-@import "@mdi/font/css/materialdesignicons.css" ;
 </style>
