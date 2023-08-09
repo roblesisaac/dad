@@ -2,9 +2,9 @@
   <draggable class="grid draggable" v-model="state[listName]" v-bind="dragOptions">
     <div :class="' cell-1-'+columns" v-for="view in state[listName]" :key="view+randomNumber()">
       <div class="p5r p5b">
-        <button class="grid viewButton">
+        <button @dblclick="specialClick($event, view)" class="grid viewButton">
           <div class="cell-1 proper center middle">
-            {{  view }}
+            {{ view }}
           </div>
         </button>
       </div>
@@ -20,6 +20,7 @@
     cols: Number,
     listName: String,
     state: Object,
+    onDblClick: Function
   });
   
   const columns = props.cols || 2;
@@ -28,6 +29,14 @@
     animation: 200,
     touchStartThreshold: 100
   };
+
+  function specialClick($event, view) {
+    if(!props.onDblClick) {
+      return;
+    }
+
+    props.onDblClick($event, view);
+  }
   
   </script>
   

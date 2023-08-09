@@ -238,7 +238,7 @@ const validate = function() {
   }
 
   return {
-    init: async (collectionName, schema, body, req, globalFormatting) => {
+    init: async (collectionName, schema, body={}, req, globalFormatting) => {
       const data = {
         collectionName,
         schema,

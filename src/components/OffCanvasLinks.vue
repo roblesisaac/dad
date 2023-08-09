@@ -1,7 +1,7 @@
 <template>
 <div class="grid off-canvas">
   <div class="cell-1">
-    <button class="close-window" @click="State.showingOffCanvasLinks=false">      
+    <button class="close-window p20" @click="State.showingOffCanvasLinks=false">      
       <close-thick-icon />
     </button>
     <button class="link-button" @click="app.changePath(link)"

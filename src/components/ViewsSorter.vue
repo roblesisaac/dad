@@ -72,7 +72,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue :class="{ 'dashed': !state.views.visible.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'"></DraggerVue>
+            <ViewDragger :class="{ 'dashed': !state.views.visible.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'" :onDblClick="app.onDblClick"></ViewDragger>
           </Transition>
         </div>
       </div>
@@ -86,7 +86,7 @@
         </div>
         <div class="cell-4-5">
           <Transition>
-            <DraggerVue :class="{ 'dashed': !state.views.hidden.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></DraggerVue>
+            <ViewDragger :class="{ 'dashed': !state.views.hidden.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></ViewDragger>
           </Transition>
         </div>
       </div>
@@ -98,7 +98,7 @@
   import { reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
   import CloseCircle from 'vue-material-design-icons/CloseCircle.vue';
   import { useAppStore } from '../stores/app';
-  import DraggerVue from './DraggerVue.vue';
+  import ViewDragger from './ViewDragger.vue';
   import ScrollingContent from './ScrollingContent.vue';
   import { arraysMatch } from '../utils';
 
@@ -287,7 +287,7 @@
     }
 
     return {
-      init: async function() {
+      init: async () => {
         onMounted(() => sticky.stickify(stickys));
         onBeforeUnmount(() => app.resetBgColors());
 
@@ -309,7 +309,7 @@
       isUserSelected: () => {
         return !!selectedUser();
       },
-      loadViewButtons: async function() {
+      loadViewButtons: async () => {
         hideViewButtons();
 
         if(isSelectingRole()) {
@@ -318,7 +318,7 @@
         
         setViewsButtons(selectedUsersAllowedViews());
       },
-      lookupUsers: async function(email, wait) {         
+      lookupUsers: async (email, wait) => {         
         if (!email) {
           state.matchingUsers = [];
           setViewsButtons(allowedRoleViews());
@@ -334,10 +334,14 @@
           }
         );
       },
-      resetBgColors: function() {
+      onDblClick: (_, view) => {
+        // const indexOfView = getViewIndex(view);
+        // renderEditFormForVisibleView(indexOfView);
+      },
+      resetBgColors: () => {
         changeBgColor('');
       },
-      saveSettings: async function() {
+      saveSettings: async () => {
         if(!state.showingViewButtons) {
           return;
         }

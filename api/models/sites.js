@@ -8,6 +8,12 @@ const siteSchema = Record('sites', {
     unique: true,
     default: params('APP_NAME')
   },
+  readableNames: [
+    {
+      name: String,
+      path: String
+    }
+  ],
   roles: [
     { 
       name: {
