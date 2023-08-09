@@ -7,6 +7,7 @@ import auth from './auth';
 import db from './db';
 import messages from './messages';
 import pages from './pages';
+import plaid from './plaid';
 import sites from './sites';
 import users from './users';
 
@@ -18,8 +19,6 @@ export default (app) => {
         res.json(`You've reached the starting point of our API!`);
     });
 
-    
-
     // Api routes
     [
         address,
@@ -28,6 +27,7 @@ export default (app) => {
         messages,
         sites,
         pages,
+        plaid,
         users,
         // dataApi
     ].forEach(route => route(api, '/api'));
