@@ -1,61 +1,88 @@
-import mongo from "../utils/mongo.js";
+import models from '../models';
 
-export default (function() {
-  function buildQuery(req, defaults = {}) {
-    return { ...defaults, ...req.query };
-  }
+function handleError(res, error) {
+    console.error(error);
+    if(error) res.status(400).json({ error: error.toString() });
+}
 
-  function getCollectionName(req) {
-    const { component } = req.params;
+function init(req) {
+    const { collection } = req.params;
+    const { query } = req;
+    const model = models[collection];
+    const initError = !model ? `No schema found for '${collection}'...` : null;
 
-    return component;
-  }
+    return { initError, model, query };
+}
 
-  return {
-    async deleteOne(req, res) {
-      const collection = getCollectionName(req);
-      const data = await mongo.deleteOne(collection, req.params.id);
-
-      res.json(data)
-    },
-    async deleteMany(req, res) {
-      const collection = getCollectionName(req);
-      const data = await mongo.deleteMany(collection, req.body);
-
-      res.json(data)
-    },
-    async find(req, res) {
-      const collection = getCollectionName(req);
-      const query = buildQuery(req, { limit: 50 });  
-      const data = await mongo.find(collection, query);
-
-      res.json(data)
-    },
-    async findOne(req, res) {
-      const collection = getCollectionName(req);
-      const query = buildQuery(req, { id: req.params.id });  
-      const data = await mongo.findOne(collection, query);
-
-      res.json(data)
-    },
-    async insert(req, res) {
-      const collection = getCollectionName(req);
-      const data = await mongo.insert(collection, req.body);
-
-      res.json(data)
-    },
-    async updateOne(req, res) {
-      const collection = getCollectionName(req);
-      const { params: { id }, body } = req;
-      const data = await mongo.updateOne(collection, id, body);
-      
-      res.json(data);
-    },
-    async updateMany(req, res) {
-      const collection = getCollectionName(req);
-      const data = mongo.updateMany(collection, req.body);
-
-      res.json(data);
+async function save(req, res) {
+    const { initError, model } = init(req);
+    const { body } = req;
+    
+    if(initError) {
+        return handleError(res, initError);
     }
-  };
-})();
+
+    try {
+        const inserted = await model.save(body, req);
+        return res.json(inserted);
+    } catch (error) {
+        console.log({ error });
+        handleError(res, error);
+    }
+}
+
+async function get(req, res) {
+    const { model, query, initError } = init(req);
+
+    if(initError) {
+        return handleError(res, initError);
+    }
+    
+    const { key } = req.params;
+
+    try {
+        let result = await model.find({ _id:key, ...query });
+        res.json(result);
+    } catch (error) {
+        handleError(res, error);
+    }
+}
+
+async function update(req, res) {
+    const { initError, model } = init(req);
+    const { key } = req.params;
+
+    if(initError) {
+        return handleError(res, initError);
+    }
+
+    try {
+        let result = await model.update(key || req.query, req.body, req);
+        res.json(result);
+    } catch (error) {
+        handleError(res, error);
+    }
+}
+
+async function erase(req, res) {
+    const { model, initError } = init(req);
+    const { key } = req.params;
+
+    if(initError) {
+        return handleError(res, initError);
+    }
+
+    try {
+        let result = await model.erase(key || req.query);
+        res.json(result);
+    } catch (error) {
+        handleError(res, error);
+    }
+}
+
+export default { 
+    save,
+    get, 
+    update,
+    erase 
+};

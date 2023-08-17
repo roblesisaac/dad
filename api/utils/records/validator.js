@@ -109,10 +109,12 @@ const validate = function() {
   const concatMetaRefs = (data, key) => {
     const { metadata, validated, setValue } = data;
     const concatArray = metadata[key].concat;
+    const joiner = metadata[key].join || '';
+
     let concatedRefs = '';
 
     concatArray.forEach(ref => {
-      concatedRefs += validated[ref];
+      concatedRefs += validated[ref]+joiner;
     });
 
     metadata[key] = setValue(concatedRefs);
@@ -136,8 +138,8 @@ const validate = function() {
       validated,
       req: req 
     }
-
-    return await schemaKeyType(body[key], parameters);
+    
+    return await schemaKeyType(body[key] || '', parameters);
   }
 
   const hasDefault = (data, key) => {
@@ -198,14 +200,14 @@ const validate = function() {
 
   const validateItemsInArray = async (data, key) => {
     const { collectionName, validated, body, schemaKeyType, req, globalFormatting } = data;
-    const nested = schemaKeyType[0] || {};
+    const nestedSchema = schemaKeyType[0] || {};
         
     validated[key] = body[key]
     ? await Promise.all(
         body[key].map(async (itm) => {
           return (await validate.init(
             collectionName,
-            nested,
+            nestedSchema,
             itm,
             body,
             req,
@@ -213,18 +215,7 @@ const validate = function() {
           )).validated;
         })
       )
-    : await Promise.all(
-        schemaKeyType.map(async (_) => {
-          return (await validate.init(
-            collectionName,
-            nested,
-            undefined,
-            body,
-            req,
-            globalFormatting
-          )).validated;
-        })
-      );
+    : []
   
   }
 
@@ -238,7 +229,7 @@ const validate = function() {
   }
 
   return {
-    init: async (collectionName, schema, body={}, req, globalFormatting) => {
+    init: async (collectionName, schema, body, req, globalFormatting) => {
       const data = {
         collectionName,
         schema,
@@ -284,7 +275,7 @@ const validate = function() {
           continue;
         }
 
-        if(!body.hasOwnProperty(key)) {
+        if(body && !body.hasOwnProperty(key)) {
 
           if(schema[key].required) {
             err(`Missing required property ${key}.`);

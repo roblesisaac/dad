@@ -1,6 +1,6 @@
 import { data } from '@ampt/data';
 import Protect from '../middlewares/protect';
-import db from '../controllers/data';
+import db from '../controllers/db';
 
 export default (api, baseUrl) => {
     const protect = Protect.route(api, 'messages', baseUrl);

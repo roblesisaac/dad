@@ -133,7 +133,6 @@ async function finalCheck({ body }) {
 }
 
 async function userJoined(body, events) {
-  console.log('user joined....');
   const { email, email_verified } = body;
 
   if(email_verified === true) {
@@ -154,7 +153,6 @@ async function userJoined(body, events) {
 }
 
 export function userEvents(events) {
-  console.log('events intiated...');
   events.on("user.firstCheck", ({ body }) => firstCheck(body, events));  
   events.on("user.finalCheck", finalCheck);
   events.on("users.saved", ({ body }) => userJoined(body, events));

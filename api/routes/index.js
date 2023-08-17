@@ -3,8 +3,8 @@ import { Router } from 'express';
 
 import address from './address';
 import auth from './auth';
-// import dataApi from './data';
-import db from './db';
+// import db from './db';
+import mongo from './mongo';
 import messages from './messages';
 import pages from './pages';
 import plaid from './plaid';
@@ -23,13 +23,13 @@ export default (app) => {
     [
         address,
         auth,
-        db,
+        mongo,
         messages,
         sites,
         pages,
         plaid,
         users,
-        // dataApi
+        // db
     ].forEach(route => route(api, '/api'));
 
     // Api catch all

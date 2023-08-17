@@ -5,7 +5,7 @@ import {
     ensureUserCreatedItem
 } from '../middlewares/utils';
 
-import db from '../controllers/data';
+import db from '../controllers/db';
 
 export default (api, baseUrl) => {
     const protect = Protect.route(api, 'address', baseUrl);

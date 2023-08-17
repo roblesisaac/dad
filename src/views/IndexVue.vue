@@ -90,7 +90,7 @@ const car = ref(emptyCar());
 onMounted(async () => {
   sticky.stickify(stickys);
 
-  users.value = await api.get('/db/users');
+  users.value = await api.get('/mongo/users');
   loading.value = false;
 });
 

@@ -17,7 +17,6 @@ export default function(collectionName, schema, globalFormatting) {
         await data.set(keyGen, validated, metadata);
         const savedItem = { _id:keyGen, ...validated, ...metadata };
 
-        console.log('event:', `${collectionName}.saved`);
         events.publish(`${collectionName}.saved`, savedItem);        
         return savedItem;
     }
@@ -46,7 +45,7 @@ export default function(collectionName, schema, globalFormatting) {
     const findOne = async(filter) => {
         const results = await find(filter) || [];
 
-        return results[0];
+        return Array.isArray(results) ? results[0] : results;
     };
       
     const update = async (filter, updates, req) => {

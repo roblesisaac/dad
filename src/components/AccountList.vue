@@ -19,25 +19,21 @@ const { state } = defineProps({ state: 'object' });
 
 const app = function() {
   function createLink() {
-    var linkHandler = Plaid.create({
+    return Plaid.create({
       token: state.linkToken,
-      onSuccess: function(publicToken) {
-        // Handle successful Plaid Link flow
-        console.log('Public token:', { publicToken });
-        // Send the public token to your server to exchange it for an access token
+      onSuccess: async function(publicToken) {
+        const accessToken = await api.post('api/plaid/exchange', { publicToken });
+
+        console.log({ accessToken });
       },
       onExit: function(err, metadata) {
-        // Handle when the user exits the Plaid Link flow
         console.log('Link exit:', { err, metadata });
       },
     });
-
-    // Open Plaid Link
-    linkHandler.open();
   }
 
   async function fetchLinkToken() {
-    state.linkToken = state.linkToken || await api.get('api/linktoken');
+    state.linkToken = state.linkToken || await api.get('api/link/token');
   }
 
   return {
@@ -45,7 +41,9 @@ const app = function() {
       await fetchLinkToken();
     },
     linkNewAccount: async () => {
-      createLink();
+      const link = createLink();
+
+      link.open();
     }
   }
 }();
