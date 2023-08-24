@@ -167,6 +167,10 @@ const app = function() {
     return plaidItem.find({ itemId: `${userId}*`});
   }
 
+  function hasMatch(userAccounts, retrieved) {
+    return userAccounts.find(itm => itm.account_id === retrieved.account_id);
+  }
+
   async function retrieveAccountsFromPlaidForItem({ accessToken }, { encryptionKey }) {
     const access_token = decryptAccessToken(accessToken, encryptionKey);
     const { data } = await plaidClient.accountsGet({ access_token });
@@ -342,10 +346,9 @@ const app = function() {
     syncAccounts: async function({ user }, res) {
       initClient();
 
-      const items = await fetchUserItems(user._id);
       let retrievedAccounts = [];
 
-      for(const item of items) {
+      for(const item of await fetchUserItems(user._id)) {
         retrievedAccounts = retrievedAccounts.concat(
           await retrieveAccountsFromPlaidForItem(item, user)
         );
@@ -355,9 +358,7 @@ const app = function() {
       const synced = [];
 
       for(const retrieved of retrievedAccounts) {
-        const hasMatch = userAccounts.find(itm => itm.account_id === retrieved.account_id);
-
-        if(hasMatch) {
+        if(hasMatch(userAccounts, retrieved)) {
           continue;
         }
 
