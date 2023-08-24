@@ -17,21 +17,18 @@ const {
 const app = function() {
   let plaidClient;
 
-  async function applyTransactionUpdates({ body }) {
-    const { 
-      _id, cursor, req,
-      added, modified, removed 
-    } = body;
+  async function applyTransactionUpdates(_id, access_token, cursor, req, has_more, plaidData) {
+    const { added, modified, removed } = plaidData;
 
     const userQuery = buildUserQuery(req.user._id);
-    const existingTransactions = await fetchAllUserTransactions(userQuery);
+    const existingTransactions = added.length || removed.length 
+      ? await fetchAllUserTransactions(userQuery)
+      : [];
     
     for (const transaction of added) {
-      const isAlreadyAdded = existingTransactions.find(itm => 
-        itm.transaction_id === transaction.transaction_id
-      );
+      const existingItem = findExistingTransaction(existingTransactions, transaction);
 
-      if(!isAlreadyAdded) {
+      if(!existingItem) {
         await plaidTransaction.save(transaction, req);
       }
     }
@@ -41,15 +38,27 @@ const app = function() {
       await plaidTransaction.update({ transaction_id }, transaction);
     }
 
-    const removeIds = removed.map(({ transaction_id }) => transaction_id);
-    if(removeIds.lengths) await data.remove(removeIds);
-  
-    const nowInPST = new Date(Date.now() - 8 * 3600000)
-    await plaidItem.update(_id, { 
-      lastSynced: nowInPST,
-      syncStatus: `complete`, 
-      cursor 
+    const removeIds = removed.map(removed => {
+      return findExistingTransaction(existingTransactions, removed)._id;
     });
+    
+    if(removeIds.lengths) await data.remove(removeIds);
+
+    if(has_more) {
+      return await syncTransactions({
+        body: {
+          _id, access_token, cursor, req
+        }
+      });
+    }
+
+    await completeTransactionsSync(_id, cursor);
+  }
+
+  function dataIsEmpty(plaidData) {
+    return ['added', 'modified', 'removed'].every(
+      arrName => plaidData[arrName].length === 0
+    );
   }
 
   function buildConfiguration() {
@@ -76,6 +85,16 @@ const app = function() {
     }
 
     return isEmptyObject(query) ? user_id : query;
+  }
+
+  function completeTransactionsSync(_id, cursor) {  
+    const nowInPST = new Date(Date.now() - 8 * 3600000);
+    
+    return plaidItem.update(_id, { 
+      lastSynced: nowInPST,
+      syncStatus: `complete`, 
+      cursor
+    });
   }
 
   function initClient() {
@@ -167,6 +186,12 @@ const app = function() {
     return plaidItem.find({ itemId: `${userId}*`});
   }
 
+  function findExistingTransaction(existingTransactions, transaction) {
+    return existingTransactions.find(itm => 
+      itm.transaction_id === transaction.transaction_id
+    );
+  }
+
   function hasMatch(userAccounts, retrieved) {
     return userAccounts.find(itm => itm.account_id === retrieved.account_id);
   }
@@ -232,8 +257,7 @@ const app = function() {
 
   async function syncTransactions({ body }) {
     let { 
-      _id, access_token, cursor, req, 
-      added, modified, removed 
+      _id, access_token, cursor, req
     } = body;
 
     const request = {
@@ -244,22 +268,14 @@ const app = function() {
 
     const response = await plaidClient.transactionsSync(request);
 
-    const { data } = response;
+    const { data: plaidData } = response;
+    const { next_cursor, has_more } = plaidData;
 
-    added = added.concat(data.added);
-    modified = modified.concat(data.modified);
-    removed = removed.concat(data.removed);
+    if(dataIsEmpty(plaidData) && !has_more) {
+      return await completeTransactionsSync(_id, next_cursor);
+    }
 
-    cursor = data.next_cursor;
-    const { has_more } = data;
-
-    events.publish(
-      `plaid.${has_more ? 'syncTransactions' : 'applyTransactionUpdates'}`,
-      {
-        _id, access_token, cursor:'', req,
-        added, modified, removed
-      }
-    );
+    await applyTransactionUpdates(_id, access_token, next_cursor, req, has_more, plaidData);
   }
 
   function warn(userId, _id, product) {
@@ -269,7 +285,6 @@ const app = function() {
   return {
     init: function() {
       subscribeEvent('plaid.syncTransactions', syncTransactions);
-      subscribeEvent('plaid.applyTransactionUpdates', applyTransactionUpdates);
       initClient();
     },
     exchangeToken: async function(req, res) {
@@ -337,8 +352,7 @@ const app = function() {
       await plaidItem.update(_id, { syncStatus: 'sync in progress...' });
 
       events.publish('plaid.syncTransactions', {
-        _id, access_token, cursor, req: { user },
-        added: [], modified: [], removed: []
+        _id, access_token, cursor, req: { user }
       });
 
       res.json('sync initiated...');
