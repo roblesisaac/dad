@@ -1,19 +1,27 @@
 import Record from '../utils/records';
-import { encrypt, decrypt } from '../utils/encryption';
+import { encrypt, decrypt, encryptWithKey } from '../utils/encryption';
 
 const plaidItem = Record('plaiditems', {
-  userId: (_, { item, req }) => item.userId || req?.user?._id,
-  accessToken: {
-    value: encrypt,
+  userId: {
+    value: (_, { req }) => encrypt(req.user._id),
     get: decrypt,
-    required: true,
+    isLocked: true
   },
-  itemId: {
+  accessToken: { 
+    value: (accessToken, { req }) => {
+      const { encryptionKey } = req.user;
+      const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
+
+      return encrypt(userEncryptedKey);
+    },
+    isLocked: true,
+    required: true
+   },
+  itemId: { 
     value: encrypt,
-    get: decrypt,
     required: true,
-    unique: true,
-  },
+    unique: true
+   },
   institutionId: value => value || '',
   lastSyncedAt: Date,
   accessTokenExpiration: value => value || '',
@@ -24,11 +32,7 @@ const plaidItem = Record('plaiditems', {
     name: 'itemId',
     concat: ['userId', 'itemId']
   },
-  label2: {
-    name: 'accessToken',
-    concat: ['userId', 'accessToken']
-  },
-  label3: 'cursor'
+  label2: 'cursor'
 });
 
 export default plaidItem;

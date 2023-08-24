@@ -1,16 +1,16 @@
 <template>
   <!-- BackButton -->
   <Transition>
-    <button @click="state.status='ready'" v-if="!state.is(['ready', 'loading'])" class="backButton section b-bottom"><ChevronLeft /> Back</button>
+    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="backButton section b-bottom"><ChevronLeft /> Back</button>
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen() && state.is('ready')" class="grid middle">
+  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
     <!-- Pickers -->
     <div class="cell-1">
       <div class="grid middle">
         <div class="cell auto section b-bottom b-right line50">
-          <a @click="state.status='acctList'" class="section-content proper" href="#">
+          <a @click="state.view='acctList'" class="section-content proper" href="#">
             {{ acctName }}
           </a>
         </div>
@@ -42,7 +42,7 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('ready')" class="grid middle">
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid middle">
     <div class="cell-shrink section b-right b-bottom">
     </div>
   </div>
@@ -64,7 +64,7 @@
 </template>
 
 <script setup>
-  import { computed, reactive } from 'vue';
+  import { computed, reactive, watch } from 'vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import AccountList from '../components/AccountList.vue';
@@ -75,27 +75,31 @@
   const { api, State } = useAppStore();
 
   const state = reactive({
-    account: null,
     body: document.documentElement.style,
     date: {
       start: 'firstOfMonth',
       end: 'today'
     },
     state: [],
-    is(status) {
-      const statuses = Array.isArray(status) ? status : [status];
-      return statuses.includes(this.status);
+    is(view) {
+      const viewes = Array.isArray(view) ? view : [view];
+      return viewes.includes(this.view);
     },
     isSmallScreen() {
       return State.currentScreenSize() === 'small'
     },
     linkToken: null,
-    status: 'ready',
+    selectedAccount: null,
     topNav: document.querySelector('.topNav').style,
-    userAccounts: ['orange']
+    userAccounts: [],
+    view: 'home'
   });
 
-  const acctName = computed(() => state.account || 'Select Acct. »');
+  const acctName = computed(() => 
+    state.selectedAccount ? 
+      `${state.selectedAccount.subtype} ${state.selectedAccount.mask}` 
+      : 'Select Acct. »'
+  );
 
   const app = function() {
     function changeBgColor(color) {
@@ -107,7 +111,9 @@
     }
 
     async function fetchUserAccounts() {
-      state.userAccounts = ['orange'];
+      const fetchedAccounts = await api.get('api/plaid/accounts');
+
+      state.userAccounts = state.userAccounts.concat(fetchedAccounts);
     }
 
     function loadScript(src) {
@@ -137,11 +143,20 @@
         changeFont('Consolas, monospace');
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js')
         await fetchUserAccounts();
+      },
+      handleViewChange: async (view) => {
+        if(view !== 'home' || !state.selectedAccount) {
+          return;
+        }
+
+        console.log(state)
       }
     }
   }();
 
   app.init();
+
+  watch(() => state.view, app.handleViewChange);
 
 </script>
 

@@ -4,7 +4,7 @@ import page from '../controllers/pages';
 
 const app = function() {
   function buildFilter(req) {
-    return { email: req.params.id || rapp.email }
+    return { email: req.params.id || req.email }
   }
 
   function getUserRole(user) {
@@ -30,6 +30,12 @@ const app = function() {
   }
 
   return {
+    fetchUser: async ({ user }, res) => {
+      const fetchedUser = await Users.find(user._id);
+      delete fetchedUser.encryptionKey;
+
+      res.json(fetchedUser);
+    },
     updateUser: async (req, res) => {    
       if(!hasAccess(req)) {
         handleError(res, 'You do not have permission to access this resource.');

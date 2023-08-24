@@ -4,8 +4,8 @@
     <a v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="section-content">+ Link New Account</a>
     <b v-else>Loading <LoadingDots /></b>
   </div>
-  <div v-for="acct in state.userAccounts" class="cell-1 section b-top line50">
-    <a href="#" class="section-content proper">{{ acct.name || acct }}</a>
+  <div v-for="acct in state.userAccounts" class="cell-1 section b-top">
+    <a @click="app.selectAccount(acct)" href="#" class="section-content proper line50">{{ acct.subtype }} {{  acct.mask }}</a>
   </div>
 </div>
 </template>
@@ -44,6 +44,10 @@ const app = function() {
       const link = createLink();
 
       link.open();
+    },
+    selectAccount: (acct) => {
+      state.selectedAccount = acct;
+      state.view = 'home';
     }
   }
 }();

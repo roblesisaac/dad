@@ -1,10 +1,12 @@
 import { events, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
+import { encrypt, decryptWithKey, decrypt } from '../utils/encryption';
+import { isEmptyObject } from '../../src/utils';
 
+import plaidAccounts from '../models/plaidAccounts';
 import plaidItem from '../models/plaidItems';
 import plaidTransaction from '../models/plaidTransactions';
-import { encrypt } from '../utils/encryption';
 
 const {
   AMPT_URL,
@@ -15,14 +17,23 @@ const {
 const app = function() {
   let plaidClient;
 
-  async function applyUpdates({ body }) {
+  async function applyTransactionUpdates({ body }) {
     const { 
-      _id, cursor, req, 
+      _id, cursor, req,
       added, modified, removed 
     } = body;
+
+    const userQuery = buildUserQuery(req.user._id);
+    const existingTransactions = await fetchAllUserTransactions(userQuery);
     
     for (const transaction of added) {
-      await plaidTransaction.save(transaction, req);
+      const isAlreadyAdded = existingTransactions.find(itm => 
+        itm.transaction_id === transaction.transaction_id
+      );
+
+      if(!isAlreadyAdded) {
+        await plaidTransaction.save(transaction, req);
+      }
     }
 
     for (const transaction of modified) {
@@ -54,25 +65,37 @@ const app = function() {
     });
   }
 
+  function buildUserQuery(userId, query) {
+    const user_id = `${encrypt(userId)}`;
+
+    for (const prop in query) {
+      if(['limit', 'start'].includes(prop)) {
+        continue;
+      }
+      query[prop] = `${user_id}${query[prop]}*`
+    }
+
+    return isEmptyObject(query) ? user_id : query;
+  }
+
   function initClient() {
     plaidClient = plaidClient || new PlaidApi(buildConfiguration());
   }
 
-  function buildRequest({ client_user_id, redirect_uri }) {
+  function buildRequest(userId) {
     return {
-      user: { client_user_id },
+      user: { client_user_id: userId },
       client_name: 'Plaid Test App',
       products: ['auth', 'transactions'],
       country_codes: ['US'],
       language: 'en',
-      redirect_uri: redirect_uri || `${AMPT_URL}/spendingreport`
+      redirect_uri: `${AMPT_URL}/spendingreport`
     };
   }
 
-  function getItemId(user, { itemId }) {
-    if(itemId) itemId = encrypt(itemId.replace('*', ''));
-  
-    return `${user._id}${itemId || ''}*`
+  function decryptAccessToken(accessToken, encryptionKey) {
+    accessToken = decrypt(accessToken);
+    return decryptWithKey(accessToken, encryptionKey);
   }
 
   async function exchangePublicToken(publicToken) {
@@ -87,21 +110,83 @@ const app = function() {
     }
   }
 
-  function fetchAccessToken(_id) {
-    return plaidItem.findOne(_id);
+  async function fetchAllUserTransactions(userQuery) {
+    let transactions = [];
+    let lastKey = true;
+
+    while(lastKey) {
+      const start = typeof lastKey === 'string' ? lastKey : undefined;
+      const fetched = await fetchTransactions({ start, ...userQuery });
+
+      transactions = transactions.concat(fetched.items || fetched);
+      lastKey = fetched.lastKey;
+    }
+
+    return transactions;
   }
 
-  async function fetchAccounts(access_token) {
+  async function fetchUserAccounts(userId) {
+    return plaidAccounts.find({
+      account_id: `${encrypt(userId)}*`
+    });
+  }
+
+  async function fetchItemById(_id, userId) {
+    const item = await plaidItem.findOne(_id);
+    
+    if(item.userId === userId) {
+      return item;
+    }
+
+    warn(userId, _id, 'Item');
+    return false;
+  }
+
+  function fetchTransactions(query) {
+    if(typeof query === 'string') {
+      const userId = query;
+      query = { account_id:  `${userId}*`}
+    }
+
+    return plaidTransaction.find(query);
+  }
+
+  async function fetchTransactionById(_id, userId) {
+    const transaction = await plaidTransaction.findOne(_id);
+
+    if(transaction.userId === userId) {
+      return transaction;
+    }
+
+    warn(userId, _id, 'Transaction');
+    return null;
+  }
+
+  function fetchUserItems(userId) {
+    userId = encrypt(userId);
+    return plaidItem.find({ itemId: `${userId}*`});
+  }
+
+  async function retrieveAccountsFromPlaidForItem({ accessToken }, { encryptionKey }) {
+    const access_token = decryptAccessToken(accessToken, encryptionKey);
     const { data } = await plaidClient.accountsGet({ access_token });
-    return data;
+
+    if(!data.accounts) {
+      return [];
+    }
+    
+    return data.accounts.map(account => ({ 
+      ...account, 
+      itemId: data.item.item_id 
+    }));
   }
 
   async function savePlaidAccessData(accessData, req) {
-    const { access_token: accessToken, item_id: itemId } = accessData;
+    const { access_token, item_id } = accessData;
     
     const item = await plaidItem.save({
-      accessToken,
-      itemId
+      accessToken: access_token,
+      itemId: item_id
     }, req);
 
     return item;
@@ -143,12 +228,12 @@ const app = function() {
 
   async function syncTransactions({ body }) {
     let { 
-      _id, accessToken, cursor, req, 
+      _id, access_token, cursor, req, 
       added, modified, removed 
     } = body;
 
     const request = {
-      access_token: accessToken,
+      access_token,
       cursor,
       options: { include_personal_finance_category: true },
     };
@@ -162,21 +247,25 @@ const app = function() {
     removed = removed.concat(data.removed);
 
     cursor = data.next_cursor;
+    const { has_more } = data;
 
-    const eventName = data.has_more 
-      ? 'plaid.syncTransactions' 
-      : 'plaid.applyUpdates';
+    events.publish(
+      `plaid.${has_more ? 'syncTransactions' : 'applyTransactionUpdates'}`,
+      {
+        _id, access_token, cursor:'', req,
+        added, modified, removed
+      }
+    );
+  }
 
-    events.publish(eventName, {
-      _id, accessToken, cursor, req,
-      added, modified, removed
-    });
+  function warn(userId, _id, product) {
+    console.warn(`Unauthorized attempt: User ${userId} tried to access Plaid ${product} (${_id}) without proper authorization.`);
   }
 
   return {
     init: function() {
       subscribeEvent('plaid.syncTransactions', syncTransactions);
-      subscribeEvent('plaid.applyUpdates', applyUpdates);
+      subscribeEvent('plaid.applyTransactionUpdates', applyTransactionUpdates);
       initClient();
     },
     exchangeToken: async function(req, res) {
@@ -187,59 +276,55 @@ const app = function() {
 
       res.json({ success: true });
     },
-    getAccounts: async function(req, res) {
-      initClient();
-
-      const { _id } = req.params;
-
-      const { accessToken } = await fetchAccessToken(_id);
-      const accounts = await fetchAccounts(accessToken);
-
+    getAccounts: async (req, res) => {
+      const accounts = await fetchUserAccounts(req.user._id);
       res.json(accounts);
     },
     getLinkToken: async (req, res) => {
-      const { redirect_uri, user } = req;
-
-      const request = buildRequest({ 
-        client_user_id: user._id, 
-        redirect_uri 
-      });
+      const request = buildRequest(req.user._id);
 
       const response = await plaidClient.linkTokenCreate(request);
       const { link_token } = response.data;
 
       res.json(link_token);
     },
-    getPlaidItemsByItemId: async (req, res) => {
-      const itemId = getItemId(req.user, req.query);
-      const response = await plaidItem.find({ itemId });
+    getPlaidItems: async (req, res) => {    
+      const { params, user } = req;
+      let response;
+
+      if(params._id) {
+        response = await fetchItemById(params._id, user._id);
+      } else {
+        response = await fetchUserItems(user._id);
+      }
 
       if(!response) {
         return res.json(null);
       }
 
       const scrubbed = scrub(response, ['accessToken', 'itemId', 'userId']);
-      res.json(scrubbed);
+      return res.json(scrubbed);
     },
-    getPlaidItemsBy_id: async (req, res) => {
-      const response = await plaidItem.findOne(req.params._id);
-
-      if(!response) {
-        return res.json(null);
+    getTransactions: async (req, res) => {
+      const { _id } = req.params;
+      const { user, query } = req;
+      
+      if(_id) {
+        const transaction = await fetchTransactionById(_id, user._id);
+        return res.json(transaction);
       }
 
-      if(response.userId === req.user._id) {
-        const scrubbed = scrub(response, ['accessToken', 'itemId', 'userId']);
-        return res.json(scrubbed);
-      }
-
-      res.json('Not authorized to view this item...');
+      const userQuery = buildUserQuery(user._id, query)
+      const transactions = await fetchTransactions(userQuery);
+      res.json(transactions);
     },
-    initSyncEvent: async function ({ params, user }, res) {
+    initSyncTransactions: async function ({ params, user }, res) {
       initClient();
 
       const { _id } = params;
-      let { accessToken, cursor, syncStatus } = await plaidItem.find(_id);
+      let { accessToken, cursor, syncStatus } = await fetchItemById(_id, user._id);
+
+      const access_token = decryptAccessToken(accessToken, user.encryptionKey);
 
       if(syncStatus === 'sync in progress...') {
         return res.json({ syncStatus });
@@ -248,11 +333,39 @@ const app = function() {
       await plaidItem.update(_id, { syncStatus: 'sync in progress...' });
 
       events.publish('plaid.syncTransactions', {
-        _id, accessToken, cursor, req: { user },
+        _id, access_token, cursor, req: { user },
         added: [], modified: [], removed: []
       });
 
       res.json('sync initiated...');
+    },
+    syncAccounts: async function({ user }, res) {
+      initClient();
+
+      const items = await fetchUserItems(user._id);
+      let retrievedAccounts = [];
+
+      for(const item of items) {
+        retrievedAccounts = retrievedAccounts.concat(
+          await retrieveAccountsFromPlaidForItem(item, user)
+        );
+      }
+
+      const userAccounts = await fetchUserAccounts(user._id);
+      const synced = [];
+
+      for(const retrieved of retrievedAccounts) {
+        const hasMatch = userAccounts.find(itm => itm.account_id === retrieved.account_id);
+
+        if(hasMatch) {
+          continue;
+        }
+
+        synced.push(retrieved);
+        await plaidAccounts.save(retrieved, { user });
+      }
+
+      res.json(synced);
     }
   }
 }();

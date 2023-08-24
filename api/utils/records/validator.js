@@ -124,9 +124,9 @@ const validate = function() {
     throw new Error(message);
   }
 
-  const getValidatedValue = async (data, key) => {
+  const getValidatedValue = async (data, key, action) => {
     const {
-      body, 
+      body,
       validated,
       req,
       schemaKeyType
@@ -136,7 +136,8 @@ const validate = function() {
       value: body[key],
       item: body,
       validated,
-      req: req 
+      req: req,
+      action
     }
     
     return await schemaKeyType(body[key] || '', parameters);
@@ -199,7 +200,7 @@ const validate = function() {
   const isWild = (symbol) => symbol === '*';
 
   const validateItemsInArray = async (data, key) => {
-    const { collectionName, validated, body, schemaKeyType, req, globalFormatting } = data;
+    const { collectionName, validated, body, schemaKeyType, req, globalFormatting, action } = data;
     const nestedSchema = schemaKeyType[0] || {};
         
     validated[key] = body[key]
@@ -211,7 +212,8 @@ const validate = function() {
             itm,
             body,
             req,
-            globalFormatting
+            globalFormatting,
+            action
           )).validated;
         })
       )
@@ -220,8 +222,9 @@ const validate = function() {
   }
 
   const validateSubObject = async (data, key) => {
-    const { collectionName, schema, body, validated } = data;
-    validated[key] = await validate.init(collectionName, schema[key], body[key]).validated;
+    const { collectionName, schema, body, validated, req, globalFormatting, action } = data;
+
+    validated[key] = (await validate.init(collectionName, schema[key], body[key], req, globalFormatting, action)).validated;
   }
 
   const validateSingleItem = (body, schema) => {
@@ -229,8 +232,9 @@ const validate = function() {
   }
 
   return {
-    init: async (collectionName, schema, body, req, globalFormatting) => {
+    init: async (collectionName, schema, body, req, globalFormatting, action) => {
       const data = {
+        action,
         collectionName,
         schema,
         body,
@@ -245,9 +249,19 @@ const validate = function() {
         return data;
       }
 
-      for(const key in schema) {
-        const { type, value } = schema[key] || {};
+      const targetObject = action === 'save' ? schema : body;
+
+      for(const key in targetObject) {
+        if(!schema.hasOwnProperty(key)) {
+          continue;
+        }
+
+        const { type, value, isLocked } = schema[key] || {};
         const schemaKeyType = type || value || schema[key];
+
+        if(action==='update' && isLocked) {
+          continue;
+        }
 
         Object.assign(data, { key, schemaKeyType });
 
@@ -299,7 +313,7 @@ const validate = function() {
         }
 
         try {
-          data.validKey = await getValidatedValue(data, key);
+          data.validKey = await getValidatedValue(data, key, action);
 
           if(hasFormatting(data, key)) {
             applyFormatting(data, key)
@@ -347,12 +361,12 @@ const validate = function() {
     build: (collectionName, schema, globalFormatting) => ({
       async forSave(body, req) {        
         const keyGen = buildSchemaId(collectionName);
-        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting);
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting, 'save');
 
         return { keyGen, validated, metadata };
       },
       async forUpdate(body, req) {
-        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting);
+        const { validated, metadata } = await validate.init(collectionName, schema, body, req, globalFormatting, 'update');
 
         return { validated, metadata };    
       }

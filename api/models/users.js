@@ -1,6 +1,7 @@
 import Record from '../utils/records';
 import bcrypt from 'bcryptjs';
-import { isValidEmail, randomNumber } from '../../src/utils';
+import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
+import { isValidEmail } from '../../src/utils';
 
 const users = Record('users', {
   email: {
@@ -33,6 +34,11 @@ const users = Record('users', {
       const salt = await bcrypt.genSalt(12);
       return await bcrypt.hash(password, salt);
     }
+  },
+  encryptionKey: {
+    value: _ => encrypt(generateSymmetricKey()),
+    get: v => decrypt(v, 'buffer'),
+    isLocked: true
   },
   role: {
     value: String,

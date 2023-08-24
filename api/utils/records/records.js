@@ -27,6 +27,7 @@ export default function(collectionName, schema, globalFormatting) {
         if(_id || isEmptyObject(query)) {
             const key = buildUrlKey(collectionName, _id || '*');
             const meta = { meta: true, ...metadata };
+
             const response = await data.get(key, meta);
 
             return await respond(response, selectedKeys, _id, schema);
@@ -58,7 +59,7 @@ export default function(collectionName, schema, globalFormatting) {
         }
 
         const { _id } = found;
-        const newItem = { ...found, ...updates };
+        const newItem = { _id, ...updates };
 
         const { validated, metadata } = await validate.forUpdate(newItem, req);
 
@@ -135,10 +136,9 @@ async function respond(response, selectedKeys, _id, schema) {
     }
 
     const { items, key, value, lastKey } = response;
-    const getSelection = async (itm) => await select(itm, selectedKeys, schema);
 
     if(value) {
-        const item = await getSelection({ _id:key, ...value });
+        const item = await select({ _id:key, ...value }, selectedKeys, schema);
 
         return _id ? item : [item];
     }
@@ -148,7 +148,9 @@ async function respond(response, selectedKeys, _id, schema) {
     }
 
     const selection = await Promise.all(
-        items.map(async (itm) => await getSelection({ _id: itm.key, ...itm.value }))
+        items.map(async itm => 
+            await select({ _id: itm.key, ...itm.value }, selectedKeys, schema)
+        )
     );
       
 

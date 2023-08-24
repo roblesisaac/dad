@@ -1,6 +1,5 @@
 import Protect from '../middlewares/protect';
 import db from '../controllers/db';
-import { concatToQuery } from '../middlewares/users';
 
 import user from '../controllers/users';
 
@@ -11,7 +10,7 @@ export default (api, baseUrl) => {
 
   api.get(baseUrl + '/userviews', user.serveUserPages);
 
-  member.get('/users', concatToQuery('email'), db.get);
+  member.get('/users', user.fetchUser);
   member.get('/allroles', user.serveAllRoleNames);
   member.put('/users/:id', user.updateUser);
 

@@ -1,4 +1,4 @@
-import { data } from '@ampt/data';
+import Users from '../../models/users';
 import passport from 'passport';
 import { LocalStrategy } from './local';
 import { GoogleStrategy } from './google';
@@ -8,8 +8,8 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser(async (_id, done) => {
-    const user = await data.get(_id);
-    done(null, { _id, ...user });
+    const user = await Users.find(_id);
+    done(null, { ...user });
 });
 
 passport.use(LocalStrategy);
