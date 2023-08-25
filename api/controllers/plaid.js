@@ -61,19 +61,6 @@ const app = function() {
     );
   }
 
-  function buildConfiguration() {
-    return new Configuration({
-      basePath: PlaidEnvironments.sandbox,
-      baseOptions: {
-        headers: {
-          'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
-          'Plaid-Version': '2020-09-14',
-        },
-      },
-    });
-  }
-
   function buildUserQuery(userId, query) {
     const user_id = `${encrypt(userId)}`;
 
@@ -98,7 +85,18 @@ const app = function() {
   }
 
   function initClient() {
-    plaidClient = plaidClient || new PlaidApi(buildConfiguration());
+    const config = new Configuration({
+      basePath: PlaidEnvironments.sandbox,
+      baseOptions: {
+        headers: {
+          'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
+          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
+          'Plaid-Version': '2020-09-14',
+        },
+      },
+    });
+
+    plaidClient = plaidClient || new PlaidApi(config);
   }
 
   function buildRequest(userId) {
@@ -119,11 +117,11 @@ const app = function() {
 
   async function exchangePublicToken(publicToken) {
     try {
-      const response = await plaidClient.itemPublicTokenExchange({
+      const { data } = await plaidClient.itemPublicTokenExchange({
         public_token: publicToken,
       });
 
-      return response.data;
+      return data;
     } catch (error) {
       console.error('Error exchanging public token:', error);
     }
@@ -196,8 +194,7 @@ const app = function() {
     return userAccounts.find(itm => itm.account_id === retrieved.account_id);
   }
 
-  async function retrieveAccountsFromPlaidForItem({ accessToken }, { encryptionKey }) {
-    const access_token = decryptAccessToken(accessToken, encryptionKey);
+  async function retrieveAccountsFromPlaidForItem(access_token) {
     const { data } = await plaidClient.accountsGet({ access_token });
 
     if(!data.accounts) {
@@ -211,14 +208,19 @@ const app = function() {
   }
 
   async function savePlaidAccessData(accessData, req) {
-    const { access_token, item_id } = accessData;
-    
-    const item = await plaidItem.save({
-      accessToken: access_token,
-      itemId: item_id
-    }, req);
-
-    return item;
+    try {
+      const { access_token, item_id } = accessData;
+      
+      const item = await plaidItem.save({
+        accessToken: access_token,
+        itemId: item_id,
+        syncStatus: 'sync in progress...'
+      }, req);
+  
+      return { access_token, ...item };
+    } catch (err) {
+      console.error('Error saving plaid access data...', { err });
+    }
   }
 
   function scrub(response, propsToRemove) {
@@ -255,6 +257,21 @@ const app = function() {
     });
   }
 
+  async function saveAccountsForNewPlaidItem(access_token, req) {
+    try {
+      const retrievedAccounts = await retrieveAccountsFromPlaidForItem(access_token);
+      const saved = [];
+  
+      for(const retrieved of retrievedAccounts) {
+        saved.push(await plaidAccounts.save(retrieved, req));
+      }
+  
+      return saved;
+    } catch (err) {
+      console.log(`Error at 'saveAccountsForNewPlaidItem'`, err);
+    }
+  }
+
   async function syncTransactions({ body }) {
     let { 
       _id, access_token, cursor, req
@@ -263,7 +280,7 @@ const app = function() {
     const request = {
       access_token,
       cursor,
-      options: { include_personal_finance_category: true },
+      options: { include_personal_finance_category: true }
     };
 
     const response = await plaidClient.transactionsSync(request);
@@ -287,13 +304,19 @@ const app = function() {
       subscribeEvent('plaid.syncTransactions', syncTransactions);
       initClient();
     },
-    exchangeToken: async function(req, res) {
+    exchangeTokenAndSavePlaidItem: async function(req, res) {
       const { publicToken } = req.body;
+      const { user } = req;
 
       const accessData = await exchangePublicToken(publicToken);
-      await savePlaidAccessData(accessData, req);
+      const { _id, access_token } = await savePlaidAccessData(accessData, { user });
+      const accounts = await saveAccountsForNewPlaidItem(access_token, { user });
 
-      res.json({ success: true });
+      await events.publish('plaid.syncTransactions', {
+        _id, access_token, cursor: '', req: { user }
+      });
+
+      res.json(accounts);
     },
     getAccounts: async (req, res) => {
       const accounts = await fetchUserAccounts(req.user._id);
@@ -351,7 +374,7 @@ const app = function() {
 
       await plaidItem.update(_id, { syncStatus: 'sync in progress...' });
 
-      events.publish('plaid.syncTransactions', {
+      await events.publish('plaid.syncTransactions', {
         _id, access_token, cursor, req: { user }
       });
 
@@ -363,8 +386,10 @@ const app = function() {
       let retrievedAccounts = [];
 
       for(const item of await fetchUserItems(user._id)) {
+        const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+
         retrievedAccounts = retrievedAccounts.concat(
-          await retrieveAccountsFromPlaidForItem(item, user)
+          await retrieveAccountsFromPlaidForItem(access_token)
         );
       }
 

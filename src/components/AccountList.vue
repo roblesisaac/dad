@@ -1,12 +1,12 @@
 <template>
-<div class="grid">
-  <div class="cell-1 section line50">
-    <a v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="section-content">+ Link New Account</a>
-    <b v-else>Loading <LoadingDots /></b>
+<div class="grid">    
+  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton section proper">+ Link New Account</button>
+  <div v-else class="cell-1 section line50">
+    <b>Loading <LoadingDots /></b>
   </div>
-  <div v-for="acct in state.userAccounts" class="cell-1 section b-top">
-    <a @click="app.selectAccount(acct)" href="#" class="section-content proper line50">{{ acct.subtype }} {{  acct.mask }}</a>
-  </div>
+  <button v-for="acct in state.userAccounts" @click="app.selectAccount(acct)" href="#" class="acctButton section b-top proper">
+    {{ acct.subtype }} {{  acct.mask }}
+  </button>
 </div>
 </template>
 

@@ -1,7 +1,7 @@
 <template>
   <!-- BackButton -->
   <Transition>
-    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="backButton section b-bottom"><ChevronLeft /> Back</button>
+    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="acctButton section b-bottom"><ChevronLeft /> Back</button>
   </Transition>
 
   <!-- Small Screens -->
@@ -9,10 +9,10 @@
     <!-- Pickers -->
     <div class="cell-1">
       <div class="grid middle">
-        <div class="cell auto section b-bottom b-right line50">
-          <a @click="state.view='acctList'" class="section-content proper" href="#">
+        <div class="cell shrink section b-bottom b-right line50">
+          <button @click="state.view='acctList'" class="acctButton section-content proper" href="#">
             {{ acctName }}
-          </a>
+          </button>
         </div>
         <div class="cell auto section b-bottom line50">          
           <DatePicker :date="state.date" when="start" /> <b>thru</b> <DatePicker :date="state.date" when="end" />
@@ -23,13 +23,13 @@
     <!-- Totals -->
     <div class="cell-1">
       <div class="grid">
-        <div class="cell auto section b-bottom b-right">
+        <div class="cell auto">
           <TotalCalc :state="state" name="income" />
         </div>
-        <div class="cell auto section b-bottom b-right">
+        <div class="cell auto">
           <TotalCalc :state="state" name="expenses" />
         </div>
-        <div class="cell auto section b-bottom">
+        <div class="cell auto">
           <TotalCalc :state="state" name="net" />
         </div>
       </div>
@@ -90,6 +90,7 @@
     },
     linkToken: null,
     selectedAccount: null,
+    selectedCalc: 'income',
     topNav: document.querySelector('.topNav').style,
     userAccounts: [],
     view: 'home'
@@ -98,7 +99,7 @@
   const acctName = computed(() => 
     state.selectedAccount ? 
       `${state.selectedAccount.subtype} ${state.selectedAccount.mask}` 
-      : 'Select Acct. »'
+      : 'Account »'
   );
 
   const app = function() {
@@ -161,14 +162,14 @@
 </script>
 
 <style>
-.backButton, .backButton:hover {
+.acctButton, .acctButton:hover {
   background: transparent;
   color: black;
   box-shadow: none;
   width: 100%;
 }
 
-.backButton:hover {
+.acctButton:hover {
   color: royalblue;
 }
 
@@ -183,6 +184,10 @@
 
 .section.b-right {
   border-right: 2px solid #000;
+}
+
+.section.b-left {
+  border-left: 2px solid #000;
 }
 
 .section.b-bottom {

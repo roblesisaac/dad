@@ -35,7 +35,7 @@ const state = reactive({
     const monthIndex = parseInt(month, 10) - 1;
     const formattedMonth = months[monthIndex];
 
-    return `${formattedMonth} ${parseInt(day, 10)}, ${year}`;
+    return `${month}/${parseInt(day, 10)}/${year}`;
   }
 });
 
