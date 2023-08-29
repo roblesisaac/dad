@@ -55,38 +55,41 @@ const app = function() {
     await completeTransactionsSync(_id, cursor);
   }
 
-  function dataIsEmpty(plaidData) {
-    return ['added', 'modified', 'removed'].every(
-      arrName => plaidData[arrName].length === 0
-    );
+  function buildRequest(userId) {
+    return {
+      user: { client_user_id: userId },
+      client_name: 'Plaid Test App',
+      products: ['auth', 'transactions'],
+      country_codes: ['US'],
+      language: 'en',
+      redirect_uri: `${AMPT_URL}/spendingreport`
+    };
   }
 
-  function buildUserQueryForDate(user_id, query) {
+  function buildUserQueryForTransactions(user_id, query) {
     if (isEmptyObject(query)) {
       return user_id;
     }
   
-    const { account_id, startDate, endDate, start, select } = query;
+    const { account_id } = query;
     const userTree = `${user_id}${account_id}`;
-    let date = `${userTree}`;
 
-    if(startDate) {
-      date += startDate;
-    }
-    
-    if (endDate) {
-      date += `|date_${userTree}${endDate}`;
-    } else {
-      date += '*';
-    }
+    for(const prop in query) {
+      if(isMeta(prop) || prop==='select') {
+        continue
+      }
 
-    console.log(date);
-  
-    return {
-      date,
-      select,
-      start
+      if(prop === 'date') {
+        query[prop] = formatDateForQuery(userTree, query[prop]);
+        continue;
+      }
+
+      query[prop] = `${user_id}${query[prop].replace('*', '')}*`;
     };
+
+    delete query.account_id;
+  
+    return query
   }
 
   function completeTransactionsSync(_id, cursor) {  
@@ -99,30 +102,10 @@ const app = function() {
     });
   }
 
-  function initClient() {
-    const config = new Configuration({
-      basePath: PlaidEnvironments.sandbox,
-      baseOptions: {
-        headers: {
-          'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
-          'Plaid-Version': '2020-09-14',
-        },
-      },
-    });
-
-    plaidClient = plaidClient || new PlaidApi(config);
-  }
-
-  function buildRequest(userId) {
-    return {
-      user: { client_user_id: userId },
-      client_name: 'Plaid Test App',
-      products: ['auth', 'transactions'],
-      country_codes: ['US'],
-      language: 'en',
-      redirect_uri: `${AMPT_URL}/spendingreport`
-    };
+  function dataIsEmpty(plaidData) {
+    return ['added', 'modified', 'removed'].every(
+      arrName => plaidData[arrName].length === 0
+    );
   }
 
   function decryptAccessToken(accessToken, encryptionKey) {
@@ -205,8 +188,39 @@ const app = function() {
     );
   }
 
+  function formatDateForQuery(userTree, dateRange) {
+    const [startDate, endDate] = dateRange.split('|');
+
+    let formatted = userTree;
+
+    if(startDate) formatted += startDate;
+
+    if(endDate) {
+      formatted += `|date_${userTree}${endDate}`;
+    } else {
+      formatted += '*';
+    }
+
+    return formatted;
+  }
+
   function hasMatch(userAccounts, retrieved) {
     return userAccounts.find(itm => itm.account_id === retrieved.account_id);
+  }
+
+  function initClient() {
+    const config = new Configuration({
+      basePath: PlaidEnvironments.sandbox,
+      baseOptions: {
+        headers: {
+          'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
+          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
+          'Plaid-Version': '2020-09-14',
+        },
+      },
+    });
+
+    plaidClient = plaidClient || new PlaidApi(config);
   }
 
   async function retrieveAccountsFromPlaidForItem(access_token) {
@@ -351,7 +365,7 @@ const app = function() {
         return res.json(transaction);
       }
 
-      const userQueryForDate = buildUserQueryForDate(user._id, query);
+      const userQueryForDate = buildUserQueryForTransactions(user._id, query);
       const transactions = await fetchTransactions(userQueryForDate);
       res.json(transactions);
     },
