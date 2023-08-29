@@ -84,7 +84,7 @@ const app = function() {
         continue;
       }
 
-      query[prop] = `${user_id}${query[prop].replace('*', '')}*`;
+      query[prop] = `${userTree}${query[prop].replace('*', '')}*`;
     };
 
     delete query.account_id;
