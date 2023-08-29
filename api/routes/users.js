@@ -1,5 +1,4 @@
 import Protect from '../middlewares/protect';
-import db from '../controllers/db';
 
 import user from '../controllers/users';
 
@@ -12,7 +11,7 @@ export default (api, baseUrl) => {
 
   member.get('/users', user.fetchUser);
   member.get('/allroles', user.serveAllRoleNames);
-  member.put('/users/:id', user.updateUser);
+  member.put('/users/:_id', user.updateUser);
 
-  admin.get('/allusers', db.get);
+  admin.get('/allusers/:_id?', user.lookupUsers);
 }

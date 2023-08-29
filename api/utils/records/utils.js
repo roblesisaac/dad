@@ -43,5 +43,19 @@ export async function siftOutLabelAndFetch(
     const { labelNumber, labelValue } = siftLabels(schema, filter, collectionName);
     const meta = { meta: true, ...metadata };
 
-    return await data.getByLabel(labelNumber, labelValue, meta) || {};
+    try {
+      console.log({labelNumber, labelValue});
+      return await data.getByLabel(labelNumber, labelValue, meta) || {};
+    } catch (error) {
+      console.error({
+        message: `Error gettingByLabel`,
+        filter,
+        collectionName,
+        labelNumber,
+        labelValue,
+        error
+      });
+
+      return [];
+    }
 }

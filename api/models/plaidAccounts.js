@@ -1,19 +1,20 @@
 import Record from '../utils/records';
 import { encrypt, decrypt } from '../utils/encryption';
 
+const encryptedValue = {
+  value: encrypt,
+  get: decrypt
+};
+
 const accountSchema = {
   userId: {
-    value: (_, { req }) => encrypt(req.user._id),
-    get: decrypt,
+    value: (_, { req }) => req.user._id,
     isLocked: true
   },
-  account_id: {
-    value: encrypt,
-    get: decrypt
-  },
+  account_id: String,
   balances: {
-    available: Number,
-    current: Number,
+    available: encryptedValue,
+    current: encryptedValue,
     iso_currency_code: {
       type: String,
       default: 'USD'
@@ -22,14 +23,11 @@ const accountSchema = {
     unofficial_currency_code: String
   },
   mask: String,
-  name: String,
-  official_name: String,
+  name: encryptedValue,
+  official_name: encryptedValue,
   subtype: String,
   type: String,
-  itemId: {
-    value: encrypt,
-    get: decrypt
-  },
+  itemId: String,
   label1: {
     name: 'account_id',
     concat: ['userId', 'account_id']

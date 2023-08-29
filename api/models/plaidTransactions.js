@@ -23,17 +23,21 @@ const paymentMetaSchema = {
   reference_number: String,
 };
 
+const encryptedValue = {
+  value: encrypt,
+  get: decrypt
+};
+
 const plaidTransaction = Record('plaidtransactions', {
   userId: {
-    value: (_, { req }) => encrypt(req.user._id),
-    get: decrypt,
+    value: (_, { req }) => req.user._id,
     isLocked: true
   },
   account_id: String,
-  amount: Number,
+  amount: encryptedValue,
   iso_currency_code: String,
   unofficial_currency_code: String,
-  category: [String],
+  category: (v) => Array.isArray(v) ? v.join() : v,
   category_id: String,
   check_number: String,
   date: String,
@@ -59,29 +63,24 @@ const plaidTransaction = Record('plaidtransactions', {
   transaction_code: String,
   transaction_type: String,
   label1: {
-    name: 'account_id',
-    concat: ['userId', 'account_id']
+    name: 'date',
+    concat: ['userId', 'account_id', 'date']
   },
   label2: {
     name: 'transaction_id',
-    concat: ['userId', 'transaction_id']
+    concat: ['userId', 'account_id', 'transaction_id']
   },
   label3: {
-    name: 'transaction_name',
-    concat: ['userId', 'name', 'category_id']
+    name: 'name',
+    concat: ['userId', 'account_id', 'name']
   },
   label4: {
-    name: 'category_id',
-    concat: ['userId', 'category_id']
+    name: 'category',
+    concat: ['userId', 'account_id', 'category']
   },
   label5: {
-    name: 'category',
-    value: (itm) => {
-      const { category } = itm;
-      const cat = category.join();
-
-      return `${itm.userId}${cat.toLowerCase()}`;
-    }
+    name: 'amount',
+    concat: ['userId', 'account_id', 'amount']
   },
 });
 

@@ -29,7 +29,7 @@ async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     }
 
     const { email } = profile._json;  
-    const existingUser = await Users.findOne({ email });
+    const existingUser = await Users.findUser(email);
     
     const user = { 
         accessToken,
@@ -37,7 +37,7 @@ async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     };
   
     if(existingUser) {
-        return done(null, await Users.update({ email }, user));
+        return done(null, await Users.updateUser(email, user));
     }
 
     const newUser = await Users.save(user);

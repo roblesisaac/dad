@@ -1,4 +1,5 @@
 import Record from '../utils/records';
+import { encrypt, decrypt } from '../utils/encryption';
 
 const addressSchema = Record('addresses', {
   userid: (_, { req }) => req.user._id,
@@ -7,7 +8,8 @@ const addressSchema = Record('addresses', {
   postalCode: { type: String, required: true },
   country: { type: String, required: true },
   phoneNumber: { 
-    value: itm => itm.replace(/\D/g, ''), 
+    value: encrypt,
+    get: decrypt,
     required: true
   },
   isDefault: { type: Boolean, default: false },

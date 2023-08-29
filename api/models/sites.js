@@ -1,6 +1,5 @@
 import Record from '../utils/records';
 import { params } from '@ampt/sdk';
-import pages from '../controllers/pages';
 
 const siteSchema = Record('sites', {
   name: {
@@ -17,12 +16,10 @@ const siteSchema = Record('sites', {
   roles: [
     { 
       name: {
-        value: String,
-        default: 'public'
+        value: String
       },
       views: {
-        value: [String],
-        default: async () => await pages.getPageNames()
+        value: [String]
       }
      }
   ],

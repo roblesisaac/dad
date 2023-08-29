@@ -1,10 +1,9 @@
 import Record from '../utils/records';
-import { encrypt, decrypt, encryptWithKey } from '../utils/encryption';
+import { encrypt, encryptWithKey } from '../utils/encryption';
 
 const plaidItem = Record('plaiditems', {
   userId: {
-    value: (_, { req }) => encrypt(req.user._id),
-    get: decrypt,
+    value: (_, { req }) => req.user._id,
     isLocked: true
   },
   accessToken: { 
@@ -18,16 +17,16 @@ const plaidItem = Record('plaiditems', {
     required: true
    },
   itemId: { 
-    value: encrypt,
+    value: String,
     required: true,
     unique: true
    },
-  institutionId: value => value || '',
+  institutionId: String,
   lastSyncedAt: Date,
-  accessTokenExpiration: value => value || '',
-  institutionName: value => value || '',
-  cursor: value => value || '',
-  syncStatus: value => value || '',
+  accessTokenExpiration: String,
+  institutionName: String,
+  cursor: String,
+  syncStatus: String,
   label1: {
     name: 'itemId',
     concat: ['userId', 'itemId']

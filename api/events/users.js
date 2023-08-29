@@ -4,6 +4,7 @@ import fs from "fs";
 import notify from "../utils/notify";
 import { proper, randomNumber } from "../../src/utils";
 import Users from "../models/users";
+import { decrypt } from '../utils/encryption';
 
 const { 
     APP_NAME,
@@ -76,7 +77,7 @@ export async function sendVerificationCode(email, { subject, data }) {
     ...data
   };
 
-  await Users.update({ email }, { email_verified });
+  await Users.updateUser(email, { email_verified });
   
   return notify.email(email, {
     subject: subject || "Here is your verification code",
@@ -88,7 +89,7 @@ export async function sendVerificationCode(email, { subject, data }) {
 async function fetchUserFromEvent(body, eventName) {
   const { email } = body;
   
-  const user = await Users.findOne({ email });
+  const user = await Users.findUser(email);
 
   if(!user) {
     console.log(`${email} not found while running '${eventName}' event.`);
@@ -133,7 +134,8 @@ async function finalCheck({ body }) {
 }
 
 async function userJoined(body, events) {
-  const { email, email_verified } = body;
+  const { email: encryptedEmail, email_verified } = body;
+  const email = decrypt(encryptedEmail);
 
   if(email_verified === true) {
     const message = 'Congratulations! Your account has been successfully created.';

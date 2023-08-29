@@ -1,12 +1,18 @@
 import Site from '../models/sites';
+import pages from './pages';
 
 const state = {
   siteKey: null
 }
 
 const app = function () {
-  function emptySite() {
-    return { name: null, roles:[{}] };
+  async function emptySite() {
+    return { name: null, roles:[
+      { 
+        name: 'public',
+        views: await pages.getPageNames()
+       }
+    ]};
   }
 
   async function siteIdMatchesUpdateId(updateKey) {
@@ -17,7 +23,7 @@ const app = function () {
 
   return {
     createNew: async () => {
-      return await Site.save(emptySite());
+      return await Site.save(await emptySite());
     },
     get: async (_, res) => {
       const site = await Site.findOne();

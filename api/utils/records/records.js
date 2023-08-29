@@ -139,7 +139,6 @@ async function respond(response, selectedKeys, _id, schema) {
 
     if(value) {
         const item = await select({ _id:key, ...value }, selectedKeys, schema);
-
         return _id ? item : [item];
     }
 
@@ -151,8 +150,7 @@ async function respond(response, selectedKeys, _id, schema) {
         items.map(async itm => 
             await select({ _id: itm.key, ...itm.value }, selectedKeys, schema)
         )
-    );
-      
+    );      
 
     return lastKey ? {
         lastKey,

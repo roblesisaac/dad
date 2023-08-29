@@ -2,6 +2,8 @@ import { createApp } from 'vue';
 import { createRouter, createWebHistory } from 'vue-router';
 import { createPinia } from 'pinia';
 import App from './App.vue';
+import '@fontsource/fira-code';
+import '@fontsource/fira-code/700.css';
 
 const views = import.meta.glob('./views/*.vue');
 

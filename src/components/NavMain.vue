@@ -2,12 +2,12 @@
   <nav class="grid topNav shadow middle">
     
     <!-- logo -->
-    <div class="cell-1-3 text-left bold">
+    <div class="cell auto text-left bold">
       <img id="logo" src="../assets/icon.svg" height="30" />
     </div>
 
     <!-- links -->
-    <div v-if="State.currentScreenSize() !== 'small'" class="cell-2-3 text-right">
+    <div v-if="State.currentScreenSize() !== 'small'" class="cell auto text-right">
       <router-link @click="utils.changePath(link)"
       v-for="link in State.userViews" 
       :to="link.path || link"
@@ -17,9 +17,9 @@
   </div>
 
   <!-- hamburger -->
-  <div v-if="State.currentScreenSize()==='small'" class="cell-2-3 text-right">
+  <div v-if="State.currentScreenSize()==='small'" class="cell shrink text-right" @click="State.showingOffCanvasLinks=true">
     <a href="#" class="menu-icon">
-      <MenuIcon @click="State.showingOffCanvasLinks=true" />
+      <MenuIcon />
     </a>
   </div>
 

@@ -1,8 +1,9 @@
 import { events, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-import { encrypt, decryptWithKey, decrypt } from '../utils/encryption';
-import { isEmptyObject } from '../../src/utils';
+import { decryptWithKey, decrypt } from '../utils/encryption';
+import { isEmptyObject, scrub, formatDate } from '../../src/utils';
+import { isMeta } from '../utils/records/utils';
 
 import plaidAccounts from '../models/plaidAccounts';
 import plaidItem from '../models/plaidItems';
@@ -20,9 +21,8 @@ const app = function() {
   async function applyTransactionUpdates(_id, access_token, cursor, req, has_more, plaidData) {
     const { added, modified, removed } = plaidData;
 
-    const userQuery = buildUserQuery(req.user._id);
     const existingTransactions = added.length || removed.length 
-      ? await fetchAllUserTransactions(userQuery)
+      ? await fetchAllUserTransactions(req.user._id)
       : [];
     
     for (const transaction of added) {
@@ -61,17 +61,32 @@ const app = function() {
     );
   }
 
-  function buildUserQuery(userId, query) {
-    const user_id = `${encrypt(userId)}`;
+  function buildUserQueryForDate(user_id, query) {
+    if (isEmptyObject(query)) {
+      return user_id;
+    }
+  
+    const { account_id, startDate, endDate, start, select } = query;
+    const userTree = `${user_id}${account_id}`;
+    let date = `${userTree}`;
 
-    for (const prop in query) {
-      if(['limit', 'start'].includes(prop)) {
-        continue;
-      }
-      query[prop] = `${user_id}${query[prop]}*`
+    if(startDate) {
+      date += startDate;
+    }
+    
+    if (endDate) {
+      date += `|date_${userTree}${endDate}`;
+    } else {
+      date += '*';
     }
 
-    return isEmptyObject(query) ? user_id : query;
+    console.log(date);
+  
+    return {
+      date,
+      select,
+      start
+    };
   }
 
   function completeTransactionsSync(_id, cursor) {  
@@ -127,13 +142,14 @@ const app = function() {
     }
   }
 
-  async function fetchAllUserTransactions(userQuery) {
+  async function fetchAllUserTransactions(userId) {
     let transactions = [];
     let lastKey = true;
 
     while(lastKey) {
       const start = typeof lastKey === 'string' ? lastKey : undefined;
-      const fetched = await fetchTransactions({ start, ...userQuery });
+      const filter = { start, name: userId+'*' };
+      const fetched = await fetchTransactions(filter);
 
       transactions = transactions.concat(fetched.items || fetched);
       lastKey = fetched.lastKey;
@@ -144,7 +160,7 @@ const app = function() {
 
   async function fetchUserAccounts(userId) {
     return plaidAccounts.find({
-      account_id: `${encrypt(userId)}*`
+      account_id: `${userId}*`
     });
   }
 
@@ -162,7 +178,7 @@ const app = function() {
   function fetchTransactions(query) {
     if(typeof query === 'string') {
       const userId = query;
-      query = { account_id:  `${userId}*`}
+      query = { name:  `${userId}*`}
     }
 
     return plaidTransaction.find(query);
@@ -180,7 +196,6 @@ const app = function() {
   }
 
   function fetchUserItems(userId) {
-    userId = encrypt(userId);
     return plaidItem.find({ itemId: `${userId}*`});
   }
 
@@ -221,26 +236,6 @@ const app = function() {
     } catch (err) {
       console.error('Error saving plaid access data...', { err });
     }
-  }
-
-  function scrub(response, propsToRemove) {
-    propsToRemove = Array.isArray(propsToRemove) ? propsToRemove : [propsToRemove];
-
-    if(Array.isArray(response)) {
-      return response.map(item => {
-        for(const removeProp of propsToRemove) {
-          delete item[removeProp];
-        }
-  
-        return item;
-      });
-    }
-
-    for(const removeProp of propsToRemove) {
-      delete response[removeProp];
-    }
-
-    return response;
   }
 
   function subscribeEvent(eventName, handlerFunction) {
@@ -356,8 +351,8 @@ const app = function() {
         return res.json(transaction);
       }
 
-      const userQuery = buildUserQuery(user._id, query)
-      const transactions = await fetchTransactions(userQuery);
+      const userQueryForDate = buildUserQueryForDate(user._id, query);
+      const transactions = await fetchTransactions(userQueryForDate);
       res.json(transactions);
     },
     initSyncTransactions: async function ({ params, user }, res) {

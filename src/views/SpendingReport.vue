@@ -141,7 +141,7 @@
     return {
       init: async () => {
         changeBgColor('#fffbef');
-        changeFont('Consolas, monospace');
+        // changeFont('Fira Code');
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js')
         await fetchUserAccounts();
       },

@@ -12,8 +12,9 @@ const users = Record('users', {
         throw new Error('Invalid email');
       }
       
-      return email;
-    }
+      return encrypt(email);
+    },
+    get: decrypt
   },
   views: [String],
   email_verified: '*',
@@ -60,7 +61,7 @@ users.authLocalUser = async (email, password, done) => {
     return done(`Missing 'email' or 'password' properties.`, false);
   }
   
-  const user = await users.findOne({ email });
+  const user = await users.findUser(email);
   
   if (!user || !user.password) {
     return done(errorMessage, false);
@@ -71,8 +72,15 @@ users.authLocalUser = async (email, password, done) => {
   if (!isCorrectPassword) {
     return done(errorMessage, false);
   }
-  
+
   return done(null, user);
 }
+
+users.findUser = async email => {
+  const filter = encrypt(email);
+  return await users.findOne({ email: filter })
+}
+
+users.updateUser = async (email, update) => await users.update({ email: encrypt(email) }, update);
 
 export default users;

@@ -190,7 +190,7 @@ const validate = function() {
     return typeof readable === 'string' && typeof metaValue === 'string';
   }
 
-  const isType = ({ schemaKeyType }) => ({
+  const isType = (schemaKeyType) => ({
     array: Array.isArray(schemaKeyType),
     object: typeof schemaKeyType === 'object'
   })
@@ -284,7 +284,7 @@ const validate = function() {
           }
         }
 
-        if(isWild(data.schemaKeyType)) {
+        if(isWild(schemaKeyType)) {
           assignBodyKeyToValidated(data, key);
           continue;
         }
@@ -302,12 +302,12 @@ const validate = function() {
 
         }
 
-        if(isType(data).array) {
+        if(isType(schemaKeyType).array) {
           await validateItemsInArray(data, key);
           continue;
         }
 
-        if(isType(data).object) {
+        if(isType(schemaKeyType).object) {
           await validateSubObject(data, key);
           continue;
         }

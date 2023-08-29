@@ -1,5 +1,3 @@
-import { validate } from 'uuid';
-
 export function arraysMatch(arr1, arr2) {
     if (arr1.length !== arr2.length) {
       return false;
@@ -16,6 +14,20 @@ export function arraysMatch(arr1, arr2) {
 
 export async function delay(s) {
     return new Promise(resolve => setTimeout(resolve, s*1000));
+}
+
+export function formatDate(inputDate) { // outputs YYYY-MM-DD
+    const date = new Date(inputDate);
+    
+    if (isNaN(date)) {
+      throw new Error('Invalid date input');
+    }
+    
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
 }
 
 export function isValidEmail(email) {
@@ -103,7 +115,6 @@ export function isEmptyObject(obj) {
     return Object.keys(obj).length === 0 && obj.constructor === Object;
 }
   
-
 export function buildId(yyyymmdd) {
     const random = Math.random().toString(16).substring(2);
     return `${generateDate(yyyymmdd)}_${random}`;
@@ -113,4 +124,25 @@ export function dateFromId(id) {
     const hexStamp = id.substring(0, 11);
     const timestamp = parseInt(hexStamp, 16);
     return timestamp;
+}
+
+export function scrub(response, propsToRemove) {
+    if(!response) return null;
+    propsToRemove = Array.isArray(propsToRemove) ? propsToRemove : [propsToRemove];
+
+    if(Array.isArray(response)) {
+      return response.map(item => {
+        for(const removeProp of propsToRemove) {
+          delete item[removeProp];
+        }
+  
+        return item;
+      });
+    }
+
+    for(const removeProp of propsToRemove) {
+      delete response[removeProp];
+    }
+
+    return response;
 }

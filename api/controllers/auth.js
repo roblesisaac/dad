@@ -61,6 +61,7 @@ export function loginLocal(req, res, next) {
 function loginUser(req, res, user) {
   const { email, email_verified } = user;
   
+  
   req.logIn(user, async (err) => {
     if (err) { 
       console.log({ err });
@@ -142,7 +143,7 @@ export async function verifyUser(req, res) {
   const { email } = user;
   const { code } = req.body;
   
-  const dbUser = await Users.findOne({ email });
+  const dbUser = await Users.findUser(email);
   
   if(!dbUser) {
     return res
@@ -158,7 +159,7 @@ export async function verifyUser(req, res) {
     .json(`The code you entered is incorrect. Please check and try again.`);
   }
   
-  await Users.update({ email }, { email_verified: true });
+  await Users.updateUser(email, { email_verified: true });
 
   const { views } = await userApp.getUserPages(user);
   const redirect = `/${views[0] || ''}`;

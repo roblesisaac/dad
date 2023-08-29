@@ -32,10 +32,11 @@ const state = reactive({
     ];
 
     const [year, month, day] = input.split('-');
-    const monthIndex = parseInt(month, 10) - 1;
-    const formattedMonth = months[monthIndex];
+    const monthIndex = parseInt(month, 10);
+    const formattedMonth = months[monthIndex-1];
 
-    return `${month}/${parseInt(day, 10)}/${year}`;
+    // return `${formattedMonth}-${parseInt(day, 10)}-${year}`;
+    return `${monthIndex}/${parseInt(day, 10)}/${year}`;
   }
 });
 
