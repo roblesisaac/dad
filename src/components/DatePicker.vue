@@ -1,10 +1,10 @@
 <template>
-<a class="section-content" href="#">{{ state.readable(date[when]) }}</a>
+<VueDatePicker class="section-content" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" />
 </template>
 
 <script setup>
 import { reactive } from 'vue';
-import { generateDate } from '../utils'
+import VueDatePicker from '@vuepic/vue-datepicker';
 
 const { date, when } = defineProps({
   date: 'object',
@@ -12,31 +12,23 @@ const { date, when } = defineProps({
 });
 
 const state = reactive({
+  format: (date) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+
+    return `${month}/${day}/${year}`;
+  },
   presets: {
     firstOfMonth() {
-      const now = new Date();
-      return generateDate(`${now.getFullYear()}-${now.getMonth()+1}-01`);
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      return new Date(year, month, 1);
     },
     today() {
-      return generateDate();
+      return new Date();
     }
-  }, 
-  readable(input) {
-    if(!input) {
-      return;
-    }
-
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-
-    const [year, month, day] = input.split('-');
-    const monthIndex = parseInt(month, 10);
-    const formattedMonth = months[monthIndex-1];
-
-    // return `${formattedMonth}-${parseInt(day, 10)}-${year}`;
-    return `${monthIndex}/${parseInt(day, 10)}/${year}`;
   }
 });
 
@@ -45,7 +37,7 @@ const app = function() {
     return state.presets.hasOwnProperty(date[when]);
   }
 
-  function launcPreset() {
+  function launchPreset() {
     const { presets } = state;
 
     date[when] = presets[date[when]]();
@@ -54,7 +46,7 @@ const app = function() {
   return {
     init: () => {
       if(dateIsAPreset()) {
-        launcPreset();
+        launchPreset();
       }
     }
   }
@@ -63,3 +55,23 @@ const app = function() {
 app.init();
 
 </script>
+
+<style>
+.dp__input_reg {
+  background: transparent;
+  border: 0;
+  color: blue;
+  font-weight: bold;
+  font-family: "Fira Code", monospace;
+  padding: 0;
+  text-align: center;
+}
+
+.dp__btn {
+  box-shadow: none;
+}
+
+.dp__calendar_header_separator {
+  background: transparent;
+}
+</style>

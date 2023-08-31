@@ -30,6 +30,16 @@ export function formatDate(inputDate) { // outputs YYYY-MM-DD
     return `${year}-${month}-${day}`;
 }
 
+export function formatPrice(value) {
+    const numericValue = typeof value === 'string' ? parseFloat(value) : value;
+  
+    if (isNaN(numericValue)) {
+      return 'Invalid Price';
+    }
+  
+    return '$' + numericValue.toFixed(2);
+}  
+
 export function isValidEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);

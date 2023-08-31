@@ -59,7 +59,7 @@ app.init();
 }
 
 .topNav {
-  background: #fff;
+  background: rgb(243 243 238);
   transition: all .3s;
   border-bottom: 2px solid #000;
 }

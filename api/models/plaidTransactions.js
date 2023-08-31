@@ -72,11 +72,21 @@ const plaidTransaction = Record('plaidtransactions', {
   },
   label3: {
     name: 'name',
-    concat: ['userId', 'account_id', 'name']
+    value: item => {
+      const { userId, account_id, name } = item;
+      const lowercaseName = (name || '').toLowerCase();
+
+      return userId+account_id+lowercaseName
+    }
   },
   label4: {
     name: 'category',
-    concat: ['userId', 'account_id', 'category']
+    value: item => {
+      const { userId, account_id, category } = item;
+      const lowercaseCat = (category || '').toLowerCase();
+
+      return userId+account_id+lowercaseCat
+    }
   },
   label5: {
     name: 'amount',

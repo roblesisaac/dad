@@ -1,7 +1,7 @@
 <template>
   <!-- BackButton -->
   <Transition>
-    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="acctButton section b-bottom"><ChevronLeft /> Back</button>
+    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
   </Transition>
 
   <!-- Small Screens -->
@@ -9,36 +9,48 @@
     <!-- Pickers -->
     <div class="cell-1">
       <div class="grid middle">
-        <div class="cell shrink section b-bottom b-right line50">
-          <button @click="state.view='acctList'" class="acctButton section-content proper" href="#">
-            {{ acctName }}
+        <div class="cell-6-24 section b-bottom b-right line50">
+          <button @click="state.view='acctList'" class="acctButton section-content proper" href="#" v-html="acctName">
           </button>
         </div>
-        <div class="cell auto section b-bottom line50">          
-          <DatePicker :date="state.date" when="start" /> <b>thru</b> <DatePicker :date="state.date" when="end" />
+        <div class="cell-18-24 section b-bottom line50">          
+          <div class="grid">
+            <div class="cell-10-24">
+              <DatePicker :date="state.date" when="start" />
+            </div>
+            <div class="cell-4-24 bold">thru</div>
+            <div class="cell-10-24">
+              <DatePicker :date="state.date" when="end" />
+            </div>
+          </div>
         </div>
       </div>
     </div>
 
     <!-- Totals -->
-    <div class="cell-1">
+    <div class="cell-1 totalsRow">
       <div class="grid">
         <div class="cell auto">
-          <TotalCalc :state="state" name="income" />
+          <ReportTab :state="state" name="income" />
         </div>
         <div class="cell auto">
-          <TotalCalc :state="state" name="expenses" />
+          <ReportTab :state="state" name="expenses" />
         </div>
         <div class="cell auto">
-          <TotalCalc :state="state" name="net" />
+          <ReportTab :state="state" name="net" />
         </div>
       </div>
     </div>
 
     <!-- Category Rows -->
-    <div class="cell-1">
-      <!-- <div class="grid"></div> -->
-    </div>
+    <Transition>
+      <div v-if="!state.isLoading" class="cell-1">
+        <AccountCategories :state="state" />
+      </div>
+    </Transition>
+    <Transition>
+      <LoadingDots v-if="state.isLoading"></LoadingDots>
+    </Transition>
   </div>
 
   <!-- Not Small Screens -->
@@ -46,11 +58,7 @@
     <div class="cell-shrink section b-right b-bottom">
     </div>
   </div>
-
-  <!-- Loading -->
-  <Transition>
-    <LoadingDots v-if="state.is('loading')"></LoadingDots>
-  </Transition>
+ 
 
   <!-- DatePicker -->
   <Transition>
@@ -64,23 +72,31 @@
 </template>
 
 <script setup>
-  import { computed, reactive, watch } from 'vue';
+  import { computed, onMounted, nextTick, reactive, watch } from 'vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import AccountList from '../components/AccountList.vue';
   import DatePicker from '../components/DatePicker.vue';
-  import TotalCalc from '../components/TotalCalc.vue';
+  import ReportTab from '../components/ReportTab.vue';
+  import AccountCategories from '../components/AccountCategories.vue';
   import { useAppStore } from '../stores/app';
 
-  const { api, State } = useAppStore();
+  const { api, State, sticky } = useAppStore();
+
+  onMounted(() => {
+    sticky.stickify('.totalsRow');
+  });
 
   const state = reactive({
-    body: document.documentElement.style,
     date: {
       start: 'firstOfMonth',
       end: 'today'
     },
-    state: [],
+    elems: {
+      body: document.documentElement.style,
+      topNav: document.querySelector('.topNav').style
+    },
+    isLoading: false,
     is(view) {
       const viewes = Array.isArray(view) ? view : [view];
       return viewes.includes(this.view);
@@ -89,32 +105,65 @@
       return State.currentScreenSize() === 'small'
     },
     linkToken: null,
-    selectedAccount: null,
-    selectedCalc: 'income',
-    topNav: document.querySelector('.topNav').style,
+    selected: {
+      account: null,
+      tab: 'income',
+      transactions: [],
+      items: {}
+    },
+    sorted: {},
     userAccounts: [],
     view: 'home'
   });
 
-  const acctName = computed(() => 
-    state.selectedAccount ? 
-      `${state.selectedAccount.subtype} ${state.selectedAccount.mask}` 
-      : 'Account »'
-  );
+  const acctName = computed(() => {
+    const { selected } = state;
+
+    return selected.account?.subtype ? 
+      `#${selected.account.mask}` 
+      : `<span class="underline">Account</span>`
+  });
 
   const app = function() {
     function changeBgColor(color) {
-      state.topNav.backgroundColor = state.body.backgroundColor = color;
+      const { elems } = state;
+
+      elems.topNav.backgroundColor = elems.body.backgroundColor = color;
     }
 
-    function changeFont(fontFamily) {
-      document.body.style.fontFamily = fontFamily;
+    function extractDate() {
+      const { date : { start, end } } = state;
+
+      return `${yyyyMmDd(start)}|${yyyyMmDd(end)}`;
+    }
+
+    async function fetchTransactions({ account_id, date, select }) {
+      account_id = account_id || state.selected?.account?.account_id;
+      date = date || extractDate();
+
+      if(!account_id || !date) {
+        return;
+      }
+
+      let url = `api/plaid/transactions?account_id=${account_id}&date=${date}`;
+
+      if(select) {
+        url += `&select=${select}`;
+      };
+
+      return await api.get(url);
     }
 
     async function fetchUserAccounts() {
       const fetchedAccounts = await api.get('api/plaid/accounts');
 
       state.userAccounts = state.userAccounts.concat(fetchedAccounts);
+    }
+
+    function isAnExpense({ amount }) {
+      const numericAmount = Number(amount);
+
+      return numericAmount < 0;
     }
 
     function loadScript(src) {
@@ -137,42 +186,125 @@
         document.head.appendChild(el);
       });
     }
+    
+    function selectAccount(index) {
+      const { userAccounts } = state;
 
-    return {
-      init: async () => {
-        changeBgColor('#fffbef');
-        // changeFont('Fira Code');
-        await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js')
-        await fetchUserAccounts();
-      },
-      handleViewChange: async (view) => {
-        if(view !== 'home' || !state.selectedAccount) {
-          return;
+      if(!userAccounts.length) {
+        return;
+      }
+
+      state.selected.account = userAccounts[index];
+    }
+
+    function sortByCategory(data) {
+      const categorized = {
+        income: {},
+        expenses: {}
+      };
+
+      for(const item of data) {
+        const { category } = item;
+
+        if(!category) {
+          continue;
         }
 
-        console.log(state)
+        const catName = category.split(',')[0];
+        const transactionType = isAnExpense(item) ? 'expenses' : 'income';
+
+        (categorized[transactionType][catName] ??= []).push(item);
+      }
+
+      return categorized;
+    }
+
+    function sortByDate(data) {
+      return data.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    function sortSelectedTransactions({ category=true, date=true, reverse=false }={}) {
+      const { transactions } = state.selected;
+      
+      if(!transactions) {
+        return;
+      }
+
+      let sorted = [...transactions];
+
+      if(date) {
+        sorted = sortByDate(sorted);
+      }
+
+      if(reverse) {
+        sorted.reverse();
+      }
+
+      if(category) {
+        sorted = sortByCategory(sorted);
+      }
+
+      return sorted;
+    }
+
+    function yyyyMmDd(dateObject) {
+      const year = dateObject.getFullYear();
+      const month = String(dateObject.getMonth() + 1).padStart(2, '0');
+      const day = String(dateObject.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    }
+
+
+    return {
+      fetchTransactionsForSelectedDate: async () => {
+        const { account_id } = state.selected.account || {};
+
+        if(!account_id) {
+          return;
+        }
+        state.isLoading = true;
+        const date = extractDate();
+        state.selected.transactions = await fetchTransactions({ account_id, date });
+        nextTick(() => state.isLoading = false);
+      },
+      init: async () => {
+        changeBgColor('rgb(243 243 238)');
+        await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
+        await fetchUserAccounts();
+        selectAccount(0);
+      },
+      handleAccountChange: async () => {
+        await app.fetchTransactionsForSelectedDate();
+        state.sorted = sortSelectedTransactions();
       }
     }
   }();
 
   app.init();
 
-  watch(() => state.view, app.handleViewChange);
+  watch(() => state.selected.account, app.handleAccountChange);
+  watch(() => state.date.start, app.handleAccountChange);
+  watch(() => state.date.end, app.handleAccountChange);
 
 </script>
 
 <style>
 .acctButton, .acctButton:hover {
   background: transparent;
-  color: black;
+  color: blue;
   box-shadow: none;
   width: 100%;
 }
 
 .acctButton:hover {
-  color: royalblue;
+  color: blue;
 }
 
+.icon {
+  color: #333;
+  line-height: 1;
+}
 
 .line50 {
   line-height: 50px;
@@ -198,6 +330,10 @@
   border-top: 2px solid #000;
 }
 
+.totalsRow {
+  background-color: rgb(243 243 238);
+}
+
 .relative {
   position: relative;
 }
@@ -210,7 +346,11 @@
   font-weight: 900;
 }
 .section-content {
-  color: blueviolet;
+  color: blue;
   font-weight: 900;
+}
+
+.underline {
+  text-decoration: underline;
 }
 </style>

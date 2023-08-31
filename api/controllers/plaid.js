@@ -2,7 +2,7 @@ import { events, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
-import { isEmptyObject, scrub, formatDate } from '../../src/utils';
+import { isEmptyObject, scrub } from '../../src/utils';
 import { isMeta } from '../utils/records/utils';
 
 import plaidAccounts from '../models/plaidAccounts';
@@ -12,6 +12,7 @@ import plaidTransaction from '../models/plaidTransactions';
 const {
   AMPT_URL,
   PLAID_CLIENT_ID,
+  PLAID_SECRET_DEVELOPMENT,
   PLAID_SECRET_SANDBOX
 } = params().list();
 
@@ -55,17 +56,6 @@ const app = function() {
     await completeTransactionsSync(_id, cursor);
   }
 
-  function buildRequest(userId) {
-    return {
-      user: { client_user_id: userId },
-      client_name: 'Plaid Test App',
-      products: ['auth', 'transactions'],
-      country_codes: ['US'],
-      language: 'en',
-      redirect_uri: `${AMPT_URL}/spendingreport`
-    };
-  }
-
   function buildUserQueryForTransactions(user_id, query) {
     if (isEmptyObject(query)) {
       return user_id;
@@ -87,8 +77,7 @@ const app = function() {
       query[prop] = `${userTree}${query[prop].replace('*', '')}*`;
     };
 
-    delete query.account_id;
-  
+    delete query.account_id;  
     return query
   }
 
@@ -218,7 +207,7 @@ const app = function() {
           'Plaid-Version': '2020-09-14',
         },
       },
-    });
+    });    
 
     plaidClient = plaidClient || new PlaidApi(config);
   }
@@ -313,6 +302,20 @@ const app = function() {
       subscribeEvent('plaid.syncTransactions', syncTransactions);
       initClient();
     },
+    connectLink: async ({ user }, res) => {
+      const request = {
+        user: { client_user_id: user._id },
+        client_name: 'UISHEET',
+        products: ['auth', 'transactions'],
+        country_codes: ['US'],
+        language: 'en',
+        redirect_uri: `${AMPT_URL}/spendingreport`
+      };
+
+      const { data } = await plaidClient.linkTokenCreate(request);
+
+      res.json(data.link_token);
+    },
     exchangeTokenAndSavePlaidItem: async function(req, res) {
       const { publicToken } = req.body;
       const { user } = req;
@@ -330,14 +333,6 @@ const app = function() {
     getAccounts: async (req, res) => {
       const accounts = await fetchUserAccounts(req.user._id);
       res.json(accounts);
-    },
-    getLinkToken: async (req, res) => {
-      const request = buildRequest(req.user._id);
-
-      const response = await plaidClient.linkTokenCreate(request);
-      const { link_token } = response.data;
-
-      res.json(link_token);
     },
     getPlaidItems: async (req, res) => {    
       const { params, user } = req;
@@ -366,7 +361,19 @@ const app = function() {
       }
 
       const userQueryForDate = buildUserQueryForTransactions(user._id, query);
-      const transactions = await fetchTransactions(userQueryForDate);
+
+      let transactions = [];
+      let lastKey = true;
+  
+      while(lastKey) {
+        const start = typeof lastKey === 'string' ? lastKey : undefined;
+        const filter = { start, ...userQueryForDate };
+        const fetched = await fetchTransactions(filter);
+  
+        transactions = transactions.concat(fetched.items || fetched);
+        lastKey = fetched.lastKey;
+      }
+
       res.json(transactions);
     },
     initSyncTransactions: async function ({ params, user }, res) {

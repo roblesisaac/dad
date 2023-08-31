@@ -12,6 +12,10 @@
   -webkit-text-size-adjust: 100%;
 }
 
+html {
+  background: rgb(243, 243, 238) !important;
+}
+
 #app {
   text-align: center;
 }

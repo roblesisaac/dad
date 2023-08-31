@@ -1,16 +1,18 @@
 <template>
 <div class="grid">    
-  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton section proper">+ Link New Account</button>
+  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton section proper"><PlusVue class="icon" /> Link New Account</button>
   <div v-else class="cell-1 section line50">
     <b>Loading <LoadingDots /></b>
   </div>
   <button v-for="acct in state.userAccounts" @click="app.selectAccount(acct)" href="#" class="acctButton section b-top proper">
-    {{ acct.subtype }} {{  acct.mask }}
+    {{ acct.subtype }} {{  acct.mask }} <ChevronRight class="icon" />
   </button>
 </div>
 </template>
 
 <script setup>
+import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
+import PlusVue from 'vue-material-design-icons/Plus.vue';
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/app';
 
@@ -21,10 +23,10 @@ const app = function() {
   function createLink() {
     return Plaid.create({
       token: state.linkToken,
+      // receivedRedirectUri: window.location.href,
       onSuccess: async function(publicToken) {
-        const accessToken = await api.post('api/plaid/exchange', { publicToken });
-
-        console.log({ accessToken });
+        const newAccounts = await api.post('api/plaid/exchange', { publicToken });
+        state.userAccounts = state.userAccounts.concat(newAccounts);
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
@@ -33,7 +35,7 @@ const app = function() {
   }
 
   async function fetchLinkToken() {
-    state.linkToken = state.linkToken || await api.get('api/link/token');
+    state.linkToken = state.linkToken || await api.post('api/plaid/connect');
   }
 
   return {
@@ -46,7 +48,7 @@ const app = function() {
       link.open();
     },
     selectAccount: (acct) => {
-      state.selectedAccount = acct;
+      state.selected.account = acct;
       state.view = 'home';
     }
   }
