@@ -2,7 +2,7 @@ import { router } from '../../main';
 import { useAppStore } from '../app';
 
 export default function(State) {
-  function buildPayload(method, body) {
+  async function buildPayload(method, body) {
     return {
       method,
       body: body ? JSON.stringify(body) : null,
@@ -66,21 +66,21 @@ export default function(State) {
   
   return {
     get: async function(url, settings={}) {
-      const payload = buildPayload('GET');
+      const payload = await buildPayload('GET');
       return handle(url, payload, settings);
     },
     put: async function(url, body, settings={}) {
       await checkHuman(settings, body);
-      const payload = buildPayload('PUT', body);
+      const payload = await buildPayload('PUT', body);
       return handle(url, payload, settings);
     },
     post: async function(url, body, settings={}) {
       await checkHuman(settings, body);
-      const payload = buildPayload('POST', body);
+      const payload = await buildPayload('POST', body);
       return handle(url, payload, settings);
     },
     delete: async function(url, settings={}) {
-      const payload = buildPayload('DELETE');
+      const payload = await buildPayload('DELETE');
       return handle(url, payload, settings);
     }
   };

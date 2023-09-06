@@ -1,5 +1,4 @@
-import { events, params } from '@ampt/sdk';
-import { data } from '@ampt/data';
+import { params } from '@ampt/sdk';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
 import { isEmptyObject, scrub } from '../../src/utils';
@@ -8,6 +7,8 @@ import { isMeta } from '../utils/records/utils';
 import plaidAccounts from '../models/plaidAccounts';
 import plaidItem from '../models/plaidItems';
 import plaidTransaction from '../models/plaidTransactions';
+
+import tasks from '../tasks/plaid';
 
 const {
   AMPT_URL,
@@ -18,43 +19,6 @@ const {
 
 const app = function() {
   let plaidClient;
-
-  async function applyTransactionUpdates(_id, access_token, cursor, req, has_more, plaidData) {
-    const { added, modified, removed } = plaidData;
-
-    const existingTransactions = added.length || removed.length 
-      ? await fetchAllUserTransactions(req.user._id)
-      : [];
-    
-    for (const transaction of added) {
-      const existingItem = findExistingTransaction(existingTransactions, transaction);
-
-      if(!existingItem) {
-        await plaidTransaction.save(transaction, req);
-      }
-    }
-
-    for (const transaction of modified) {
-      const { transaction_id } = transaction;
-      await plaidTransaction.update({ transaction_id }, transaction);
-    }
-
-    const removeIds = removed.map(removed => {
-      return findExistingTransaction(existingTransactions, removed)._id;
-    });
-    
-    if(removeIds.lengths) await data.remove(removeIds);
-
-    if(has_more) {
-      return await syncTransactions({
-        body: {
-          _id, access_token, cursor, req
-        }
-      });
-    }
-
-    await completeTransactionsSync(_id, cursor);
-  }
 
   function buildUserQueryForTransactions(user_id, query) {
     if (isEmptyObject(query)) {
@@ -81,22 +45,6 @@ const app = function() {
     return query
   }
 
-  function completeTransactionsSync(_id, cursor) {  
-    const nowInPST = new Date(Date.now() - 8 * 3600000);
-    
-    return plaidItem.update(_id, { 
-      lastSynced: nowInPST,
-      syncStatus: `complete`, 
-      cursor
-    });
-  }
-
-  function dataIsEmpty(plaidData) {
-    return ['added', 'modified', 'removed'].every(
-      arrName => plaidData[arrName].length === 0
-    );
-  }
-
   function decryptAccessToken(accessToken, encryptionKey) {
     accessToken = decrypt(accessToken);
     return decryptWithKey(accessToken, encryptionKey);
@@ -114,36 +62,20 @@ const app = function() {
     }
   }
 
-  async function fetchAllUserTransactions(userId) {
-    let transactions = [];
-    let lastKey = true;
-
-    while(lastKey) {
-      const start = typeof lastKey === 'string' ? lastKey : undefined;
-      const filter = { start, name: userId+'*' };
-      const fetched = await fetchTransactions(filter);
-
-      transactions = transactions.concat(fetched.items || fetched);
-      lastKey = fetched.lastKey;
-    }
-
-    return transactions;
-  }
-
   async function fetchUserAccounts(userId) {
     return plaidAccounts.find({
       account_id: `${userId}*`
     });
   }
 
-  async function fetchItemById(_id, userId) {
-    const item = await plaidItem.findOne(_id);
+  async function fetchItemById(itemId, userId) {
+    const item = await plaidItem.findOne(itemId);
     
     if(item.userId === userId) {
       return item;
     }
 
-    warn(userId, _id, 'Item');
+    warn(userId, itemId, 'Item');
     return false;
   }
 
@@ -171,14 +103,8 @@ const app = function() {
     return plaidItem.find({ itemId: `${userId}*`});
   }
 
-  function findExistingTransaction(existingTransactions, transaction) {
-    return existingTransactions.find(itm => 
-      itm.transaction_id === transaction.transaction_id
-    );
-  }
-
   function formatDateForQuery(userTree, dateRange) {
-    const [startDate, endDate] = dateRange.split('|');
+    const [startDate, endDate] = dateRange.split('_');
 
     let formatted = userTree;
 
@@ -241,20 +167,6 @@ const app = function() {
     }
   }
 
-  function subscribeEvent(eventName, handlerFunction) {
-    return events.on(eventName, { timeout: 60000 }, async (event) => {
-      try {
-        console.log(`Firing event: ${eventName}`);
-        await handlerFunction(event);
-      } catch (error) {
-        console.error({
-          message: `Error trying to execute ${eventName}`,
-          error
-        });
-      }
-    });
-  }
-
   async function saveAccountsForNewPlaidItem(access_token, req) {
     try {
       const retrievedAccounts = await retrieveAccountsFromPlaidForItem(access_token);
@@ -270,39 +182,17 @@ const app = function() {
     }
   }
 
-  async function syncTransactions({ body }) {
-    let { 
-      _id, access_token, cursor, req
-    } = body;
-
-    const request = {
-      access_token,
-      cursor,
-      options: { include_personal_finance_category: true }
-    };
-
-    const response = await plaidClient.transactionsSync(request);
-
-    const { data: plaidData } = response;
-    const { next_cursor, has_more } = plaidData;
-
-    if(dataIsEmpty(plaidData) && !has_more) {
-      return await completeTransactionsSync(_id, next_cursor);
-    }
-
-    await applyTransactionUpdates(_id, access_token, next_cursor, req, has_more, plaidData);
-  }
-
-  function warn(userId, _id, product) {
-    console.warn(`Unauthorized attempt: User ${userId} tried to access Plaid ${product} (${_id}) without proper authorization.`);
+  function warn(userId, itemId, product) {
+    console.warn(`Unauthorized attempt: User ${userId} tried to access Plaid ${product} (${itemId}) without proper authorization.`);
   }
 
   return {
     init: function() {
-      subscribeEvent('plaid.syncTransactions', syncTransactions);
       initClient();
     },
-    connectLink: async ({ user }, res) => {
+    connectLink: async (req, res) => {
+      const { user } = req;
+
       const request = {
         user: { client_user_id: user._id },
         client_name: 'UISHEET',
@@ -321,12 +211,10 @@ const app = function() {
       const { user } = req;
 
       const accessData = await exchangePublicToken(publicToken);
-      const { _id, access_token } = await savePlaidAccessData(accessData, { user });
+      const { _id: itemId, access_token } = await savePlaidAccessData(accessData, { user });
       const accounts = await saveAccountsForNewPlaidItem(access_token, { user });
 
-      await events.publish('plaid.syncTransactions', {
-        _id, access_token, cursor: '', req: { user }
-      });
+      tasks.syncTransactions(itemId, user._id);
 
       res.json(accounts);
     },
@@ -379,20 +267,16 @@ const app = function() {
     initSyncTransactions: async function ({ params, user }, res) {
       initClient();
 
-      const { _id } = params;
-      let { accessToken, cursor, syncStatus } = await fetchItemById(_id, user._id);
-
-      const access_token = decryptAccessToken(accessToken, user.encryptionKey);
+      const { _id: itemId } = params;
+      const { _id: userId } = user;
+      const { syncStatus } = await fetchItemById(itemId, userId);
 
       if(syncStatus === 'sync in progress...') {
         return res.json({ syncStatus });
       }
 
-      await plaidItem.update(_id, { syncStatus: 'sync in progress...' });
-
-      await events.publish('plaid.syncTransactions', {
-        _id, access_token, cursor, req: { user }
-      });
+      await plaidItem.update(itemId, { syncStatus: 'sync in progress...' });
+      tasks.syncTransactions(itemId, user._id);
 
       res.json('sync initiated...');
     },

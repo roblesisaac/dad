@@ -4,7 +4,7 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import '@fontsource/fira-code';
 import '@fontsource/fira-code/700.css';
-import '@vuepic/vue-datepicker/dist/main.css'
+import '@vuepic/vue-datepicker/dist/main.css';
 
 const views = import.meta.glob('./views/*.vue');
 
@@ -31,6 +31,7 @@ const routerPromise = new Promise((resolve) => {
     });
   }
 });
+
 
 let router;
 

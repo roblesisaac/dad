@@ -134,7 +134,7 @@
     function extractDate() {
       const { date : { start, end } } = state;
 
-      return `${yyyyMmDd(start)}|${yyyyMmDd(end)}`;
+      return `${yyyyMmDd(start)}_${yyyyMmDd(end)}`;
     }
 
     async function fetchTransactions({ account_id, date, select }) {
@@ -269,7 +269,7 @@
         nextTick(() => state.isLoading = false);
       },
       init: async () => {
-        changeBgColor('rgb(243 243 238)');
+        changeBgColor('rgb(243, 243, 238)');  
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
         await fetchUserAccounts();
         selectAccount(0);

@@ -277,7 +277,7 @@ const app = function() {
       watch(() => state.selectedSetting, app.loadViewButtons);
       watch(() => state.views.visible, app.saveSettings);
       
-      changeBgColor('#efeff5');
+      changeBgColor('rgb(243, 243, 238)');
       
       if(userIs(['admin', 'owner'])) {
         showAdminTools();

@@ -1,17 +1,17 @@
 import { params } from '@ampt/sdk';
-import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
-const { 
+const {
   CRYPT_KEY,
   CRYPT_IV,
   RSA_PRIVATE,
   RSA_PUBLIC
 } = params().list();
 
-const RSA = { 
-  PRIVATE: RSA_PRIVATE.replace(/\\n/g, '\n'), 
-  PUBLIC: RSA_PUBLIC.replace(/\\n/g, '\n') 
+const RSA = {
+  PRIVATE: RSA_PRIVATE.replace(/\\n/g, '\n'),
+  PUBLIC: RSA_PUBLIC.replace(/\\n/g, '\n')
 };
 
 const ENCRYPT_KEY = JSON.parse(CRYPT_KEY);
@@ -21,7 +21,7 @@ export function decodeJWT(token) {
   return jwt.verify(token, RSA.PUBLIC, { algorithm: 'RS256' });
 }
 
-export function decrypt(encryptedData, dataType='string') {
+export function decrypt(encryptedData, dataType = 'string') {
   try {
     let encryptedText = Buffer.from(encryptedData, 'hex');
     let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY, 'hex'), Buffer.from(ENCRYPT_IV, 'hex'));
@@ -45,13 +45,13 @@ export function decryptWithKey(encryptedData, key) {
     const [ivHex, encryptedText, authenticationTagHex] = encryptedData.split(':');
     const iv = Buffer.from(ivHex, 'hex');
     const authenticationTag = Buffer.from(authenticationTagHex, 'hex');
-    
+
     const decipher = crypto.createDecipheriv('aes-256-gcm', key, iv);
     decipher.setAuthTag(authenticationTag);
-    
+
     let decryptedData = decipher.update(encryptedText, 'hex', 'utf8');
     decryptedData += decipher.final('utf8');
-    
+
     return decryptedData;
   } catch (error) {
     console.error({
@@ -60,20 +60,20 @@ export function decryptWithKey(encryptedData, key) {
       error
     });
   }
-};
+}
 
 export function encrypt(data) {
   try {
-    if(typeof data === 'number') {
+    if (typeof data === 'number') {
       data = data.toString();
     }
-    
+
     let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY, 'hex'), Buffer.from(ENCRYPT_IV, 'hex'));
     let encrypted = cipher.update(data);
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     return encrypted.toString('hex');
-  
-  } catch(error) {
+
+  } catch (error) {
     console.error({
       errorMessage: `Error encrypting...`,
       data,
@@ -86,10 +86,10 @@ export function encryptWithKey(data, key) {
   try {
     const iv = crypto.randomBytes(16);
     const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
-    
+
     let encryptedData = cipher.update(data, 'utf8', 'hex');
     encryptedData += cipher.final('hex');
-    
+
     const authenticationTag = cipher.getAuthTag().toString('hex');
     return iv.toString('hex') + ':' + encryptedData + ':' + authenticationTag;
   } catch (error) {
@@ -99,11 +99,11 @@ export function encryptWithKey(data, key) {
       error
     });
   }
-};
+}
 
 export function generateSymmetricKey() {
   return crypto.randomBytes(32);
-};
+}
 
 export function generateToken(payload) {
   const exp = Math.floor(Date.now() / 1000) + (60 * 60);
