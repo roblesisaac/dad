@@ -1,5 +1,5 @@
 <template>
-  <AccountCategory :state="state" :category="category" :categoryName="categoryName" v-for="(category, categoryName) in selectedTabData" :key="categoryName+state.selected.tab" />
+  <AccountCategory :state="state" :category="category" :categoryName="categoryName" v-for="(category, categoryName) in selectedTabData" :key="categoryName+state.selectedTab.tabName" />
 </template>
 
 <script setup>
@@ -11,7 +11,7 @@ const { state } = defineProps({
 });
 
 const selectedTabData = computed(() => {
-  return state.sorted[state.selected.tab];
+  return state.sorted[state.selectedTab.tabName];
 });
 </script>
 

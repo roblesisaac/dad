@@ -48,7 +48,7 @@ const app = function() {
       link.open();
     },
     selectAccount: (acct) => {
-      state.selected.account = acct;
+      state.selectedTab.account = acct;
       state.view = 'home';
     }
   }

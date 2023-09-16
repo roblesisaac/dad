@@ -7,6 +7,7 @@ const siteSchema = Record('sites', {
     unique: true,
     default: params('APP_NAME')
   },
+  email: String,
   readableNames: [
     {
       name: String,

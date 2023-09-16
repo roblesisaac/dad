@@ -30,15 +30,23 @@ export function formatDate(inputDate) { // outputs YYYY-MM-DD
   return `${year}-${month}-${day}`;
 }
 
-export function formatPrice(value) {
+export function formatPrice(value, { toFixed = 2, thousands = true } = {}) {
   const numericValue = typeof value === 'string' ? parseFloat(value) : value;
 
   if (isNaN(numericValue)) {
     return 'Invalid Price';
   }
 
-  return '$' + numericValue.toFixed(2);
-}  
+  let formatted = numericValue.toFixed(toFixed);
+
+  if (thousands) {
+    const parts = formatted.split('.');
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    formatted = parts.join('.');
+  }
+
+  return '$' + formatted;
+}
 
 export function isValidEmail(email) {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -155,4 +163,12 @@ export function scrub(response, propsToRemove) {
   }
 
   return response;
+}
+
+export function sum(num1, num2) {
+  const parsedNum1 = parseFloat(num1.replace(/[^0-9.]/g, ''));
+  const parsedNum2 = parseFloat(num2.replace(/[^0-9.]/g, ''));
+  const sum = parsedNum1 + parsedNum2;
+
+  return isNaN(sum) ? 0 : sum;
 }

@@ -5,9 +5,9 @@
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
+  <div v-if="state.isSmallScreen()" class="grid middle">
     <!-- Pickers -->
-    <div class="cell-1">
+    <div v-show="state.is('home')" class="cell-1">
       <div class="grid middle">
         <div class="cell-6-24 section b-bottom b-right line50">
           <button @click="state.view='acctList'" class="acctButton section-content proper" href="#" v-html="acctName">
@@ -28,23 +28,23 @@
     </div>
 
     <!-- Totals -->
-    <div class="cell-1 totalsRow">
+    <div v-show="state.is('home')" class="cell-1 totalsRow">
       <div class="grid">
         <div class="cell auto">
-          <ReportTab :state="state" name="income" />
+          <ReportTab :state="state" tabName="income" />
         </div>
         <div class="cell auto">
-          <ReportTab :state="state" name="expenses" />
+          <ReportTab :state="state" tabName="expenses" />
         </div>
         <div class="cell auto">
-          <ReportTab :state="state" name="net" />
+          <ReportTab :state="state" tabName="net" />
         </div>
       </div>
     </div>
 
     <!-- Category Rows -->
     <Transition>
-      <div v-if="!state.isLoading" class="cell-1">
+      <div v-if="!state.isLoading && state.is('home')" class="cell-1">
         <AccountCategories :state="state" />
       </div>
     </Transition>
@@ -105,22 +105,25 @@
       return State.currentScreenSize() === 'small'
     },
     linkToken: null,
-    selected: {
+    selectedTab: {
       account: null,
-      tab: 'income',
-      transactions: [],
+      tabName: 'income',
+      allTransactions: [],
       items: {}
     },
     sorted: {},
+    totals: {
+      income: 0, expenses: 0, net: 0
+    },
     userAccounts: [],
     view: 'home'
   });
 
   const acctName = computed(() => {
-    const { selected } = state;
+    const { selectedTab } = state;
 
-    return selected.account?.subtype ? 
-      `#${selected.account.mask}` 
+    return selectedTab.account?.subtype ? 
+      `#${selectedTab.account.mask}` 
       : `<span class="underline">Account</span>`
   });
 
@@ -138,7 +141,7 @@
     }
 
     async function fetchTransactions({ account_id, date, select }) {
-      account_id = account_id || state.selected?.account?.account_id;
+      account_id = account_id || state.selectedTab?.account?.account_id;
       date = date || extractDate();
 
       if(!account_id || !date) {
@@ -158,6 +161,16 @@
       const fetchedAccounts = await api.get('api/plaid/accounts');
 
       state.userAccounts = state.userAccounts.concat(fetchedAccounts);
+    }
+
+    function getCategoryName(item) {
+      const { category } = item;
+
+      if(!category) {
+        return;
+      }
+
+      return category.split(',')[0];
     }
 
     function isAnExpense({ amount }) {
@@ -194,54 +207,50 @@
         return;
       }
 
-      state.selected.account = userAccounts[index];
-    }
-
-    function sortByCategory(data) {
-      const categorized = {
-        income: {},
-        expenses: {}
-      };
-
-      for(const item of data) {
-        const { category } = item;
-
-        if(!category) {
-          continue;
-        }
-
-        const catName = category.split(',')[0];
-        const transactionType = isAnExpense(item) ? 'expenses' : 'income';
-
-        (categorized[transactionType][catName] ??= []).push(item);
-      }
-
-      return categorized;
+      state.selectedTab.account = userAccounts[index];
     }
 
     function sortByDate(data) {
       return data.sort((a, b) => a.date.localeCompare(b.date));
     }
 
-    function sortSelectedTransactions({ category=true, date=true, reverse=false }={}) {
-      const { transactions } = state.selected;
+    function sortAndTotalAllSelectedTransactions(presets={}) {
+      const { byCategory=true, byDate=true, reverseOrder=false } = presets;
+      const { allTransactions } = state.selectedTab;
       
-      if(!transactions) {
+      if(!allTransactions) {
         return;
       }
+      
+      const sorted = {
+        income: {},
+        expenses: {}
+      };
 
-      let sorted = [...transactions];
+      let unSorted = [...allTransactions];
 
-      if(date) {
-        sorted = sortByDate(sorted);
+      state.totals = { income: 0, expenses: 0, net: 0 };
+
+      if(byDate) {
+        unSorted = sortByDate(unSorted);
       }
 
-      if(reverse) {
-        sorted.reverse();
+      if(reverseOrder) {
+        unSorted.reverse();
       }
 
-      if(category) {
-        sorted = sortByCategory(sorted);
+      for(const item of unSorted) {
+        const transactionType = isAnExpense(item) ? 'expenses' : 'income';
+
+        if(byCategory) {
+          const categoryName = getCategoryName(item);
+
+          (sorted[transactionType][categoryName] ??= []).push(item);
+        } else {
+          sorted[transactionType].push(item);
+        }
+
+        state.totals[transactionType] += parseFloat(item.amount);
       }
 
       return sorted;
@@ -258,14 +267,16 @@
 
     return {
       fetchTransactionsForSelectedDate: async () => {
-        const { account_id } = state.selected.account || {};
+        const { account_id } = state.selectedTab.account || {};
 
         if(!account_id) {
           return;
         }
+
         state.isLoading = true;
         const date = extractDate();
-        state.selected.transactions = await fetchTransactions({ account_id, date });
+        state.selectedTab.allTransactions = await fetchTransactions({ account_id, date });
+
         nextTick(() => state.isLoading = false);
       },
       init: async () => {
@@ -276,14 +287,15 @@
       },
       handleAccountChange: async () => {
         await app.fetchTransactionsForSelectedDate();
-        state.sorted = sortSelectedTransactions();
+        state.sorted = sortAndTotalAllSelectedTransactions();
+        state.totals.net = state.totals.income + state.totals.expenses;
       }
     }
   }();
 
   app.init();
 
-  watch(() => state.selected.account, app.handleAccountChange);
+  watch(() => state.selectedTab.account, app.handleAccountChange);
   watch(() => state.date.start, app.handleAccountChange);
   watch(() => state.date.end, app.handleAccountChange);
 
@@ -324,6 +336,10 @@
 
 .section.b-bottom {
   border-bottom: 2px solid #000;
+}
+
+.section.b-bottom-dashed {
+  border-bottom: 2px dotted #000;
 }
 
 .section.b-top {

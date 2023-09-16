@@ -26,7 +26,7 @@ const { categoryName, state } = defineProps({
 });
 
 const items = computed(() => {
-  const { items } = state.selected;
+  const { items } = state.selectedTab;
   
   return items[categoryName] || [];
 });

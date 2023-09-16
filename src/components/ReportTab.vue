@@ -1,33 +1,41 @@
 <template>
-  <div @click="state.selected.tab=name" class="relative pointer" :class="borders">
+  <div @click="state.selectedTab.tabName=tabName" class="relative pointer" :class="borders">
     <small :class="[underline,'section-title']">
-      {{ name }}
+      {{ tabName }}
     </small>
     <br/>
-    <a href="#" class="section-content">$0.00</a>
+    <a href="#" class="section-content">{{ tabTotal }}</a>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
+import { formatPrice } from '../utils';
 
-const { state, name } = defineProps({
+const { state, tabName } = defineProps({
   state: 'object',
-  name: 'string'
+  tabName: 'string'
 });
 
 const tabs = ['income', 'expenses', 'net'];
 
 const borders = computed(() => {
-  const rightBorder = isLastInArray(name) || isSelected(name) ? '' : 'b-right';
-  const bottomBorder = isSelected(name) ? '' : 'b-bottom';
-  const borderLeft = isPreviousSelected(name) ? 'b-left' : '';
+  const rightBorder = isLastInArray(tabName) || isSelected(tabName) ? '' : 'b-right';
+  const bottomBorder = isSelected(tabName) ? 'b-bottom-dashed' : 'b-bottom';
+  const borderLeft = isPreviousSelected(tabName) ? 'b-left' : '';
 
   return ['section', bottomBorder, rightBorder, borderLeft];
 });
 
+const tabTotal = computed(() => {
+  return formatPrice(state.totals[tabName], {
+    thousands: true,
+    toFixed: 0
+  });
+});
+
 const underline = computed(() => {
-  return isSelected(name) ? 'underline' : '';
+  return isSelected(tabName) ? 'underline' : '';
 });
 
 function isLastInArray(tabName) {
@@ -35,7 +43,7 @@ function isLastInArray(tabName) {
 }
 
 function isSelected(tabName) {
-  return state.selected.tab === tabName;
+  return state.selectedTab.tabName === tabName;
 }
 
 function isPreviousSelected(tabName) {

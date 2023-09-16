@@ -145,8 +145,6 @@ const tasks = (function() {
   }
 
   const syncTransactions = task('sync.transactions', async ({ body }) => {
-    plaidClient = plaidClient || initClient();
-
     let { itemId, userId } = body;
 
     const { accessToken, cursor } = await plaidItem.find(itemId);
@@ -158,6 +156,8 @@ const tasks = (function() {
   
   return {
     syncTransactions: function(itemId, userId) {
+      plaidClient = plaidClient || initClient();
+
       syncTransactions.run({ itemId, userId });
     }
   }

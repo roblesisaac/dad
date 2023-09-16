@@ -25,14 +25,14 @@ const validate = function() {
     const { key, validKey } = data;
     let formatted;
 
-    if(typeof globalFormatting === 'object') {
-      formatted = applyFormat(validKey, globalFormatting);
-    } else {
-      formatted = await globalFormatting(validKey);
-    }
-
-    if(!formatted && typeof formatted !== 'boolean') {
-      console.error(`Failed to format key '${key}' with global formatting for ${data.collectionName}`);
+    try {
+      if(typeof globalFormatting === 'object') {
+        formatted = applyFormat(validKey, globalFormatting);
+      } else {
+        formatted = await globalFormatting(validKey);
+      }
+    } catch (error) {
+      throw new Error(`Failed to format key '${key}' with global formatting for ${data.collectionName}. Error: ${error.message}`);
     }
 
     data.validKey = formatted || validKey;
@@ -53,7 +53,7 @@ const validate = function() {
 
       metadata[key] = setValue(validMeta);
     } catch(error) {
-      err(`Failed to validate meta '${key}': ${body[key]} ↓↓↓
+      throw new Error(`Failed to validate meta '${key}': ${body[key]} ↓↓↓
       ${error.message}`);
     }
   }
@@ -67,7 +67,11 @@ const validate = function() {
     const { body, validated, schema } = data;
     const { default: defaultValue } = schema[key];
 
-    validated[key] = typeof defaultValue === 'function' ? await defaultValue(body) : defaultValue;
+    try {
+      validated[key] = typeof defaultValue === 'function' ? await defaultValue(body) : defaultValue;
+    } catch (error) {
+      throw new Error(`Failed to assign default property '${key}'. Error: ${error.message}`);
+    }
   }
 
   const assignMetaToData = (data, key) => {
@@ -140,7 +144,11 @@ const validate = function() {
       action
     }
     
-    return await schemaKeyType(body[key] || '', parameters);
+    try {
+      return await schemaKeyType(body[key] || '', parameters);
+    } catch (error) {
+      throw new Error(`Failed to get validated value for '${key}'. Error: ${error.message}`);
+    }
   }
 
   const hasDefault = (data, key) => {
@@ -170,18 +178,22 @@ const validate = function() {
     const { schema, body, collectionName } = data;
     const query = { [key]: body[key] };
 
-    const { 
-      key: duplicateKey,
-      items
-    } = await siftOutLabelAndFetch(schema, query, collectionName) || {};
-    
-    const dupKey = duplicateKey
-      ? duplicateKey
-      : items && items[0]
-      ? items[0].key 
-      : null;
+    try {
+      const { 
+        key: duplicateKey,
+        items
+      } = await siftOutLabelAndFetch(schema, query, collectionName) || {};
+      
+      const dupKey = duplicateKey
+        ? duplicateKey
+        : items && items[0]
+        ? items[0].key 
+        : null;
 
-    return body._id !== dupKey && (dupKey || items?.length);
+      return body._id !== dupKey && (dupKey || items?.length);
+    } catch (error) {
+      throw new Error(`Failed to check for duplicate '${key}'. Error: ${error.message}`);
+    }
   }
   
   const isFunction = ({ metaValue }) => typeof metaValue === 'function';
@@ -203,32 +215,43 @@ const validate = function() {
     const { collectionName, validated, body, schemaKeyType, req, globalFormatting, action } = data;
     const nestedSchema = schemaKeyType[0] || {};
         
-    validated[key] = body[key]
-    ? await Promise.all(
-        body[key].map(async (itm) => {
-          return (await validate.init(
-            collectionName,
-            nestedSchema,
-            itm,
-            body,
-            req,
-            globalFormatting,
-            action
-          )).validated;
-        })
-      )
-    : []
-  
+    try {
+      validated[key] = body[key]
+      ? await Promise.all(
+          body[key].map(async (itm) => {
+            return (await validate.init(
+              collectionName,
+              nestedSchema,
+              itm,
+              body,
+              req,
+              globalFormatting,
+              action
+            )).validated;
+          })
+        )
+      : []
+    } catch (error) {
+      throw new Error(`Failed to validate items in array for '${key}'. Error: ${error.message}`);
+    }
   }
 
   const validateSubObject = async (data, key) => {
     const { collectionName, schema, body, validated, req, globalFormatting, action } = data;
 
-    validated[key] = (await validate.init(collectionName, schema[key], body[key], req, globalFormatting, action)).validated;
+    try {
+      validated[key] = (await validate.init(collectionName, schema[key], body[key], req, globalFormatting, action)).validated;
+    } catch (error) {
+      throw new Error(`Failed to validate sub object for '${key}'. Error: ${error.message}`);
+    }
   }
 
   const validateSingleItem = (body, schema) => {
-    return !body ? body : schema(body);
+    try {
+      return !body ? body : schema(body);
+    } catch (error) {
+      throw new Error(`Failed to validate single item. Error: ${error.message}`);
+    }
   }
 
   return {
@@ -276,11 +299,11 @@ const validate = function() {
           }
           
           if (!body[key]) {
-            err(`Please provide a unique value for '${key}'.`);
+            throw new Error(`Please provide a unique value for '${key}'.`);
           }
 
           if (await isADuplicate(data, key)) {
-            err(`A duplicate item was found with '${key}=${body[key]}'`);
+            throw new Error(`A duplicate item was found with '${key}=${body[key]}'`);
           }
         }
 
@@ -292,7 +315,7 @@ const validate = function() {
         if(body && !body.hasOwnProperty(key)) {
 
           if(schema[key].required) {
-            err(`Missing required property ${key}.`);
+            throw new Error(`Missing required property ${key}.`);
           }
 
           if(hasDefault(data, key)) {
@@ -326,7 +349,7 @@ const validate = function() {
           data.validated[key] = data.validKey;
 
         } catch(error) {
-          err(`Failed to validate schema '${key}': ${data.body[key]} ↓↓↓
+          throw new Error(`Failed to validate schema '${key}': ${data.body[key]} ↓↓↓
           ${error.message}`);
         }
       }

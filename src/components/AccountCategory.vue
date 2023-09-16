@@ -39,7 +39,7 @@ const categoryTotal = computed(() => {
 function selectCategory(category) {
   isExpanded.value = !isExpanded.value;
   
-  state.selected.items[categoryName] = isExpanded.value ? category : [];
+  state.selectedTab.items[categoryName] = isExpanded.value ? category : [];
 }
 
 </script>
