@@ -83,6 +83,7 @@
 
   const { api, State, sticky } = useAppStore();
 
+
   onMounted(() => {
     sticky.stickify('.totalsRow');
   });

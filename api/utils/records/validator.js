@@ -124,10 +124,6 @@ const validate = function() {
     metadata[key] = setValue(concatedRefs);
   }
 
-  const err = (message) => {
-    throw new Error(message);
-  }
-
   const getValidatedValue = async (data, key, action) => {
     const {
       body,

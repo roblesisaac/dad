@@ -1,5 +1,5 @@
 import Record from '../utils/records';
-import bcrypt from 'bcryptjs';
+import { hashPassword, comparePassword } from '../utils/auth';
 import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
 import { isValidEmail } from '../../src/utils';
 
@@ -32,8 +32,7 @@ const users = Record('users', {
         throw new Error('Password must be at least 8 characters long.');
       }
       
-      const salt = await bcrypt.genSalt(12);
-      return await bcrypt.hash(password, salt);
+      return await hashPassword(password);
     }
   },
   encryptionKey: {
@@ -67,7 +66,7 @@ users.authLocalUser = async (email, password, done) => {
     return done(errorMessage, false);
   }
   
-  const isCorrectPassword = await bcrypt.compare(password, user.password);
+  const isCorrectPassword = await comparePassword(password, user.password);
   
   if (!isCorrectPassword) {
     return done(errorMessage, false);

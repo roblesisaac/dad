@@ -6,6 +6,9 @@ export default defineConfig({
   build: {
     outDir: "./static",
   },
+  test: {
+    include: '**/*.test.js',
+  },
   plugins: [
     vue(),
     // VitePWA({ 

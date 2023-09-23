@@ -9,6 +9,7 @@ import plaidItem from '../models/plaidItems';
 import plaidTransaction from '../models/plaidTransactions';
 
 import tasks from '../tasks/plaid';
+import plaid from '../routes/plaid';
 
 const {
   AMPT_URL,
@@ -189,6 +190,7 @@ const app = function() {
   return {
     init: function() {
       initClient();
+      return plaidClient;
     },
     connectLink: async (req, res) => {
       const { user } = req;
@@ -205,6 +207,7 @@ const app = function() {
       const { data } = await plaidClient.linkTokenCreate(request);
 
       res.json(data.link_token);
+      return data;
     },
     exchangeTokenAndSavePlaidItem: async function(req, res) {
       const { publicToken } = req.body;

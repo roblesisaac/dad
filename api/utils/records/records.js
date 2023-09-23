@@ -58,7 +58,7 @@ export default function(collectionName, schema, globalFormatting) {
             return { error: `${JSON.stringify(filter)} does not exist` };
         }
 
-        const { _id } = found;
+        const { _id } = found; 
         const newItem = { _id, ...updates };
 
         const { validated, metadata } = await validate.forUpdate(newItem, req);
@@ -74,7 +74,8 @@ export default function(collectionName, schema, globalFormatting) {
     }
 
     const erase = async (filter) => {
-        const { _id } = await find(filter) || {};
+        let response = await findOne(filter) || {};
+        let { _id } = response;
 
         if(!_id) {
             return { error: `${JSON.stringify(filter)} does not exist` };
