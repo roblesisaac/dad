@@ -213,11 +213,19 @@ describe('validate', () => {
     expect(validated).toEqual({ username: 'testuser' });
   });
 
-  test('invalid type throws error', async () => {
-    const testSchema = { username: String };
+  test('strict invalid type throws error', async () => {
+    const testSchema = { username: { type: String, strict: true } };
     const testItem = { username: 123 };
 
     expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must be of type string');
+  });
+
+  test('not string invalid type corrects', async () => {
+    const testSchema = { username: String };
+    const testItem = { username: 123 };
+    const { validated } = await validate(testSchema, testItem);
+
+    expect(validated.username).toBe('123')
   });
 
   test('valid enum works', async () => {
@@ -252,9 +260,9 @@ describe('validate', () => {
 
   test('computed values work', async () => {
     const testSchema = { username: { type: String, computed: value => `ampt${value}` } };
-    const testItem = { username: 'XXXX' };
+    const testProps = { username: 'XXXX' };
 
-    const { validated } = await validate(testSchema, testItem);
+    const { validated } = await validate(testSchema, testProps);
     expect(validated.username).toBe('amptXXXX');
   });
 

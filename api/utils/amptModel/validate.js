@@ -11,9 +11,7 @@ async function validate(schema, dataToValidate, props) {
   const uniqueFieldsToCheck = [];
 
   if (typeof schema === 'function') {
-    return {
-      validated: await schema(dataToValidate),
-    };
+    return { validated: await schema(dataToValidate) };
   }
 
   if (typeof dataToValidate !== 'object') {
@@ -23,24 +21,22 @@ async function validate(schema, dataToValidate, props) {
   for (const field in schema) {
     const rules = schema[field];
 
-    if (Array.isArray(rules) || rules.type === Array || rules === Array) {
+    if (isANestedArray(rules)) {
       if (!Array.isArray(dataToValidate[field])) {
         throw new Error(`${field} must be an array`);
       }
 
-      const validatedArray = [];
+      validated[field] = [];
       const arrayRules = rules[0] || '*';
 
       for (const item of dataToValidate[field]) {
         const validationResult = await validate(arrayRules, item, props);
-        validatedArray.push(validationResult.validated);
+        validated[field].push(validationResult.validated);
       }
-
-      validated[field] = validatedArray;
       continue;
     }
 
-    if (typeof schema[field] === 'object' && !schema[field].hasOwnProperty('type')) {
+    if (isANestedObject(schema[field])) {
       if (typeof dataToValidate[field] !== 'object' || Array.isArray(dataToValidate[field])) {
         throw new Error(`${field} must be an object`);
       }
@@ -52,36 +48,24 @@ async function validate(schema, dataToValidate, props) {
 
     const validationResult = await validateItem(rules, dataToValidate, field, props);
 
-    if (validationResult.validated) {
-      validated[field] = validationResult.validated;
-    }
-
-    if (validationResult.unique) {
-      uniqueFieldsToCheck.push(validationResult.unique);
-    }
+    validated[field] = validationResult.validated;
+    uniqueFieldsToCheck.push(validationResult.unique);
   }
 
   return { validated, uniqueFieldsToCheck };
 }
 
 async function validateItem(rules, dataToValidate, field, props) {
-  let dataValue = typeof dataToValidate === 'object' && dataToValidate !== null 
-    ? dataToValidate[field] 
-    : dataToValidate;
-
   field = field || dataToValidate;
-
-  const rulesType = typeof rules === 'function' 
-    ? rules.name.toLowerCase() 
-    : typeof rules.type === 'function'
-    ? rules.type.name.toLowerCase()
-    : rules.type || rules;
-
+  let dataValue = getDataValue(dataToValidate, field);
+  const rule = getRule(rules);
+  const rulesType = getTypeName(rule);
+  
   if(rulesType === '*') {
     return { validated: dataValue };
   }
 
-  if (rules.computed) {
+  if (rules.computed || isAComputedField(rules)) {
     try {
       dataValue = await rules.computed(dataValue, { item: dataToValidate, ...props });
     } catch (e) {
@@ -99,7 +83,13 @@ async function validateItem(rules, dataToValidate, field, props) {
   }
 
   if (typeof dataValue !== 'undefined' && rulesType && typeof dataValue !== rulesType) {
-    throw new Error(`${field} must be of type ${rulesType}`);
+    if(rules.strict) {
+      throw new Error(`${field} must be of type ${rulesType}`);
+    }
+
+    if(typeof rule === 'function') {
+      dataValue = rule(dataValue);
+    }
   }
 
   if (rules.enum && !rules.enum.includes(dataValue)) {
@@ -149,4 +139,36 @@ async function validateItem(rules, dataToValidate, field, props) {
   }
 
   return result;
+}
+
+function getDataValue(dataToValidate, field) {
+  return typeof dataToValidate === 'object' && dataToValidate !== null 
+  ? dataToValidate[field] 
+  : dataToValidate;
+}
+
+function getTypeName(rule) {
+  return typeof rule === 'function' ? rule.name.toLowerCase() : rule;
+}
+
+function getRule(rules) {
+  return typeof rules === 'function' 
+    ? rules 
+    : rules.type ||  rules;
+}
+
+function isAJavascriptType(rules) {
+  return [String, Number, Object, Function, Boolean, Date, RegExp, Map, Set, Promise, WeakMap, WeakSet].includes(rules);
+}
+
+function isAComputedField(rules) {
+  return typeof rules === 'function' && !isAJavascriptType(rules)
+}
+
+function isANestedArray(rules) {
+  return Array.isArray(rules) || rules.type === Array || rules === Array
+}
+
+function isANestedObject(itemValue) {
+  return typeof itemValue === 'object' && !itemValue.hasOwnProperty('type');
 }

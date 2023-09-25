@@ -1,10 +1,10 @@
 import { data } from '@ampt/data';
 import validator from './validate';
 import { generateDate } from '../../../src/utils';
-import labelMap from './labelMap';
+import LabelMap from './labelMap';
 
-const amptModel = function(collectionName, schema, labels) {
-  const labelMaps = labelMap(schema);
+const amptModel = function(collectionName, schema, labelMapSchema) {
+  const labelMap = LabelMap(collectionName, labelMapSchema);
   const validate = async (dataToValidate, props) => {
     return await validator(schema,dataToValidate, props);
   };
@@ -20,19 +20,23 @@ const amptModel = function(collectionName, schema, labels) {
 
   return {
     validate,
+    labelMap,
     save: async function (value, props) {
       const { validated, uniqueFieldsToCheck } = await validate(value, props);
+      const labels = {} // labelMap.buildLabels(validated);
 
       if (!validated) {
         throw new Error("Validation failed");
       }
 
       if(uniqueFieldsToCheck) {
-        //check for matches
+        // for(const uniqueField of uniqueFieldsToCheck) {
+        //   const uniqueFieldExists = await LabelMap.find(uniqueFieldsToCheck, uniqueField);
+        // }
       }
 
       const _id = value._id || buildSchema_Id();
-      const response = await data.set(_id, { ...validated, _id });
+      const response = await data.set(_id, { ...validated, _id }, { ...labels });
 
       await data.remove(_id);
       
@@ -43,7 +47,13 @@ const amptModel = function(collectionName, schema, labels) {
 
       return await data.get(`${collectionName}:${key}`, options);
     },
-    labelMaps
+    remove: async (filter) => { 
+      if(typeof filter === 'string') {
+        return await data.remove(filter);
+      }
+
+      const itemToRemove = await labelMap.find(filter);
+    }
   };
 };
 
