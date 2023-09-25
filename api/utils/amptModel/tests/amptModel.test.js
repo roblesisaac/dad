@@ -43,11 +43,11 @@ describe('amptModels', () => {
     expect(TestModel.labelMap).toBeDefined();
   });
 
-  test('amptModel.labelMap.getLabelKey works', async () => {
+  test('amptModel.labelMap.writeLabelKey works', async () => {
     const url = 'testcollection';
-    const label1Key = await TestModel.labelMap.getLabelKey('name', testItem);
-    const label2Key = await TestModel.labelMap.getLabelKey('label2', testItem);
-    const label3Key = await TestModel.labelMap.getLabelKey('user_details', testItem);
+    const label1Key = await TestModel.labelMap.writeLabelKey('name', testItem);
+    const label2Key = await TestModel.labelMap.writeLabelKey('label2', testItem);
+    const label3Key = await TestModel.labelMap.writeLabelKey('user_details', testItem);
 
     expect(label1Key).toBe(`${url}:name_${testItem.name}`);
     expect(label2Key).toBe(`${url}:label2_${testItem.name.length}`);

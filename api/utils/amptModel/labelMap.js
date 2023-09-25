@@ -40,7 +40,7 @@ export default function(collectionName, raw) {
     raw,
     ...labelNumbers,
     getLabelNumber: readableName => labelNumbers[readableName],
-    getLabelKey: async function(readableName, validated) {
+    writeLabelKey: async function(readableName, validated) {
       const labelNumber = this.getLabelNumber(readableName);
       const labelSpecs = this.raw[labelNumber];
 
