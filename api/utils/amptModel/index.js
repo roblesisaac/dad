@@ -3,8 +3,8 @@ import validator from './validate';
 import { generateDate } from '../../../src/utils';
 import LabelMap from './labelMap';
 
-const amptModel = function(collectionName, schema, labelMapSchema) {
-  const labelMap = LabelMap(collectionName, labelMapSchema);
+const amptModel = function(collectionName, schema, labelConfig) {
+  const labelMap = LabelMap(collectionName, labelConfig);
   const validate = async (dataToValidate, props) => {
     return await validator(schema,dataToValidate, props);
   };
@@ -16,6 +16,17 @@ const amptModel = function(collectionName, schema, labelMapSchema) {
 
   function buildSchema_Id() {
     return `${collectionName}:${buildId()}`;
+  }
+
+  function getFirstObjectKeyAndValue(inputObject) {
+    for (const key in inputObject) {
+      if (inputObject.hasOwnProperty(key)) {
+        return {
+          objKey: key,
+          objValue: inputObject[key],
+        };
+      }
+    }
   }
 
   return {
@@ -43,9 +54,19 @@ const amptModel = function(collectionName, schema, labelMapSchema) {
       return response;
     },
     find: async (filter, options) => {
-      const { _id } = siftOut(filter);
+      if(typeof filter === 'string') {
+        return await data.get(filter, options);
+      };
 
-      return await data.get(`${collectionName}:${key}`, options);
+      const { objKey, objValue } = getFirstObjectKeyAndValue(filter);
+      let url = `${collectionName}:${objKey}_${objValue}`;
+
+      if(!url.includes('*')) url += '*';
+
+      const labelNumber = labelMap.getLabelNumber(objKey);
+
+      return { labelNumber, url };
+      // return await data.getByLabel(labelMap.getLabelNumber(objKey), url)
     },
     remove: async (filter) => { 
       if(typeof filter === 'string') {

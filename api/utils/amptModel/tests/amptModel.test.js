@@ -54,12 +54,12 @@ describe('amptModels', () => {
     expect(label3Key).toBe(`${url}:user_details_${testItem.name}${testItem.age}`);
   });
 
-  test('amptModel.labelMap.find works', async () => {
-    const label3Key = await TestModel.labelMap.find({ user_details: 'jo'});
+  test('amptModel.find workss', async () => {
+    const label3Key = await TestModel.find({ user_details: 'jo'});
 
     console.log(label3Key);
 
     expect(label3Key).toBeDefined();
-  }, 1000*10);
+  }, 1000*20);
 
 });

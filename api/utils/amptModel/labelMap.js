@@ -1,6 +1,6 @@
 import { data } from '@ampt/data';
 
-export default function(collectionName, raw) {
+export default function(collectionName, labelConfig) {
   const labelNumbers = {};
 
   function isLabel(field) {
@@ -9,12 +9,12 @@ export default function(collectionName, raw) {
     return validLabels.includes(field);
   }
 
-  for (const labelNumber in raw) { 
+  for (const labelNumber in labelConfig) { 
     if(!isLabel(labelNumber)) {
       throw new Error(`Invalid label: ${labelNumber}`);
     }
 
-    const labelSpecs = raw[labelNumber];
+    const labelSpecs = labelConfig[labelNumber];
 
     const labelName = typeof labelSpecs === 'function' 
       ? labelNumber 
@@ -22,27 +22,16 @@ export default function(collectionName, raw) {
 
     labelNumbers[labelName] = labelNumber;
   }
-
-  function getFirstObjectKeyAndValue(inputObject) {
-    for (const key in inputObject) {
-      if (inputObject.hasOwnProperty(key)) {
-        return {
-          objKey: key,
-          objValue: inputObject[key],
-        };
-      }
-    }
-  }
   
 
   return {
     collectionName,
-    raw,
+    labelConfig,
     ...labelNumbers,
     getLabelNumber: readableName => labelNumbers[readableName],
     writeLabelKey: async function(readableName, validated) {
       const labelNumber = this.getLabelNumber(readableName);
-      const labelSpecs = this.raw[labelNumber];
+      const labelSpecs = this.labelConfig[labelNumber];
 
       if(!labelSpecs) {
         throw new Error(`No label ${labelNumber}`);
@@ -78,14 +67,6 @@ export default function(collectionName, raw) {
       }
       
       return `${url}${computedLabel}`;
-    },
-    find: async function(filter) {
-      const { objKey, objValue } = getFirstObjectKeyAndValue(filter);
-      let url = `${collectionName}:${objKey}_${objValue}`;
-
-      if(!url.includes('*')) url += '*';
-
-      return await data.getByLabel(this.getLabelNumber(objKey), url)
     }
   }
 }
