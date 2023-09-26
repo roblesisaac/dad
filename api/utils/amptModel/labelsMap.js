@@ -76,11 +76,14 @@ export default function(collectionName, labelsConfig) {
         throw new Error(`No label ${labelNumber}`);
       }
 
-      const url = `${this.collectionName}:${labelName}_`;
-      const isPlainObjectOrFunction = (typeof labelConfig === 'object' && !Array.isArray(labelConfig)) || typeof labelConfig === 'function';
+      const url = `${this.collectionName}:${labelName}`;
 
-      if(!isPlainObjectOrFunction) {
-        return `${url}${validated[labelConfig]}`;
+      if(labelName == labelConfig) {
+        const labelConfigValue = validated[labelConfig];
+
+        return labelConfigValue ? 
+          `${url}_${labelConfigValue}`
+          : url;
       }
 
       if(labelConfig.concat) {
@@ -91,7 +94,7 @@ export default function(collectionName, labelsConfig) {
         }
 
         const concattedValue = concatSpecs.map(key => validated[key]).join('');
-        return `${url}${concattedValue}`;
+        return `${url}_${concattedValue}`;
       }
 
       const computedConstructor = labelConfig.value || labelConfig.computed || labelConfig;
@@ -99,14 +102,14 @@ export default function(collectionName, labelsConfig) {
       if(typeof computedConstructor === 'function') {
         try {
           const computedOutput = await computedConstructor({ item: validated }, labelName);
-          return `${url}${computedOutput}`;
+          return `${url}_${computedOutput}`;
         
         } catch (error) {
           throw new Error(`Error in ${labelNumber} : ${error.message}`);
         }
       }
       
-      return `${url}${computedConstructor}`;
+      return `${url}_${computedConstructor}`;
     },
     writeLabelKeys: async function(validated) {
       const writtenKeys = {};

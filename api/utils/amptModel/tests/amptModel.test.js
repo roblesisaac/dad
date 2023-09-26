@@ -14,7 +14,7 @@ describe('amptModels', () => {
 
   const labelsConfig = {
     label1: 'name',
-    label2: ({ item }) => `${item.name.length}`,
+    label2: ({ item }) => `name length is ${item.name.length}`,
     label3: {
       name: 'user_details',
       concat: ['name', 'age'],
@@ -37,8 +37,6 @@ describe('amptModels', () => {
     const testProps = { req: { user: { role: 'admin' } } };
     const { _id, writtenLabels } = await TestModel.save(testItem, testProps);
 
-    console.log({writtenLabels})
-
     expect(_id).toMatch(/^testcollection/);
   }, 10000);
 
@@ -55,7 +53,7 @@ describe('amptModels', () => {
     const label3Key = await TestModel.labelsMap.writeLabelKey('user_details', testItem);
 
     expect(label1Key).toBe(`${url}:name_${testItem.name}`);
-    expect(label2Key).toBe(`${url}:label2_${testItem.name.length}`);
+    expect(label2Key).toBe(`${url}:label2_name length is ${testItem.name.length}`);
     expect(label3Key).toBe(`${url}:user_details_${testItem.name}${testItem.age}`);
   });
 
@@ -67,8 +65,6 @@ describe('amptModels', () => {
 
   test('amptModel.find works', async () => {
     const label3Key = await TestModel.find({ user_details: 'jo'});
-
-    console.log(label3Key);
 
     expect(label3Key).toBeDefined();
   }, 1000*10);
