@@ -1,10 +1,10 @@
 import { data } from '@ampt/data';
 import validator from './validate';
 import { generateDate } from '../../../src/utils';
-import LabelMap from './labelMap';
+import LabelsMap from './labelsMap';
 
-const amptModel = function(collectionName, schema, labelConfig) {
-  const labelMap = LabelMap(collectionName, labelConfig);
+const amptModel = function(collectionName, schema, labelsConfig) {
+  const labelsMap = LabelsMap(collectionName, labelsConfig);
   const validate = async (dataToValidate, props) => {
     return await validator(schema,dataToValidate, props);
   };
@@ -18,62 +18,52 @@ const amptModel = function(collectionName, schema, labelConfig) {
     return `${collectionName}:${buildId()}`;
   }
 
-  function getFirstObjectKeyAndValue(inputObject) {
-    for (const key in inputObject) {
-      if (inputObject.hasOwnProperty(key)) {
-        return {
-          objKey: key,
-          objValue: inputObject[key],
-        };
-      }
-    }
+  function isSearchingBy_Id(filter) {
+    return typeof filter === 'string' && filter.includes(':');
   }
 
   return {
     validate,
-    labelMap,
+    labelsMap,
     save: async function (value, props) {
       const { validated, uniqueFieldsToCheck } = await validate(value, props);
-      const labels = {} // labelMap.buildLabels(validated);
 
       if (!validated) {
-        throw new Error("Validation failed");
+        throw new Error('Validation failed');
       }
 
       if(uniqueFieldsToCheck) {
         // for(const uniqueField of uniqueFieldsToCheck) {
-        //   const uniqueFieldExists = await LabelMap.find(uniqueFieldsToCheck, uniqueField);
+        //   const uniqueFieldExists = await LabelsMap.find(uniqueFieldsToCheck, uniqueField);
         // }
       }
 
-      const _id = value._id || buildSchema_Id();
-      const response = await data.set(_id, { ...validated, _id }, { ...labels });
 
-      await data.remove(_id);
+      const writtenLabels = await labelsMap.writeLabelKeys(validated);
+      const _id = value._id || buildSchema_Id();
+      return { _id, validated, writtenLabels }
+      // const response = await data.set(_id, { ...validated, _id }, { ...writtenLabels });
+
+      // await data.remove(_id);
       
-      return response;
+      // return response;
     },
     find: async (filter, options) => {
-      if(typeof filter === 'string') {
+      if(isSearchingBy_Id(filter)) {
         return await data.get(filter, options);
       };
 
-      const { objKey, objValue } = getFirstObjectKeyAndValue(filter);
-      let url = `${collectionName}:${objKey}_${objValue}`;
+      const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
 
-      if(!url.includes('*')) url += '*';
-
-      const labelNumber = labelMap.getLabelNumber(objKey);
-
-      return { labelNumber, url };
-      // return await data.getByLabel(labelMap.getLabelNumber(objKey), url)
+      return { labelNumber, labelValue };
+      // return await data.getByLabel(labelNumber, url)
     },
     remove: async (filter) => { 
       if(typeof filter === 'string') {
         return await data.remove(filter);
       }
 
-      const itemToRemove = await labelMap.find(filter);
+      const itemToRemove = await labelsMap.find(filter);
     }
   };
 };
