@@ -1,21 +1,6 @@
 export default function(collectionName, labelsConfig) {
   const labelNumbers = {};
-
-  function buildConfig() {
-    for (const labelNumber in labelsConfig) { 
-      if(!isLabel(labelNumber)) {
-        throw new Error(`Invalid label: ${labelNumber}`);
-      }
-  
-      const labelConfig = labelsConfig[labelNumber];
-  
-      const labelName = typeof labelConfig === 'function' 
-        ? labelNumber 
-        : labelConfig.name || labelConfig;
-  
-      labelNumbers[labelName] = labelNumber;
-    }
-  }
+  const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
 
   function buildLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
@@ -35,13 +20,23 @@ export default function(collectionName, labelsConfig) {
   }
 
   function isLabel(field) {
-    const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
-
     return validLabels.includes(field);
   }
 
   function init() {
-    buildConfig();
+    for (const labelNumber in labelsConfig) { 
+      if(!isLabel(labelNumber)) {
+        throw new Error(`Invalid label: ${labelNumber}`);
+      }
+  
+      const labelConfig = labelsConfig[labelNumber];
+  
+      const labelName = typeof labelConfig === 'function' 
+        ? labelNumber 
+        : labelConfig.name || labelConfig;
+  
+      labelNumbers[labelName] = labelNumber;
+    }
   }
 
   init();
@@ -50,33 +45,15 @@ export default function(collectionName, labelsConfig) {
     collectionName,
     labelsConfig,
     labelNumbers,
-    getLabelNumber: labelName => {
-      const labelNumber = labelNumbers[labelName];
-
-      if(!labelNumber) {
-        throw new Error(`No label ${labelName}`);
-      }
-
-      return labelNumber;
-    },
-    getArgumentsForGetByLabel(filter) {
-      const { objKey, objValue } = getFirstKeyAndValueFromObject(filter);
-      const labelValue = buildLabelValue(objKey, objValue);
-
-      return { 
-        labelNumber: this.getLabelNumber(objKey),
-        labelValue 
-      };
-    },
-    writeLabelKey: async function(labelName, validated) {
+    createLabelKey: async function(labelName, validated) {
       const labelNumber = this.getLabelNumber(labelName);
-      const labelConfig = this.labelsConfig[labelNumber];
+      const labelConfig = labelsConfig[labelNumber];
 
       if(!labelConfig) {
         throw new Error(`No label ${labelNumber}`);
       }
 
-      const url = `${this.collectionName}:${labelName}`;
+      const url = `${collectionName}:${labelName}`;
 
       if(labelName == labelConfig) {
         const labelConfigValue = validated[labelConfig];
@@ -111,17 +88,35 @@ export default function(collectionName, labelsConfig) {
       
       return `${url}_${computedConstructor}`;
     },
-    writeLabelKeys: async function(validated) {
-      const writtenKeys = {};
+    createLabelKeys: async function(validated) {
+      const createdLabelKeys = {};
 
       for(const labelName in labelNumbers) {
-        const labelKey = await this.writeLabelKey(labelName, validated);
+        const labelKey = await this.createLabelKey(labelName, validated);
         const labelNumber = this.getLabelNumber(labelName);
         
-        writtenKeys[labelNumber] = labelKey;
+        createdLabelKeys[labelNumber] = labelKey;
       }
 
-      return writtenKeys;
+      return createdLabelKeys;
+    },
+    getLabelNumber: labelName => {
+      const labelNumber = labelNumbers[labelName];
+
+      if(!labelNumber) {
+        throw new Error(`No label ${labelName}`);
+      }
+
+      return labelNumber;
+    },
+    getArgumentsForGetByLabel(filter) {
+      const { objKey, objValue } = getFirstKeyAndValueFromObject(filter);
+      const labelValue = buildLabelValue(objKey, objValue);
+
+      return { 
+        labelNumber: this.getLabelNumber(objKey),
+        labelValue 
+      };
     }
   }
 }

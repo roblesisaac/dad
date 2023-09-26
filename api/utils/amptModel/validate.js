@@ -1,4 +1,4 @@
-export default async (schema, dataToValidate, props) => {
+export default async (schema, dataToValidate, props, globalConfig) => {
   if (!dataToValidate) {
     return async (toValidate, props) => await validate(schema, toValidate, props);
   }
@@ -49,7 +49,10 @@ async function validate(schema, dataToValidate, props) {
     const validationResult = await validateItem(rules, dataToValidate, field, props);
 
     validated[field] = validationResult.validated;
-    uniqueFieldsToCheck.push(validationResult.unique);
+
+    if(validationResult.unique) {
+      uniqueFieldsToCheck.push(validationResult.unique);
+    }
   }
 
   return { validated, uniqueFieldsToCheck };
@@ -135,7 +138,7 @@ async function validateItem(rules, dataToValidate, field, props) {
   const result = { validated: dataValue };
 
   if (rules.unique) {
-    result.unique = dataValue;
+    result.unique = field;
   }
 
   return result;

@@ -3,10 +3,13 @@ import validator from './validate';
 import { generateDate } from '../../../src/utils';
 import LabelsMap from './labelsMap';
 
-const amptModel = function(collectionName, schema, labelsConfig) {
+const amptModel = function(collectionName, schemaConfig, globalConfig) {
+  let { schema, labelsConfig } = schemaConfig;
   const labelsMap = LabelsMap(collectionName, labelsConfig);
+  schema = schema || schemaConfig;
+
   const validate = async (dataToValidate, props) => {
-    return await validator(schema,dataToValidate, props);
+    return await validator(schema, dataToValidate, props, globalConfig);
   };
 
   function buildId(yyyymmdd) {
@@ -33,16 +36,19 @@ const amptModel = function(collectionName, schema, labelsConfig) {
       }
 
       if(uniqueFieldsToCheck) {
-        // for(const uniqueField of uniqueFieldsToCheck) {
-        //   const uniqueFieldExists = await LabelsMap.find(uniqueFieldsToCheck, uniqueField);
-        // }
+        for(const uniqueField of uniqueFieldsToCheck) {
+          if(!labelsMap.labelNumbers[uniqueField]) {
+            throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be specified in a labelsConfig...`);
+          }
+          // const uniqueFieldExists = await LabelsMap.find(uniqueFieldsToCheck, uniqueField);
+        }
       }
 
+      const createdLabels = await labelsMap.createLabelKeys(validated);
 
-      const writtenLabels = await labelsMap.writeLabelKeys(validated);
       const _id = value._id || buildSchema_Id();
-      return { _id, validated, writtenLabels }
-      // const response = await data.set(_id, { ...validated, _id }, { ...writtenLabels });
+      return { _id, validated, createdLabels }
+      // const response = await data.set(_id, { ...validated, _id }, { ...createdLabels });
 
       // await data.remove(_id);
       
