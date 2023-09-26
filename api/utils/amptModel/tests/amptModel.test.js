@@ -18,7 +18,8 @@ describe('amptModels', () => {
     label3: {
       name: 'user_details',
       concat: ['name', 'age'],
-    }
+    },
+    label4: 5
   };
 
   const TestModel = amptModel('testcollection', schema, labelsConfig);

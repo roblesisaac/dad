@@ -7,11 +7,11 @@ export default function(collectionName, labelsConfig) {
         throw new Error(`Invalid label: ${labelNumber}`);
       }
   
-      const labelSpecs = labelsConfig[labelNumber];
+      const labelConfig = labelsConfig[labelNumber];
   
-      const labelName = typeof labelSpecs === 'function' 
+      const labelName = typeof labelConfig === 'function' 
         ? labelNumber 
-        : labelSpecs.name || labelSpecs;
+        : labelConfig.name || labelConfig;
   
       labelNumbers[labelName] = labelNumber;
     }
@@ -106,7 +106,7 @@ export default function(collectionName, labelsConfig) {
         }
       }
       
-      return `${url}${computedLabel}`;
+      return `${url}${computedConstructor}`;
     },
     writeLabelKeys: async function(validated) {
       const writtenKeys = {};
@@ -114,7 +114,7 @@ export default function(collectionName, labelsConfig) {
       for(const labelName in labelNumbers) {
         const labelKey = await this.writeLabelKey(labelName, validated);
         const labelNumber = this.getLabelNumber(labelName);
-
+        
         writtenKeys[labelNumber] = labelKey;
       }
 
