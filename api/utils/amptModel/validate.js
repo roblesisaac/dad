@@ -1,12 +1,12 @@
-export default async (schema, dataToValidate, props, globalConfig) => {
+export default async (schema, dataToValidate, config) => {
   if (!dataToValidate) {
-    return async (toValidate, props) => await validate(schema, toValidate, props, globalConfig);
+    return async (toValidate, config) => await validate(schema, toValidate, config);
   }
 
-  return await validate(schema, dataToValidate, props, globalConfig);
+  return await validate(schema, dataToValidate, config);
 };
 
-async function validate(schema, dataToValidate, props, globalConfig) {
+async function validate(schema, dataToValidate, config={}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
 
@@ -15,7 +15,7 @@ async function validate(schema, dataToValidate, props, globalConfig) {
   }
 
   if (typeof dataToValidate !== 'object') {
-    return await validateItem(schema, dataToValidate, false, props, globalConfig);
+    return await validateItem(schema, dataToValidate, false, config);
   }
 
   for (const field in schema) {
@@ -30,7 +30,7 @@ async function validate(schema, dataToValidate, props, globalConfig) {
       const arrayRules = rules[0] || '*';
 
       for (const item of dataToValidate[field]) {
-        const validationResult = await validate(arrayRules, item, props);
+        const validationResult = await validate(arrayRules, item, config);
         validated[field].push(validationResult.validated);
       }
       continue;
@@ -41,12 +41,12 @@ async function validate(schema, dataToValidate, props, globalConfig) {
         throw new Error(`${field} must be an object`);
       }
 
-      const validationResult = await validate(rules, dataToValidate[field], props);
+      const validationResult = await validate(rules, dataToValidate[field], config);
       validated[field] = validationResult.validated;
       continue;
     }
 
-    const validationResult = await validateItem(rules, dataToValidate, field, props, globalConfig);
+    const validationResult = await validateItem(rules, dataToValidate, field, config);
 
     validated[field] = validationResult.validated;
 
@@ -58,7 +58,8 @@ async function validate(schema, dataToValidate, props, globalConfig) {
   return { validated, uniqueFieldsToCheck };
 }
 
-async function validateItem(rules, dataToValidate, field, props, globalConfig) {
+async function validateItem(rules, dataToValidate, field, config) {
+  const { props, globalConfig } = config || {}
   field = field || dataToValidate;
   let dataValue = getDataValue(dataToValidate, field);
   const rule = getRule(rules);

@@ -1,6 +1,6 @@
 export default function(collectionName, config) {
   const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
-  const { labelNumbers, labelsConfig } = init();
+  const { labelNames, labelsConfig } = init();
 
   function createLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
@@ -21,7 +21,7 @@ export default function(collectionName, config) {
 
   function init() {
     const labelsConfig = {};
-    const labelNumbers = {};
+    const labelNames = {};
 
     for (const labelNumber in config) { 
       if(!isLabel(labelNumber)) {
@@ -34,10 +34,10 @@ export default function(collectionName, config) {
         ? labelNumber 
         : labelConfig.name || labelConfig;
   
-      labelNumbers[labelName] = labelNumber;
+      labelNames[labelName] = labelNumber;
     }
 
-    return { labelsConfig, labelNumbers };
+    return { labelsConfig, labelNames };
   }
 
   function isLabel(field) {
@@ -47,7 +47,7 @@ export default function(collectionName, config) {
   return {
     collectionName,
     labelsConfig,
-    labelNumbers,
+    labelNames,
     createLabelKey: async function(labelName, validated) {
       const labelNumber = this.getLabelNumber(labelName);
       const labelConfig = labelsConfig[labelNumber];
@@ -94,7 +94,7 @@ export default function(collectionName, config) {
     createLabelKeys: async function(validated) {
       const createdLabelKeys = {};
 
-      for(const labelName in labelNumbers) {
+      for(const labelName in labelNames) {
         const labelKey = await this.createLabelKey(labelName, validated);
         const labelNumber = this.getLabelNumber(labelName);
         
@@ -103,12 +103,12 @@ export default function(collectionName, config) {
 
       return createdLabelKeys;
     },
-    isLabeled(uniqueField) {
-      return this.labelNumbers[uniqueField];
+    hasLabel(uniqueField) {
+      return this.labelNames[uniqueField];
     },
     isLabel,
     getLabelNumber: labelName => {
-      const labelNumber = labelNumbers[labelName];
+      const labelNumber = labelNames[labelName];
 
       if(!labelNumber) {
         throw new Error(`No label ${labelName}`);

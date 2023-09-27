@@ -22,7 +22,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
   }
 
   const validate = async (dataToValidate, props) => {
-    return await validator(schema, dataToValidate, props, globalConfig);
+    return await validator(schema, dataToValidate, { props, globalConfig });
   };
 
   function buildId(yyyymmdd) {
@@ -51,7 +51,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
       if(uniqueFieldsToCheck) {
         for(const uniqueField of uniqueFieldsToCheck) {
           
-          if(!labelsMap.isLabeled(uniqueField)) {
+          if(!labelsMap.hasLabel(uniqueField)) {
             throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be labeled in a labelsConfig...`);
           }
 

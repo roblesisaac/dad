@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">72.72% </span>
+                <span class="strong">72.87% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>136/187</span>
+                <span class='fraction'>137/188</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">61.11% </span>
+                <span class="strong">60.27% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>44/72</span>
+                <span class='fraction'>44/73</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">72.72% </span>
+                <span class="strong">72.87% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>136/187</span>
+                <span class='fraction'>137/188</span>
             </div>
         
             
@@ -249,7 +249,8 @@
 <a name='L184'></a><a href='#L184'>184</a>
 <a name='L185'></a><a href='#L185'>185</a>
 <a name='L186'></a><a href='#L186'>186</a>
-<a name='L187'></a><a href='#L187'>187</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L187'></a><a href='#L187'>187</a>
+<a name='L188'></a><a href='#L188'>188</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -309,6 +310,7 @@
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
@@ -435,15 +437,15 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">10x</span>
 <span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span></td><td class="text"><pre class="prettyprint lang-js">export default async (schema, dataToValidate, props, globalConfig) =&gt; {
+<span class="cline-any cline-yes">10x</span></td><td class="text"><pre class="prettyprint lang-js">export default async (schema, dataToValidate, config) =&gt; {
   if (!dataToValidate) <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
-<span class="cstat-no" title="statement not covered" >    return async (toValidate, props) =&gt; await validate(schema, toValidate, props, globalConfig);</span>
+<span class="cstat-no" title="statement not covered" >    return async (toValidate, config) =&gt; await validate(schema, toValidate, config);</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
-  return await validate(schema, dataToValidate, props, globalConfig);
+  return await validate(schema, dataToValidate, config);
 };
 &nbsp;
-async function validate(schema, dataToValidate, props, globalConfig) {
+async function validate(schema, dataToValidate, config={}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
 &nbsp;
@@ -452,7 +454,7 @@ async function validate(schema, dataToValidate, props, globalConfig) {
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
   if (typeof dataToValidate !== 'object') <span class="branch-0 cbranch-no" title="branch not covered" >{</span>
-<span class="cstat-no" title="statement not covered" >    return await validateItem(schema, dataToValidate, false, props, globalConfig);</span>
+<span class="cstat-no" title="statement not covered" >    return await validateItem(schema, dataToValidate, false, config);</span>
 <span class="cstat-no" title="statement not covered" >  }</span>
 &nbsp;
   for (const field in schema) {
@@ -467,7 +469,7 @@ async function validate(schema, dataToValidate, props, globalConfig) {
 <span class="cstat-no" title="statement not covered" >      const arrayRules = rules[0] || '*';</span>
 <span class="cstat-no" title="statement not covered" ></span>
 <span class="cstat-no" title="statement not covered" >      for (const item of dataToValidate[field]) {</span>
-<span class="cstat-no" title="statement not covered" >        const validationResult = await validate(arrayRules, item, props);</span>
+<span class="cstat-no" title="statement not covered" >        const validationResult = await validate(arrayRules, item, config);</span>
 <span class="cstat-no" title="statement not covered" >        validated[field].push(validationResult.validated);</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
 <span class="cstat-no" title="statement not covered" >      continue;</span>
@@ -478,12 +480,12 @@ async function validate(schema, dataToValidate, props, globalConfig) {
 <span class="cstat-no" title="statement not covered" >        throw new Error(`${field} must be an object`);</span>
 <span class="cstat-no" title="statement not covered" >      }</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >      const validationResult = await validate(rules, dataToValidate[field], props);</span>
+<span class="cstat-no" title="statement not covered" >      const validationResult = await validate(rules, dataToValidate[field], config);</span>
 <span class="cstat-no" title="statement not covered" >      validated[field] = validationResult.validated;</span>
 <span class="cstat-no" title="statement not covered" >      continue;</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
-    const validationResult = await validateItem(rules, dataToValidate, field, props, globalConfig);
+    const validationResult = await validateItem(rules, dataToValidate, field, config);
 &nbsp;
     validated[field] = validationResult.validated;
 &nbsp;
@@ -495,7 +497,8 @@ async function validate(schema, dataToValidate, props, globalConfig) {
   return { validated, uniqueFieldsToCheck };
 }
 &nbsp;
-async function validateItem(rules, dataToValidate, field, props, globalConfig) {
+async function validateItem(rules, dataToValidate, field, config) {
+  const { props, globalConfig } = config <span class="branch-0 cbranch-no" title="branch not covered" >|| {}</span>
   field = field <span class="branch-0 cbranch-no" title="branch not covered" >|| dataToValidate;</span>
   let dataValue = getDataValue(dataToValidate, field);
   const rule = getRule(rules);
@@ -628,7 +631,7 @@ function isANestedObject(itemValue) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-09-27T01:41:13.879Z
+                at 2023-09-27T20:02:50.120Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>
