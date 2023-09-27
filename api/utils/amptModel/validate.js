@@ -1,12 +1,12 @@
 export default async (schema, dataToValidate, props, globalConfig) => {
   if (!dataToValidate) {
-    return async (toValidate, props) => await validate(schema, toValidate, props);
+    return async (toValidate, props) => await validate(schema, toValidate, props, globalConfig);
   }
 
-  return await validate(schema, dataToValidate, props);
+  return await validate(schema, dataToValidate, props, globalConfig);
 };
 
-async function validate(schema, dataToValidate, props) {
+async function validate(schema, dataToValidate, props, globalConfig) {
   const validated = {};
   const uniqueFieldsToCheck = [];
 
@@ -15,7 +15,7 @@ async function validate(schema, dataToValidate, props) {
   }
 
   if (typeof dataToValidate !== 'object') {
-    return await validateItem(schema, dataToValidate, false, props);
+    return await validateItem(schema, dataToValidate, false, props, globalConfig);
   }
 
   for (const field in schema) {
@@ -46,7 +46,7 @@ async function validate(schema, dataToValidate, props) {
       continue;
     }
 
-    const validationResult = await validateItem(rules, dataToValidate, field, props);
+    const validationResult = await validateItem(rules, dataToValidate, field, props, globalConfig);
 
     validated[field] = validationResult.validated;
 
@@ -58,7 +58,7 @@ async function validate(schema, dataToValidate, props) {
   return { validated, uniqueFieldsToCheck };
 }
 
-async function validateItem(rules, dataToValidate, field, props) {
+async function validateItem(rules, dataToValidate, field, props, globalConfig) {
   field = field || dataToValidate;
   let dataValue = getDataValue(dataToValidate, field);
   const rule = getRule(rules);
@@ -76,9 +76,11 @@ async function validateItem(rules, dataToValidate, field, props) {
     }
   }
 
+  dataValue = formatters(dataValue, globalConfig);
+  dataValue = formatters(dataValue, rules);
+
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
     dataValue = rules.default;
-    return { validated: dataValue };
   }
 
   if (rules.required && (dataValue === undefined || dataValue === null || dataValue === '')) {
@@ -119,6 +121,24 @@ async function validateItem(rules, dataToValidate, field, props) {
     throw new Error(`${field} must have a maximum length of ${rules.maxlength}`);
   }
 
+  if (rules.select === false) {
+    return {};
+  }
+
+  const result = { validated: dataValue };
+
+  if (rules.unique) {
+    result.unique = field;
+  }
+
+  return result;
+}
+
+function formatters(dataValue, rules) {
+  if(!rules) {
+    return dataValue;
+  }
+
   if (rules.trim && typeof dataValue === 'string') {
     dataValue = dataValue.trim();
   }
@@ -131,17 +151,7 @@ async function validateItem(rules, dataToValidate, field, props) {
     dataValue = dataValue.toUpperCase();
   }
 
-  if (rules.select === false) {
-    return {};
-  }
-
-  const result = { validated: dataValue };
-
-  if (rules.unique) {
-    result.unique = field;
-  }
-
-  return result;
+  return dataValue;
 }
 
 function getDataValue(dataToValidate, field) {

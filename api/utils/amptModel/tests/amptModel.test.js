@@ -5,12 +5,14 @@ describe('amptModels', () => {
   const schema = {      
     name: {
       type: String,
-      unique: true
+      unique: true,
+      strict: true
     },
     age: Number,
     role: {
       type: String,
-      computed: (_, { req }) => req.user.role,
+      computed: (_, { req }) => req?.user?.role,
+      default: 'user',
       enum: ['user', 'admin']
     }
   };
@@ -30,7 +32,7 @@ describe('amptModels', () => {
   const TestModel = amptModel('testcollection', { schema, labelsConfig }, globalConfig);
 
   const testItem = {
-    name: 'john',
+    name: 'John',
     age: '20'
   };
 
@@ -38,9 +40,16 @@ describe('amptModels', () => {
     expect(amptModel).toBeDefined();
   });
 
+  test('amptModel.validate throws error if schema is invalid', () => {
+    expect(async () => await TestModel.validate({ name: 1 }))
+      .rejects.toThrowError('name must be of type string');
+  });
+
   test('ampModel.save works', async () => {
     const testProps = { req: { user: { role: 'admin' } } };
     const { _id, createdLabels } = await TestModel.save(testItem, testProps);
+
+    console.log({ createdLabels})
 
     expect(_id).toMatch(/^testcollection/);
   }, 10000);

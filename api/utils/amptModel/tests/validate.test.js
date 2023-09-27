@@ -177,6 +177,16 @@ describe('validate', () => {
   
   });
 
+  test('globalConfig works', async () => {
+    const testSchema = { firstName: String, lastName: String };
+    const globalConfig = { lowercase: true, trim: true };
+    const testItem = { firstName: 'John', lastName: 'Doe ' };
+    const { validated } = await validate(testSchema, testItem, null, globalConfig);
+
+    expect(validated.firstName).toBe('john');
+    expect(validated.lastName).toBe('doe');  
+  });
+
   test('setting default for undefined works', async () => {
     const testSchema = { username: { type: String, default: 'defaultUsername' } };
     const { validated } = await validate(testSchema, { username: undefined });
