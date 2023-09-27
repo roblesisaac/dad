@@ -27,12 +27,12 @@ describe('amptModels', () => {
     label4: 5
   };
 
-  const globalConfig = { lowercase: true };
+  const globalConfig = { lowercase: true, trim: true };
 
-  const TestModel = amptModel('testcollection', { schema, labelsConfig }, globalConfig);
+  const TestModel = amptModel('testcollection', { ...schema, ...labelsConfig }, globalConfig);
 
   const testItem = {
-    name: 'John',
+    name: 'John ',
     age: '20'
   };
 
@@ -45,14 +45,12 @@ describe('amptModels', () => {
       .rejects.toThrowError('name must be of type string');
   });
 
-  test('ampModel.save works', async () => {
-    const testProps = { req: { user: { role: 'admin' } } };
-    const { _id, createdLabels } = await TestModel.save(testItem, testProps);
+  test('amptModel.validate works', async () => {
+    const { validated } = await TestModel.validate({ name: 'Jane ' });
 
-    console.log({ createdLabels})
-
-    expect(_id).toMatch(/^testcollection/);
-  }, 10000);
+    expect(validated.name).toBe('jane');
+    expect(validated.role).toBe('user');
+  });
 
   test('amptModel.labelsMap.createLabelKey works', async () => {
     const url = 'testcollection';
@@ -66,15 +64,26 @@ describe('amptModels', () => {
   });
 
   test('amptModel.labelsMap.createLabelKeys works', async() => {
-    const createdLabelKeys = await TestModel.labelsMap.createLabelKeys(testItem);
+    const { validated } = await TestModel.validate(testItem);
+    const createdLabels = await TestModel.labelsMap.createLabelKeys(validated);
 
-    expect(createdLabelKeys).toBeDefined();
+    console.log({ createdLabels });
+    expect(createdLabels).toBeDefined();
   });
 
-  // test('amptModel.find works', async () => {
-  //   const label3Key = await TestModel.find({ user_details: 'jo'});
+  test('ampModel.save works', async () => {
+    const testProps = { req: { user: { role: 'admin' } } };
+    const { _id, ...rest } = await TestModel.save(testItem, testProps);
 
-  //   expect(label3Key).toBeDefined();
-  // }, 1000*10);
+    expect(_id).toMatch(/^testcollection/);
+  }, 10000);
+
+  test('amptModel.find works', async () => {
+    const label3Key = await TestModel.find({ user_details: 'jo'});
+
+    console.log({ label3Key });
+
+    expect(label3Key).toBeDefined();
+  }, 1000*10);
 
 });

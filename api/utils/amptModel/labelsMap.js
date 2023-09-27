@@ -1,5 +1,6 @@
-export default function(collectionName, labelsConfig) {
+export default function(collectionName, config) {
   const labelNumbers = {};
+  const labelsConfig = {};
   const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
 
   function buildLabelValue(labelName, labelValue) {
@@ -24,12 +25,12 @@ export default function(collectionName, labelsConfig) {
   }
 
   function init() {
-    for (const labelNumber in labelsConfig) { 
+    for (const labelNumber in config) { 
       if(!isLabel(labelNumber)) {
-        throw new Error(`Invalid label: ${labelNumber}`);
+        continue;
       }
   
-      const labelConfig = labelsConfig[labelNumber];
+      const labelConfig = labelsConfig[labelNumber] = config[labelNumber];
   
       const labelName = typeof labelConfig === 'function' 
         ? labelNumber 
@@ -100,6 +101,10 @@ export default function(collectionName, labelsConfig) {
 
       return createdLabelKeys;
     },
+    isLabeled(uniqueField) {
+      return this.labelNumbers[uniqueField];
+    },
+    isLabel,
     getLabelNumber: labelName => {
       const labelNumber = labelNumbers[labelName];
 

@@ -4,9 +4,22 @@ import { generateDate } from '../../../src/utils';
 import LabelsMap from './labelsMap';
 
 const amptModel = function(collectionName, schemaConfig, globalConfig) {
-  let { schema, labelsConfig } = schemaConfig;
-  const labelsMap = LabelsMap(collectionName, labelsConfig);
-  schema = schema || schemaConfig;
+  const labelsMap = LabelsMap(collectionName, schemaConfig);
+  const schema = extractSchema(schemaConfig);
+
+  function extractSchema(schemaConfig) {
+    const schema = {};
+
+    for(const schemaKey in schemaConfig) {
+      if(labelsMap.isLabel(schemaKey)) {
+        continue;
+      }
+
+      schema[schemaKey] = schemaConfig[schemaKey];
+    }
+
+    return schema;
+  }
 
   const validate = async (dataToValidate, props) => {
     return await validator(schema, dataToValidate, props, globalConfig);
@@ -37,10 +50,19 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
 
       if(uniqueFieldsToCheck) {
         for(const uniqueField of uniqueFieldsToCheck) {
-          if(!labelsMap.labelNumbers[uniqueField]) {
-            throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be specified in a labelsConfig...`);
+          
+          if(!labelsMap.isLabeled(uniqueField)) {
+            throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be labeled in a labelsConfig...`);
           }
-          // const uniqueFieldExists = await LabelsMap.find(uniqueFieldsToCheck, uniqueField);
+
+          console.log('check for duplicate:', { [uniqueField] : validated[uniqueField] })
+          
+          // const duplicate = await this.find({ [uniqueField]: validated[uniqueField] });
+
+          // if(duplicate) {
+          //   throw new Error(`Duplicate value for '${uniqueField}'`);
+          // }
+
         }
       }
 
