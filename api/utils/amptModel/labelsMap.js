@@ -2,7 +2,7 @@ export default function(collectionName, config) {
   const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
   const { labelNumbers, labelsConfig } = init();
 
-  function buildLabelValue(labelName, labelValue) {
+  function createLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
 
     return `${collectionName}:${labelName}_${labelValue}`;
@@ -118,7 +118,7 @@ export default function(collectionName, config) {
     },
     getArgumentsForGetByLabel(filter) {
       const { objKey, objValue } = getFirstKeyAndValueFromObject(filter);
-      const labelValue = buildLabelValue(objKey, objValue);
+      const labelValue = createLabelValue(objKey, objValue);
 
       return { 
         labelNumber: this.getLabelNumber(objKey),

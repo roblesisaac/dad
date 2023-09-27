@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1695778749067" clover="3.2.0">
-  <project timestamp="1695778749067" name="All files">
+<coverage generated="1695778874000" clover="3.2.0">
+  <project timestamp="1695778874000" name="All files">
     <metrics statements="589" coveredstatements="403" conditionals="128" coveredconditionals="86" methods="48" coveredmethods="32" elements="765" coveredelements="521" complexity="0" loc="589" ncloc="589" packages="2" files="4" classes="4"/>
     <package name="api.utils.amptModel">
       <metrics statements="415" coveredstatements="343" conditionals="120" coveredconditionals="81" methods="30" coveredmethods="29"/>
