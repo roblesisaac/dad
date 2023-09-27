@@ -31,6 +31,8 @@ describe('amptModels', () => {
 
   const TestModel = amptModel('testcollection', { ...schema, ...labelsConfig }, globalConfig);
 
+  console.log(TestModel.labelsMap);
+
   const testItem = {
     name: 'John ',
     age: '20'

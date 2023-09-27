@@ -1,7 +1,6 @@
 export default function(collectionName, config) {
-  const labelNumbers = {};
-  const labelsConfig = {};
   const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
+  const { labelNumbers, labelsConfig } = init();
 
   function buildLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
@@ -20,11 +19,10 @@ export default function(collectionName, config) {
     }
   }
 
-  function isLabel(field) {
-    return validLabels.includes(field);
-  }
-
   function init() {
+    const labelsConfig = {};
+    const labelNumbers = {};
+
     for (const labelNumber in config) { 
       if(!isLabel(labelNumber)) {
         continue;
@@ -38,9 +36,13 @@ export default function(collectionName, config) {
   
       labelNumbers[labelName] = labelNumber;
     }
+
+    return { labelsConfig, labelNumbers };
   }
 
-  init();
+  function isLabel(field) {
+    return validLabels.includes(field);
+  }
 
   return {
     collectionName,
