@@ -21,8 +21,8 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     return schema;
   }
 
-  const validate = async (dataToValidate, props) => {
-    return await validator(schema, dataToValidate, { props, globalConfig });
+  const validate = async (dataToValidate, action) => {
+    return await validator(schema, dataToValidate, { globalConfig, action });
   };
 
   function buildId(yyyymmdd) {
@@ -41,8 +41,8 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
   return {
     validate,
     labelsMap,
-    save: async function (value, props) {
-      const { validated, uniqueFieldsToCheck } = await validate(value, props);
+    create: async function (value) {
+      const { validated, uniqueFieldsToCheck } = await validate(value, 'set');
 
       if (!validated) {
         throw new Error('Validation failed');
@@ -55,14 +55,11 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
             throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be labeled in a labelsConfig...`);
           }
 
-          console.log('check for duplicate:', { [uniqueField] : validated[uniqueField] })
-          
-          // const duplicate = await this.find({ [uniqueField]: validated[uniqueField] });
+          const duplicate = await this.find({ [uniqueField]: validated[uniqueField] });
 
-          // if(duplicate) {
-          //   throw new Error(`Duplicate value for '${uniqueField}'`);
-          // }
-
+          if(duplicate?.items?.length) {
+            throw new Error(`Duplicate value for '${uniqueField}'`);
+          }
         }
       }
 
@@ -82,9 +79,18 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
       };
 
       const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
+      const response = await data.getByLabel(labelNumber, labelValue);
 
-      return { labelNumber, labelValue };
-      // return await data.getByLabel(labelNumber, url)
+      if(!response?.items?.length) {
+        return null;
+      }
+
+      const validatedResponse = [];
+
+      for(const responseItem of response.items) {
+        const { validated } = await validate(responseItem, 'get');
+        validatedResponse.push(validated);
+      }
     },
     remove: async (filter) => { 
       if(typeof filter === 'string') {

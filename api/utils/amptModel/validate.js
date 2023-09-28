@@ -59,8 +59,9 @@ async function validate(schema, dataToValidate, config={}) {
 }
 
 async function validateItem(rules, dataToValidate, field, config) {
-  const { props, globalConfig } = config || {}
   field = field || dataToValidate;
+
+  const { globalConfig, action } = config;
   let dataValue = getDataValue(dataToValidate, field);
   const rule = getRule(rules);
   const rulesType = getTypeName(rule);
@@ -69,16 +70,25 @@ async function validateItem(rules, dataToValidate, field, config) {
     return { validated: dataValue };
   }
 
+  dataValue = formatValue(dataValue, globalConfig);
+  dataValue = formatValue(dataValue, rules);
+
+  if(dataToValidate.hasOwnProperty(field)) {
+    dataToValidate[field] = dataValue;
+  };
+
   if (rules.computed || isAComputedField(rules)) {
     try {
-      dataValue = await rules.computed(dataValue, { item: dataToValidate, ...props });
+      const computedConstructor = rules.computed || rules;
+      dataValue = await computedConstructor({ value: dataValue, item: dataToValidate });
     } catch (e) {
-      throw new Error(`${field} failed computed validation`);
+      throw new Error(`${field} failed computed validation: ${e.message}`);
     }
   }
 
-  dataValue = formatters(dataValue, globalConfig);
-  dataValue = formatters(dataValue, rules);
+  if(action && rules[action]) {
+    dataValue = await rules[action]({ value: dataValue, item: dataToValidate });
+  }
 
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
     dataValue = rules.default;
@@ -135,7 +145,7 @@ async function validateItem(rules, dataToValidate, field, config) {
   return result;
 }
 
-function formatters(dataValue, rules) {
+function formatValue(dataValue, rules) {
   if(!rules) {
     return dataValue;
   }
@@ -184,5 +194,5 @@ function isANestedArray(rules) {
 }
 
 function isANestedObject(itemValue) {
-  return typeof itemValue === 'object' && !itemValue.hasOwnProperty('type');
+  return typeof itemValue === 'object' && !itemValue.hasOwnProperty('type') && !itemValue.hasOwnProperty('get') && !itemValue.hasOwnProperty('set') && !itemValue.hasOwnProperty('computed');
 }

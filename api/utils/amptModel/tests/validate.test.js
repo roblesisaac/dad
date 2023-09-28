@@ -268,33 +268,99 @@ describe('validate', () => {
     await expect(validate(testSchema, testItem)).rejects.toThrowError('username failed custom validation');
   });
 
+  test('computed values throw error', async () => {
+    const testSchema = { username: { type: String, computed: _ => `ampt${values}` } };
+    const testItem = { username: 'X' };
+
+    expect(async () => validate(testSchema, testItem)).rejects.toThrowError('username failed computed validation');
+  });
+
   test('computed values work', async () => {
-    const testSchema = { username: { type: String, computed: value => `ampt${value}` } };
+    const testSchema = { username: { type: String, computed: ({ value }) => `ampt${value}` } };
     const testItem = { username: 'XXXX' };
 
     const { validated } = await validate(testSchema, testItem);
     expect(validated.username).toBe('amptXXXX');
   });
 
-  test('computed values throw error', async () => {
-    const testSchema = { username: { type: String, computed: value => `ampt${values}` } };
-    const testItem = { username: 'X' };
-
-    expect(async () => validate(testSchema, testItem)).rejects.toThrowError('username failed computed validation');
-  });
-
-  test('computed works with props', async () => {
+  test('computed works', async () => {
     const testSchema = { 
       username: { 
         type: String, 
-        computed: (value, { item }) => `ampt${item.username}${value}` 
-      } 
+        computed: ({ item, value }) => `ampt${item.username}${value}` 
+      }
     };
 
     const testItem = { username: 'XXXX' };
 
     const { validated } = await validate(testSchema, testItem);
     expect(validated.username).toBe('amptXXXXXXXX');
+  });
+
+  test('getter and setter works', async () => {
+    const testSchema = { 
+      username: {
+        type: String,
+        lowercase: true,
+        trim: true
+      },
+      userdetails: {
+        set: ({ item, value }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
+        get: ({ value }) => value.includes('USER') ? value : `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
+      },
+      anotherComputed: {
+        computed: ({ item }) => `this was computed for ${item.username} at ${Date.now()}`
+      },
+      currentTime: () => Date.now(),
+      createdOn: {
+        set: () => Date.now()
+      },
+      password: {
+        set: ({ value }) => hash(value),
+        get: ({ value }) => value.replace('hashed', '')
+      }
+    };
+
+    function hash(value) {
+      return `hashed${value}`;
+    }
+
+    const testItem = {
+      username: 'John doe',
+      password: 'secret',
+      userdetails: '<detailed info here>'
+    };
+
+    const req = {
+      user: { _id: 123 }
+    };
+
+    const { validated: validatedWithSet } = await validate(testSchema, { ...testItem, ...req }, { action: 'set' });
+
+    function delay(ms) {
+      return new Promise(resolve => {
+        setTimeout(resolve, ms);
+      });
+    }
+    
+    await delay(200);
+
+    const { validated: validatedWithGet } = await validate(testSchema, validatedWithSet, { action: 'get' });
+
+    await delay(200);
+
+    const { validated: validatedAgain } = await validate(testSchema, validatedWithGet);
+
+    await delay(200);
+
+    const { validated: validatedWithGetAgain } = await validate(testSchema, validatedAgain, { action: 'get' });
+
+    console.log({ validatedWithSet, validatedWithGet, validatedAgain, validatedWithGetAgain });
+
+    expect(validatedWithSet.createdOn).toBe(validatedWithGet.createdOn);
+    expect(validatedWithSet.currentTime).toBeLessThan(validatedWithGet.currentTime);
+    expect(validatedWithGet.currentTime).toBeLessThan(validatedAgain.currentTime);
+    expect(validatedWithGet.createdOn).toBe(validatedAgain.createdOn);
   });
 
   test('rules.min works', async () => {

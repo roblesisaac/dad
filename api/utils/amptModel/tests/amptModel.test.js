@@ -8,12 +8,16 @@ describe('amptModels', () => {
       unique: true,
       strict: true
     },
+    createdAt: {
+      set: () => Date.now(),
+      get: ({ item }) => `${item.name} created at ${item.createdAt}`
+    },
     age: Number,
     role: {
       type: String,
-      computed: (_, { req }) => req?.user?.role,
+      computed: ({ item }) => item?.req?.user?.role,
       default: 'user',
-      enum: ['user', 'admin']
+      enum: ['user', 'admin', null]
     }
   };
 
@@ -31,10 +35,8 @@ describe('amptModels', () => {
 
   const TestModel = amptModel('testcollection', { ...schema, ...labelsConfig }, globalConfig);
 
-  console.log(TestModel.labelsMap);
-
   const testItem = {
-    name: 'John ',
+    name: 'John  ',
     age: '20'
   };
 
@@ -69,21 +71,18 @@ describe('amptModels', () => {
     const { validated } = await TestModel.validate(testItem);
     const createdLabels = await TestModel.labelsMap.createLabelKeys(validated);
 
-    console.log({ createdLabels });
     expect(createdLabels).toBeDefined();
   });
 
-  test('ampModel.save works', async () => {
+  test('ampModel.create works', async () => {
     const testProps = { req: { user: { role: 'admin' } } };
-    const { _id, ...rest } = await TestModel.save(testItem, testProps);
+    const { _id } = await TestModel.create({ ...testItem, ...testProps }, testProps);
 
     expect(_id).toMatch(/^testcollection/);
   }, 10000);
 
   test('amptModel.find works', async () => {
-    const label3Key = await TestModel.find({ user_details: 'jo'});
-
-    console.log({ label3Key });
+    const label3Key = await TestModel.find({ user_details: 'jo' });
 
     expect(label3Key).toBeDefined();
   }, 1000*10);
