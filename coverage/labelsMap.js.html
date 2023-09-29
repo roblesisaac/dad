@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>130/130</span>
+                <span class='fraction'>140/140</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>39/39</span>
+                <span class='fraction'>43/43</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>13/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>130/130</span>
+                <span class='fraction'>140/140</span>
             </div>
         
             
@@ -192,10 +192,28 @@
 <a name='L127'></a><a href='#L127'>127</a>
 <a name='L128'></a><a href='#L128'>128</a>
 <a name='L129'></a><a href='#L129'>129</a>
-<a name='L130'></a><a href='#L130'>130</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L130'></a><a href='#L130'>130</a>
+<a name='L131'></a><a href='#L131'>131</a>
+<a name='L132'></a><a href='#L132'>132</a>
+<a name='L133'></a><a href='#L133'>133</a>
+<a name='L134'></a><a href='#L134'>134</a>
+<a name='L135'></a><a href='#L135'>135</a>
+<a name='L136'></a><a href='#L136'>136</a>
+<a name='L137'></a><a href='#L137'>137</a>
+<a name='L138'></a><a href='#L138'>138</a>
+<a name='L139'></a><a href='#L139'>139</a>
+<a name='L140'></a><a href='#L140'>140</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -206,6 +224,10 @@
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -252,12 +274,6 @@
 <span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -271,6 +287,10 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">4x</span>
 <span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-yes">14x</span>
 <span class="cline-any cline-yes">14x</span>
@@ -326,6 +346,14 @@
   const validLabels = new Set(['label1', 'label2', 'label3', 'label4', 'label5']);
   const { labelNames, labelsConfig } = init(config);
 &nbsp;
+  function buildUrl(url, validated, labelName) {
+    const propString = String(labelName);
+        
+    return validated.hasOwnProperty(propString) ? 
+      `${url}_${validated[propString]}`
+      : url;
+  }
+&nbsp;
   function createLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
 &nbsp;
@@ -334,6 +362,10 @@
 &nbsp;
   function handleError(message) {
     throw new Error(`LabelMap Error for collection '${collectionName}': ${message}`);
+  }
+&nbsp;
+  function isObject(input) {
+    return typeof input === 'object' &amp;&amp; !Array.isArray(input);
   }
 &nbsp;
   function getFirstKeyAndValueFromObject(inputObject) {
@@ -379,26 +411,24 @@
       const labelConfig = labelsConfig[labelNumber];
       const url = `${collectionName}:${labelName}`;
 &nbsp;
-      if(labelName == labelConfig) {
-        return validated.hasOwnProperty(labelConfig) ? 
-          `${url}_${validated[labelConfig]}`
-          : url;
-      }
-&nbsp;
-      if(labelConfig.concat) {
+      if(labelConfig.concat &amp;&amp; isObject(labelConfig)) {
         const { concat } = labelConfig;
 &nbsp;
         if(!Array.isArray(concat)) {
-          handleError('concat must be an array');
+          handleError(`concat must be an array for '${labelName}'`);
         }
 &nbsp;
         if(!concat.every(key =&gt; validated.hasOwnProperty(key))) {
-          handleError('some concat keys are missing');
+          handleError(`some concat keys are missing for '${labelName}'`);
         }
         
         const concattedValue = concat.map(key =&gt; validated[key]).join('');
         
         return `${url}_${concattedValue}`;
+      }
+&nbsp;
+      if(labelName == labelConfig) {
+        return buildUrl(url, validated, labelName);
       }
 &nbsp;
       const computedConstructor = labelConfig.value || labelConfig.computed || labelConfig;
@@ -457,7 +487,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-09-29T21:42:10.600Z
+                at 2023-09-29T22:06:11.143Z
             </div>
         <script src="prettify.js"></script>
         <script>

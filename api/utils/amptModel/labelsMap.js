@@ -3,6 +3,14 @@ export default function(collectionName, config) {
   const validLabels = new Set(['label1', 'label2', 'label3', 'label4', 'label5']);
   const { labelNames, labelsConfig } = init(config);
 
+  function buildUrl(url, validated, labelName) {
+    const propString = String(labelName);
+        
+    return validated.hasOwnProperty(propString) ? 
+      `${url}_${validated[propString]}`
+      : url;
+  }
+
   function createLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
 
@@ -11,6 +19,10 @@ export default function(collectionName, config) {
 
   function handleError(message) {
     throw new Error(`LabelMap Error for collection '${collectionName}': ${message}`);
+  }
+
+  function isObject(input) {
+    return typeof input === 'object' && !Array.isArray(input);
   }
 
   function getFirstKeyAndValueFromObject(inputObject) {
@@ -56,26 +68,24 @@ export default function(collectionName, config) {
       const labelConfig = labelsConfig[labelNumber];
       const url = `${collectionName}:${labelName}`;
 
-      if(labelName == labelConfig) {
-        return validated.hasOwnProperty(labelConfig) ? 
-          `${url}_${validated[labelConfig]}`
-          : url;
-      }
-
-      if(labelConfig.concat) {
+      if(labelConfig.concat && isObject(labelConfig)) {
         const { concat } = labelConfig;
 
         if(!Array.isArray(concat)) {
-          handleError('concat must be an array');
+          handleError(`concat must be an array for '${labelName}'`);
         }
 
         if(!concat.every(key => validated.hasOwnProperty(key))) {
-          handleError('some concat keys are missing');
+          handleError(`some concat keys are missing for '${labelName}'`);
         }
         
         const concattedValue = concat.map(key => validated[key]).join('');
         
         return `${url}_${concattedValue}`;
+      }
+
+      if(labelName == labelConfig) {
+        return buildUrl(url, validated, labelName);
       }
 
       const computedConstructor = labelConfig.value || labelConfig.computed || labelConfig;
