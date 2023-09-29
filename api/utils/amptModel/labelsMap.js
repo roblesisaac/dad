@@ -93,8 +93,8 @@ export default function(collectionName, config) {
       if(typeof computedConstructor === 'function') {
         try {
           const computedOutput = await computedConstructor({ item: validated }, labelName);
-          return `${url}_${computedOutput}`;
-        
+          
+          return `${url}_${computedOutput}`;        
         } catch (error) {
           handleError(`Error in ${labelName} : ${error.message}`);
         }
