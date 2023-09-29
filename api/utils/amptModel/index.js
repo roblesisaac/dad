@@ -57,6 +57,8 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
 
           const duplicate = await this.find({ [uniqueField]: validated[uniqueField] });
 
+          console.log({ duplicate });
+
           if(duplicate?.items?.length) {
             throw new Error(`Duplicate value for '${uniqueField}'`);
           }
@@ -86,6 +88,8 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
         const { validated } = await validate(responseItem, 'get');
         validatedResponse.push(validated);
       }
+
+      return validatedResponse;
     },
     remove: async (filter) => { 
       if(typeof filter === 'string') {

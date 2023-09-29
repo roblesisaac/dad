@@ -58,16 +58,17 @@ describe('amptModels', () => {
 
   test('ampModel.save works', async () => {
     const testProps = { req: { user: { role: 'admin' } } };
-    // const { _id } = await TestModel.save({ ...testItem, ...testProps }, testProps);
+    const response = await TestModel.save({ ...testItem, ...testProps }, testProps);
 
-    expect(true).toBe(true);
-    // expect(_id).toMatch(/^testcollection/);
-  }, 10000);
+    expect(response._id).toMatch(/^testcollection/);
+  }, 20000);
 
   test('amptModel.find works', async () => {
-    const label3Key = await TestModel.find({ user_details: 'jo' });
+    const response = await TestModel.find({ user_details: 'jo' });
 
-    expect(label3Key).toBeDefined();
+    console.log({response})
+
+    expect(response).toBeDefined();
   }, 1000*10);
 
 });
