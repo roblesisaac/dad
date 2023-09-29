@@ -111,10 +111,10 @@ export default function(collectionName, config) {
       return this.labelNames[uniqueField];
     },
     isLabel,
-    getLabelNumber: labelName => {
+    getLabelNumber: (labelName) => {
       const labelNumber = labelNames[labelName];
 
-      if(!labelNumber) {
+      if(!labelNumber) {        
         throw new Error(`No label ${labelName}`);
       }
 

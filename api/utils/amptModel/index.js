@@ -64,14 +64,9 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
       }
 
       const createdLabels = await labelsMap.createLabelKeys(validated);
-
       const _id = value._id || buildSchema_Id();
-      return { _id, validated, createdLabels }
-      // const response = await data.set(_id, { ...validated, _id }, { ...createdLabels });
-
-      // await data.remove(_id);
       
-      // return response;
+      return await data.set(_id, { ...validated, _id }, { ...createdLabels });
     },
     find: async (filter, options) => {
       if(isSearchingBy_Id(filter)) {
