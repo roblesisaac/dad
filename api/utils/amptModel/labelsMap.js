@@ -1,4 +1,6 @@
 export default function(collectionName, config) {
+
+  const validLabels = new Set(['label1', 'label2', 'label3', 'label4', 'label5']);
   const { labelNames, labelsConfig } = init(config);
 
   function createLabelValue(labelName, labelValue) {
@@ -39,9 +41,7 @@ export default function(collectionName, config) {
     return { labelsConfig, labelNames };
   }
   
-  function isLabel(input) {
-    const validLabels = new Set(['label1', 'label2', 'label3', 'label4', 'label5']);
-    
+  function isLabel(input) {    
     return validLabels.has(input);
   }  
 
