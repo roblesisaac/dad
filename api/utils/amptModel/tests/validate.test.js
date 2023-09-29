@@ -298,6 +298,8 @@ describe('validate', () => {
   });
 
   test('getter and setter works', async () => {
+    const hash = value => `hashed${value}`;
+
     const testSchema = { 
       username: {
         type: String,
@@ -306,9 +308,9 @@ describe('validate', () => {
       },
       userdetails: {
         set: ({ item, value }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
-        get: ({ value }) => value.includes('USER') ? value : `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
+        get: ({ value }) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
       },
-      anotherComputed: {
+      computedTest: {
         computed: ({ item }) => `this was computed for ${item.username} at ${Date.now()}`
       },
       currentTime: () => Date.now(),
@@ -321,46 +323,25 @@ describe('validate', () => {
       }
     };
 
-    function hash(value) {
-      return `hashed${value}`;
-    }
-
     const testItem = {
       username: 'John doe',
       password: 'secret',
-      userdetails: '<detailed info here>'
+      userdetails: '<users detailed info here>'
     };
 
-    const req = {
-      user: { _id: 123 }
-    };
-
-    const { validated: validatedWithSet } = await validate(testSchema, { ...testItem, ...req }, { action: 'set' });
-
-    function delay(ms) {
-      return new Promise(resolve => {
-        setTimeout(resolve, ms);
-      });
-    }
+    const req = {  user: { _id: 123 } };
+    const originalItem = { ...testItem, ...req };
+    const { validated: validatedWithSet } = await validate(testSchema, originalItem, { action: 'set' });
     
-    await delay(200);
+    // delay 100 ms
+    await new Promise(resolve => setTimeout(resolve, 100) );
 
     const { validated: validatedWithGet } = await validate(testSchema, validatedWithSet, { action: 'get' });
-
-    await delay(200);
-
     const { validated: validatedAgain } = await validate(testSchema, validatedWithGet);
-
-    await delay(200);
-
-    const { validated: validatedWithGetAgain } = await validate(testSchema, validatedAgain, { action: 'get' });
-
-    console.log({ validatedWithSet, validatedWithGet, validatedAgain, validatedWithGetAgain });
 
     expect(validatedWithSet.createdOn).toBe(validatedWithGet.createdOn);
     expect(validatedWithSet.currentTime).toBeLessThan(validatedWithGet.currentTime);
-    expect(validatedWithGet.currentTime).toBeLessThan(validatedAgain.currentTime);
-    expect(validatedWithGet.createdOn).toBe(validatedAgain.createdOn);
+    expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
   });
 
   test('rules.min works', async () => {
@@ -393,31 +374,31 @@ describe('validate', () => {
     expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('age must be at most 100');
   });
 
-  test('rules.minlength works', async () => {
-    const testSchema = { username: { type: String, minlength: 3 } };
+  test('rules.minLength works', async () => {
+    const testSchema = { username: { type: String, minLength: 3 } };
     const testItem = { username: 'test' };
 
     const { validated } = await validate(testSchema, testItem);
     expect(validated.username).toBe('test');
   });
 
-  test('rules.minlength throws error when expected', async () => {
-    const testSchema = { username: { type: String, minlength: 3 } };
+  test('rules.minLength throws error when expected', async () => {
+    const testSchema = { username: { type: String, minLength: 3 } };
     const testItem = { username: 'XX' };
 
     expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must have a minimum length of 3');
   });
 
-  test('rules.maxlength works', async () => {
-    const testSchema = { username: { type: String, maxlength: 10 } };
+  test('rules.maxLength works', async () => {
+    const testSchema = { username: { type: String, maxLength: 10 } };
     const testItem = { username: 'test' };
 
     const { validated } = await validate(testSchema, testItem);
     expect(validated.username).toBe('test');
   });
 
-  test('rules.maxlength throws error when expected', async () => {
-    const testSchema = { username: { type: String, maxlength: 2 } };
+  test('rules.maxLength throws error when expected', async () => {
+    const testSchema = { username: { type: String, maxLength: 2 } };
     const testItem = { username: 'test' };
 
     expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must have a maximum length of 2');

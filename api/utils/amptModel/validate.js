@@ -124,12 +124,12 @@ async function validateItem(rules, dataToValidate, field, config) {
     throw new Error(`${field} must be at most ${rules.max}`);
   }
 
-  if (rules.minlength !== undefined && dataValue.length < rules.minlength) {
-    throw new Error(`${field} must have a minimum length of ${rules.minlength}`);
+  if (rules.minLength !== undefined && dataValue.length < rules.minLength) {
+    throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
   }
 
-  if (rules.maxlength !== undefined && dataValue.length > rules.maxlength) {
-    throw new Error(`${field} must have a maximum length of ${rules.maxlength}`);
+  if (rules.maxLength !== undefined && dataValue.length > rules.maxLength) {
+    throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
   }
 
   if (rules.select === false) {

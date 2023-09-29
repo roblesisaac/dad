@@ -40,7 +40,7 @@ describe('amptModels', () => {
     age: '20'
   };
 
-  test('amptModel', async () => {
+  test('amptModels', async () => {
     expect(amptModel).toBeDefined();
   });
 
@@ -74,9 +74,9 @@ describe('amptModels', () => {
     expect(createdLabels).toBeDefined();
   });
 
-  test('ampModel.create works', async () => {
+  test('ampModel.save works', async () => {
     const testProps = { req: { user: { role: 'admin' } } };
-    const { _id } = await TestModel.create({ ...testItem, ...testProps }, testProps);
+    const { _id } = await TestModel.save({ ...testItem, ...testProps }, testProps);
 
     expect(_id).toMatch(/^testcollection/);
   }, 10000);

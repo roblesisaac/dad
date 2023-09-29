@@ -1,6 +1,5 @@
 export default function(collectionName, config) {
-  const validLabels = Array.from({ length: 5 }, (_, i) => `label${i + 1}`);
-  const { labelNames, labelsConfig } = init();
+  const { labelNames, labelsConfig } = init(config);
 
   function createLabelValue(labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
@@ -19,7 +18,7 @@ export default function(collectionName, config) {
     }
   }
 
-  function init() {
+  function init(config) {
     const labelsConfig = {};
     const labelNames = {};
 
@@ -39,10 +38,12 @@ export default function(collectionName, config) {
 
     return { labelsConfig, labelNames };
   }
-
-  function isLabel(field) {
-    return validLabels.includes(field);
-  }
+  
+  function isLabel(input) {
+    const validLabels = new Set(['label1', 'label2', 'label3', 'label4', 'label5']);
+    
+    return validLabels.has(input);
+  }  
 
   return {
     collectionName,
@@ -59,21 +60,24 @@ export default function(collectionName, config) {
       const url = `${collectionName}:${labelName}`;
 
       if(labelName == labelConfig) {
-        const labelConfigValue = validated[labelConfig];
-
-        return labelConfigValue ? 
-          `${url}_${labelConfigValue}`
+        return validated.hasOwnProperty(labelConfig) ? 
+          `${url}_${validated[labelConfig]}`
           : url;
       }
 
       if(labelConfig.concat) {
-        let concatSpecs = labelConfig.concat;
+        const { concat } = labelConfig;
 
-        if(!Array.isArray(concatSpecs) && concatSpecs.includes(',')) {
-          concatSpecs = concatSpecs.split(',');          
+        if(!Array.isArray(concat)) {
+          throw new Error('concat must be an array');
         }
 
-        const concattedValue = concatSpecs.map(key => validated[key]).join('');
+        if(!concat.every(key => validated.hasOwnProperty(key))) {
+          throw new Error('concat keys must be valid');
+        }
+        
+        const concattedValue = concat.map(key => validated[key]).join('');
+        
         return `${url}_${concattedValue}`;
       }
 

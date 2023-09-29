@@ -41,7 +41,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
   return {
     validate,
     labelsMap,
-    create: async function (value) {
+    save: async function (value) {
       const { validated, uniqueFieldsToCheck } = await validate(value, 'set');
 
       if (!validated) {

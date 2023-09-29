@@ -19,6 +19,18 @@ const users = Record('users', {
   views: [String],
   email_verified: '*',
   password: {
+    set: async ({ value: password }) => {
+      if(!password) return;
+      const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
+      const isAlreadyHashed = bcryptRegex.test(password);
+      
+      if(isAlreadyHashed) {
+        return password;
+      }
+      
+      return await hashPassword(password);
+    },
+    minLength: 8,
     value: async password => {
       if(!password) return;
       const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
