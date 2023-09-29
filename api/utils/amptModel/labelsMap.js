@@ -62,11 +62,11 @@ export default function(collectionName, config) {
         const { concat } = labelConfig;
 
         if(!Array.isArray(concat)) {
-          throw new Error('concat must be an array');
+          throw new Error(`LabelMap Error for collection '${collectionName}': concat must be an array`);
         }
 
         if(!concat.every(key => validated.hasOwnProperty(key))) {
-          throw new Error('concat keys for labelMap must be valid');
+          throw new Error(`LabelMap Error for collection '${collectionName}': some concat keys are missing`);
         }
         
         const concattedValue = concat.map(key => validated[key]).join('');
@@ -82,7 +82,7 @@ export default function(collectionName, config) {
           return `${url}_${computedOutput}`;
         
         } catch (error) {
-          throw new Error(`Error in ${labelNumber} : ${error.message}`);
+          throw new Error(`LabelMap Error for collection '${collectionName}': Error in ${labelNumber} : ${error.message}`);
         }
       }
 
@@ -108,7 +108,7 @@ export default function(collectionName, config) {
       const labelNumber = labelNames[labelName];
 
       if(!labelNumber) {        
-        throw new Error(`No label ${labelName}`);
+        throw new Error(`LabelMap Error for collection '${collectionName}': No label for '${labelName}'`);
       }
 
       return labelNumber;

@@ -26,15 +26,16 @@ describe('labelsMap', () => {
     const label1Number = labelsMap.getLabelNumber('name');
     const label2Number = labelsMap.getLabelNumber('label2');
     const label3Number = labelsMap.getLabelNumber('user_details');
-    try {
-      const _ = labelsMap.getLabelNumber('random_label');
-    } catch (err) {
-      expect(err.message).toBe(`No label random_label`);
-    }
     
     expect(label1Number).toBe('label1');
     expect(label2Number).toBe('label2');
     expect(label3Number).toBe('label3');
+  });
+
+  test('labelsMap.createlabelKey throws error when expected', () => {
+    expect(async () => {
+      await labelsMap.createLabelKey('random_label', testItem);
+    }).rejects.toThrowError(`LabelMap Error for collection 'testcollection': No label for 'random_label'`);
   });
 
   test('labelsMap.hasLabel works', async () => {
@@ -69,12 +70,6 @@ describe('labelsMap', () => {
     expect(label4Key).toBe(`${collectionName}:5`);
   });
 
-  test('labelsMap.createlabelKey throws error as expected', () => {
-    expect(async () => {
-      await labelsMap.createLabelKey('random_label', testItem);
-    }).rejects.toThrowError(`No label random_label`);
-  });
-
   test('labelsMap concat must be an array', async () => {
     const concatLabelConstruct = {
       label1: {
@@ -85,7 +80,8 @@ describe('labelsMap', () => {
     
     const concatLabelMap = LabelsMap(collectionName, concatLabelConstruct);
 
-    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' })).rejects.toThrowError('concat must be an array');
+    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' }))
+      .rejects.toThrowError(`LabelMap Error for collection '${collectionName}': concat must be an array`);
   });
 
   test('labelsMap concat keys must be valid', async () => {
@@ -98,7 +94,8 @@ describe('labelsMap', () => {
     
     const concatLabelMap = LabelsMap(collectionName, concatLabelConstruct);
 
-    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' })).rejects.toThrowError('concat keys for labelMap must be valid');
+    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' }))
+    .rejects.toThrowError(`LabelMap Error for collection '${collectionName}': some concat keys are missing`);
   });
 
   test('labelsMap computed catches errors', async () => {
@@ -113,7 +110,8 @@ describe('labelsMap', () => {
     
     const concatLabelMap = LabelsMap(collectionName, labelConstruct);
 
-    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' })).rejects.toThrowError('Error in label1 : undefinedVarName is not defined');
+    expect(async () => await concatLabelMap.createLabelKeys({ name: 'John' }))
+    .rejects.toThrowError(`LabelMap Error for collection '${collectionName}': Error in label1 : undefinedVarName is not defined`);
   });
 
   test('labelsMap non computed works', async () => {
