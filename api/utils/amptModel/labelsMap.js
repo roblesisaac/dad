@@ -9,6 +9,10 @@ export default function(collectionName, config) {
     return `${collectionName}:${labelName}_${labelValue}`;
   }
 
+  function handleError(message) {
+    throw new Error(`LabelMap Error for collection '${collectionName}': ${message}`);
+  }
+
   function getFirstKeyAndValueFromObject(inputObject) {
     const objKey = Object.keys(inputObject)[0];
 
@@ -62,11 +66,11 @@ export default function(collectionName, config) {
         const { concat } = labelConfig;
 
         if(!Array.isArray(concat)) {
-          throw new Error(`LabelMap Error for collection '${collectionName}': concat must be an array`);
+          handleError('concat must be an array');
         }
 
         if(!concat.every(key => validated.hasOwnProperty(key))) {
-          throw new Error(`LabelMap Error for collection '${collectionName}': some concat keys are missing`);
+          handleError('some concat keys are missing');
         }
         
         const concattedValue = concat.map(key => validated[key]).join('');
@@ -82,7 +86,7 @@ export default function(collectionName, config) {
           return `${url}_${computedOutput}`;
         
         } catch (error) {
-          throw new Error(`LabelMap Error for collection '${collectionName}': Error in ${labelNumber} : ${error.message}`);
+          handleError(`Error in ${labelName} : ${error.message}`);
         }
       }
 
@@ -108,7 +112,7 @@ export default function(collectionName, config) {
       const labelNumber = labelNames[labelName];
 
       if(!labelNumber) {        
-        throw new Error(`LabelMap Error for collection '${collectionName}': No label for '${labelName}'`);
+        handleError(`No label for '${labelName}'`);
       }
 
       return labelNumber;
