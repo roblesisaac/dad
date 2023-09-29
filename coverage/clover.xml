@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<coverage generated="1696025171181" clover="3.2.0">
-  <project timestamp="1696025171181" name="All files">
+<coverage generated="1696025335124" clover="3.2.0">
+  <project timestamp="1696025335124" name="All files">
     <metrics statements="140" coveredstatements="140" conditionals="43" coveredconditionals="43" methods="13" coveredmethods="13" elements="196" coveredelements="196" complexity="0" loc="140" ncloc="140" packages="1" files="1" classes="1"/>
     <file name="labelsMap.js" path="/Users/Sharhino/Desktop/Isaac/aws/dad/api/utils/amptModel/labelsMap.js">
       <metrics statements="140" coveredstatements="140" conditionals="43" coveredconditionals="43" methods="13" coveredmethods="13"/>

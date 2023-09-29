@@ -115,7 +115,7 @@ export default function(collectionName, config) {
       return createdLabelKeys;
     },
     hasLabel(uniqueField) {
-      return !!this.labelNames[uniqueField];
+      return !!labelNames[uniqueField];
     },
     isLabel,
     getLabelNumber: (labelName) => {
