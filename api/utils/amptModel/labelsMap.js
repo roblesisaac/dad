@@ -10,13 +10,11 @@ export default function(collectionName, config) {
   }
 
   function getFirstKeyAndValueFromObject(inputObject) {
-    for (const key in inputObject) {
-      if (inputObject.hasOwnProperty(key)) {
-        return {
-          objKey: key,
-          objValue: inputObject[key],
-        };
-      }
+    const objKey = Object.keys(inputObject)[0];
+
+    return {
+      objKey,
+      objValue: inputObject[objKey],
     }
   }
 
@@ -52,11 +50,6 @@ export default function(collectionName, config) {
     createLabelKey: async function(labelName, validated) {
       const labelNumber = this.getLabelNumber(labelName);
       const labelConfig = labelsConfig[labelNumber];
-
-      if(!labelConfig) {
-        throw new Error(`No label ${labelNumber}`);
-      }
-
       const url = `${collectionName}:${labelName}`;
 
       if(labelName == labelConfig) {
@@ -73,7 +66,7 @@ export default function(collectionName, config) {
         }
 
         if(!concat.every(key => validated.hasOwnProperty(key))) {
-          throw new Error('concat keys must be valid');
+          throw new Error('concat keys for labelMap must be valid');
         }
         
         const concattedValue = concat.map(key => validated[key]).join('');
@@ -92,7 +85,7 @@ export default function(collectionName, config) {
           throw new Error(`Error in ${labelNumber} : ${error.message}`);
         }
       }
-      
+
       return `${url}_${computedConstructor}`;
     },
     createLabelKeys: async function(validated) {
@@ -108,7 +101,7 @@ export default function(collectionName, config) {
       return createdLabelKeys;
     },
     hasLabel(uniqueField) {
-      return this.labelNames[uniqueField];
+      return !!this.labelNames[uniqueField];
     },
     isLabel,
     getLabelNumber: (labelName) => {
