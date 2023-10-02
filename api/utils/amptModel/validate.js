@@ -64,7 +64,6 @@ async function validate(schema, dataToValidate, config={}) {
 }
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
-  
   const rule = getRule(rules);
   const rulesType = getTypeName(rule);
   const specialAction = rules[config.action];
@@ -75,10 +74,6 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     return {
       _isAGetter: true
     };
-  }
-  
-  if(rulesType === '*') {
-    return { validated: dataValue };
   }
 
   dataValue = formatValue(dataValue, config.globalConfig);
@@ -109,7 +104,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     throw new Error(`${field} is required`);
   }
 
-  if (typeof dataValue !== 'undefined' && rulesType && typeof dataValue !== rulesType) {
+  if (typeof dataValue !== 'undefined' && rulesType && typeof dataValue !== rulesType && rulesType !== '*') {
     if(rules.strict) {
       throw new Error(`${field} must be of type ${rulesType}`);
     }
