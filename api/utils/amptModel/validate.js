@@ -104,7 +104,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     throw new Error(`${field} is required`);
   }
 
-  if (typeof dataValue !== 'undefined' && rulesType && typeof dataValue !== rulesType && rulesType !== '*') {
+  if (rulesType && typeof dataValue !== rulesType && typeof dataValue !== 'undefined' && rulesType !== '*') {
     if(rules.strict) {
       throw new Error(`${field} must be of type ${rulesType}`);
     }
@@ -118,7 +118,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     throw new Error(`${field} must be one of ${rules.enum}`);
   }
 
-  if (rules.validate && !rules.validate(dataValue)) {
+  if (rules.validate && !await rules.validate(dataValue)) {
     throw new Error(`${field} failed custom validation`);
   }
 
