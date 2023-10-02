@@ -344,6 +344,61 @@ describe('validate', () => {
     expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
   });
 
+  test('getter and setter works when not specified', async () => {
+    const hash = value => `hashed${value}`;
+
+    const testSchema = { 
+      username: {
+        type: String,
+        lowercase: true,
+        trim: true
+      },
+      userdetails: {
+        set: ({ item, value }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
+        get: ({ value }) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
+      },
+      computedTest: {
+        computed: ({ item }) => `this was computed for ${item.username} at ${Date.now()}`
+      },
+      currentTime: () => Date.now(),
+      createdOn: {
+        set: () => Date.now()
+      },
+      password: {
+        set: ({ value }) => hash(value),
+        get: ({ value }) => value.replace('hashed', '')
+      }
+    };
+
+    const testItem = {
+      userdetails: '<users detailed info here>',
+      username: 'John doe ',
+      password: 'secret'
+    };
+
+    const req = {  user: { _id: 123 } };
+    const originalItem = { ...testItem, ...req };
+    const { validated: validatedWithSet } = await validate(testSchema, originalItem, { action: 'set' });
+    
+    // delay 100 ms
+    await new Promise(resolve => setTimeout(resolve, 100) );
+
+    const { validated: validatedWithGet } = await validate(testSchema, validatedWithSet);
+    const { validated: validatedAgain } = await validate(testSchema, validatedWithGet);
+
+    const { validated: anotherAgain } = await validate(testSchema, testItem);
+
+    console.log({
+      anotherAgain,
+      validatedWithGet,
+      validatedWithSet
+    })
+
+    expect(validatedWithSet.createdOn).toBe(validatedWithGet.createdOn);
+    expect(validatedWithSet.currentTime).toBeLessThan(validatedWithGet.currentTime);
+    expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
+  });
+
   test('rules.min works', async () => {
     const testSchema = { age: { type: Number, min: 18 } };
     const testItem = { age: 19 };

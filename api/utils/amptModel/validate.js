@@ -15,7 +15,7 @@ async function validate(schema, dataToValidate, config={}) {
   }
 
   if (typeof dataToValidate !== 'object') {
-    return await validateItem(schema, dataToValidate, false, config);
+    return await validateItem(schema, dataToValidate, undefined, config);
   }
 
   for (const field in schema) {
@@ -48,29 +48,40 @@ async function validate(schema, dataToValidate, config={}) {
 
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
-    validated[field] = validationResult.validated;
+    if(!!validationResult._isAGetter) {
+      continue;
+    }
+
+    validated[field] =  validationResult.validated;
 
     if(validationResult.unique) {
       uniqueFieldsToCheck.push(validationResult.unique);
     }
+
   }
 
-  return { validated, uniqueFieldsToCheck };
+  return { uniqueFieldsToCheck, validated };
 }
 
-async function validateItem(rules, dataToValidate, field, config) {
-  field = field || dataToValidate;
-
-  const { globalConfig, action } = config;
-  let dataValue = getDataValue(dataToValidate, field);
+async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
+  
   const rule = getRule(rules);
   const rulesType = getTypeName(rule);
+  const specialAction = rules[config.action];
+
+  let dataValue = getDataValue(dataToValidate, field);
+
+  if(rule.hasOwnProperty('get') && !specialAction) {
+    return {
+      _isAGetter: true
+    };
+  }
   
   if(rulesType === '*') {
     return { validated: dataValue };
   }
 
-  dataValue = formatValue(dataValue, globalConfig);
+  dataValue = formatValue(dataValue, config.globalConfig);
   dataValue = formatValue(dataValue, rules);
 
   if(dataToValidate.hasOwnProperty(field)) {
@@ -86,8 +97,8 @@ async function validateItem(rules, dataToValidate, field, config) {
     }
   }
 
-  if(action && rules[action]) {
-    dataValue = await rules[action]({ value: dataValue, item: dataToValidate });
+  if(specialAction) {
+    dataValue = await specialAction({ value: dataValue, item: dataToValidate });
   }
 
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
@@ -136,13 +147,10 @@ async function validateItem(rules, dataToValidate, field, config) {
     return {};
   }
 
-  const result = { validated: dataValue };
-
-  if (rules.unique) {
-    result.unique = field;
+  return { 
+    unique: rules.unique ? field : undefined,
+    validated: dataValue
   }
-
-  return result;
 }
 
 function formatValue(dataValue, rules) {

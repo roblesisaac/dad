@@ -16,7 +16,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     return `${collectionName}:${buildId()}`;
   }
 
-  async function checkForDuplicates(uniqueFieldsToCheck, labelsMap, validated, collectionName) {
+  async function checkForDuplicates(uniqueFieldsToCheck, validated) {
     for(const uniqueField of uniqueFieldsToCheck) {
           
       if(!labelsMap.hasLabel(uniqueField)) {
@@ -87,7 +87,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     }
 
     if(uniqueFieldsToCheck.length) {
-      await checkForDuplicates(uniqueFieldsToCheck, labelsMap, validated, collectionName);
+      await checkForDuplicates(uniqueFieldsToCheck, validated);
     }
 
     const createdLabels = await labelsMap.createLabelKeys(validated);
@@ -107,18 +107,24 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     const { validated, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
 
     if(uniqueFieldsToCheck.length) {
-      await checkForDuplicates(uniqueFieldsToCheck, labelsMap, { _id: existingItem._id, ...validated }, collectionName);
+      await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validated });
     }
 
     const createdLabels = await labelsMap.createLabelKeys(validated);
-    const updated = await data.set(existingItem._id, { ...existingItem, ...validated }, createdLabels);
 
-    return updated;
+    const updated = await data.set(existingItem._id, 
+      validated, 
+      createdLabels
+    );
+
+    const { validated: updatedValidated } = await validate({ ...existingItem, ...updated }, 'get');
+
+    return { _id: existingItem._id, ...updatedValidated };
   }
 
   async function validate(dataToValidate, action) {
     return await validator(schema, dataToValidate, { globalConfig, action });
-  };
+  }
 
   return {
     validate,

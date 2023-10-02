@@ -2,6 +2,7 @@ import { describe, test, expect  } from 'vitest';
 import amptModel from '../index';
 
 describe('amptModels', () => {
+  const createdAt = Date.now();
   const schema = {      
     name: {
       type: String,
@@ -9,9 +10,10 @@ describe('amptModels', () => {
       strict: true
     },
     createdAt: {
-      set: () => Date.now(),
+      set: () => createdAt,
       get: ({ item }) => `${item.name} who is ${item.age} created at ${item.createdAt}`
     },
+    lastLogin: () => Date.now(),
     age: Number,
     role: {
       type: String,
@@ -46,7 +48,7 @@ describe('amptModels', () => {
   });
 
   test('amptModel.validate works', async () => {
-    const { validated } = await TestModel.validate({ name: 'Jane ' });
+    const { validated } = await TestModel.validate({ name: 'Jane ' }, 'set');
 
     expect(validated.name).toBe('jane');
     expect(validated.role).toBe('user');
@@ -55,7 +57,7 @@ describe('amptModels', () => {
   test('ampModel.save works', async () => {
     const testItem = { name: 'John  ', age: '20' };
     const testProps = { req: { user: { role: 'admin' } } };
-    const response = await TestModel.save({ ...testItem, ...testProps }, testProps);
+    const response = await TestModel.save({ ...testItem, ...testProps });
 
     expect(response._id).toMatch(/^testcollection/);
     expect(response.name).toBe('john');
@@ -63,10 +65,10 @@ describe('amptModels', () => {
     expect(response.role).toBe('admin');
   }, 20000);
 
-  test('amptModel.find whent the filter is a string works', async () => {
-    const responseForFilterString = await TestModel.find('plaidtransactions:2023-09-06T15:35:57Z_c1c5d8c3b1de8');
+  test('amptModel.find when the filter is a string works', async () => {
+    const responseForFilterString = await TestModel.find('testcollection:*');
 
-    expect(responseForFilterString).toBeDefined();
+    expect(Array.isArray(responseForFilterString.items)).toBe(true);
   }, 1000*10);
 
   test('amptModel.find works for user_details', async () => {
@@ -88,16 +90,31 @@ describe('amptModels', () => {
   }, 1000*10);
 
   test('amptModel.updateWorks', async () => {
-    const response = await TestModel.update({ name: 'john' }, { age: 30 });
+    const updated = await TestModel.update({ name: 'john' }, { age: 30 });
 
-    expect(response.age).toBe(30);
+    expect(updated.age).toBe(30);
+    expect(updated.createdAt).toBe(`john who is 30 created at ${createdAt}`);
   });
 
-  test('amptModel.findOne after update workd', async () => {
+  test('amptModel.findOne after update works', async () => {
     const response = await TestModel.findOne({ name: 'john' });
 
-    console.log({ response });
     expect(response.age).toBe(30);
+    expect(response.createdAt).toBe(`john who is 30 created at ${createdAt}`);
+  });
+
+  test('amptModel.updateWorks again', async () => {
+    const updated = await TestModel.update({ name: 'john' }, { age: 31 });
+
+    expect(updated.age).toBe(31);
+    expect(updated.createdAt).toBe(`john who is 31 created at ${createdAt}`);
+  });
+
+  test('amptModel.findOne after update works again', async () => {
+    const response = await TestModel.findOne({ name: 'john' });
+
+    expect(response.age).toBe(31);
+    expect(response.createdAt).toBe(`john who is 31 created at ${createdAt}`);
   });
 
   test('amptModel.save duplicate unique key throws error', async () => {
