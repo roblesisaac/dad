@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.94% </span>
+                <span class="strong">93.03% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>145/156</span>
+                <span class='fraction'>147/158</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">92.94% </span>
+                <span class="strong">93.03% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>145/156</span>
+                <span class='fraction'>147/158</span>
             </div>
         
             
@@ -218,7 +218,9 @@
 <a name='L153'></a><a href='#L153'>153</a>
 <a name='L154'></a><a href='#L154'>154</a>
 <a name='L155'></a><a href='#L155'>155</a>
-<a name='L156'></a><a href='#L156'>156</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L156'></a><a href='#L156'>156</a>
+<a name='L157'></a><a href='#L157'>157</a>
+<a name='L158'></a><a href='#L158'>158</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -313,6 +315,8 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">2x</span>
@@ -343,8 +347,8 @@
 <span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">20x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -434,15 +438,15 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     };
 &nbsp;
     const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
-    const { items,lastKey, next } = await data.getByLabel(labelNumber, labelValue);
-    const validatedResponse = [];
+    const { items: foundItems, lastKey, next } = await data.getByLabel(labelNumber, labelValue);
+    const validatedItems = [];
 &nbsp;
-    for(const responseItem of items) {
-      const { validated } = await validate(responseItem.value, 'get');
-      validatedResponse.push({ _id: responseItem.key, ...validated });
+    for(const foundItem of foundItems) {
+      const { validated: validatedFound } = await validate(foundItem.value, 'get');
+      validatedItems.push({ _id: foundItem.key, ...validatedFound });
     }
 &nbsp;
-    return { items: validatedResponse, lastKey, next };
+    return { items: validatedItems, lastKey, next };
   }
 &nbsp;
   async function findOne(filter) {
@@ -466,10 +470,12 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     }
 &nbsp;
     const createdLabels = await labelsMap.createLabelKeys(validated);
-    const _id = value._id || buildSchema_Id();      
+    const _id = value._id || buildSchema_Id();
+    
     const saved = await data.set(_id, validated, { ...createdLabels });
+    const { validated: validatedSaved } = await validate(saved, 'get');
 &nbsp;
-    return { _id, ...saved };
+    return { _id, ...validatedSaved };
   }
 &nbsp;
   async function update(filter, updates) {
@@ -479,22 +485,22 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
 <span class="cstat-no" title="statement not covered" >      throw new Error('Item not found');</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
 &nbsp;
-    const { validated, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
+    const { validated:validatedUpdate, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
 &nbsp;
     if(uniqueFieldsToCheck.length) {
-      await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validated });
+      await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validatedUpdate });
     }
 &nbsp;
-    const createdLabels = await labelsMap.createLabelKeys(validated);
+    const createdLabels = await labelsMap.createLabelKeys(validatedUpdate);
 &nbsp;
-    const updated = await data.set(existingItem._id, 
-      validated, 
+    const updated = await data.set(existingItem._id,
+      validatedUpdate, 
       createdLabels
     );
 &nbsp;
-    const { validated: updatedValidated } = await validate({ ...existingItem, ...updated }, 'get');
+    const withGetters = await validate({ ...existingItem, ...updated }, 'get');
 &nbsp;
-    return { _id: existingItem._id, ...updatedValidated };
+    return { _id: existingItem._id, ...withGetters.validated };
   }
 &nbsp;
   async function validate(dataToValidate, action) {
@@ -535,7 +541,7 @@ export default amptModel;</pre></td></tr></table></pre>
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-10-03T01:18:10.929Z
+                at 2023-10-03T19:15:19.105Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

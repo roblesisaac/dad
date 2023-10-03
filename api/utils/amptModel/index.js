@@ -59,15 +59,15 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     };
 
     const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
-    const { items,lastKey, next } = await data.getByLabel(labelNumber, labelValue);
-    const validatedResponse = [];
+    const { items: foundItems, lastKey, next } = await data.getByLabel(labelNumber, labelValue);
+    const validatedItems = [];
 
-    for(const responseItem of items) {
-      const { validated } = await validate(responseItem.value, 'get');
-      validatedResponse.push({ _id: responseItem.key, ...validated });
+    for(const foundItem of foundItems) {
+      const { validated: validatedFound } = await validate(foundItem.value, 'get');
+      validatedItems.push({ _id: foundItem.key, ...validatedFound });
     }
 
-    return { items: validatedResponse, lastKey, next };
+    return { items: validatedItems, lastKey, next };
   }
 
   async function findOne(filter) {
@@ -91,10 +91,12 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     }
 
     const createdLabels = await labelsMap.createLabelKeys(validated);
-    const _id = value._id || buildSchema_Id();      
+    const _id = value._id || buildSchema_Id();
+    
     const saved = await data.set(_id, validated, { ...createdLabels });
+    const { validated: validatedSaved } = await validate(saved, 'get');
 
-    return { _id, ...saved };
+    return { _id, ...validatedSaved };
   }
 
   async function update(filter, updates) {
@@ -104,22 +106,22 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
       throw new Error('Item not found');
     }
 
-    const { validated, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
+    const { validated:validatedUpdate, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
 
     if(uniqueFieldsToCheck.length) {
-      await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validated });
+      await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validatedUpdate });
     }
 
-    const createdLabels = await labelsMap.createLabelKeys(validated);
+    const createdLabels = await labelsMap.createLabelKeys(validatedUpdate);
 
-    const updated = await data.set(existingItem._id, 
-      validated, 
+    const updated = await data.set(existingItem._id,
+      validatedUpdate, 
       createdLabels
     );
 
-    const { validated: updatedValidated } = await validate({ ...existingItem, ...updated }, 'get');
+    const withGetters = await validate({ ...existingItem, ...updated }, 'get');
 
-    return { _id: existingItem._id, ...updatedValidated };
+    return { _id: existingItem._id, ...withGetters.validated };
   }
 
   async function validate(dataToValidate, action) {

@@ -65,7 +65,7 @@ async function validate(schema, dataToValidate, config={}) {
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
   let dataValue = getDataValue(dataToValidate, field);
-  const _shouldSkip = rules.get && !rules[config.action];
+  const _shouldSkip = rules.get && !config.action;
 
   if(_shouldSkip) {
     return { _shouldSkip };
@@ -199,8 +199,8 @@ function isANestedArray(rules) {
 }
 
 function isANestedObject(itemValue) {
-  const propertiesToExclude = ['type', 'get', 'set', 'computed', 'ref'];
-  return typeof itemValue === 'object' && propertiesToExclude.every(prop => !itemValue.hasOwnProperty(prop));
+  const nativePropertiesToExclude = ['type', 'get', 'set', 'computed', 'ref'];
+  return typeof itemValue === 'object' && nativePropertiesToExclude.every(prop => !itemValue.hasOwnProperty(prop));
 }
 
 function isAValidDataType(rulesTypeName, dataTypeName) {
