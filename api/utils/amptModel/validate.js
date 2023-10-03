@@ -103,11 +103,10 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
   }
 
   const rule = rules.type || rules;
-  const dataTypeName = typeof dataValue;
   const rulesTypeName = getTypeName(rule);
-  const isAValidType = rulesTypeName === '*' || dataTypeName === rulesTypeName;
+  const dataTypeName = typeof dataValue;
 
-  if (!isAValidType) {
+  if (!isAValidDataType(rulesTypeName, dataTypeName)) {
     if(rules.strict) {
       throw new Error(`${field} must be of type ${rulesTypeName}`);
     }
@@ -185,14 +184,14 @@ function isAJavascriptType(rules) {
   return [String, Number, Object, Function, Boolean, Date, RegExp, Map, Set, Promise, WeakMap, WeakSet].includes(rules);
 }
 
+function isAValidDataType(rulesTypeName, dataTypeName) {
+  return dataTypeName === rulesTypeName || rulesTypeName === '*';
+};
+
 function getComputedConstructor(rules) {
   return rules.computed || typeof rules === 'function' && !isAJavascriptType(rules)
     ? rules.computed || rules
     : undefined;
-}
-
-function isAComputedField(rules) {
-  return 
 }
 
 function isANestedArray(rules) {
