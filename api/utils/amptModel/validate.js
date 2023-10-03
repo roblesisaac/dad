@@ -48,7 +48,7 @@ async function validate(schema, dataToValidate, config={}) {
 
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
-    if(!!validationResult._isAGetter) {
+    if(!!validationResult._shouldSkip) {
       continue;
     }
 
@@ -65,11 +65,10 @@ async function validate(schema, dataToValidate, config={}) {
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
   let dataValue = getDataValue(dataToValidate, field);
+  const _shouldSkip = rules.get && !rules[config.action]
 
-  if(rules.get && !rules[config.action]) {
-    return {
-      _isAGetter: true
-    };
+  if(_shouldSkip) {
+    return { _shouldSkip };
   }
 
   dataValue = formatValue(dataValue, config.globalConfig);
