@@ -20,6 +20,9 @@ describe('amptModels', () => {
       set: ({ item }) => item?.req?.user?.role,
       default: 'user',
       enum: ['user', 'admin']
+    },
+    orderId: {
+      ref: `orders`
     }
   };
 
@@ -58,6 +61,8 @@ describe('amptModels', () => {
     const testItem = { name: 'John  ', age: '20' };
     const testProps = { req: { user: { role: 'admin' } } };
     const response = await TestModel.save({ ...testItem, ...testProps });
+
+    console.log({ response });
 
     expect(response._id).toMatch(/^testcollection/);
     expect(response.name).toBe('john');

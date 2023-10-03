@@ -174,6 +174,12 @@ function formatValue(dataValue, rules) {
   return dataValue;
 }
 
+function getComputedConstructor(rules) {
+  return rules.computed || typeof rules === 'function' && !isAJavascriptType(rules)
+    ? rules.computed || rules
+    : undefined;
+}
+
 function getDataValue(dataToValidate, field) {
   return typeof dataToValidate === 'object' && dataToValidate !== null 
   ? dataToValidate[field] 
@@ -188,20 +194,15 @@ function isAJavascriptType(rules) {
   return [String, Number, Object, Function, Boolean, Date, RegExp, Map, Set, Promise, WeakMap, WeakSet].includes(rules);
 }
 
-function isAValidDataType(rulesTypeName, dataTypeName) {
-  return dataTypeName === rulesTypeName || rulesTypeName === '*';
-};
-
-function getComputedConstructor(rules) {
-  return rules.computed || typeof rules === 'function' && !isAJavascriptType(rules)
-    ? rules.computed || rules
-    : undefined;
-}
-
 function isANestedArray(rules) {
   return Array.isArray(rules) || rules.type === Array || rules === Array
 }
 
 function isANestedObject(itemValue) {
-  return typeof itemValue === 'object' && !itemValue.hasOwnProperty('type') && !itemValue.hasOwnProperty('get') && !itemValue.hasOwnProperty('set') && !itemValue.hasOwnProperty('computed');
+  const propertiesToExclude = ['type', 'get', 'set', 'computed', 'ref'];
+  return typeof itemValue === 'object' && propertiesToExclude.every(prop => !itemValue.hasOwnProperty(prop));
+}
+
+function isAValidDataType(rulesTypeName, dataTypeName) {
+  return dataTypeName === rulesTypeName || rulesTypeName === '*';
 }
