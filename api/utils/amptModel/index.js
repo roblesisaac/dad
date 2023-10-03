@@ -49,13 +49,21 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     return schema;
   }
 
+  async function fetchRef(validated, ref) {
+    const refKey = validated[ref];
+
+    return typeof refKey === 'string'
+      ? await data.get(refKey)
+      : ref;
+  }
+
   async function find(filter, options) {
     if(typeof filter === 'string') {
       return await data.get(filter, options);
     };
 
     if(!isObject(filter)) {
-      throw new Error('Filter must be an object');
+      throw new Error('Filter must be an object or string');
     };
 
     const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
@@ -63,7 +71,14 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     const validatedItems = [];
 
     for(const foundItem of foundItems) {
-      const { validated: validatedFound } = await validate(foundItem.value, 'get');
+      const { validated: validatedFound, refs } = await validate(foundItem.value, 'get');
+
+      if(refs.length) {
+        for(const ref of refs) {
+          validatedFound[ref] = await fetchRef(validatedFound, ref)
+        }
+      }
+      
       validatedItems.push({ _id: foundItem.key, ...validatedFound });
     }
 
@@ -82,10 +97,6 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
   async function save(value) {
     const { validated, uniqueFieldsToCheck } = await validate(value, 'set');
 
-    if (!validated) {
-      throw new Error('Validation failed');
-    }
-
     if(uniqueFieldsToCheck.length) {
       await checkForDuplicates(uniqueFieldsToCheck, validated);
     }
@@ -103,7 +114,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     const existingItem = await findOne(filter);
 
     if(!existingItem) {
-      throw new Error('Item not found');
+      throw new Error(`No item found with filter '${JSON.stringify(filter)}`);
     }
 
     const { validated:validatedUpdate, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
@@ -137,13 +148,15 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
     update,
     erase: async function(filter) { 
       if(typeof filter === 'string') {
-        return await data.remove(filter);
+        return {
+          removed: await data.remove(filter)
+        }
       }
 
-      const { _id } = await findOne(filter);
+      const { _id } = await findOne(filter) || {};
 
       if(!_id) {
-        throw new Error(`Item not found when trying to perfomr erase in collection '${collectionName}: `);
+        throw new Error(`Item not found when trying to perform erase in collection '${collectionName}' for filter '${JSON.stringify(filter)}'`);
       }
 
       const isRemoved = await data.remove(_id);

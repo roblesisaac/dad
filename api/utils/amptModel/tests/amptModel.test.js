@@ -51,25 +51,37 @@ describe('amptModels', () => {
   });
 
   test('amptModel.validate works', async () => {
-    const { validated } = await TestModel.validate({ name: 'Jane ', orderId: 'order1234' }, 'set');
+    const { validated } = await TestModel.validate({ name: 'Jane ', orderId: 'testcollection:*' }, 'set');
 
     expect(validated.name).toBe('jane');
     expect(validated.role).toBe('user');
-    expect(validated.orderId).toBe('order1234');
+    expect(validated.orderId).toBe('testcollection:*');
   });
 
   test('ampModel.save works', async () => {
-    const testItem = { name: 'John  ', age: '20', orderId: 'order4567'  };
+    const testItem = { name: 'John  ', age: '20', orderId: 'testcollection:*'  };
     const testProps = { req: { user: { role: 'admin' } } };
     const response = await TestModel.save({ ...testItem, ...testProps });
-
-    console.log({ response });
 
     expect(response._id).toMatch(/^testcollection/);
     expect(response.name).toBe('john');
     expect(response.age).toBe(20);
     expect(response.role).toBe('admin');
+    expect(response.orderId).toBe('testcollection:*');
   }, 20000);
+
+  test('throws error when unique field has missing label', async () => {
+    const testSchema = {
+      name: {
+        unique: true
+      }
+    };
+    
+    const TestModel2 = amptModel(collectionName, { ...testSchema });
+
+    expect(async () => await TestModel2.save({ name: 'bill' }))
+      .rejects.toThrowError(`Unique field 'name' for '${collectionName}' must be labeled in a labelsConfig...`);
+  });
 
   test('amptModel.find when the filter is a string works', async () => {
     const responseForFilterString = await TestModel.find('testcollection:*');
@@ -82,6 +94,11 @@ describe('amptModels', () => {
 
     expect(response.items[0].name).toBe('john');
   }, 1000*10);
+
+  test('amptModel.find rejects if filter is not object or string', () => {
+    expect(async () => await TestModel.find(true))
+      .rejects.toThrowError('Filter must be an object or string');
+  });
 
   test('amptModel.find works for name', async () => {
     const response = await TestModel.find({ name: 'john' });
@@ -116,6 +133,14 @@ describe('amptModels', () => {
     expect(updated.createdAt).toBe(`john who is 31 created at ${createdAt}`);
   });
 
+  test('amptModel.update throws error if no existing item found', async () => {
+    try {
+      await TestModel.update({ name: 'jane' }, { age: 31 });
+    } catch (error) {
+      expect(error.message.includes('No item found with')).toBe(true);
+    }
+  });
+
   test('amptModel.findOne after update works again', async () => {
     const response = await TestModel.findOne({ name: 'john' });
 
@@ -132,6 +157,21 @@ describe('amptModels', () => {
     const response = await TestModel.erase({ name: 'john' });
 
     expect(response).toEqual({ removed: true });
+  });
+
+  test('amptModel.erase throws error when no matching item found', async () => {
+    try {
+      await TestModel.erase({ name: 'john' });
+    } catch (error) {
+      expect(error.message.includes(`Item not found when trying to perform erase in collection '${collectionName}' for filter`)).toBe(true);
+    }
+  });
+
+  test('TestModel.erase works when its a string', async () => {
+    const { _id } = await TestModel.save({ name: 'jane', age: 20 });
+    const { removed } = await TestModel.erase(_id);
+
+    expect(removed).toBe(true);
   });
 
 });

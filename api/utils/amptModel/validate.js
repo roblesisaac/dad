@@ -9,6 +9,7 @@ export default async (schema, dataToValidate, config) => {
 async function validate(schema, dataToValidate, config={}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
+  const refs = [];
 
   if (typeof schema === 'function') {
     return { validated: await schema(dataToValidate) };
@@ -58,9 +59,13 @@ async function validate(schema, dataToValidate, config={}) {
       uniqueFieldsToCheck.push(validationResult.unique);
     }
 
-  }
+    if(validationResult.ref) {
+      refs.push(validationResult.ref);
+    }
 
-  return { uniqueFieldsToCheck, validated };
+  }  
+
+  return { uniqueFieldsToCheck, validated, refs };
 }
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
@@ -148,7 +153,8 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     return {};
   }
 
-  return { 
+  return {
+    ref: rules.ref ? field : undefined,
     unique: rules.unique ? field : undefined,
     validated: dataValue
   }
@@ -199,7 +205,7 @@ function isANestedArray(rules) {
 }
 
 function isANestedObject(itemValue) {
-  const nativePropertiesToExclude = ['type', 'get', 'set', 'computed', 'ref'];
+  const nativePropertiesToExclude = ['type', 'get', 'set', 'computed', 'ref', 'unique'];
   return typeof itemValue === 'object' && nativePropertiesToExclude.every(prop => !itemValue.hasOwnProperty(prop));
 }
 
