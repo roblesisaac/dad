@@ -90,7 +90,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
 
   const specialAction = rules[config.action];
 
-  if(specialAction && typeof specialAction === 'function') {
+  if(typeof specialAction === 'function') {
     dataValue = await specialAction({ value: dataValue, item: dataToValidate });
   }
 
