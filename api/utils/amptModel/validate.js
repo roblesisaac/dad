@@ -66,11 +66,12 @@ async function validate(schema, dataToValidate, config={}) {
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
   const rule = getRule(rules);
   const rulesType = getTypeName(rule);
-  const specialAction = rules[config.action];
+  const needsToPerformASpecialAction = rules.hasOwnProperty(config.action);
+  const hasAGetter = rules.hasOwnProperty('get');
 
   let dataValue = getDataValue(dataToValidate, field);
 
-  if(rule.hasOwnProperty('get') && !specialAction) {
+  if(hasAGetter && !needsToPerformASpecialAction) {
     return {
       _isAGetter: true
     };
@@ -92,8 +93,8 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     }
   }
 
-  if(specialAction && typeof specialAction === 'function') {
-    dataValue = await specialAction({ value: dataValue, item: dataToValidate });
+  if(needsToPerformASpecialAction && typeof rules[config.action] === 'function') {
+    dataValue = await rules[config.action]({ value: dataValue, item: dataToValidate });
   }
 
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {

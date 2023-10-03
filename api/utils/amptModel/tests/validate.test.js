@@ -386,14 +386,6 @@ describe('validate', () => {
     const { validated: validatedWithGet } = await validate(testSchema, validatedWithSet);
     const { validated: validatedAgain } = await validate(testSchema, validatedWithGet);
 
-    const { validated: anotherAgain } = await validate(testSchema, testItem);
-
-    console.log({
-      anotherAgain,
-      validatedWithGet,
-      validatedWithSet
-    })
-
     expect(validatedWithSet.createdOn).toBe(validatedWithGet.createdOn);
     expect(validatedWithSet.currentTime).toBeLessThan(validatedWithGet.currentTime);
     expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
