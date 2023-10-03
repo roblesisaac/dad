@@ -171,12 +171,6 @@ function formatValue(dataValue, rules) {
   return dataValue;
 }
 
-function getComputedConstructor(rules) {
-  return typeof rules === 'function' && !isAJavascriptType(rules)
-    ? rules
-    : rules.computed;
-}
-
 function getDataValue(dataToValidate, field) {
   return typeof dataToValidate === 'object' && dataToValidate !== null 
   ? dataToValidate[field] 
@@ -189,6 +183,16 @@ function getTypeName(rule) {
 
 function isAJavascriptType(rules) {
   return [String, Number, Object, Function, Boolean, Date, RegExp, Map, Set, Promise, WeakMap, WeakSet].includes(rules);
+}
+
+function getComputedConstructor(rules) {
+  return rules.computed || typeof rules === 'function' && !isAJavascriptType(rules)
+    ? rules.computed || rules
+    : undefined;
+}
+
+function isAComputedField(rules) {
+  return 
 }
 
 function isANestedArray(rules) {
