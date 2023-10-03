@@ -64,14 +64,9 @@ async function validate(schema, dataToValidate, config={}) {
 }
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
-  const rule = getRule(rules);
-  const rulesType = getTypeName(rule);
-  const needsToPerformASpecialAction = rules.hasOwnProperty(config.action);
-  const hasAGetter = rules.hasOwnProperty('get');
-
   let dataValue = getDataValue(dataToValidate, field);
 
-  if(hasAGetter && !needsToPerformASpecialAction) {
+  if(rules.get && !rules[config.action]) {
     return {
       _isAGetter: true
     };
@@ -93,8 +88,10 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     }
   }
 
-  if(needsToPerformASpecialAction && typeof rules[config.action] === 'function') {
-    dataValue = await rules[config.action]({ value: dataValue, item: dataToValidate });
+  const specialAction = rules[config.action];
+
+  if(specialAction && typeof specialAction === 'function') {
+    dataValue = await specialAction({ value: dataValue, item: dataToValidate });
   }
 
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
@@ -105,9 +102,14 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     throw new Error(`${field} is required`);
   }
 
-  if (rulesType && typeof dataValue !== rulesType && typeof dataValue !== 'undefined' && rulesType !== '*') {
+  const rule = rules.type || rules;
+  const dataTypeName = typeof dataValue;
+  const rulesTypeName = getTypeName(rule);
+  const isAValidType = rulesTypeName === '*' || dataTypeName === rulesTypeName;
+
+  if (!isAValidType) {
     if(rules.strict) {
-      throw new Error(`${field} must be of type ${rulesType}`);
+      throw new Error(`${field} must be of type ${rulesTypeName}`);
     }
 
     if(typeof rule === 'function') {
@@ -177,12 +179,6 @@ function getDataValue(dataToValidate, field) {
 
 function getTypeName(rule) {
   return typeof rule === 'function' ? rule.name.toLowerCase() : rule;
-}
-
-function getRule(rules) {
-  return typeof rules === 'function' 
-    ? rules 
-    : rules.type ||  rules;
 }
 
 function isAJavascriptType(rules) {
