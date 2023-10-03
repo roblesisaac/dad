@@ -51,14 +51,15 @@ describe('amptModels', () => {
   });
 
   test('amptModel.validate works', async () => {
-    const { validated } = await TestModel.validate({ name: 'Jane ' }, 'set');
+    const { validated } = await TestModel.validate({ name: 'Jane ', orderId: 'order1234' }, 'set');
 
     expect(validated.name).toBe('jane');
     expect(validated.role).toBe('user');
+    expect(validated.orderId).toBe('order1234');
   });
 
   test('ampModel.save works', async () => {
-    const testItem = { name: 'John  ', age: '20' };
+    const testItem = { name: 'John  ', age: '20', orderId: 'order4567'  };
     const testProps = { req: { user: { role: 'admin' } } };
     const response = await TestModel.save({ ...testItem, ...testProps });
 
