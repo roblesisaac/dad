@@ -391,6 +391,15 @@ describe('validate', () => {
     expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
   });
 
+  test('getter throws error when expected', async () => {
+    const testSchema = { username: { type: String, get: () => undefinedVar } };
+    const testItem = { username: 'XXXX' };
+
+    expect(
+      async () => await validate(testSchema, testItem, { action: 'get'})
+    ).rejects.toThrowError('username failed special action: undefinedVar is not defined');
+  });
+
   test('rules.min works', async () => {
     const testSchema = { age: { type: Number, min: 18 } };
     const testItem = { age: 19 };

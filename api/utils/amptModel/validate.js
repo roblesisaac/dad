@@ -90,8 +90,12 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
 
   const specialAction = rules[config.action];
 
-  if(typeof specialAction === 'function') {
-    dataValue = await specialAction({ value: dataValue, item: dataToValidate });
+  if(specialAction) {
+    try {
+      dataValue = await specialAction({ value: dataValue, item: dataToValidate });
+    } catch (e) {
+      throw new Error(`${field} failed special action: ${e.message}`);
+    }
   }
 
   if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
