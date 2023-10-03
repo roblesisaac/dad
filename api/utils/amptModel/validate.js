@@ -65,7 +65,7 @@ async function validate(schema, dataToValidate, config={}) {
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
   let dataValue = getDataValue(dataToValidate, field);
-  const _shouldSkip = rules.get && !config.action;
+  const _shouldSkip = rules.hasOwnProperty('get') && !config.action;
 
   if(_shouldSkip) {
     return { _shouldSkip };
