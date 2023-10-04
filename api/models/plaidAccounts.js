@@ -1,15 +1,14 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel/index';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const encryptedValue = {
-  value: encrypt,
-  get: decrypt
+  set: ({ value }) => encrypt(value),
+  get: ({ value }) => decrypt(value)
 };
 
 const accountSchema = {
   userId: {
-    value: (_, { req }) => req.user._id,
-    isLocked: true
+    set: (_, { req }) => req.user._id
   },
   account_id: String,
   balances: {
@@ -38,4 +37,4 @@ const accountSchema = {
   }
 };
 
-export default Record('plaidaccounts', accountSchema);
+export default AmptModel('plaidaccounts', accountSchema);

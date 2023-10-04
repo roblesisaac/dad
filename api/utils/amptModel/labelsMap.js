@@ -101,10 +101,14 @@ export default function(collectionName, config) {
 
       return `${url}_${computedConstructor}`;
     },
-    createLabelKeys: async function(validated) {
+    createLabelKeys: async function(validated, skipped) {
       const createdLabelKeys = {};
 
       for(const labelName in labelNames) {
+        if(skipped?.includes(labelName)) {
+          continue;
+        }
+
         const labelKey = await this.createLabelKey(labelName, validated);
         const labelNumber = this.getLabelNumber(labelName);
         

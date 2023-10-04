@@ -8,8 +8,9 @@ passport.serializeUser((user, done) => {
 });
 
 passport.deserializeUser(async (_id, done) => {
-    const user = await Users.find(_id);
-    done(null, { ...user });
+    const user = await Users.findOne(_id);
+    
+    done(null, { _id, ...user });
 });
 
 passport.use(LocalStrategy);

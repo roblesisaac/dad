@@ -159,9 +159,9 @@
     }
 
     async function fetchUserAccounts() {
-      const fetchedAccounts = await api.get('api/plaid/accounts');
+      const { items } = await api.get('api/plaid/accounts');
 
-      state.userAccounts = state.userAccounts.concat(fetchedAccounts);
+      state.userAccounts = state.userAccounts.concat(items);
     }
 
     function getCategoryName(item) {
@@ -264,7 +264,6 @@
       
       return `${year}-${month}-${day}`;
     }
-
 
     return {
       fetchTransactionsForSelectedDate: async () => {

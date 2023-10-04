@@ -1,78 +1,62 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel/index';
 import { hashPassword, comparePassword } from '../utils/auth';
 import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
 import { isValidEmail } from '../../src/utils';
 
-const users = Record('users', {
+const Users = AmptModel('users', {
   email: {
     unique: true,
     required: true,
-    value: email => {
-      if(!isValidEmail(email)) {
+    set: ({ value }) => {
+      if(!isValidEmail(value)) {
         throw new Error('Invalid email');
       }
       
-      return encrypt(email);
+      return encrypt(value);
     },
-    get: decrypt
+    get: ({ value }) => decrypt(value)
   },
   views: [String],
   email_verified: '*',
   password: {
-    set: async ({ value: password }) => {
-      if(!password) return;
-      const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
-      const isAlreadyHashed = bcryptRegex.test(password);
-      
-      if(isAlreadyHashed) {
-        return password;
+    set: async ({ value }) => {
+      if(!value) {
+        return;
+      };
+
+      if(value.length < 8) {
+        throw new Error('Password must be at least 8 characters long');
       }
-      
-      return await hashPassword(password);
-    },
-    minLength: 8,
-    value: async password => {
-      if(!password) return;
-      const bcryptRegex = /^\$2[ab]\$\d{1,2}\$[./0-9A-Za-z]{53}$/;
-      const isAlreadyHashed = bcryptRegex.test(password);
-      
-      if(isAlreadyHashed) {
-        return password;
-      }
-      
-      if(password.length < 8) {
-        throw new Error('Password must be at least 8 characters long.');
-      }
-      
-      return await hashPassword(password);
+
+      return await hashPassword(value);
     }
   },
   encryptionKey: {
-    value: _ => encrypt(generateSymmetricKey()),
-    get: v => decrypt(v, 'buffer'),
-    isLocked: true
+    set: () => encrypt(generateSymmetricKey()),
+    get: ({ value }) => decrypt(value, 'buffer')
   },
   role: {
-    value: String,
+    type: String,
     default: 'member'
   },
   hideAllViews: {
-    value: Boolean,
+    type: Boolean,
     default: false
   },
+  lastLoggedIn: () => String(new Date()),
   label1: 'email',
   label2: 'email_verified',
   label3: 'role'
 });
 
-users.authLocalUser = async (email, password, done) => {
+Users.authLocalUser = async (email, password, done) => {
   const errorMessage = `The username or password you provided is incorrect.`;
   
   if (!email || !password) {
     return done(`Missing 'email' or 'password' properties.`, false);
   }
   
-  const user = await users.findUser(email);
+  const user = await Users.findUser(email);
   
   if (!user || !user.password) {
     return done(errorMessage, false);
@@ -87,11 +71,10 @@ users.authLocalUser = async (email, password, done) => {
   return done(null, user);
 }
 
-users.findUser = async email => {
-  const filter = encrypt(email);
-  return await users.findOne({ email: filter })
-}
+Users.findUser = async (email) => await Users.findOne({ email: encrypt(email) });
 
-users.updateUser = async (email, update) => await users.update({ email: encrypt(email) }, update);
+Users.eraseUser = async (email) => await Users.erase({ email: encrypt(email) });
 
-export default users;
+Users.updateUser = async (email, update) => await Users.update({ email: encrypt(email) }, update);
+
+export default Users;

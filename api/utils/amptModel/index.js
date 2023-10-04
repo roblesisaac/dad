@@ -87,7 +87,7 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
 
   async function findOne(filter) {
     const response = await find(filter, { limit: 1 });
-    return response?.items?.[0];
+    return response?.items?.[0] || response;
   }
 
   function isObject(value) {
@@ -117,13 +117,13 @@ const amptModel = function(collectionName, schemaConfig, globalConfig) {
       throw new Error(`No item found with filter '${JSON.stringify(filter)}`);
     }
 
-    const { validated:validatedUpdate, uniqueFieldsToCheck } = await validate({ ...existingItem, ...updates });
+    const { validated:validatedUpdate, uniqueFieldsToCheck, skipped } = await validate({ ...existingItem, ...updates });
 
     if(uniqueFieldsToCheck.length) {
       await checkForDuplicates(uniqueFieldsToCheck, { _id: existingItem._id, ...validatedUpdate });
     }
 
-    const createdLabels = await labelsMap.createLabelKeys(validatedUpdate);
+    const createdLabels = await labelsMap.createLabelKeys(validatedUpdate, skipped);
 
     const updated = await data.set(existingItem._id,
       validatedUpdate, 

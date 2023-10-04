@@ -10,6 +10,7 @@ async function validate(schema, dataToValidate, config={}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
   const refs = [];
+  const skipped = [];
 
   if (typeof schema === 'function') {
     return { validated: await schema(dataToValidate) };
@@ -50,6 +51,7 @@ async function validate(schema, dataToValidate, config={}) {
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
     if(!!validationResult._shouldSkip) {
+      skipped.push(field);
       continue;
     }
 
@@ -65,7 +67,7 @@ async function validate(schema, dataToValidate, config={}) {
 
   }  
 
-  return { uniqueFieldsToCheck, validated, refs };
+  return { uniqueFieldsToCheck, validated, refs, skipped };
 }
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
@@ -74,6 +76,26 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
 
   if(_shouldSkip) {
     return { _shouldSkip };
+  }
+
+  if (rules.required && (dataValue === undefined || dataValue === null || dataValue === '')) {
+    throw new Error(`${field} is required`);
+  }
+
+  if (rules.min !== undefined && dataValue < rules.min) {
+    throw new Error(`${field} must be at least ${rules.min}`);
+  }
+
+  if (rules.max !== undefined && dataValue > rules.max) {
+    throw new Error(`${field} must be at most ${rules.max}`);
+  }
+
+  if (rules.minLength !== undefined && dataValue.length < rules.minLength) {
+    throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
+  }
+
+  if (rules.maxLength !== undefined && dataValue.length > rules.maxLength) {
+    throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
   }
 
   dataValue = formatValue(dataValue, config.globalConfig);
@@ -107,10 +129,6 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
     dataValue = rules.default;
   }
 
-  if (rules.required && (dataValue === undefined || dataValue === null || dataValue === '')) {
-    throw new Error(`${field} is required`);
-  }
-
   const rule = rules.type || rules;
   const rulesTypeName = getTypeName(rule);
   const dataTypeName = typeof dataValue;
@@ -131,22 +149,6 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
 
   if (rules.validate && !await rules.validate(dataValue)) {
     throw new Error(`${field} failed custom validation`);
-  }
-
-  if (rules.min !== undefined && dataValue < rules.min) {
-    throw new Error(`${field} must be at least ${rules.min}`);
-  }
-
-  if (rules.max !== undefined && dataValue > rules.max) {
-    throw new Error(`${field} must be at most ${rules.max}`);
-  }
-
-  if (rules.minLength !== undefined && dataValue.length < rules.minLength) {
-    throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
-  }
-
-  if (rules.maxLength !== undefined && dataValue.length > rules.maxLength) {
-    throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
   }
 
   if (rules.select === false) {
