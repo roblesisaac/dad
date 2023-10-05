@@ -1,4 +1,4 @@
-import AmptModel from '../utils/amptModel/index';
+import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const encryptedValue = {
@@ -37,4 +37,6 @@ const accountSchema = {
   }
 };
 
-export default AmptModel('plaidaccounts', accountSchema);
+const Accounts = AmptModel('plaidaccounts', accountSchema);
+
+export default Accounts;

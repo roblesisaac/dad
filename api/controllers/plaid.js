@@ -80,13 +80,13 @@ const app = function() {
     return false;
   }
 
-  function fetchTransactions(query) {
+  function fetchTransactions(query, metadata) {
     if(typeof query === 'string') {
       const userId = query;
       query = { name:  `${userId}*`}
     }
 
-    return plaidTransaction.find(query);
+    return plaidTransaction.find(query, metadata);
   }
 
   async function fetchTransactionById(_id, userId) {
@@ -255,14 +255,15 @@ const app = function() {
 
       let transactions = [];
       let lastKey = true;
+      let counter = 0;
   
-      while(lastKey) {
+      while(lastKey && counter < 3) {
         const start = typeof lastKey === 'string' ? lastKey : undefined;
-        const filter = { start, ...userQueryForDate };
-        const fetched = await fetchTransactions(filter);
+        const fetched = await fetchTransactions(userQueryForDate, { start });
   
         transactions = transactions.concat(fetched.items || fetched);
         lastKey = fetched.lastKey;
+        counter++;
       }
 
       res.json(transactions);

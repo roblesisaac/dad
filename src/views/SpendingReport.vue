@@ -212,7 +212,7 @@
     }
 
     function sortByDate(data) {
-      return data.sort((a, b) => a.date.localeCompare(b.date));
+      return data.sort((a, b) => a?.date?.localeCompare(b?.date));
     }
 
     function sortAndTotalAllSelectedTransactions(presets={}) {

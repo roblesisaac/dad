@@ -133,7 +133,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
   const rulesTypeName = getTypeName(rule);
   const dataTypeName = typeof dataValue;
 
-  if (!isAValidDataType(rulesTypeName, dataTypeName)) {
+  if (!(computedConstructor && !rule.type) && !isAValidDataType(rulesTypeName, dataTypeName)) {
     if(rules.strict) {
       throw new Error(`${field} must be of type ${rulesTypeName}`);
     }

@@ -34,6 +34,18 @@ export default function(collectionName, config) {
     }
   }
 
+  function getFirstLabeledKeyAndValue(inputObject) {
+    const keys = Object.keys(inputObject);
+    for (const key of keys) {
+      if(labelNames.hasOwnProperty(key)) {
+        return {
+          objKey: key,
+          objValue: inputObject[key]
+        }
+      }
+    }
+  }
+
   function init(config) {
     const labelsConfig = {};
     const labelNames = {};
@@ -124,15 +136,20 @@ export default function(collectionName, config) {
     getLabelNumber: (labelName) => {
       const labelNumber = labelNames[labelName];
 
-      if(!labelNumber) {        
+      if(!labelNumber) {      
         handleError(`No label for '${labelName}'`);
       }
 
       return labelNumber;
     },
     getArgumentsForGetByLabel(filter) {
-      const { objKey, objValue } = getFirstKeyAndValueFromObject(filter);
-      const labelValue = createLabelValue(objKey, objValue);
+      const { objKey, objValue } = getFirstLabeledKeyAndValue(filter);
+
+      if(!objKey) {
+        handleError(`No mapped label found for filter '${JSON.stringify(filter)}' for collection '${collectionName}'`);
+      }
+
+      const labelValue = createLabelValue(objKey, objValue || '');
 
       return { 
         labelNumber: this.getLabelNumber(objKey),

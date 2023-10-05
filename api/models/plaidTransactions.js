@@ -1,4 +1,4 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const locationSchema = {
@@ -24,20 +24,19 @@ const paymentMetaSchema = {
 };
 
 const encryptedValue = {
-  value: encrypt,
-  get: decrypt
+  set: ({ value }) => encrypt(value),
+  get: ({ value }) => decrypt(value)
 };
 
-const plaidTransaction = Record('plaidtransactions', {
+const plaidTransaction = AmptModel('plaidtransactions', {
   userId: {
-    value: (_, { req }) => req.user._id,
-    isLocked: true
+    set: ({ req }) => req.user._id
   },
   account_id: String,
   amount: encryptedValue,
   iso_currency_code: String,
   unofficial_currency_code: String,
-  category: (v) => Array.isArray(v) ? v.join() : v,
+  category: ({ value }) => Array.isArray(value) ? value.join() : value,
   category_id: String,
   check_number: String,
   date: String,
@@ -72,7 +71,7 @@ const plaidTransaction = Record('plaidtransactions', {
   },
   label3: {
     name: 'name',
-    value: item => {
+    computed: item => {
       const { userId, account_id, name } = item;
       const lowercaseName = (name || '').toLowerCase();
 
@@ -81,7 +80,7 @@ const plaidTransaction = Record('plaidtransactions', {
   },
   label4: {
     name: 'category',
-    value: item => {
+    computed: item => {
       const { userId, account_id, category } = item;
       const lowercaseCat = (category || '').toLowerCase();
 

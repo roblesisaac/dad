@@ -141,10 +141,6 @@ const Sticky = function() {
 	}
 	
 	function deregisterElement(selector) {
-		console.log({
-			message: 'deregisterElement',
-			selector
-		})
 		const { registeredElements } = stickyState;
 		
 		const registeredElement = registeredElements[selector];

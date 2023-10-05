@@ -106,10 +106,12 @@ describe('amptModels', () => {
     expect(response.items[0].name).toBe('john');
   }, 1000*10);
 
-  test('amptModel.findOne works for name', async () => {
+  test('amptModel.findOne works for name and string', async () => {
     const response = await TestModel.findOne({ name: 'john' });
+    const responseForFilterString = await TestModel.findOne(response._id);
 
     expect(response.name).toBe('john');
+    expect(responseForFilterString.name).toBe('john');
   }, 1000*10);
 
   test('amptModel.updateWorks', async () => {
@@ -135,7 +137,7 @@ describe('amptModels', () => {
 
   test('amptModel.update throws error if no existing item found', async () => {
     try {
-      await TestModel.update({ name: 'jane' }, { age: 31 });
+      const updated = await TestModel.update({ name: 'jane' }, { age: 31 });
     } catch (error) {
       expect(error.message.includes('No item found with')).toBe(true);
     }

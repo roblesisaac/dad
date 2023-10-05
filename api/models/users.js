@@ -1,4 +1,4 @@
-import AmptModel from '../utils/amptModel/index';
+import AmptModel from '../utils/amptModel';
 import { hashPassword, comparePassword } from '../utils/auth';
 import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
 import { isValidEmail } from '../../src/utils';
