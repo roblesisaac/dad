@@ -132,8 +132,9 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
   const rule = rules.type || rules;
   const rulesTypeName = getTypeName(rule);
   const dataTypeName = typeof dataValue;
+  const hasASpecifiedType = rules?.type || isAJavascriptType(rules);
 
-  if (!(computedConstructor && !rule.type) && !isAValidDataType(rulesTypeName, dataTypeName)) {
+  if (hasASpecifiedType && !isAValidDataType(rulesTypeName, dataTypeName)) {
     if(rules.strict) {
       throw new Error(`${field} must be of type ${rulesTypeName}`);
     }
