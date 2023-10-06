@@ -1,3 +1,6 @@
+import { data } from '@ampt/data';
+import { errorCodes, getErrorMessage } from './errorCodes';
+
 export default async (schema, dataToValidate, config) => {
   if (!dataToValidate) {
     return async (toValidate, config) => await validate(schema, toValidate, config);
@@ -10,7 +13,7 @@ async function validate(schema, dataToValidate, config={}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
   const refs = [];
-  const skipped = [];
+  const skipped = [];  
 
   if (typeof schema === 'function') {
     return { validated: await schema(dataToValidate) };
@@ -26,33 +29,43 @@ async function validate(schema, dataToValidate, config={}) {
     const rules = schema[field];
 
     if (isANestedArray(rules)) {
-      if (!Array.isArray(dataToValidate[field])) {
-        throw new Error(`${field} must be an array`);
+      validated[field] = [];
+
+      if(!dataToValidate[field] && rules.default) {
+        dataToValidate[field] = rules.default;
       }
 
-      validated[field] = [];
-      const arrayRules = rules[0] || '*';
+      if (!Array.isArray(dataToValidate[field]) && rules.strict) {
+        throw new Error(getErrorMessage(errorCodes.ARRAY_ERROR, `Field: ${field}`));
+      }
+
+      if(!dataToValidate[field]) {
+        dataToValidate[field] = [];
+      }
+
+      const arrayRule = rules.type ? rules.type[0] || rules.type : rules[0];
 
       for (const item of dataToValidate[field]) {
-        const validationResult = await validate(arrayRules, item, config);
+        const validationResult = await validate(arrayRule || '*', item, { parentField: field, ...config });
         validated[field].push(validationResult.validated);
       }
+
       continue;
     }
 
     if (isANestedObject(schema[field])) {
-      if (typeof dataToValidate[field] !== 'object' || Array.isArray(dataToValidate[field])) {
-        throw new Error(`${field} must be an object`);
+      if (!isPlainObject(dataToValidate[field])) {
+        throw new Error(getErrorMessage(errorCodes.OBJECT_ERROR, `Field: ${field}`));
       }
 
-      const validationResult = await validate(rules, dataToValidate[field], config);
+      const validationResult = await validate(rules, dataToValidate[field], { parentField: field, ...config });
       validated[field] = validationResult.validated;
       continue;
     }
 
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
-    if(!!validationResult?._shouldSkip) {
+    if(validationResult?._shouldSkip) {
       skipped.push(field);
       continue;
     }
@@ -72,29 +85,23 @@ async function validate(schema, dataToValidate, config={}) {
   return { uniqueFieldsToCheck, validated, refs, skipped };
 }
 
-async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
+async function validateItem(rules, dataToValidate, field, config) {
   const _shouldSkip = rules.hasOwnProperty('get') && !config.action;
 
   if(_shouldSkip) {
     return { _shouldSkip };
   }
 
+  field = field || config?.parentField || dataToValidate;
+
   let dataValue = getDataValue(dataToValidate, field);
+  const globalValidationProps = Object.keys(config.globalConfig || {});
+  const localtValidationProps = Object.keys(rules);
+  const validationProps = [...globalValidationProps, ...localtValidationProps];
 
-  // perform global validations first
-  for(const globalFormat in config.globalConfig) {
-    const ruleFunction = getRuleFunction(globalFormat, rules, dataToValidate, field, dataValue, config);
-
-    if(ruleFunction) {
-      dataValue = await ruleFunction();
-      setValue(dataToValidate, field, dataValue);
-    }
-  }
-
-  // then local validations
-  for(const ruleName of Object.keys(rules)) {
+  for(const ruleName of validationProps) {
     const ruleFunction = getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config);
-    
+
     if(ruleFunction) {
       dataValue = await ruleFunction();
       setValue(dataToValidate, field, dataValue);
@@ -116,7 +123,7 @@ async function executeCustomMethod(method, item, field, value) {
   try {
     return await method(value, { value, item });
   } catch (e) {
-    throw new Error(`${field} failed ${method.name} validation: ${e.message}`);
+    throw new Error(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR, `Field: ${field} - ${e.message}`));
   }
 }
 
@@ -133,7 +140,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const enumerator = () => {
     if (!rules.enum.includes(dataValue)) {
-      throw new Error(`${field} must be one of ${rules.enum}`);
+      throw new Error(getErrorMessage(errorCodes.ENUM_ERROR, `Field: ${field} - Value: ${dataValue} - Enum: ${rules.enum.join(', ')}`));
     }
 
     return dataValue;
@@ -149,7 +156,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const max = () => {
     if (dataValue > rules.max) {
-      throw new Error(`${field} must be at most ${rules.max}`);
+      throw new Error(getErrorMessage(errorCodes.MAX_ERROR, `Field: ${field} - Value: ${dataValue} - Max: ${rules.max}`));
     }
 
     return dataValue;
@@ -157,7 +164,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const min = () => {
     if (dataValue < rules.min) {
-      throw new Error(`${field} must be at least ${rules.min}`);
+      throw new Error(getErrorMessage(errorCodes.MIN_ERROR, `Field: ${field} - Value: ${dataValue} - Min: ${rules.min}`));
     }
 
     return dataValue;
@@ -165,7 +172,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const maxLength = () => {
     if (dataValue.length > rules.maxLength) {
-      throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
+      throw new Error(getErrorMessage(errorCodes.MAX_LENGTH_ERROR, `Field: ${field} - Value: ${dataValue} - Max Length: ${rules.maxLength}`));
     }
 
     return dataValue;
@@ -173,7 +180,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const minLength = () => {
     if (dataValue.length < rules.minLength) {
-      throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
+      throw new Error(getErrorMessage(errorCodes.MIN_LENGTH_ERROR, `Field: ${field} - Value: ${dataValue} - Min Length: ${rules.minLength}`));
     }
 
     return dataValue;
@@ -189,7 +196,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const required = () => {
     if (dataValue === undefined || dataValue === null) {
-      throw new Error(`${field} is required`);
+      throw new Error(getErrorMessage(errorCodes.REQUIRED_ERROR, `Field: ${field}`));
     }
 
     return dataValue;
@@ -222,7 +229,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   const type = () => {
     if (!isAValidDataType(rules, dataValue)) {
       if(rules.strict) {
-        throw new Error(`${field} must be of type ${getTypeName(rules)}`);
+        throw new Error(getErrorMessage(errorCodes.TYPE_ERROR, `Field: ${field} - Value: ${dataValue} - Type: ${getTypeName(rules)}`));
       }
 
       if(typeof rules.type === 'function') {
@@ -243,7 +250,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
 
   const validate = async () => {
     if (!await rules.validate(dataValue)) {
-      throw new Error(`${field} failed custom validation`);
+      throw new Error(getErrorMessage(errorCodes.CUSTOM_VALIDATION_ERROR, `Field: ${field} - Value: ${dataValue}`));
     }
 
     return dataValue;
@@ -283,7 +290,7 @@ function isAJavascriptType(rules) {
 }
 
 function isANestedArray(rules) {
-  return Array.isArray(rules) || rules.type === Array || rules === Array
+  return Array.isArray(rules) || rules.type === Array || rules === Array || Array.isArray(rules.type);
 }
 
 function isANestedObject(itemValue) {
@@ -298,6 +305,10 @@ function isAValidDataType(rules, dataValue) {
   const typeIsWild = rulesTypeName === '*';
   
   return !hasASpecifiedType || typeIsWild || dataTypeName === rulesTypeName;
+}
+
+function isPlainObject(item) {
+  return !Array.isArray(item) && item !== null && typeof item === 'object';
 }
 
 function setValue(dataToValidate, field, value) {

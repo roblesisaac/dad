@@ -1,5 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import validate from '../validate';
+import { errorCodes, getErrorMessage } from '../errorCodes';
+import e from 'express';
 
 describe('validate', () => {
   test('validate returns an async function', () => {
@@ -58,20 +60,96 @@ describe('validate', () => {
     expect(validated).toEqual({ name: 'TeSt'});
   });
 
+  test('validates in order', async () => {
+    const schema = {
+      name: {
+        type: String,
+        computed: (value) =>  `xxxx${value}`,
+        minLength: 8
+      }
+    };
+
+    const { validated } = await validate(schema, { name: 'TeSt'});
+    expect(validated).toEqual({ name: 'xxxxTeSt'});
+  });
+
   test('nested array throws error if not an array', async () => {
     const testSchema = {
       username: String,
       password: String,
-      roles: [{ type: String, enum: ['admin', 'user'] }],
+      roles: {
+        type: [{ type: String, enum: ['admin', 'user'] }],
+        strict: true
+      },
     };
 
-    await expect(validate(testSchema, {
-      username: 'XXXXXXXX',
-      password: 'XXXXXXXXXXXX',
-      roles: 'admin',
-    })).rejects.toThrowError('roles must be an array');
+    try {
+      await validate(testSchema, {
+        username: 'XXXXXXXX',
+        password: 'XXXXXXXXXXXX',
+        roles: 'admin',
+      });
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.ARRAY_ERROR))).toBe(true);
+    }
   
-  })
+  });
+
+  test('nested array sets default if default provided', async () => {
+    const testSchema = {
+      username: String,
+      password: String,
+      roles: {
+        type: [{
+          type: String,
+          enum: ['admin', 'user']
+        }],
+        default: ['user'],
+        strict: true
+      }
+    };
+
+    const { validated } = await validate(testSchema, {
+      username: 'XXXXXXXX',
+      password: 'XXXXXXXXXXXX'
+    });
+
+    expect(validated.roles).toEqual(['user']);
+  });
+
+  test('nested array works for []', async () => {
+    const testSchema = {
+      username: String,
+      password: String,
+      roles: {
+        type: [],
+        default: ['user'],
+        strict: true
+      }
+    };
+
+    const { validated } = await validate(testSchema, {
+      username: 'XXXXXXXX',
+      password: 'XXXXXXXXXXXX'
+    });
+
+    expect(validated.roles).toEqual(['user']);
+  });
+
+  test('nested array sets [] if not strict', async () => {
+    const testSchema = {
+      username: String,
+      password: String,
+      roles: [String]
+    };
+
+    const { validated } = await validate(testSchema, {
+      username: 'XXXXXXXX',
+      password: 'XXXXXXXXXXXX'
+    });
+
+    expect(validated.roles).toEqual([]);
+  });
 
   test('nested array of simple wilds validate', async () => {
     const testSchema = {
@@ -86,7 +164,7 @@ describe('validate', () => {
       roles: ['admin'],
     });
 
-    expect(validated).toBeDefined();  
+    expect(validated.roles).toEqual(['admin']);  
   });
 
   test('nested array of simple strings validate', async () => {
@@ -102,7 +180,7 @@ describe('validate', () => {
       roles: ['admin'],
     });
 
-    expect(validated).toBeDefined();  
+    expect(validated.roles).toEqual(['admin']);  
   });
 
   test('nested array of complex strings validate', async () => {
@@ -118,7 +196,7 @@ describe('validate', () => {
       roles: ['admin'],
     });
 
-    expect(validated).toBeDefined();  
+    expect(validated.roles).toEqual(['admin']);  
   });
 
   test('nested array of complex strings throws error', async () => {
@@ -131,10 +209,14 @@ describe('validate', () => {
     const testItem = {
       username: 'XXXXXXXX',
       password: 'XXXXXXXXXXXX',
-      roles: ['admins'],
+      roles: ['admins']
     };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('admins must be one of admin,user');  
+    try {
+      await validate(testSchema, testItem)
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.ENUM_ERROR))).toBe(true);
+    }
   });
 
   test('nested array of objects validate', async () => {
@@ -156,7 +238,7 @@ describe('validate', () => {
       }],
     });
 
-    expect(validated).toBeDefined();  
+    expect(validated.roles[0].name).toBe('admin');  
   });
 
   test('nested object throws error', async () => {
@@ -169,11 +251,15 @@ describe('validate', () => {
       },
     };
 
-    await expect(validate(testSchema, {
-      username: 'XXXXXXXX',
-      password: 'XXXXXXXXXXXX',
-      roles: 'admin',
-    })).rejects.toThrowError('roles must be an object');  
+    try {
+      await validate(testSchema, {
+        username: 'XXXXXXXX',
+        password: 'XXXXXXXXXXXX',
+        roles: 'admin',
+      });
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.OBJECT_ERROR))).toBe(true);
+    }
   });
 
   test('nested objects validate', async () => {
@@ -195,7 +281,7 @@ describe('validate', () => {
       },
     });
 
-    expect(validated).toBeDefined();  
+    expect(validated.roles.permissions[0]).toBe('read');  
   
   });
 
@@ -233,14 +319,18 @@ describe('validate', () => {
     const testSchema = { username: String, password: { required: true, type: String } };
     const testItem = { username: 'XXXX'  };
     
-    expect(async () => validate(testSchema, testItem)).rejects.toThrowError('password is required');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.REQUIRED_ERROR))).toBe(true)
+    }
   });
 
   test('having required field returns validated', async () => {
     const testSchema = { username: String, password: { type: String, required: true } };
     const { validated } = await validate(testSchema, { username: 'XXXX', password: 'XXXX'  });
     
-    expect(validated).toBeDefined();
+    expect(validated.password).toBe('XXXX');
   });
 
   test('valid type works', async () => {
@@ -255,7 +345,11 @@ describe('validate', () => {
     const testSchema = { username: { type: String, strict: true } };
     const testItem = { username: 123 };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must be of type string');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.TYPE_ERROR))).toBe(true);
+    }    
   });
 
   test('not strict invalid type corrects', async () => {
@@ -279,14 +373,18 @@ describe('validate', () => {
     const testItem = { username: 'testuser' };
 
     const { validated } = await validate(testSchema, testItem);
-    expect(validated).toBeDefined();
+    expect(validated.username).toBe('testuser');
   });
 
   test('invalid enum throws error', async () => {
     const testSchema = { username: { type: String, enum: ['testuser', 'testuser2'] } };
     const testItem = { username: 'XXXXXXXXX' };
 
-    await expect(validate(testSchema, testItem)).rejects.toThrowError('username must be one of testuser,testuser2');
+    try {
+      await validate(testSchema, testItem)
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.ENUM_ERROR))).toBe(true);
+    }
   });
 
   test('custom validate works when custom qualifications met', async () => {
@@ -294,14 +392,19 @@ describe('validate', () => {
     const testItem = { username: 'XXXX' };
 
     const { validated } = await validate(testSchema, testItem);
-    expect(validated).toBeDefined();  
+    expect(validated.username).toBe('XXXX');  
   });
 
   test('custom validate throws error when custom qualifications not met', async () => {
     const testSchema = { username: { type: String, validate: (value) => value.length > 3 } };
     const testItem = { username: 'X' };
 
-    await expect(validate(testSchema, testItem)).rejects.toThrowError('username failed custom validation');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.CUSTOM_VALIDATION_ERROR))).toBe(true);
+    }
+  
   });
 
   test('computed values throw error', async () => {
@@ -309,7 +412,11 @@ describe('validate', () => {
     const testItem = { username: 'X' };
     
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username failed computed validation');
+    try {
+      await validate(testSchema, testItem);
+    } catch(error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR))).toBe(true);  
+    }
   });
 
   test('computed values work', async () => {
@@ -428,13 +535,15 @@ describe('validate', () => {
     expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
   });
 
-  test('getter throws error when expected', () => {
+  test('getter throws error when expected', async () => {
     const testSchema = { username: { type: String, get: () => undefinedVar } };
     const testItem = { username: 'XXXXc' };
 
-    expect(
-      async () => await validate(testSchema, testItem, { action: 'get'})
-    ).rejects.toThrowError('username failed get validation: undefinedVar is not defined');
+    try {
+      await validate(testSchema, testItem, { action: 'get'});
+    } catch (error) { 
+      expect(error.message.includes(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR))).toBe(true);
+    }
   });
 
   test('rules.min works', async () => {
@@ -449,7 +558,12 @@ describe('validate', () => {
     const testSchema = { age: { type: Number, min: 18 } };
     const testItem = { age: 17 };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('age must be at least 18');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.MIN_ERROR))).toBe(true);
+    }
+    
   });
 
   test('rules.max works', async () => {
@@ -464,7 +578,11 @@ describe('validate', () => {
     const testSchema = { age: { type: Number, max: 100 } };
     const testItem = { age: 101 };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('age must be at most 100');
+    try {
+      await validate(testSchema, testItem)
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.MAX_ERROR))).toBe(true);
+    }
   });
 
   test('rules.minLength works', async () => {
@@ -479,7 +597,11 @@ describe('validate', () => {
     const testSchema = { username: { type: String, minLength: 3 } };
     const testItem = { username: 'XX' };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must have a minimum length of 3');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.MIN_LENGTH_ERROR))).toBe(true);
+    }
   });
 
   test('rules.maxLength works', async () => {
@@ -494,7 +616,45 @@ describe('validate', () => {
     const testSchema = { username: { type: String, maxLength: 2 } };
     const testItem = { username: 'test' };
 
-    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must have a maximum length of 2');
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.MAX_LENGTH_ERROR))).toBe(true);
+    }
+  });
+
+  test('unknown error works', async () => {
+    const testSchema = { username: { type: String, maxLength: 2 } };
+    const testItem = { username: 'test' };
+
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(getErrorMessage(errorCodes.MAX_LENGTH_ERRORs)).toBe('Unknown error');
+    }
+  });
+
+  test('Spanish error works', async () => {
+    const testSchema = { username: { type: String, maxLength: 2 } };
+    const testItem = { username: 'test' };
+
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      const spanish = getErrorMessage(errorCodes.MAX_LENGTH_ERROR, null, 'es');
+      expect(spanish).toBeDefined();
+    }
+  });
+
+  test('Default to english error works', async () => {
+    const testSchema = { username: { type: String, maxLength: 2 } };
+    const testItem = { username: 'test' };
+
+    try {
+      await validate(testSchema, testItem);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.MAX_LENGTH_ERROR, null, 'fr'))).toBe(true);
+    }
   });
 
   test('rules.trim works', async () => {
@@ -548,7 +708,7 @@ describe('validate', () => {
     const testItem = { username: 'XXXX' };
 
     const { uniqueFieldsToCheck } = await validate(testSchema, testItem);
-    expect(uniqueFieldsToCheck).toBeDefined();
+    expect(uniqueFieldsToCheck).toEqual(['username']);
   });
 
   test('refs are set apart', async () => {

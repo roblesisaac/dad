@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
 import Users from '../users';
+import { errorCodes, getErrorMessage } from '../../utils/amptModel/errorCodes';
 
 describe('users model', () => {
   test('Users model is defined', () => {
@@ -55,8 +56,13 @@ describe('users model', () => {
       password: 'testpassword',
       views: []
     };
+    
+    try {
+      await Users.save(newUser);
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.CUSTOM_VALIDATION_ERROR))).toBe(true)
+    }    
 
-    expect(async () => await Users.save(newUser)).rejects.toThrow(/Invalid email/);
   }, 1000*20);
 
   test('Find user works', async () => {

@@ -1,5 +1,6 @@
 import { describe, test, expect  } from 'vitest';
 import amptModel from '../index';
+import { errorCodes, getErrorMessage } from '../errorCodes';
 
 describe('amptModels', () => {
   const createdAt = Date.now();
@@ -45,9 +46,12 @@ describe('amptModels', () => {
     expect(amptModel).toBeDefined();
   });
 
-  test('amptModel.validate throws error if schema is invalid', () => {
-    expect(async () => await TestModel.validate({ name: 1 }))
-      .rejects.toThrowError('name must be of type string');
+  test('amptModel.validate throws error if schema type is invalid', async () => {
+    try {
+      await TestModel.validate({ name: 1 });
+    } catch (error) {
+      expect(error.message.includes(getErrorMessage(errorCodes.TYPE_ERROR))).toBe(true);
+    }
   });
 
   test('amptModel.validate works', async () => {

@@ -7,14 +7,9 @@ const Users = AmptModel('users', {
   email: {
     unique: true,
     required: true,
-    set: (value) => {
-      if(!isValidEmail(value)) {
-        throw new Error('Invalid email');
-      }
-      
-      return encrypt(value);
-    },
-    get: decrypt
+    get: decrypt,
+    validate: isValidEmail,
+    set: encrypt
   },
   views: [String],
   email_verified: '*',
@@ -36,8 +31,8 @@ const Users = AmptModel('users', {
     get: (value) => decrypt(value, 'buffer')
   },
   role: {
-    type: String,
-    default: 'member'
+    default: 'member',
+    type: String
   },
   hideAllViews: {
     type: Boolean,
