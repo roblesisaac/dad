@@ -4,7 +4,7 @@ import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
 
 import plaidItem from '../models/plaidItems';
-import users from '../models/users';
+import Users from '../models/users';
 import plaidTransaction from '../models/plaidTransactions';
 
 const {
@@ -28,7 +28,7 @@ const tasks = (function() {
       const existingTransaction = findExistingTransaction(transactionsInDatabase, transaction);
 
       if(!existingTransaction) {
-        await plaidTransaction.save(transaction, req);
+        await plaidTransaction.save({ ...transaction, req });
       }
     }
 
@@ -53,7 +53,7 @@ const tasks = (function() {
   }
 
   async function buildReq(userId) {
-    const user = await users.find(userId);
+    const user = await Users.findOne(userId);
 
     return { user };
   }
@@ -121,7 +121,7 @@ const tasks = (function() {
           'Plaid-Version': '2020-09-14',
         },
       },
-    });    
+    });
 
     return new PlaidApi(config);
   }
@@ -147,8 +147,9 @@ const tasks = (function() {
   const syncTransactions = task('sync.transactions', async ({ body }) => {
     let { itemId, userId } = body;
 
-    const { accessToken, cursor } = await plaidItem.find(itemId);
+    const { accessToken, cursor } = await plaidItem.findOne(itemId);
     const req = await buildReq(userId);
+
     const access_token = decryptAccessToken(accessToken, req.user.encryptionKey);
 
     return await fetchTransactionsFromPlaid({ access_token, cursor, itemId, req });

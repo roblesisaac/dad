@@ -9,7 +9,6 @@ import plaidItem from '../models/plaidItems';
 import plaidTransaction from '../models/plaidTransactions';
 
 import tasks from '../tasks/plaid';
-import plaid from '../routes/plaid';
 
 const {
   AMPT_URL,
@@ -134,7 +133,7 @@ const app = function() {
           'Plaid-Version': '2020-09-14',
         },
       },
-    });    
+    });
 
     plaidClient = plaidClient || new PlaidApi(config);
   }
@@ -155,12 +154,13 @@ const app = function() {
   async function savePlaidAccessData(accessData, req) {
     try {
       const { access_token, item_id } = accessData;
-      
+
       const item = await plaidItem.save({
         accessToken: access_token,
         itemId: item_id,
-        syncStatus: 'sync in progress...'
-      }, req);
+        syncStatus: 'sync in progress...',
+        req
+      });
   
       return { access_token, ...item };
     } catch (err) {
@@ -174,7 +174,7 @@ const app = function() {
       const saved = [];
   
       for(const retrieved of retrievedAccounts) {
-        saved.push(await plaidAccounts.save(retrieved, req));
+        saved.push(await plaidAccounts.save({ ...retrieved, req }));
       }
   
       return saved;
@@ -306,7 +306,7 @@ const app = function() {
         }
 
         synced.push(retrieved);
-        await plaidAccounts.save(retrieved, { user });
+        await plaidAccounts.save({ ...retrieved, ...{ user } });
       }
 
       res.json(synced);

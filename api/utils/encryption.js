@@ -55,9 +55,11 @@ export function decryptWithKey(encryptedData, key) {
     return decryptedData;
   } catch (error) {
     console.error({
-      errorMessage: `Error decrypting with key...`,
+      decryptError: true,
+      errorMessage: error.message,
       encryptedData,
-      error
+      error,
+      key
     });
   }
 }
@@ -75,9 +77,9 @@ export function encrypt(data) {
 
   } catch (error) {
     console.error({
-      errorMessage: `Error encrypting...`,
+      errorEncrypting: true,
       data,
-      error
+      errorMessage: error.message
     });
   }
 }
@@ -96,7 +98,8 @@ export function encryptWithKey(data, key) {
     console.error({
       errorMessage: `Error encrypting with key...`,
       data,
-      error
+      error,
+      key
     });
   }
 }

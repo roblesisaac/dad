@@ -123,7 +123,7 @@ export async function signupUser(req, res) {
   
   try {
     const newUser = await Users.save({ email, password });
-    
+
     loginUser(req, res, newUser);
   } catch (error) {
     console.log(error);

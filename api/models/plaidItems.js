@@ -1,13 +1,13 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 import { encrypt, encryptWithKey } from '../utils/encryption';
 
-const plaidItem = Record('plaiditems', {
+const plaidItem = AmptModel('plaiditems', {
   userId: {
-    value: (_, { req }) => req.user._id,
+    set: (_, { req }) => req.user._id,
     isLocked: true
   },
   accessToken: { 
-    value: (accessToken, { req }) => {
+    set: (accessToken, { req }) => {
       const { encryptionKey } = req.user;
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
 
@@ -17,7 +17,7 @@ const plaidItem = Record('plaiditems', {
     required: true
    },
   itemId: { 
-    value: String,
+    set: String,
     required: true,
     unique: true
    },

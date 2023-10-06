@@ -38,7 +38,12 @@ const Users = AmptModel('users', {
     type: Boolean,
     default: false
   },
-  lastLoggedIn: () => String(new Date()),
+  lastLoggedIn: () => {
+    const now = new Date();
+    const pstOptions = { timeZone: 'America/Los_Angeles' };
+
+    return now.toLocaleString('en-US', pstOptions);
+  },
   label1: 'email',
   label2: 'email_verified',
   label3: 'role'

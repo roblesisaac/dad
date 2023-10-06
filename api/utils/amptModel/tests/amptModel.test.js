@@ -141,7 +141,7 @@ describe('amptModels', () => {
 
   test('amptModel.update throws error if no existing item found', async () => {
     try {
-      const updated = await TestModel.update({ name: 'jane' }, { age: 31 });
+      await TestModel.update({ name: 'jane' }, { age: 31 });
     } catch (error) {
       expect(error.message.includes('No item found with')).toBe(true);
     }

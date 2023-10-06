@@ -1,4 +1,3 @@
-import { data } from '@ampt/data';
 import { errorCodes, getErrorMessage } from './errorCodes';
 
 export default async (schema, dataToValidate, config) => {
@@ -110,7 +109,7 @@ async function validateItem(rules, dataToValidate, field, config) {
 
   if(typeof rules === 'function') {
     if(isAJavascriptType(rules)) {
-      return rules(dataValue);
+      return rules(dataValue || '');
     }
     
     return await executeCustomMethod(rules, dataToValidate, field, dataValue)
@@ -121,7 +120,7 @@ async function validateItem(rules, dataToValidate, field, config) {
 
 async function executeCustomMethod(method, item, field, value) {
   try {
-    return await method(value, { value, item });
+    return await method(value, { value, item, ...item });
   } catch (e) {
     throw new Error(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR, `Field: ${field} - ${e.message}`));
   }
@@ -233,7 +232,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
       }
 
       if(typeof rules.type === 'function') {
-        return rules.type(dataValue);
+        return rules.type(dataValue || '');
       }
     }
 

@@ -83,12 +83,13 @@ export default function(collectionName, schemaConfig, globalConfig) {
     if(typeof filter === 'string') {
       const foundItem = await data.get(filter);
 
-      return foundItem 
-      ? {
-        _id: filter,
-        ...foundItem
-      } 
-      : null;
+      if(!foundItem) {
+        return null;
+      }
+
+      const { validated: validateItem } = await validate(foundItem, 'get');
+
+      return { _id: filter, ...validateItem };
     }
 
     const response = await find(filter, { limit: 1 });
