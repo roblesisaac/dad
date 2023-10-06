@@ -7,19 +7,19 @@ const Users = AmptModel('users', {
   email: {
     unique: true,
     required: true,
-    set: ({ value }) => {
+    set: (value) => {
       if(!isValidEmail(value)) {
         throw new Error('Invalid email');
       }
       
       return encrypt(value);
     },
-    get: ({ value }) => decrypt(value)
+    get: decrypt
   },
   views: [String],
   email_verified: '*',
   password: {
-    set: async ({ value }) => {
+    set: async (value) => {
       if(!value) {
         return;
       };
@@ -33,7 +33,7 @@ const Users = AmptModel('users', {
   },
   encryptionKey: {
     set: () => encrypt(generateSymmetricKey()),
-    get: ({ value }) => decrypt(value, 'buffer')
+    get: (value) => decrypt(value, 'buffer')
   },
   role: {
     type: String,

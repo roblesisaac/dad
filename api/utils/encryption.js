@@ -21,7 +21,7 @@ export function decodeJWT(token) {
   return jwt.verify(token, RSA.PUBLIC, { algorithm: 'RS256' });
 }
 
-export function decrypt(encryptedData, dataType = 'string') {
+export function decrypt(encryptedData, dataType) {
   try {
     let encryptedText = Buffer.from(encryptedData, 'hex');
     let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY, 'hex'), Buffer.from(ENCRYPT_IV, 'hex'));
@@ -30,7 +30,7 @@ export function decrypt(encryptedData, dataType = 'string') {
     return {
       buffer: decrypted,
       string: decrypted.toString()
-    }[dataType] || decrypted;
+    }[dataType] || decrypted.toString();
   } catch (error) {
     console.error({
       errorMessage: `Error decrypting...`,

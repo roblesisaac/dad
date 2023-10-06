@@ -313,7 +313,7 @@ describe('validate', () => {
   });
 
   test('computed values work', async () => {
-    const testSchema = { username: { type: String, computed: ({ value }) => `ampt${value}` } };
+    const testSchema = { username: { type: String, computed: (value) => `ampt${value}` } };
     const testItem = { username: 'XXXX' };
 
     const { validated } = await validate(testSchema, testItem);
@@ -324,7 +324,7 @@ describe('validate', () => {
     const testSchema = { 
       username: { 
         type: String, 
-        computed: ({ item, value }) => `ampt${item.username}${value}` 
+        computed: (value, { item }) => `ampt${item.username}${value}` 
       }
     };
 
@@ -344,19 +344,19 @@ describe('validate', () => {
         trim: true
       },
       userdetails: {
-        set: ({ item, value }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
-        get: ({ value }) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
+        set: (value, { item }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
+        get: (value) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
       },
       computedTest: {
-        computed: ({ item }) => `this was computed for ${item.username} at ${Date.now()}`
+        computed: (_, { item }) => `this was computed for ${item.username} at ${Date.now()}`
       },
       currentTime: () => Date.now(),
       createdOn: {
         set: () => Date.now()
       },
       password: {
-        set: ({ value }) => hash(value),
-        get: ({ value }) => value.replace('hashed', '')
+        set: hash,
+        get: (value) => value.replace('hashed', '')
       }
     };
 
@@ -391,19 +391,19 @@ describe('validate', () => {
         trim: true
       },
       userdetails: {
-        set: ({ item, value }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
-        get: ({ value }) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
+        set: (value, { item }) => `user details for ${item.username} with '_id:${ item.user?._id }' are ${value}`, 
+        get: (value) => `USER_DETAILS: ${value.toUpperCase()} ${Date.now()}`
       },
       computedTest: {
-        computed: ({ item }) => `this was computed for ${item.username} at ${Date.now()}`
+        computed: (_, { item }) => `this was computed for ${item.username} at ${Date.now()}`
       },
       currentTime: () => Date.now(),
       createdOn: {
         set: () => Date.now()
       },
       password: {
-        set: ({ value }) => hash(value),
-        get: ({ value }) => value.replace('hashed', '')
+        set: (value) => hash(value),
+        get: (value) => value.replace('hashed', '')
       }
     };
 

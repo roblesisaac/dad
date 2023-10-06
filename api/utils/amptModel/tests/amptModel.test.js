@@ -11,13 +11,13 @@ describe('amptModels', () => {
     },
     createdAt: {
       set: () => createdAt,
-      get: ({ item }) => `${item.name} who is ${item.age} created at ${item.createdAt}`
+      get: (_, { item }) => `${item.name} who is ${item.age} created at ${item.createdAt}`
     },
     lastLogin: () => Date.now(),
     age: Number,
     role: {
       type: String,
-      set: ({ item }) => item?.req?.user?.role,
+      set: (_, { item }) => item?.req?.user?.role,
       default: 'user',
       enum: ['user', 'admin']
     },

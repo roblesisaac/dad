@@ -114,7 +114,7 @@ async function validateItem(rules, dataToValidate, field=dataToValidate, config)
 
 async function executeCustomMethod(method, item, field, value) {
   try {
-    return await method({ value, item });
+    return await method(value, { value, item });
   } catch (e) {
     throw new Error(`${field} failed ${method.name} validation: ${e.message}`);
   }

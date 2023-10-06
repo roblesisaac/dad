@@ -2,8 +2,8 @@ import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const encryptedValue = {
-  set: ({ value }) => encrypt(value),
-  get: ({ value }) => decrypt(value)
+  set: encrypt,
+  get: decrypt
 };
 
 const accountSchema = {

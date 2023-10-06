@@ -24,19 +24,19 @@ const paymentMetaSchema = {
 };
 
 const encryptedValue = {
-  set: ({ value }) => encrypt(value),
-  get: ({ value }) => decrypt(value)
+  set: encrypt,
+  get: decrypt
 };
 
 const plaidTransaction = AmptModel('plaidtransactions', {
   userId: {
-    set: ({ req }) => req.user._id
+    set: (_, { req }) => req.user._id
   },
   account_id: String,
   amount: encryptedValue,
   iso_currency_code: String,
   unofficial_currency_code: String,
-  category: ({ value }) => Array.isArray(value) ? value.join() : value,
+  category: (value) => Array.isArray(value) ? value.join() : value,
   category_id: String,
   check_number: String,
   date: String,
