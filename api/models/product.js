@@ -1,6 +1,6 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 
-const productSchema = Record('products', {
+const productSchema = AmptModel('products', {
     name: { type: String, required: true },
     caption: String,
     description: String,

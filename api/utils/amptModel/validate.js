@@ -15,7 +15,7 @@ async function validate(schema, dataToValidate, config={}) {
   const skipped = [];  
 
   if (typeof schema === 'function') {
-    return { validated: await schema(dataToValidate) };
+    return { validated: await schema(dataToValidate || '') };
   }
 
   if (typeof dataToValidate !== 'object') {

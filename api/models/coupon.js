@@ -1,6 +1,6 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 
-const couponSchema = Record('coupons', {
+const couponSchema = AmptModel('coupons', {
     code: { type: String, required: true, unique: true },
     discountPercentage: { type: Number, required: true },
     expiresAt: { type: Date, required: true },

@@ -1,7 +1,7 @@
+import AmptModel from '../utils/amptModel';
 import { data } from '@ampt/data';
-import Record from '../utils/records';
 
-const orderSchema = Record('orders', {
+const orderSchema = AmptModel('orders', {
     userid: (_, { req }) => req.user._id,
     orderItems: [
         {
@@ -39,7 +39,7 @@ const orderSchema = Record('orders', {
         
         return itemTotals.reduce((accumulator, currentValue) => accumulator + currentValue, 0);
     },
-    taxPrice: (_, { validated }) => validated.itemsPrice*0.08,
+    taxPrice: (_, { item }) => item.itemsPrice*0.08,
     shippingPrice: { type: Number },
     totalPrice: (_, { item }) => [
             item.itemsPrice,

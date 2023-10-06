@@ -80,16 +80,22 @@ export default function(collectionName, schemaConfig, globalConfig) {
   }
 
   async function findOne(filter) {
+    filter = filter || `${collectionName}:*`;
+
     if(typeof filter === 'string') {
-      const foundItem = await data.get(filter);
+      let foundItem = await data.get(filter);
 
       if(!foundItem) {
         return null;
       }
 
-      const { validated: validateItem } = await validate(foundItem, 'get');
+      foundItem = filter.includes('*') ? foundItem.items[0] : foundItem;
 
-      return { _id: filter, ...validateItem };
+      const _id = foundItem?.key ? foundItem.key : filter;
+
+      const { validated: validatedItem } = await validate(foundItem.value || foundItem, 'get');
+
+      return { _id, ...validatedItem };
     }
 
     const response = await find(filter, { limit: 1 });

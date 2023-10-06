@@ -1,14 +1,14 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
-const addressSchema = Record('addresses', {
+const addressSchema = AmptModel('addresses', {
   userid: (_, { req }) => req.user._id,
   fullName: { type: String, required: true },
   city: { type: String, required: true },
   postalCode: { type: String, required: true },
   country: { type: String, required: true },
   phoneNumber: { 
-    value: encrypt,
+    set: encrypt,
     get: decrypt,
     required: true
   },
@@ -20,11 +20,11 @@ const addressSchema = Record('addresses', {
   },
   label3: {
     name: 'phoneNumber',
-    value: itm => itm.userid+itm.phoneNumber
+    computed: itm => itm.userid+itm.phoneNumber
   },
   label4: {
     name: 'city',
-    value: itm => itm.userid+itm.city
+    computed: itm => itm.userid+itm.city
   }
 }, 
 {

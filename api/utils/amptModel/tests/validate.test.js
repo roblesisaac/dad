@@ -1,7 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import validate from '../validate';
 import { errorCodes, getErrorMessage } from '../errorCodes';
-import e from 'express';
 
 describe('validate', () => {
   test('validate returns an async function', () => {
@@ -25,10 +24,39 @@ describe('validate', () => {
     expect(validated).toBe('1');
   });
 
+  test('simple validate(String, undefined) returns empty string', async () => {
+    const validator = await validate(String);
+    const { validated } = await validator();
+
+    expect(validated).toBe('');
+  });
+
   test('simple validate({ type: String, lowercase }) returns validated', async () => {
     const { validated } = await validate({ type: String, lowercase: true }, 'TEST');
 
     expect(validated).toBe('test');
+  });
+
+  test('validates when undefined and sets empty', async () => {
+    const { validated } = await validate({ 
+      name: String
+    }, {
+      name: undefined
+    });
+
+    expect(validated.name).toBe('');
+  });
+
+  test('validates when complex undefined and sets empty', async () => {
+    const { validated } = await validate({ 
+      name: {
+        type: String
+      }
+    }, {
+      name: undefined
+    });
+
+    expect(validated.name).toBe('');
   });
 
   test(`named validate type works`, async () => {

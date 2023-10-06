@@ -1,6 +1,6 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 
-const categorySchema = Record('categories', {
+const categorySchema = AmptModel('categories', {
     name: { 
         type: String, 
         required: true, 

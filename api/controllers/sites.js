@@ -16,7 +16,7 @@ const app = function () {
   }
 
   async function siteIdMatchesUpdateId(updateKey) {
-    state.siteKey = state.siteKey || (await Site.findOne()._id);
+    state.siteKey = state.siteKey || (await Site.findOne());
 
     return updateKey === state.siteKey;
   }

@@ -1,11 +1,11 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 import { params } from '@ampt/sdk';
 
-const siteSchema = Record('sites', {
+const siteSchema = AmptModel('sites', {
   name: {
+    default: params('APP_NAME'),
     type: String,
-    unique: true,
-    default: params('APP_NAME')
+    unique: true
   },
   email: String,
   readableNames: [
@@ -17,11 +17,9 @@ const siteSchema = Record('sites', {
   roles: [
     { 
       name: {
-        value: String
+        type: String
       },
-      views: {
-        value: [String]
-      }
+      views: [String]
      }
   ],
   label1: 'name'

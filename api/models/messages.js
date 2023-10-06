@@ -1,14 +1,14 @@
+import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
-import Record from '../utils/records';
 
-const messageSchema = Record('messages', {
+const messageSchema = AmptModel('messages', {
     userid: (_, { req }) => req.user._id,
     subject: {
-        value: encrypt,
+        set: encrypt,
         get: decrypt
     },
     message: {
-        value: encrypt,
+        set: encrypt,
         get: decrypt,
         required: true
     },
@@ -17,11 +17,11 @@ const messageSchema = Record('messages', {
     createdAt: Date.now,
     label1: {
         name: 'inbox',
-        value: itm => itm.recipient+itm.isRead
+        concat: ['recipient', 'isRead']
     },
     label2: {
         name: 'outbox',
-        value: itm => itm.userid+itm.isRead
+        concat: ['userId', 'isRead']
     }
 });
 

@@ -1,11 +1,11 @@
-import Record from '../utils/records';
+import AmptModel from '../utils/amptModel';
 
-const cartSchema = Record('cart', {
+const cartSchema = AmptModel('cart', {
     userid: (_, { req }) => req.user._id,
     cartItems: [
         {
-        qty: { type: Number },
-        productId: { type: String, ref: 'products' },
+            qty: { type: Number },
+            productId: { type: String, ref: 'products' },
         },
     ],
 });
