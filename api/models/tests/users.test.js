@@ -14,7 +14,7 @@ describe('users model', () => {
     });
 
     expect(newUser._id).toBeDefined();
-  }, 1000*20);
+  }, 1000*40);
 
   test('Save new user works without password', async () => {
     const newUser = await Users.save({

@@ -142,6 +142,27 @@ describe('labelsMap', () => {
 
     expect(createdLabels.label1).toBe(`${collectionName}:testName_1`);
   });
+
+  test('labelsMap skipped works', async () => {
+    const createdLabels = await labelsMap.createLabelKeys(testItem, ['name']);
+    
+    expect(createdLabels.label1).toBe(undefined);
+    expect(createdLabels.label2).toBe(`${collectionName}:label2_the length of the name is ${testItem.name.length}`);
+    expect(createdLabels.label3).toBe(`${collectionName}:user_details_${testItem.name}${testItem.age}`);
+    expect(createdLabels.label4).toBe(`${collectionName}:5`);
+  });
+
+  test('labelsMap throws error if no mapped label found', async () => {
+    expect(async () => labelsMap.getArgumentsForGetByLabel({ firstName: 'XXXX' }))
+      .rejects.toThrowError(errorMessage(`No mapped label found for filter '{"firstName":"XXXX"}'`));
+  });
+
+  test('labelsMap throws error if no mapped label found', async () => {
+    const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel({ name: '' });
+
+    expect(labelNumber).toBe('label1');
+    expect(labelValue).toBe(`${collectionName}:name_*`);
+  });
   
   test('labelsMap.createLabelKeys works', async() => {
     const createdLabels = await labelsMap.createLabelKeys(testItem);

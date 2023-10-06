@@ -17,7 +17,9 @@ async function validate(schema, dataToValidate, config={}) {
   }
 
   if (typeof dataToValidate !== 'object') {
-    return await validateItem(schema, dataToValidate, undefined, config);
+    return {
+      validated: await validateItem(schema, dataToValidate, undefined, config)
+    };
   }
 
   for (const field in schema) {
@@ -50,19 +52,19 @@ async function validate(schema, dataToValidate, config={}) {
 
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
-    if(!!validationResult._shouldSkip) {
+    if(!!validationResult?._shouldSkip) {
       skipped.push(field);
       continue;
     }
 
-    validated[field] =  validationResult.validated;
+    validated[field] = validationResult;
 
-    if(validationResult.unique) {
-      uniqueFieldsToCheck.push(validationResult.unique);
+    if(rules.unique) {
+      uniqueFieldsToCheck.push(field);
     }
 
-    if(validationResult.ref) {
-      refs.push(validationResult.ref);
+    if(rules.ref) {
+      refs.push(field);
     }
 
   }  
@@ -71,122 +73,51 @@ async function validate(schema, dataToValidate, config={}) {
 }
 
 async function validateItem(rules, dataToValidate, field=dataToValidate, config) {
-  let dataValue = getDataValue(dataToValidate, field);
-  const _shouldSkip = rules.hasOwnProperty('get') && !config.action
+  const _shouldSkip = rules.hasOwnProperty('get') && !config.action;
 
   if(_shouldSkip) {
     return { _shouldSkip };
   }
 
-  if (rules.required && (dataValue === undefined || dataValue === null || dataValue === '')) {
-    throw new Error(`${field} is required`);
-  }
+  let dataValue = getDataValue(dataToValidate, field);
 
-  if (rules.min !== undefined && dataValue < rules.min) {
-    throw new Error(`${field} must be at least ${rules.min}`);
-  }
+  // perform global validations first
+  for(const globalFormat in config.globalConfig) {
+    const ruleFunction = getRuleFunction(globalFormat, rules, dataToValidate, field, dataValue, config);
 
-  if (rules.max !== undefined && dataValue > rules.max) {
-    throw new Error(`${field} must be at most ${rules.max}`);
-  }
-
-  if (rules.minLength !== undefined && dataValue.length < rules.minLength) {
-    throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
-  }
-
-  if (rules.maxLength !== undefined && dataValue.length > rules.maxLength) {
-    throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
-  }
-
-  dataValue = formatValue(dataValue, config.globalConfig);
-  dataValue = formatValue(dataValue, rules);
-
-  if(dataToValidate?.hasOwnProperty(field)) {
-    dataToValidate[field] = dataValue;
-  };
-
-  const computedConstructor = getComputedConstructor(rules);
-
-  if (computedConstructor) {
-    try {
-      dataValue = await computedConstructor({ value: dataValue, item: dataToValidate });
-    } catch (e) {
-      throw new Error(`${field} failed computed validation: ${e.message}`);
+    if(ruleFunction) {
+      dataValue = await ruleFunction();
+      setValue(dataToValidate, field, dataValue);
     }
   }
 
-  const specialAction = rules[config.action];
-
-  if(specialAction) {
-    try {
-      dataValue = await specialAction({ value: dataValue, item: dataToValidate });
-    } catch (e) {
-      throw new Error(`${field} failed special action: ${e.message}`);
+  // then local validations
+  for(const ruleName of Object.keys(rules)) {
+    const ruleFunction = getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config);
+    
+    if(ruleFunction) {
+      dataValue = await ruleFunction();
+      setValue(dataToValidate, field, dataValue);
     }
   }
 
-  if (rules.default !== undefined && (dataValue === undefined || dataValue === null)) {
-    dataValue = rules.default;
-  }
-
-  const rule = rules.type || rules;
-  const rulesTypeName = getTypeName(rule);
-  const dataTypeName = typeof dataValue;
-  const hasASpecifiedType = rules?.type || isAJavascriptType(rules);
-
-  if (hasASpecifiedType && !isAValidDataType(rulesTypeName, dataTypeName)) {
-    if(rules.strict) {
-      throw new Error(`${field} must be of type ${rulesTypeName}`);
+  if(typeof rules === 'function') {
+    if(isAJavascriptType(rules)) {
+      return rules(dataValue);
     }
-
-    if(typeof rule === 'function') {
-      dataValue = rule(dataValue);
-    }
-  }
-
-  if (rules.enum && !rules.enum.includes(dataValue)) {
-    throw new Error(`${field} must be one of ${rules.enum}`);
-  }
-
-  if (rules.validate && !await rules.validate(dataValue)) {
-    throw new Error(`${field} failed custom validation`);
-  }
-
-  if (rules.select === false) {
-    return {};
-  }
-
-  return {
-    ref: rules.ref ? field : undefined,
-    unique: rules.unique ? field : undefined,
-    validated: dataValue
-  }
-}
-
-function formatValue(dataValue, rules) {
-  if(!rules) {
-    return dataValue;
-  }
-
-  if (rules.trim && typeof dataValue === 'string') {
-    dataValue = dataValue.trim();
-  }
-
-  if (rules.lowercase && typeof dataValue === 'string') {
-    dataValue = dataValue.toLowerCase();
-  }
-
-  if (rules.uppercase && typeof dataValue === 'string') {
-    dataValue = dataValue.toUpperCase();
+    
+    return await executeCustomMethod(rules, dataToValidate, field, dataValue)
   }
 
   return dataValue;
 }
 
-function getComputedConstructor(rules) {
-  return rules.computed || typeof rules === 'function' && !isAJavascriptType(rules)
-    ? rules.computed || rules
-    : undefined;
+async function executeCustomMethod(method, item, field, value) {
+  try {
+    return await method({ value, item });
+  } catch (e) {
+    throw new Error(`${field} failed ${method.name} validation: ${e.message}`);
+  }
 }
 
 function getDataValue(dataToValidate, field) {
@@ -195,8 +126,156 @@ function getDataValue(dataToValidate, field) {
   : dataToValidate;
 }
 
-function getTypeName(rule) {
-  return typeof rule === 'function' ? rule.name.toLowerCase() : rule;
+function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config) {
+  const computed = async () => {
+    return await executeCustomMethod(rules.computed, dataToValidate, field, dataValue);
+  }
+
+  const enumerator = () => {
+    if (!rules.enum.includes(dataValue)) {
+      throw new Error(`${field} must be one of ${rules.enum}`);
+    }
+
+    return dataValue;
+  }
+
+  const lowercase = () => {
+    if(typeof dataValue === 'string') {
+      return dataValue.toLowerCase();
+    }
+
+    return dataValue;
+  }
+
+  const max = () => {
+    if (dataValue > rules.max) {
+      throw new Error(`${field} must be at most ${rules.max}`);
+    }
+
+    return dataValue;
+  }
+
+  const min = () => {
+    if (dataValue < rules.min) {
+      throw new Error(`${field} must be at least ${rules.min}`);
+    }
+
+    return dataValue;
+  }
+
+  const maxLength = () => {
+    if (dataValue.length > rules.maxLength) {
+      throw new Error(`${field} must have a maximum length of ${rules.maxLength}`);
+    }
+
+    return dataValue;
+  }
+
+  const minLength = () => {
+    if (dataValue.length < rules.minLength) {
+      throw new Error(`${field} must have a minimum length of ${rules.minLength}`);
+    }
+
+    return dataValue;
+  }
+
+  const proper = () => {
+    if (typeof dataValue !== 'string' || dataValue.length === 0) {
+      return dataValue;
+    }
+  
+    return dataValue.charAt(0).toUpperCase() + dataValue.slice(1);
+  }
+
+  const required = () => {
+    if (dataValue === undefined || dataValue === null) {
+      throw new Error(`${field} is required`);
+    }
+
+    return dataValue;
+  }
+
+  const setDefaultValue = () => {
+    if(dataValue === undefined || dataValue === null) {
+      return rules.default;
+    }
+
+    return dataValue;
+  }
+
+  const specialAction = async (action) => {
+    if(config?.action !== action) {
+      return dataValue;
+    }
+
+    return await executeCustomMethod(rules[action], dataToValidate, field, dataValue);
+  }
+
+  const trim = () => {
+    if(typeof dataValue === 'string') {
+      return dataValue.trim();
+    }
+
+    return dataValue;
+  }  
+
+  const type = () => {
+    if (!isAValidDataType(rules, dataValue)) {
+      if(rules.strict) {
+        throw new Error(`${field} must be of type ${getTypeName(rules)}`);
+      }
+
+      if(typeof rules.type === 'function') {
+        return rules.type(dataValue);
+      }
+    }
+
+    return dataValue
+  }
+
+  const uppercase = () => {
+    if (typeof dataValue === 'string') {
+      return dataValue.toUpperCase();
+    }
+
+    return dataValue
+  }
+
+  const validate = async () => {
+    if (!await rules.validate(dataValue)) {
+      throw new Error(`${field} failed custom validation`);
+    }
+
+    return dataValue;
+  }
+
+  return {
+    // formatters
+    default: setDefaultValue,
+    enum: enumerator,
+    lowercase,
+    proper,
+    trim,
+    uppercase,
+    // validators
+    max,
+    maxLength,
+    min,
+    minLength,
+    required,
+    type,
+    validate,
+    // computed
+    computed,
+    get: async () => await specialAction('get'),
+    set: async () => await specialAction('set'),
+  
+  }[ruleName];
+}
+
+function getTypeName(rules) {
+  const type = rules?.type;
+  return typeof type === 'function' ? type.name.toLowerCase() : type;
 }
 
 function isAJavascriptType(rules) {
@@ -212,6 +291,19 @@ function isANestedObject(itemValue) {
   return typeof itemValue === 'object' && nativePropertiesToExclude.every(prop => !itemValue.hasOwnProperty(prop));
 }
 
-function isAValidDataType(rulesTypeName, dataTypeName) {
-  return dataTypeName === rulesTypeName || rulesTypeName === '*';
+function isAValidDataType(rules, dataValue) {
+  const rulesTypeName = getTypeName(rules);
+  const dataTypeName = typeof dataValue;
+  const hasASpecifiedType = rules?.type;
+  const typeIsWild = rulesTypeName === '*';
+  
+  return !hasASpecifiedType || typeIsWild || dataTypeName === rulesTypeName;
+}
+
+function setValue(dataToValidate, field, value) {
+  if (typeof dataToValidate === 'object' && dataToValidate !== null) {
+    dataToValidate[field] = value;
+  }
+
+  return value;
 }

@@ -29,6 +29,30 @@ describe('validate', () => {
     expect(validated).toBe('test');
   });
 
+  test(`named validate type works`, async () => {
+    const { validated } = await validate({ type: 'string', strict: true }, '1234');
+
+    expect(validated).toBe('1234');
+  });
+
+  test('lowercase', async () => {
+    const { validated } = await validate({ lowercase: true }, 123);
+
+    expect(validated).toBe(123);
+  });
+
+  test('proper', async () => {
+    const { validated } = await validate({ proper: true }, 'xxxx');
+
+    expect(validated).toBe('Xxxx');
+  });
+
+  test('proper', async () => {
+    const { validated } = await validate({ proper: true }, 1234);
+
+    expect(validated).toBe(1234);
+  });
+
   test('wild * works as expected', async () => {
     const { validated } = await validate({ name: '*' }, { name: 'TeSt'});
     expect(validated).toEqual({ name: 'TeSt'});
@@ -149,9 +173,7 @@ describe('validate', () => {
       username: 'XXXXXXXX',
       password: 'XXXXXXXXXXXX',
       roles: 'admin',
-    })).rejects.toThrowError('roles must be an object');
-  
-  
+    })).rejects.toThrowError('roles must be an object');  
   });
 
   test('nested objects validate', async () => {
@@ -188,21 +210,27 @@ describe('validate', () => {
   });
 
   test('setting default for undefined works', async () => {
-    const testSchema = { username: { type: String, default: 'defaultUsername' } };
+    const testSchema = { username: { default: 'defaultUsername', type: String } };
     const { validated } = await validate(testSchema, { username: undefined });
 
     expect(validated.username).toBe('defaultUsername');
   });
 
   test('setting default for null works', async () => {
-    const testSchema = { username: { type: String, default: 'defaultUsername' } };
+    const testSchema = { username: { default: 'defaultUsername', type: String } };
     const { validated } = await validate(testSchema, { username: null });
 
     expect(validated.username).toBe('defaultUsername');
   });
 
+  test('default ignores when value provided', async () => {
+    const { validated } = await validate({ default: 'a' }, 'b');
+
+    expect(validated).toBe('b');
+  });
+
   test('missing required field throws error', async () => {
-    const testSchema = { username: String, password: { type: String, required: true } };
+    const testSchema = { username: String, password: { required: true, type: String } };
     const testItem = { username: 'XXXX'  };
     
     expect(async () => validate(testSchema, testItem)).rejects.toThrowError('password is required');
@@ -216,7 +244,7 @@ describe('validate', () => {
   });
 
   test('valid type works', async () => {
-    const testSchema = { username: String };  
+    const testSchema = { username: String };
     const testItem = { username: 'testuser' };
 
     const { validated } = await validate(testSchema, testItem);
@@ -230,8 +258,16 @@ describe('validate', () => {
     expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username must be of type string');
   });
 
-  test('not string invalid type corrects', async () => {
+  test('not strict invalid type corrects', async () => {
     const testSchema = { username: String };
+    const testItem = { username: 123 };
+    const { validated } = await validate(testSchema, testItem);
+
+    expect(validated.username).toBe('123')
+  });
+
+  test('not strict invalid complex type corrects', async () => {
+    const testSchema = { username: { type: String } };
     const testItem = { username: 123 };
     const { validated } = await validate(testSchema, testItem);
 
@@ -271,8 +307,9 @@ describe('validate', () => {
   test('computed values throw error', async () => {
     const testSchema = { username: { type: String, computed: _ => `ampt${values}` } };
     const testItem = { username: 'X' };
+    
 
-    expect(async () => validate(testSchema, testItem)).rejects.toThrowError('username failed computed validation');
+    expect(async () => await validate(testSchema, testItem)).rejects.toThrowError('username failed computed validation');
   });
 
   test('computed values work', async () => {
@@ -332,9 +369,9 @@ describe('validate', () => {
     const req = {  user: { _id: 123 } };
     const originalItem = { ...testItem, ...req };
     const { validated: validatedWithSet } = await validate(testSchema, originalItem, { action: 'set' });
-    
+
     // delay 100 ms
-    await new Promise(resolve => setTimeout(resolve, 100) );
+    await new Promise(resolve => setTimeout(resolve, 200) );
 
     const { validated: validatedWithGet } = await validate(testSchema, validatedWithSet, { action: 'get' });
     const { validated: validatedAgain } = await validate(testSchema, validatedWithGet);
@@ -391,13 +428,13 @@ describe('validate', () => {
     expect(validatedWithSet.createdOn).toBe(validatedAgain.createdOn);
   });
 
-  test('getter throws error when expected', async () => {
+  test('getter throws error when expected', () => {
     const testSchema = { username: { type: String, get: () => undefinedVar } };
-    const testItem = { username: 'XXXX' };
+    const testItem = { username: 'XXXXc' };
 
     expect(
       async () => await validate(testSchema, testItem, { action: 'get'})
-    ).rejects.toThrowError('username failed special action: undefinedVar is not defined');
+    ).rejects.toThrowError('username failed get validation: undefinedVar is not defined');
   });
 
   test('rules.min works', async () => {
@@ -468,6 +505,20 @@ describe('validate', () => {
     expect(validated.username).toBe('test');
   });
 
+  test('rules.trim ignores if not string', async () => {
+    const testSchema = { username: { type: Number, trim: true } };
+    const testItem = { username: 1234 };
+
+    const { validated } = await validate(testSchema, testItem);
+    expect(validated.username).toBe(1234);
+  });
+
+  test('default ignores when value provided', async () => {
+    const { validated } = await validate({ name: { proper: true, set: () => 1234 }}, { name: 1234 });
+
+    expect(validated.name).toBe(1234);
+  });
+
   test('rules.lowercase works', async () => {
     const testSchema = { username: { type: String, lowercase: true } };
     const testItem = { username: 'TEST' };
@@ -484,6 +535,14 @@ describe('validate', () => {
     expect(validated.username).toBe('TEST');
   });
 
+  test('rules.uppercase ignores if not string', async () => {
+    const testSchema = { username: { uppercase: true, type: String,  } };
+    const testItem = { username: 1234 };
+
+    const { validated } = await validate(testSchema, testItem);
+    expect(validated.username).toBe('1234');
+  });
+
   test('rules.unique returns uniqueInstructions', async () => {
     const testSchema = { username: { type: String, unique: true } };
     const testItem = { username: 'XXXX' };
@@ -492,12 +551,12 @@ describe('validate', () => {
     expect(uniqueFieldsToCheck).toBeDefined();
   });
 
-  test('rules.select works', async () => {
-    const testSchema = { username: { type: String, select: false } };
-    const testItem = { username: 'test' };
+  test('refs are set apart', async () => {
+    const testSchema = { username: { type: String, unique: true, ref: 'users' } };
+    const testItem = { username: 'XXXX' };
 
-    const { validated } = await validate(testSchema, testItem);
-    expect(validated.username).toBeUndefined();
+    const { uniqueFieldsToCheck, refs } = await validate(testSchema, testItem);
+    expect(refs[0]).toBe('username');
   });
 
 });

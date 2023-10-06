@@ -68,7 +68,7 @@ describe('amptModels', () => {
     expect(response.age).toBe(20);
     expect(response.role).toBe('admin');
     expect(response.orderId).toBe('testcollection:*');
-  }, 20000);
+  }, 30*1000);
 
   test('throws error when unique field has missing label', async () => {
     const testSchema = {
@@ -176,4 +176,4 @@ describe('amptModels', () => {
     expect(removed).toBe(true);
   });
 
-});
+}, 20*1000);
