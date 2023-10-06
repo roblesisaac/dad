@@ -2,7 +2,6 @@ import { params } from '@ampt/sdk';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
 import { isEmptyObject, scrub } from '../../src/utils';
-import { isMeta } from '../utils/records/utils';
 
 import plaidAccounts from '../models/plaidAccounts';
 import plaidItem from '../models/plaidItems';
@@ -136,6 +135,18 @@ const app = function() {
     });
 
     plaidClient = plaidClient || new PlaidApi(config);
+  }
+
+  function isMeta(str) {
+    return [
+      ...Array.from({ length: 5 }, (_, i) => `label${i + 1}`), 
+      'meta', 
+      'overwrite', 
+      'ttl', 
+      'limit',
+      'reverse',
+      'start'
+    ].includes(str);
   }
 
   async function retrieveAccountsFromPlaidForItem(access_token) {
