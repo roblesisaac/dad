@@ -1,6 +1,5 @@
 import { params } from "@ampt/sdk";
 import fetch from "node-fetch";
-// import { Validate } from "./recordJS";
 
 const mongo = function() {
   const state = {
