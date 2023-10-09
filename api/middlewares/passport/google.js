@@ -1,4 +1,4 @@
-import { params } from '@ampt/sdk';
+import { events, params } from '@ampt/sdk';
 import { Strategy } from 'passport-google-oauth20';
 import Users from '../../models/users';
 
@@ -41,6 +41,8 @@ async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     }
 
     const newUser = await Users.save(user);
+    events.publish('users.saved', newUser);
+
     return done(null, newUser);
 }
 

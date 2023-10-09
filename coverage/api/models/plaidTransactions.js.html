@@ -3,15 +3,15 @@
 <html lang="en">
 
 <head>
-    <title>Code coverage report for api/utils/amptModel/errorCodes.js</title>
+    <title>Code coverage report for api/models/plaidTransactions.js</title>
     <meta charset="utf-8" />
-    <link rel="stylesheet" href="../../../prettify.css" />
-    <link rel="stylesheet" href="../../../base.css" />
-    <link rel="shortcut icon" type="image/x-icon" href="../../../favicon.png" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style type='text/css'>
         .coverage-summary .sorter {
-            background-image: url(../../../sort-arrow-sprite.png);
+            background-image: url(../../sort-arrow-sprite.png);
         }
     </style>
 </head>
@@ -19,34 +19,34 @@
 <body>
 <div class='wrapper'>
     <div class='pad1'>
-        <h1><a href="../../../index.html">All files</a> / <a href="index.html">api/utils/amptModel</a> errorCodes.js</h1>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">api/models</a> plaidTransactions.js</h1>
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">89.58% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>70/70</span>
+                <span class='fraction'>86/96</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/0</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/1</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">89.58% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>70/70</span>
+                <span class='fraction'>86/96</span>
             </div>
         
             
@@ -133,7 +133,32 @@
 <a name='L68'></a><a href='#L68'>68</a>
 <a name='L69'></a><a href='#L69'>69</a>
 <a name='L70'></a><a href='#L70'>70</a>
-<a name='L71'></a><a href='#L71'>71</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -195,85 +220,135 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">37x</span>
-<span class="cline-any cline-yes">37x</span>
-<span class="cline-any cline-yes">37x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">19x</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">export const errorCodes = {
-  ARRAY_ERROR: '1001',
-  OBJECT_ERROR: '1002',
-  CUSTOM_COMPUTE_ERROR: '1003',
-  ENUM_ERROR: '1004',
-  MAX_ERROR: '1005',
-  MIN_ERROR: '1006',
-  MAX_LENGTH_ERROR: '1007',
-  MIN_LENGTH_ERROR: '1008',
-  REQUIRED_ERROR: '1009',
-  TYPE_ERROR: '1010',
-  CUSTOM_VALIDATION_ERROR: '1011',
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import AmptModel from '../utils/amptModel';
+import { encrypt, decrypt } from '../utils/encryption';
+&nbsp;
+const locationSchema = {
+  address: String,
+  city: String,
+  region: String,
+  postal_code: String,
+  country: String,
+  lat: Number,
+  lon: Number,
+  store_number: String,
 };
 &nbsp;
-export const errorMessages = {
-  '1001': {
-    en: 'Validation Error: Field must be an array',
-    es: 'Error de validación: El campo debe ser un array',
-  },
-  '1002': {
-    en: 'Validation Error: Field must be an object',
-    es: 'Error de validación: El campo debe ser un objeto',
-  },
-  '1003': {
-    en: 'Validation Error: Validation failed for custom compute function.',
-    es: 'Error de validación: Falló la validación para la función personalizada de cálculo.',
-  },
-  '1004': {
-    en: 'Validation Error: Field must be one of the specified values',
-    es: 'Error de validación: El campo debe ser uno de los valores especificados',
-  },
-  '1005': {
-    en: 'Validation Error: Field exceeds the maximum allowed value',
-    es: 'Error de validación: El campo supera el valor máximo permitido',
-  },
-  '1006': {
-    en: 'Validation Error: Field falls below the minimum allowed value',
-    es: 'Error de validación: El campo está por debajo del valor mínimo permitido',
-  },
-  '1007': {
-    en: 'Validation Error: Field exceeds the maximum allowed length',
-    es: 'Error de validación: El campo supera la longitud máxima permitida',
-  },
-  '1008': {
-    en: 'Validation Error: Field falls below the minimum allowed length',
-    es: 'Error de validación: El campo está por debajo de la longitud mínima permitida',
-  },
-  '1009': {
-    en: 'Validation Error: Field is required',
-    es: 'Error de validación: El campo es obligatorio',
-  },
-  '1010': {
-    en: 'Validation Error: Field has an invalid type',
-    es: 'Error de validación: El campo tiene un tipo no válido',
-  },
-  '1011': {
-    en: 'Validation Error: Custom validation failed',
-    es: 'Error de validación: Falló la validación personalizada',
-  },
+const paymentMetaSchema = {
+  by_order_of: String,
+  payee: String,
+  payer: String,
+  payment_method: String,
+  payment_processor: String,
+  ppd_id: String,
+  reason: String,
+  reference_number: String,
 };
 &nbsp;
-export const getErrorMessage = (code, context = null, lang = 'en') =&gt; {
-  const errorMessage = errorMessages[code]?.[lang] || errorMessages[code]?.en || 'Unknown error';
-&nbsp;
-  if (context !== null) {
-    return `${errorMessage} : '${context}'`;
-  }
-&nbsp;
-  return errorMessage;
+const encryptedValue = {
+  set: encrypt,
+  get: decrypt
 };
-&nbsp;</pre></td></tr></table></pre>
+&nbsp;
+const plaidTransaction = AmptModel('plaidtransactions', {
+  userId: {
+    set: <span class="fstat-no" title="function not covered" >(_, { req }) =&gt; req.user._id</span>
+  },
+  account_id: String,
+  amount: encryptedValue,
+  iso_currency_code: String,
+  unofficial_currency_code: String,
+  category: <span class="fstat-no" title="function not covered" >(value) =&gt; Array.isArray(value) ? value.join() : value,</span>
+  category_id: String,
+  check_number: String,
+  date: String,
+  datetime: String,
+  authorized_date: String,
+  authorized_datetime: String,
+  location: locationSchema,
+  name: String,
+  merchant_name: String,
+  payment_meta: paymentMetaSchema,
+  payment_channel: String,
+  pending: Boolean,
+  pending_transaction_id: String,
+  personal_finance_category: {
+    primary: String,
+    detailed: String,
+  },
+  account_owner: String,
+  transaction_id: {
+    type: String,
+    unique: true
+  },
+  transaction_code: String,
+  transaction_type: String,
+  label1: {
+    name: 'date',
+    concat: ['userId', 'account_id', 'date']
+  },
+  label2: {
+    name: 'transaction_id',
+    concat: ['userId', 'account_id', 'transaction_id']
+  },
+  label3: {
+    name: 'name',
+    computed: <span class="fstat-no" title="function not covered" >item =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      const { userId, account_id, name } = item;</span>
+<span class="cstat-no" title="statement not covered" >      const lowercaseName = (name || '').toLowerCase();</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      return userId+account_id+lowercaseName</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+  },
+  label4: {
+    name: 'category',
+    computed: <span class="fstat-no" title="function not covered" >item =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      const { userId, account_id, category } = item;</span>
+<span class="cstat-no" title="statement not covered" >      const lowercaseCat = (category || '').toLowerCase();</span>
+<span class="cstat-no" title="statement not covered" ></span>
+<span class="cstat-no" title="statement not covered" >      return userId+account_id+lowercaseCat</span>
+<span class="cstat-no" title="statement not covered" >    }</span>
+  },
+  label5: {
+    name: 'amount',
+    concat: ['userId', 'account_id', 'amount']
+  },
+});
+&nbsp;
+export default plaidTransaction;</pre></td></tr></table></pre>
 
                 <div class='push'></div><!-- for sticky footer -->
             </div><!-- /wrapper -->
@@ -282,14 +357,14 @@ export const getErrorMessage = (code, context = null, lang = 'en') =&gt; {
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
                 at 2023-10-07T02:54:02.655Z
             </div>
-        <script src="../../../prettify.js"></script>
+        <script src="../../prettify.js"></script>
         <script>
             window.onload = function () {
                 prettyPrint();
             };
         </script>
-        <script src="../../../sorter.js"></script>
-        <script src="../../../block-navigation.js"></script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
     </body>
 </html>
     

@@ -1,10 +1,9 @@
-import { params } from "@ampt/sdk";
-import fs from "fs";
+import { params } from '@ampt/sdk';
+import fs from 'fs';
 
-import notify from "../utils/notify";
-import { proper, randomNumber } from "../../src/utils";
-import Users from "../models/users";
-import { decrypt } from '../utils/encryption';
+import notify from '../utils/notify';
+import { proper, randomNumber } from '../../src/utils';
+import Users from '../models/users';
 
 const { 
     APP_NAME,
@@ -12,8 +11,8 @@ const {
 } = params().list();
 
 const appName = proper(APP_NAME);
-const png = fs.readFileSync("./logo.png", "binary");
-const base64 = Buffer.from(png, "binary").toString("base64");
+const png = fs.readFileSync('./logo.png', 'binary');
+const base64 = Buffer.from(png, 'binary').toString('base64');
 const logoImage = `data:image/png;base64,${base64}`;
 
 const template = `
@@ -80,7 +79,7 @@ export async function sendVerificationCode(email, { subject, data }) {
   await Users.updateUser(email, { email_verified });
   
   return notify.email(email, {
-    subject: subject || "Here is your verification code",
+    subject: subject || 'Here is your verification code',
     data: templateData,
     template
   });
@@ -110,7 +109,7 @@ async function firstCheck(body, events) {
   await sendVerificationCode(user.email, {
     subject: 'Verification Still Needed',
     data: {
-      message: "<b>Your Account is about to be removed.</b>"
+      message: '<b>Your Account is about to be removed.</b>'
     }
   });
 
@@ -134,8 +133,8 @@ async function finalCheck({ body }) {
 }
 
 async function userJoined(body, events) {
-  const { email: encryptedEmail, email_verified } = body;
-  const email = decrypt(encryptedEmail);
+  const { email, email_verified } = body;
+  // const email = decrypt(encryptedEmail);
 
   if(email_verified === true) {
     const message = 'Congratulations! Your account has been successfully created.';
@@ -155,7 +154,7 @@ async function userJoined(body, events) {
 }
 
 export function userEvents(events) {
-  events.on("user.firstCheck", ({ body }) => firstCheck(body, events));  
-  events.on("user.finalCheck", finalCheck);
-  events.on("users.saved", ({ body }) => userJoined(body, events));
+  events.on('user.firstCheck', ({ body }) => firstCheck(body, events));  
+  events.on('user.finalCheck', finalCheck);
+  events.on('users.saved', ({ body }) => userJoined(body, events));
 }

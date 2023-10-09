@@ -1,3 +1,4 @@
+import { events } from '@ampt/sdk';
 import { params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
 import { proper } from '../../src/utils';
@@ -123,6 +124,7 @@ export async function signupUser(req, res) {
   
   try {
     const newUser = await Users.save({ email, password });
+    events.publish('users.saved', newUser);
 
     loginUser(req, res, newUser);
   } catch (error) {
