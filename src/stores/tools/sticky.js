@@ -78,8 +78,8 @@ const Sticky = function() {
 	}
 	
 	function buildScrollHandler(elementInstanceData) {
-		const { element, selector, validScreenSizes } = elementInstanceData;
-		const { stuckElements } = stickyState;
+		const { element, selector, validScreenSizes, stickyConfig } = elementInstanceData;
+		const { stuckElements } = stickyState;		
 		
 		let elementData = {
 			boundingBox: null,
@@ -89,6 +89,13 @@ const Sticky = function() {
 		};
 		
 		return () => {
+
+			if(!document.contains(element)) {
+				deregisterElement(selector);
+				Sticky.stickify(stickyConfig);
+				return;			
+			}
+
 			if(!isScreenSizeValid(validScreenSizes)) return;
 			
 			elementData.boundingBox = elementData.boundingBox || buildBoundingBox(element);
@@ -130,13 +137,14 @@ const Sticky = function() {
 		return presets;
 	}
 	
-	function defineSelectorInfo(sticky) {
-		let { selector, stickUnder, unstickWhen, screenSize } = sticky;
+	function defineSelectorInfo(stickyConfig) {
+		let { selector, stickUnder, unstickWhen, screenSize } = stickyConfig;
 		
 		return {
-			selector: selector || sticky, 
+			selector: selector || stickyConfig, 
 			validScreenSizes: screenSize,
-			defaultSettings: { stickUnder, unstickWhen }
+			defaultSettings: { stickUnder, unstickWhen },
+			stickyConfig
 		};
 	}
 	
@@ -157,6 +165,19 @@ const Sticky = function() {
 		}
 		
 		delete registeredElements[selector]; 
+	}
+
+	function getElement(selector) {
+		const isAClass = selector.includes('.');
+
+		if(isAClass) {
+			return document.querySelector(selector);
+		}
+
+		const hasHash = selector.includes('#');
+		const id = hasHash ? selector : '#' + selector;
+
+		return document.querySelector(id);
 	}
 
 	function getStickingPoint(settings, StuckElement, elementData) {
@@ -335,7 +356,12 @@ const Sticky = function() {
 					return;
 				}
 				
-				const element = document.querySelector(selector);
+				const element = getElement(selector);
+
+				if(!document.contains(element)) {
+					return;
+				}
+
 				const elementData = { element, ...selectorInfo, stickyElement };
 				
 				const handlers = {

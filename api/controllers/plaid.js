@@ -13,7 +13,7 @@ const {
   AMPT_URL,
   PLAID_CLIENT_ID,
   PLAID_SECRET_DEVELOPMENT,
-  PLAID_SECRET_SANDBOX
+  // PLAID_SECRET_SANDBOX
 } = params().list();
 
 const app = function() {
@@ -124,11 +124,11 @@ const app = function() {
 
   function initClient() {
     const config = new Configuration({
-      basePath: PlaidEnvironments.sandbox,
+      basePath: PlaidEnvironments.development,
       baseOptions: {
         headers: {
           'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
+          'PLAID-SECRET': PLAID_SECRET_DEVELOPMENT,
           'Plaid-Version': '2020-09-14',
         },
       },

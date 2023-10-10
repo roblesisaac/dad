@@ -5,9 +5,10 @@
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen()" class="grid middle">
-    <!-- Pickers -->
-    <div v-show="state.is('home')" class="cell-1">
+  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
+    
+    <!-- Account + Date -->
+    <div class="cell-1">
       <div class="grid middle">
 
         <!-- Account Selector -->
@@ -33,7 +34,7 @@
     </div>
 
     <!-- Income Expense + Net Tabs -->
-    <div v-show="state.is('home')" class="cell-1 totalsRow">
+    <div class="cell-1 totalsRow">
       <div class="grid">
         <div class="cell auto">
           <ReportTab :state="state" tabName="income" />
@@ -72,7 +73,7 @@
         </div>
 
         <!-- Income Expense + Net Tabs -->
-        <div class="cell-1">
+        <div class="cell-1 totalsRow">
           <div class="grid">
             <div class="cell auto">
               <ReportTab :state="state" tabName="income" />
@@ -88,12 +89,15 @@
 
         <!-- Category Rows -->
         <Transition>
-          <div v-if="!state.isLoading && state.is('home')" class="cell-1">
-            <AccountCategories :state="state" />
-          </div>
+        <div v-if="!state.isLoading && state.is('home')" class="cell-1">
+          <AccountCategories :state="state" />
+        </div>
         </Transition>
+
+
+
         <Transition>
-          <LoadingDots v-if="state.isLoading"></LoadingDots>
+        <LoadingDots v-if="state.isLoading"></LoadingDots>
         </Transition>
 
       </div>
@@ -114,7 +118,13 @@
       </div>
 
       <!-- Selected Category Details List -->
-      
+      <SelectedItems v-if="state.selectedTab.categoryName" :state="state" :categoryName="state.selectedTab.categoryName" />
+
+      <Transition>
+      <div v-if="!state.selectedTab.items.length" class="cell-1 panel p30 text-center">        
+        <b>« Choose an account and category to see detailed transactions here</b>
+      </div>
+      </Transition>
 
     </div>
 
@@ -134,6 +144,7 @@
   import DatePicker from '../components/DatePicker.vue';
   import ReportTab from '../components/ReportTab.vue';
   import AccountCategories from '../components/AccountCategories.vue';
+  import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/app';
 
   const { api, State, sticky } = useAppStore();
@@ -341,15 +352,21 @@
         selectAccount(0);
       },
       handleAccountChange: async () => {
+        app.resetSelectedTab();
         await app.fetchTransactionsForSelectedDate();
         state.sorted = sortAndTotalAllSelectedTransactions();
         state.totals.net = state.totals.income + state.totals.expenses;
+      },
+      resetSelectedTab: () => {
+        state.selectedTab.categoryName = null;
+        state.selectedTab.items = [];
       }
     }
   }();
 
   app.init();
 
+  watch(() => state.selectedTab.tabName, app.resetSelectedTab);
   watch(() => state.selectedTab.account, app.handleAccountChange);
   watch(() => state.date.start, app.handleAccountChange);
   watch(() => state.date.end, app.handleAccountChange);

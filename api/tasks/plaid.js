@@ -2,6 +2,7 @@ import { task, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
+import notify from '../utils/notify';
 
 import plaidItem from '../models/plaidItems';
 import Users from '../models/users';
@@ -9,8 +10,8 @@ import plaidTransaction from '../models/plaidTransactions';
 
 const {
   PLAID_CLIENT_ID,
-  // PLAID_SECRET_DEVELOPMENT,
-  PLAID_SECRET_SANDBOX
+  PLAID_SECRET_DEVELOPMENT,
+  // PLAID_SECRET_SANDBOX
 } = params().list();
 
 const tasks = (function() {
@@ -49,7 +50,7 @@ const tasks = (function() {
       return await fetchTransactionsFromPlaid({ access_token, cursor, itemId, req })
     }
 
-    return await updateItemCursorAndStatus(itemId, cursor, 'complete');
+    return await updateItemCursorAndStatus(itemId, cursor, 'complete', req);
   }
 
   async function buildReq(userId) {
@@ -113,11 +114,11 @@ const tasks = (function() {
   
   function initClient() {
     const config = new Configuration({
-      basePath: PlaidEnvironments.sandbox,
+      basePath: PlaidEnvironments.development,
       baseOptions: {
         headers: {
           'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-          'PLAID-SECRET': PLAID_SECRET_SANDBOX,
+          'PLAID-SECRET': PLAID_SECRET_DEVELOPMENT,
           'Plaid-Version': '2020-09-14',
         },
       },
@@ -132,7 +133,7 @@ const tasks = (function() {
     );
   }
 
-  async function updateItemCursorAndStatus(itemId, cursor, syncStatus) {  
+  async function updateItemCursorAndStatus(itemId, cursor, syncStatus, req) {  
     const nowInPST = new Date(Date.now() - 8 * 3600000);
 
     await plaidItem.update(itemId, { 
@@ -141,11 +142,23 @@ const tasks = (function() {
       cursor
     });
 
+    if(syncStatus === 'complete' && req?.user) {
+      const { user } = req;
+
+      await notify.email(user.email, {
+        subject: 'Plaid Sync Complete!',
+        template: 'Your sync is complete!'
+      });
+
+    }
+
     return { itemId, lastSynced: nowInPST };
   }
 
   const syncTransactions = task('sync.transactions', async ({ body }) => {
     let { itemId, userId } = body;
+
+    plaidClient = plaidClient || initClient();
 
     const { accessToken, cursor } = await plaidItem.findOne(itemId);
     const req = await buildReq(userId);
@@ -157,8 +170,6 @@ const tasks = (function() {
   
   return {
     syncTransactions: function(itemId, userId) {
-      plaidClient = plaidClient || initClient();
-
       syncTransactions.run({ itemId, userId });
     }
   }

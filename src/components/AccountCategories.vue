@@ -1,5 +1,5 @@
 <template>
-  <AccountCategory :state="state" :category="category" :categoryName="categoryName" v-for="(category, categoryName) in selectedTabData" :key="categoryName+state.selectedTab.tabName" />
+  <AccountCategory :state="state" :category="category" :categoryName="categoryName" :key="categoryName+state.selectedTab.tabName" v-for="(category, categoryName) in selectedTabData" />
 </template>
 
 <script setup>

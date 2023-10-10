@@ -1,5 +1,5 @@
 <template>
-<VueDatePicker class="section-content" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" />
+<VueDatePicker class="section-content" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" :enable-time-picker="false" :auto-apply="true" />
 </template>
 
 <script setup>
