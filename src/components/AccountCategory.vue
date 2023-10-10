@@ -29,7 +29,9 @@ const { category, categoryName, state } = defineProps({
   categoryName: String
 });
 
-const isExpanded = ref(false);
+const isExpanded = computed(() => {
+  state.selectedTab.categoryName === categoryName;
+});
 
 const categoryTotal = computed(() => {
   const total = category.reduce((acc, { amount }) => acc + parseFloat(amount), 0);
@@ -37,9 +39,8 @@ const categoryTotal = computed(() => {
 });
 
 function selectCategory(category) {
-  isExpanded.value = !isExpanded.value;
-  
-  state.selectedTab.items[categoryName] = isExpanded.value ? category : [];
+  state.selectedTab.categoryName = categoryName;
+  state.selectedTab.items = isExpanded.value ? category : [];
 }
 
 </script>

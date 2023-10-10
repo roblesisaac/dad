@@ -208,7 +208,7 @@ const app = function() {
 
       const request = {
         user: { client_user_id: user._id },
-        client_name: 'UISHEET',
+        client_name: 'LACRESTA SEED',
         products: ['auth', 'transactions'],
         country_codes: ['US'],
         language: 'en',

@@ -3,9 +3,6 @@ import { hashPassword, comparePassword } from '../utils/auth';
 import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
 import { isValidEmail } from '../../src/utils';
 
-const symbolRegex = /[$&+,:;=?@#|'<>.^*()%!-]/;
-const digitRegex = /\d/;
-
 const Users = AmptModel('users', {
   email: {
     unique: true,
@@ -29,10 +26,14 @@ const Users = AmptModel('users', {
       if (value.length < 8) {
         throw new Error('Password must be at least 8 characters long');
       }
+
+      const symbolRegex = /[$&+,:;=?@#|'<>.^*()%!-]/;
     
       if (!symbolRegex.test(value)) {
         throw new Error('Password must contain at least one symbol character');
       }
+
+      const digitRegex = /\d/;
 
       if (!digitRegex.test(value)) {
         throw new Error('Password must contain at least one numeric character');

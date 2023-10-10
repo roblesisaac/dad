@@ -9,10 +9,14 @@
     <!-- Pickers -->
     <div v-show="state.is('home')" class="cell-1">
       <div class="grid middle">
+
+        <!-- Account Selector -->
         <div class="cell-6-24 section b-bottom b-right line50">
-          <button @click="state.view='acctList'" class="acctButton section-content proper" href="#" v-html="acctName">
+          <button @click="state.view='accountList'" class="acctButton section-content proper" href="#" v-html="acctName">
           </button>
         </div>
+
+        <!-- Date Pickers -->
         <div class="cell-18-24 section b-bottom line50">          
           <div class="grid">
             <div class="cell-10-24">
@@ -24,10 +28,11 @@
             </div>
           </div>
         </div>
+
       </div>
     </div>
 
-    <!-- Totals -->
+    <!-- Income Expense + Net Tabs -->
     <div v-show="state.is('home')" class="cell-1 totalsRow">
       <div class="grid">
         <div class="cell auto">
@@ -54,20 +59,70 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid middle">
-    <div class="cell-shrink section b-right b-bottom">
-    </div>
-  </div>
- 
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
 
-  <!-- DatePicker -->
-  <Transition>
-    <DatePicker v-if="state.is('date')"></DatePicker>
-  </Transition>
+    <!-- Left Side: Account and Date Selector -->
+    <div class="cell-2-5 b-right panel">
+      <div class="grid">
+
+        <!-- Account Selector -->
+        <div class="cell-1 b-bottom section line50">
+          <button @click="state.view='accountList'" class="acctButton section-content proper" href="#" v-html="acctName">
+          </button>
+        </div>
+
+        <!-- Income Expense + Net Tabs -->
+        <div class="cell-1">
+          <div class="grid">
+            <div class="cell auto">
+              <ReportTab :state="state" tabName="income" />
+            </div>
+            <div class="cell auto">
+              <ReportTab :state="state" tabName="expenses" />
+            </div>
+            <div class="cell auto">
+              <ReportTab :state="state" tabName="net" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Category Rows -->
+        <Transition>
+          <div v-if="!state.isLoading && state.is('home')" class="cell-1">
+            <AccountCategories :state="state" />
+          </div>
+        </Transition>
+        <Transition>
+          <LoadingDots v-if="state.isLoading"></LoadingDots>
+        </Transition>
+
+      </div>
+    </div>
+
+    <!-- Right Side: Date and Selected Category Details List -->
+    <div class="cell-3-5">
+
+      <!-- Date Pickers -->
+      <div class="grid middle">
+        <div class="cell-10-24 section line50 b-bottom">
+          <DatePicker :date="state.date" when="start" />
+        </div>
+        <div class="cell-4-24 bold section line50 b-bottom">thru</div>
+        <div class="cell-10-24 section line50 b-bottom">
+          <DatePicker :date="state.date" when="end" />
+        </div>
+      </div>
+
+      <!-- Selected Category Details List -->
+      
+
+    </div>
+
+  </div>
 
     <!-- AccountList -->
   <Transition>
-    <AccountList v-if="state.is('acctList')" :state="state"></AccountList>
+    <AccountList v-if="state.is('accountList')" :state="state"></AccountList>
   </Transition>
 </template>
 
@@ -82,7 +137,6 @@
   import { useAppStore } from '../stores/app';
 
   const { api, State, sticky } = useAppStore();
-
 
   onMounted(() => {
     sticky.stickify('.totalsRow');
@@ -108,9 +162,10 @@
     linkToken: null,
     selectedTab: {
       account: null,
+      categoryName: null,
       tabName: 'income',
       allTransactions: [],
-      items: {}
+      items: []
     },
     sorted: {},
     totals: {
@@ -322,27 +377,31 @@
   line-height: 50px;
 }
 
+.panel {
+  height: 100vh;
+}
+
 .section {
   height: 50px;
 }
 
-.section.b-right {
+.b-right {
   border-right: 2px solid #000;
 }
 
-.section.b-left {
+.b-left {
   border-left: 2px solid #000;
 }
 
-.section.b-bottom {
+.b-bottom {
   border-bottom: 2px solid #000;
 }
 
-.section.b-bottom-dashed {
+.b-bottom-dashed {
   border-bottom: 2px dotted #000;
 }
 
-.section.b-top {
+.b-top {
   border-top: 2px solid #000;
 }
 
