@@ -57,10 +57,10 @@ watch(isSelected, () => {
   const el = document.getElementById(id);
 
   if(isSelected.value) {
-    sticky.stickify(id);
+    // sticky.stickify(id);
     hideRightBorder(el);
   } else {
-    sticky.unstick(id);
+    // sticky.unstick(id);
     showRightBorder(el);
   }
 });

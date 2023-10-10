@@ -177,7 +177,7 @@ const Sticky = function() {
 		const hasHash = selector.includes('#');
 		const id = hasHash ? selector : '#' + selector;
 
-		return document.querySelector(id);
+		return document.getElementById(id);
 	}
 
 	function getStickingPoint(settings, StuckElement, elementData) {
