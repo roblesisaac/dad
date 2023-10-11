@@ -57,18 +57,16 @@ watch(isSelected, () => {
   const el = document.getElementById(id);
 
   if(isSelected.value) {
-    // sticky.stickify(id);
     hideRightBorder(el);
+    sticky.stickify(id);    
   } else {
-    // sticky.unstick(id);
+    sticky.unstick(id);
     showRightBorder(el);
   }
 });
 
 function hideRightBorder(el) {
-  const box = el.getBoundingClientRect();
-
-  el.style.width = box.width - 37 + 'px';
+  el.style.width = getInnerWidth(el) + 2 + 'px';
   el.style.background = '#f3f4ee';
 }
 
@@ -76,6 +74,24 @@ function showRightBorder(el) {
   el.style.width = '';
   el.style.background = '';
 }
+
+function getInnerWidth(el) {
+  if (!(el instanceof HTMLElement)) {
+    console.error('Invalid element provided.');
+    return null;
+  }
+
+  const computedStyles = window.getComputedStyle(el);
+  const paddingLeft = parseFloat(computedStyles.paddingLeft);
+  const paddingRight = parseFloat(computedStyles.paddingRight);
+  const borderLeft = parseFloat(computedStyles.borderLeftWidth);
+  const borderRight = parseFloat(computedStyles.borderRightWidth);
+
+  const innerWidth = el.clientWidth - (paddingLeft + paddingRight + borderLeft + borderRight);
+
+  return innerWidth;
+}
+
 
 </script>
 
