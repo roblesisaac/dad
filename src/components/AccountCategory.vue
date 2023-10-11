@@ -1,17 +1,24 @@
 <template>
 <div :id="id" @click="selectCategory(category)" class="grid categoryRow proper">
-  <div class="cell auto categoryTitle">
-    <b>{{ category.length }}</b> {{ categoryName }} <b>{{  categoryTotal }}</b>
+
+  <div :id="id+'title'" class="cell-1">
+    <div class="grid">
+      <div class="cell auto categoryTitle">
+        <b>{{ category.length }}</b> {{ categoryName }} <b>{{  categoryTotal }}</b>
+      </div>
+      <div class="cell shrink categoryExpand">
+        <a href="#"  class="bold colorJet icon">
+          <Minus v-if="isSelected" />
+          <Plus v-else />
+        </a>
+      </div>
+    </div>
   </div>
-  <div class="cell shrink categoryExpand">
-    <a href="#"  class="bold colorJet icon">
-      <Minus v-if="isSelected" />
-      <Plus v-else />
-    </a>
-  </div>
+
   <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
     <SelectedItems :state="state" :categoryName="categoryName" />
   </div>
+
 </div>
 </template>
 
@@ -51,6 +58,12 @@ function selectCategory(category) {
 
 watch(isSelected, () => {
   if(state.isSmallScreen()) {
+    if(isSelected.value) {
+      sticky.stickify(id+'title');    
+    } else {
+      sticky.unstick(id+'title');
+    }
+
     return;
   }
 
