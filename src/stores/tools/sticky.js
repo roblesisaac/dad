@@ -51,7 +51,7 @@ const Sticky = function() {
 		
 		return ({ deRegistering }) => {
 			if(deRegistering) {
-				return makeElementUnsticky(elementData);
+				return makeElementUnsticky(elementData.selector);
 			}
 			
 			const currentWindowSize = window.innerWidth;
@@ -59,7 +59,7 @@ const Sticky = function() {
 			
 			previousWindowSize = currentWindowSize;
 			if (sizeDifference > 1) {
-				makeElementUnsticky(elementData);
+				makeElementUnsticky(elementData.selector);
 			}
 		}
 	}
@@ -82,7 +82,6 @@ const Sticky = function() {
 		
 		let elementData = {
 			boundingBox: null,
-			isSticky: false,
 			initialStyle: null,
 			...elementInstanceData
 		};
@@ -106,7 +105,7 @@ const Sticky = function() {
 			setScrollDirection(currentScrollPosition);
 			
 			if(currentScrollPosition <= stickingPoint) {
-				return makeElementUnsticky(elementData);
+				return makeElementUnsticky(selector);
 			}
 			
 			makeElementSticky(stickingPoint, elementData);
@@ -276,18 +275,15 @@ const Sticky = function() {
 	}
 	
 	function makeElementSticky (stickingPoint, elementData) {
-		if(elementData.isSticky) {
+		const { element, boundingBox, selector } = elementData;
+		const { stuckElements } = stickyState;
+
+		if(stuckElements.hasOwnProperty(selector)) {
 			return;
 		}
 
-		elementData.isSticky = true;
+		elementData.initialStyle = getUserDefinedStyles(element);
 
-		const { element, boundingBox, selector } = elementData;
-		const initialStyle = getUserDefinedStyles(element);
-		
-		elementData.initialStyle = initialStyle;
-
-		const { stuckElements } = stickyState;
 		let { top, left, height, width } = boundingBox;
 		
 		top = top - stickingPoint;
@@ -298,6 +294,11 @@ const Sticky = function() {
 			width: parseFloat(width) + 'px',
 			zIndex: Math.round(100 + stuckElements.height)
 		};
+
+		// Add data to state
+		const bottom = top + boundingBox.height;
+		stuckElements[selector] = { height, stickingPoint, top, bottom, ...elementData };
+		stuckElements.height += height;
 		
 		//Make sticky
 		element.classList.add('stickify');
@@ -306,49 +307,40 @@ const Sticky = function() {
 		//Add placeholder to dom
 		elementData.placeholder = elementData.placeholder || buildPlaceholderElement(boundingBox);
 		element.parentNode.insertBefore(elementData.placeholder, element.nextSibling);
-		
-		//Add data to state
-		const bottom = top + boundingBox.height;
-		stuckElements[selector] = { height, stickingPoint, top, bottom };
-		stuckElements.height += height;
 	}
 	
-	function makeElementUnsticky(elementData) {
-		if(!elementData.isSticky) return;
+	function makeElementUnsticky(selector) {
+		const { stuckElements } = stickyState;
 
-		elementData.isSticky = false;
+		if(!stuckElements[selector]) {
+			return;
+		}
 
-		const { boundingBox, element, initialStyle, placeholder, selector } = elementData;
-		
+		const { boundingBox, element, initialStyle, placeholder } = stuckElements[selector];
+
+		delete stuckElements[selector];
+
 		if(!boundingBox) {
 			return;
 		}
-		
-		const { stuckElements } = stickyState;
-		const { height } = boundingBox;
 		
 		for (const property in initialStyle) {
 			element.style[property] = initialStyle[property];
 		}
 
 		element.classList.remove('stickify');
-		elementData.boundingBox = buildBoundingBox(element);
+		const boundingBoxToRemove = buildBoundingBox(element);
 		
-		stuckElements.height -= height;
-		delete stuckElements[selector];
+		stuckElements.height -= boundingBoxToRemove.height;
 		
 		if (element.nextSibling === placeholder) {
 			element.parentNode.removeChild(placeholder);
 		}
 	}
 	
-	function registerElementToScrollHandler(elementHandlerData, handlers) {
-		const { selector } = elementHandlerData;
-		
-		const options = { passive: true };
-		
+	function registerElementToScrollHandler(selector, handlers) {		
 		for (let eventName in handlers) {
-			window.addEventListener(eventName, handlers[eventName], options);
+			window.addEventListener(eventName, handlers[eventName], { passive: true });
 		}
 		
 		stickyState.registeredElements[selector] = { handlers };
@@ -381,37 +373,19 @@ const Sticky = function() {
 	
 	return { 
 		state: stickyState,
-		stickyfy(stickyConfigs) {
-			for(const stickyConfig of convertToArray(stickyConfigs)) {
-				const config = defineConfigs(stickyConfig);
-				const { selector } = config;
-				const element = getElement(selector);
-
-				if(isElementAlreadyRegistered(selector) || !document.contains(element)) {
-					return;
-				}
-
-
-			}
-		},
 		stickify(stickyConfigs) {
 			for (const stickyConfig of convertToArray(stickyConfigs)) {
 				const config = defineConfigs(stickyConfig);
 				const { selector } = config;
-				
-				if(isElementAlreadyRegistered(selector)) {
-					return;
-				}
-				
 				const element = getElement(selector);
-
-				if(!document.contains(element)) {
+				
+				if(isElementAlreadyRegistered(selector) || !document.contains(element)) {
 					return;
 				}
 
 				const elementData = { element, ...config, stickyConfig };
 				
-				registerElementToScrollHandler({ selector }, {
+				registerElementToScrollHandler(selector, {
 					scroll: buildScrollHandler(elementData),
 					resize: buildResizeHandler(elementData)
 				});
