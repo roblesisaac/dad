@@ -342,8 +342,8 @@ const Sticky = function() {
 		}
 	}
 	
-	function registerElementToScrollHandler(elementHandlerData) {
-		const { selector, handlers } = elementHandlerData;
+	function registerElementToScrollHandler(elementHandlerData, handlers) {
+		const { selector } = elementHandlerData;
 		
 		const options = { passive: true };
 		
@@ -381,6 +381,19 @@ const Sticky = function() {
 	
 	return { 
 		state: stickyState,
+		stickyfy(stickyConfigs) {
+			for(const stickyConfig of convertToArray(stickyConfigs)) {
+				const config = defineConfigs(stickyConfig);
+				const { selector } = config;
+				const element = getElement(selector);
+
+				if(isElementAlreadyRegistered(selector) || !document.contains(element)) {
+					return;
+				}
+
+
+			}
+		},
 		stickify(stickyConfigs) {
 			for (const stickyConfig of convertToArray(stickyConfigs)) {
 				const config = defineConfigs(stickyConfig);
@@ -398,12 +411,10 @@ const Sticky = function() {
 
 				const elementData = { element, ...config, stickyConfig };
 				
-				const handlers = {
+				registerElementToScrollHandler({ selector }, {
 					scroll: buildScrollHandler(elementData),
 					resize: buildResizeHandler(elementData)
-				}
-				
-				registerElementToScrollHandler({ selector, handlers });
+				});
 			}
 		},
 		unstick(stickyConfigs) {
