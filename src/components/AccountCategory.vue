@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, watch } from 'vue';
+import { computed, defineProps, nextTick, watch } from 'vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import SelectedItems from './SelectedItems.vue';
@@ -54,24 +54,22 @@ const categoryTotal = computed(() => {
 function selectCategory(category) {
   state.selectedTab.categoryName = state.selectedTab.categoryName === categoryName ? null : categoryName;
   state.selectedTab.items = isSelected.value ? category : [];
+  leftPanel.style.height = null;
 }
 
 watch(isSelected, () => {
   if(state.isSmallScreen()) {
-    if(isSelected.value) {
-      sticky.stickify(id+'title');    
-    } else {
-      sticky.unstick(id+'title');
-    }
-
     return;
   }
 
   const el = document.getElementById(id);
+  const leftPanel = document.getElementById('leftPanel');
+  const rightPanel = document.getElementById('rightPanel');
 
   if(isSelected.value) {
     hideRightBorder(el);
-    sticky.stickify(id);    
+    sticky.stickify(id);
+    nextTick(() => matchPanelSizes(leftPanel, rightPanel));  
   } else {
     sticky.unstick(id);
     showRightBorder(el);
@@ -81,6 +79,10 @@ watch(isSelected, () => {
 function hideRightBorder(el) {
   el.style.width = getInnerWidth(el) + 2 + 'px';
   el.style.background = '#f3f4ee';
+}
+
+function matchPanelSizes(leftPanel, rightPanel) {
+  leftPanel.style.height = rightPanel.scrollHeight + 'px';
 }
 
 function showRightBorder(el) {

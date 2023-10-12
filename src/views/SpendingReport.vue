@@ -63,7 +63,7 @@
   <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
 
     <!-- Left Side: Account and Date Selector -->
-    <div class="cell-2-5 b-right panel">
+    <div id="leftPanel" class="cell-2-5 b-right panel">
       <div class="grid">
 
         <!-- Account Selector -->
@@ -104,7 +104,7 @@
     </div>
 
     <!-- Right Side: Date and Selected Category Details List -->
-    <div class="cell-3-5">
+    <div id="rightPanel" class="cell-3-5">
 
       <!-- Date Pickers -->
       <div class="grid middle">

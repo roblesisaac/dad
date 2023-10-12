@@ -409,7 +409,10 @@ const Sticky = function() {
 		unstick(stickyConfigs) {
 			for(const stickyConfig of convertToArray(stickyConfigs)) {
 				const config = defineConfigs(stickyConfig);
-				
+				// const element = getElement(config.selector);
+				// const elementData = { element, ...config, stickyConfig };
+
+				// makeElementUnsticky(elementData);
 				deregisterElement(config.selector);
 			}
 		},
