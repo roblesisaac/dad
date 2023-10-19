@@ -29,7 +29,7 @@ describe('amptModels', () => {
 
   const labelsConfig = {
     label1: 'name',
-    label2: ({ item }) => `name length is ${item.name.length}`,
+    label2: item => `name length is ${item.name.length}`,
     label3: {
       name: 'user_details',
       concat: ['name', 'age'],

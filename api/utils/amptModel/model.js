@@ -3,8 +3,8 @@ import validator from './validate';
 import { generateDate } from '../../../src/utils';
 import LabelsMap from './labelsMap';
 
-export default function(collectionName, schemaConfig, globalConfig) {
-  const labelsMap = LabelsMap(collectionName, schemaConfig);
+export default function(collectionNameConfig, schemaConfig, globalConfig) {
+  const labelsMap = LabelsMap(collectionNameConfig, schemaConfig);
   const schema = extractSchema(schemaConfig);
 
   function buildId(yyyymmdd) {
@@ -12,20 +12,55 @@ export default function(collectionName, schemaConfig, globalConfig) {
     return `${generateDate(yyyymmdd)}_${random}`;
   }
 
-  function buildSchema_Id() {
-    return `${collectionName}:${buildId()}`;
+  function buildSchema_Id(context, includeDate) {
+    const sort = includeDate 
+      ? `:${buildId()}` 
+      : '';
+
+    if(typeof collectionNameConfig === 'string') {
+      return `${collectionNameConfig}${sort}`;
+    }
+
+    if(!Array.isArray(collectionNameConfig)) {
+      throw new Error('Collection name must be a string or array of strings');
+    }
+
+    try {
+      const [collectionName, ...props] = collectionNameConfig;
+
+      let _id = collectionName;
+
+      for (const propName of props) {
+        if(!context.hasOwnProperty(propName)) {
+          throw new Error(`Error building _id: Property '${propName}' does not exist in context..`);
+        }
+
+        const propValue = String(context[propName]).replaceAll(':', '-');
+
+        _id += `-${propValue}`;
+      }
+      
+      return `${_id}${sort}`;
+
+    } catch (error) {
+      throw new Error(`Error building schema_id for ${collectionNameConfig}: ${error.message}`);
+    }
   }
 
   async function checkForDuplicate(validated, uniqueField) {
     if(!labelsMap.hasLabel(uniqueField)) {
-      throw new Error(`Unique field '${uniqueField}' for '${collectionName}' must be labeled in a labelsConfig...`);
+      throw new Error(`Unique field '${uniqueField}' for '${collectionNameConfig}' must be labeled in a labelsConfig...`);
     }
 
-    const duplicate = await findOne({ [uniqueField]: validated[uniqueField] });
+    const duplicate = await findOne({ [uniqueField]: validated[uniqueField], ...validated });
 
     if(!!duplicate && duplicate?._id !== validated?._id) {
-      throw new Error(`Duplicate value for '${uniqueField}' exists in collection '${collectionName}'`);
+      throw new Error(`Duplicate value for '${uniqueField}' exists in collection '${collectionNameConfig}'`);
     }
+  }
+
+  function extractCollectionFromId(id) {
+    return id.split(':')[0];
   }
 
   function extractSchema(schemaConfig) {
@@ -51,59 +86,58 @@ export default function(collectionName, schemaConfig, globalConfig) {
   }
 
   async function find(filter, options) {
+    filter = filter || `${collectionNameConfig}:*`;
+
     if(typeof filter === 'string') {
-      return await data.get(filter, options);
+      const response = await data.get(filter, options);
+
+      if(!response) {
+        return { items: [null] };
+      }
+
+      const items = await validateItems(response.items || { key: filter, value: response });
+
+      return { items, next: response.next, lastKey: response.lastKey };
     };
 
     if(!isObject(filter)) {
       throw new Error('Filter must be an object or string');
     };
 
-    const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(filter);
+    const _id = buildSchema_Id(filter);
+    const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(_id, filter);
     const foundResponse = await data.getByLabel(labelNumber, labelValue, options);
     const { items: foundItems, lastKey, next } = foundResponse;
-    const validatedItems = [];
-
-    for(const foundItem of foundItems) {
-      const { validated: validatedFound, refs, skipped } = await validate(foundItem.value, 'get');
-
-      if(refs.length) {
-        for(const ref of refs) {
-          validatedFound[ref] = await fetchRef(validatedFound, ref)
-        }
-      }
-      
-      validatedItems.push({ _id: foundItem.key, ...validatedFound });
-    }
+    const validatedItems = await validateItems(foundItems);
 
     return { items: validatedItems, lastKey, next };
   }
 
-  async function findOne(filter) {
-    filter = filter || `${collectionName}:*`;
-
-    if(typeof filter === 'string') {
-      let foundItem = await data.get(filter);
-
-      if(!foundItem) {
-        return null;
-      }
-
-      foundItem = filter.includes('*') ? foundItem.items[0] : foundItem;
-
-      const _id = foundItem?.key ? foundItem.key : filter;
-
-      const { validated: validatedItem } = await validate(foundItem.value || foundItem, 'get');
-
-      return { _id, ...validatedItem };
+  async function findAll(filter, options) {
+    let response = await find(filter, options);
+    let allItems = [...response.items];
+    
+    while (response.lastKey) {
+      response = await find(filter, { start: response.lastKey });
+      const items = response.items || response;
+      allItems = [...allItems, ...items];
     }
 
-    const response = await find(filter, { limit: 1 });
-    return response?.items?.[0];
+    return allItems;  
+  }
+
+  async function findOne(filter) {
+    const { items } = await find(filter);
+
+    return items[0];
   }
 
   function isObject(value) {
     return typeof value === 'object' && !Array.isArray(value);
+  }
+
+  function makeArray(value) {
+    return Array.isArray(value) ? value : [value];
   }
 
   async function save(value) {
@@ -113,8 +147,10 @@ export default function(collectionName, schemaConfig, globalConfig) {
       await checkForDuplicate(validated, uniqueField);
     }
 
-    const createdLabels = await labelsMap.createLabelKeys(validated);
-    const _id = value._id || buildSchema_Id();
+    const _id = value._id || buildSchema_Id(validated, true);
+    const collectionId = extractCollectionFromId(_id);
+
+    const createdLabels = await labelsMap.createLabelKeys(collectionId, validated);    
     
     const saved = await data.set(_id, validated, { ...createdLabels });
     const { validated: validatedSaved } = await validate(saved, 'get');
@@ -130,14 +166,16 @@ export default function(collectionName, schemaConfig, globalConfig) {
     }
 
     const { validated:validatedUpdate, uniqueFieldsToCheck, skipped } = await validate({ ...existingItem, ...updates });
+    const existingId = existingItem._id;
 
     for(const uniqueField of uniqueFieldsToCheck) {
-      await checkForDuplicate({ _id: existingItem._id, ...validatedUpdate }, uniqueField);
+      await checkForDuplicate({ _id: existingId, ...validatedUpdate }, uniqueField);
     }
 
-    const createdLabels = await labelsMap.createLabelKeys(validatedUpdate, skipped);
+    const collectionFromId = extractCollectionFromId(existingId);
+    const createdLabels = await labelsMap.createLabelKeys(collectionFromId, validatedUpdate, skipped);
 
-    const updated = await data.set(existingItem._id,
+    const updated = await data.set(existingId,
       validatedUpdate, 
       createdLabels
     );
@@ -151,11 +189,30 @@ export default function(collectionName, schemaConfig, globalConfig) {
     return await validator(schema, dataToValidate, { globalConfig, action });
   }
 
+  async function validateItems(items, action='get') {
+    const validatedItems = [];
+
+    for (const item of makeArray(items)) {
+      const { validated: validatedFound, refs } = await validate(item.value, action);
+
+      if(refs?.length) {
+        for(const ref of refs) {
+          validatedFound[ref] = await fetchRef(validatedFound, ref)
+        }
+      }
+      
+      validatedItems.push({ _id: item.key, ...validatedFound }); 
+    }
+
+    return validatedItems;
+  }
+
   return {
     validate,
     labelsMap,
     save,
     find,
+    findAll,
     findOne,
     update,
     erase: async function(filter) { 
@@ -168,7 +225,7 @@ export default function(collectionName, schemaConfig, globalConfig) {
       const { _id } = await findOne(filter) || {};
 
       if(!_id) {
-        throw new Error(`Item not found when trying to perform erase in collection '${collectionName}' for filter '${JSON.stringify(filter)}'`);
+        throw new Error(`Item not found when trying to perform erase in collection '${collectionNameConfig}' for filter '${JSON.stringify(filter)}'`);
       }
 
       const isRemoved = await data.remove(_id);

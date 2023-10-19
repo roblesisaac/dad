@@ -1,7 +1,7 @@
 <template>
-<div :id="id" @click="selectCategory(category)" class="grid categoryRow proper">
+<div :id="id" class="grid categoryRow proper">
 
-  <div :id="id+'title'" class="cell-1">
+  <div @click="selectCategory(category)" :id="id+'title'" class="cell-1">
     <div class="grid">
       <div class="cell auto categoryTitle">
         <b>{{ category.length }}</b> {{ categoryName }} <b>{{  categoryTotal }}</b>
@@ -54,7 +54,6 @@ const categoryTotal = computed(() => {
 function selectCategory(category) {
   state.selectedTab.categoryName = state.selectedTab.categoryName === categoryName ? null : categoryName;
   state.selectedTab.items = isSelected.value ? category : [];
-  leftPanel.style.height = null;
 }
 
 watch(isSelected, () => {
@@ -73,6 +72,7 @@ watch(isSelected, () => {
   } else {
     sticky.unstick(id);
     showRightBorder(el);
+    leftPanel.style.height = null;
   }
 });
 

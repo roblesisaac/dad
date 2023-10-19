@@ -3,7 +3,7 @@ import { hashPassword, comparePassword } from '../utils/auth';
 import { encrypt, decrypt, generateSymmetricKey } from '../utils/encryption';
 import { isValidEmail } from '../../src/utils';
 
-const Users = AmptModel('users', {
+const userSchema = {
   email: {
     unique: true,
     required: true,
@@ -63,7 +63,9 @@ const Users = AmptModel('users', {
   label1: 'email',
   label2: 'email_verified',
   label3: 'role'
-});
+};
+
+const Users = AmptModel('users', userSchema);
 
 Users.authLocalUser = async (email, password, done) => {
   const errorMessage = `The username or password you provided is incorrect.`;

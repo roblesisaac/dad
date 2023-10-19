@@ -84,7 +84,7 @@ export function randomNumber(length=6) {
 
 export const generateDate = (function() {
   function format(num, pad = 2) {
-      return String(num).padStart(pad, '0');
+    return String(num).padStart(pad, '0');
   }
 
   function generateRandomTime() {
@@ -124,7 +124,7 @@ export const generateDate = (function() {
       const minutes = format(d.getUTCMinutes());
       const seconds = format(d.getUTCSeconds());
       
-      return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
+      return `${year}-${month}-${day}T${hours}-${minutes}-${seconds}Z`;
   }
 })();
 

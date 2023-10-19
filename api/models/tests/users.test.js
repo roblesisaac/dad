@@ -10,7 +10,7 @@ describe('users model', () => {
   test('Save new user works', async () => {
     const newUser = await Users.save({
       email: 'testemail@gmail.com',
-      password: 'testpassword',
+      password: 'testpassword1.',
       views: []
     });
 
@@ -20,6 +20,7 @@ describe('users model', () => {
   test('Save new user works without password', async () => {
     const newUser = await Users.save({
       email: 'testemails@gmail.com',
+      email_verified: true,
       views: []
     });
 
@@ -33,7 +34,7 @@ describe('users model', () => {
   test('Save new user throws error when email is already taken', async () => {
     const newUser = {
       email: 'testemail@gmail.com',
-      password: 'testpassword',
+      password: 'testpassword1.',
       views: []
     };
 
@@ -72,7 +73,7 @@ describe('users model', () => {
   }, 1000*20);
 
   test('Auth local user works', async () => {
-    await Users.authLocalUser('testemail@gmail.com', 'testpassword', function(_, user) {
+    await Users.authLocalUser('testemail@gmail.com', 'testpassword1.', function(_, user) {
       expect(user.email).toBe('testemail@gmail.com');
     });
   });

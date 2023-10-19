@@ -11,10 +11,50 @@ export default function(collectionName, config) {
       : url;
   }
 
-  function createLabelValue(labelName, labelValue) {
+  async function createLabelKey(_id, labelName, labelNumber, validated) {
+    const labelConfig = labelsConfig[labelNumber];
+    const url = `${_id}:${labelName}`;
+
+    if(labelConfig.concat && isObject(labelConfig)) {
+      const { concat } = labelConfig;
+
+      if(!Array.isArray(concat)) {
+        handleError(`concat must be an array for '${labelName}'`);
+      }
+
+      if(!concat.every(key => validated.hasOwnProperty(key))) {
+        handleError(`Concat key '${key}' is missing for '${labelName}'`);
+      }
+      
+      const concattedValue = concat.map(key => validated[key]).join(':');
+      
+      return `${url}_${concattedValue}`;
+    }
+
+    if(labelName == labelConfig) {
+      return buildUrl(url, validated, labelName);
+    }
+
+    const computedConstructor = typeof labelConfig == 'function' 
+      ? labelConfig 
+      : labelConfig.computed || labelConfig.value;
+
+    if(typeof computedConstructor === 'function') {
+      try {
+        const computedOutput = await computedConstructor(validated, { item: validated, labelName });          
+        return `${url}_${computedOutput}`;        
+      } catch (error) {
+        handleError(`Error in ${labelName} : ${error.message}`);
+      }
+    }
+
+    return `${url}_${computedConstructor}`;
+  }
+
+  function createLabelValue(_id, labelName, labelValue) {
     if(!labelValue.includes('*')) labelValue += '*';
 
-    return `${collectionName}:${labelName}_${labelValue}`;
+    return `${_id}:${labelName}_${labelValue}`;
   }
 
   function handleError(message) {
@@ -70,45 +110,7 @@ export default function(collectionName, config) {
     collectionName,
     labelsConfig,
     labelNames,
-    createLabelKey: async function(labelName, validated) {
-      const labelNumber = this.getLabelNumber(labelName);
-      const labelConfig = labelsConfig[labelNumber];
-      const url = `${collectionName}:${labelName}`;
-
-      if(labelConfig.concat && isObject(labelConfig)) {
-        const { concat } = labelConfig;
-
-        if(!Array.isArray(concat)) {
-          handleError(`concat must be an array for '${labelName}'`);
-        }
-
-        if(!concat.every(key => validated.hasOwnProperty(key))) {
-          handleError(`some concat keys are missing for '${labelName}'`);
-        }
-        
-        const concattedValue = concat.map(key => validated[key]).join('');
-        
-        return `${url}_${concattedValue}`;
-      }
-
-      if(labelName == labelConfig) {
-        return buildUrl(url, validated, labelName);
-      }
-
-      const computedConstructor = labelConfig.value || labelConfig.computed || labelConfig;
-
-      if(typeof computedConstructor === 'function') {
-        try {
-          const computedOutput = await computedConstructor({ item: validated }, labelName);          
-          return `${url}_${computedOutput}`;        
-        } catch (error) {
-          handleError(`Error in ${labelName} : ${error.message}`);
-        }
-      }
-
-      return `${url}_${computedConstructor}`;
-    },
-    createLabelKeys: async function(validated, skipped) {
+    createLabelKeys: async function(_id, validated, skipped) {
       const createdLabelKeys = {};
 
       for(const labelName in labelNames) {
@@ -116,8 +118,8 @@ export default function(collectionName, config) {
           continue;
         }
 
-        const labelKey = await this.createLabelKey(labelName, validated);
         const labelNumber = this.getLabelNumber(labelName);
+        const labelKey = await createLabelKey(_id, labelName, labelNumber, validated);
         
         createdLabelKeys[labelNumber] = labelKey;
       }
@@ -137,15 +139,15 @@ export default function(collectionName, config) {
 
       return labelNumber;
     },
-    getArgumentsForGetByLabel(filter) {
+    getArgumentsForGetByLabel(_id, filter) {
       const { objKey, objValue } = getFirstLabeledKeyAndValue(filter) || {};
 
       if(!objKey) {
         handleError(`No mapped label found for filter '${JSON.stringify(filter)}' for collection '${collectionName}'`);
       }
 
-      const labelValue = createLabelValue(objKey, objValue || '');
-
+      const labelValue = createLabelValue(_id, objKey, objValue || '');
+      
       return { 
         labelNumber: this.getLabelNumber(objKey),
         labelValue 

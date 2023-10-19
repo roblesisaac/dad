@@ -2,8 +2,8 @@ import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const encryptedValue = {
-  set: encrypt,
-  get: decrypt
+  get: decrypt,
+  computed: encrypt
 };
 
 const accountSchema = {
@@ -27,16 +27,8 @@ const accountSchema = {
   subtype: String,
   type: String,
   itemId: String,
-  label1: {
-    name: 'account_id',
-    concat: ['userId', 'account_id']
-  },
-  label2: {
-    name: 'itemId',
-    concat: ['userId', 'itemId']
-  }
+  label1: 'account_id',
+  label2: 'itemId'
 };
 
-const Accounts = AmptModel('plaidaccounts', accountSchema);
-
-export default Accounts;
+export default AmptModel(['plaidaccounts', 'userId'], accountSchema);

@@ -85,7 +85,7 @@ async function validate(schema, dataToValidate, config={}) {
 }
 
 async function validateItem(rules, dataToValidate, field, config) {
-  const _shouldSkip = rules.hasOwnProperty('get') && !config.action;
+  const _shouldSkip = rules.hasOwnProperty('get') && !config.action && !rules.computed;
 
   if(_shouldSkip) {
     return { _shouldSkip };
@@ -94,11 +94,15 @@ async function validateItem(rules, dataToValidate, field, config) {
   field = field || config?.parentField || dataToValidate;
 
   let dataValue = getDataValue(dataToValidate, field);
-  const globalValidationProps = Object.keys(config.globalConfig || {});
+  const globalValidationProps = Object.keys(config?.globalConfig || {});
   const localtValidationProps = Object.keys(rules);
   const validationProps = [...globalValidationProps, ...localtValidationProps];
 
   for(const ruleName of validationProps) {
+    if(ruleName === 'computed' && config.action === 'get') {
+      continue;
+    }
+
     const ruleFunction = getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config);
 
     if(ruleFunction) {
@@ -109,7 +113,11 @@ async function validateItem(rules, dataToValidate, field, config) {
 
   if(typeof rules === 'function') {
     if(isAJavascriptType(rules)) {
-      return rules(dataValue || '');
+      try {
+        return rules(dataValue || '');
+      } catch (e) {
+        throw new Error(getErrorMessage(errorCodes.TYPE_ERROR, `Field: ${field} - ${e.message}`));
+      }
     }
     
     return await executeCustomMethod(rules, dataToValidate, field, dataValue)
@@ -122,7 +130,11 @@ async function executeCustomMethod(method, item, field, value) {
   try {
     return await method(value, { value, item, ...item });
   } catch (e) {
-    throw new Error(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR, `Field: ${field} - ${e.message}`));
+    const message = typeof e.message === 'string'
+      ? e.message
+      : JSON.stringify(e.message);
+
+    throw new Error(getErrorMessage(errorCodes.CUSTOM_COMPUTE_ERROR, `Field: ${field} - ${message}`));
   }
 }
 

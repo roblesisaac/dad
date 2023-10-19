@@ -1,7 +1,7 @@
 import AmptModel from '../utils/amptModel';
 import { encrypt, encryptWithKey } from '../utils/encryption';
 
-const plaidItem = AmptModel('plaiditems', {
+const itemSchema = {
   userId: {
     set: (_, { req }) => req.user._id,
     isLocked: true
@@ -27,11 +27,8 @@ const plaidItem = AmptModel('plaiditems', {
   institutionName: String,
   cursor: String,
   syncStatus: String,
-  label1: {
-    name: 'itemId',
-    concat: ['userId', 'itemId']
-  },
+  label1: 'itemId',
   label2: 'cursor'
-});
+};
 
-export default plaidItem;
+export default AmptModel(['plaiditems', 'userId'], itemSchema);

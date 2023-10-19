@@ -32,11 +32,7 @@ export function decrypt(encryptedData, dataType) {
       string: decrypted.toString()
     }[dataType] || decrypted.toString();
   } catch (error) {
-    console.error({
-      errorMessage: `Error decrypting...`,
-      encryptedData,
-      error
-    });
+    throw new Error(`Error decrypting - ${error.message} Data: ${JSON.stringify(encryptedData)}.`);
   }
 }
 

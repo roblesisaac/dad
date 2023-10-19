@@ -34,6 +34,12 @@
     </div>
 
     <!-- Income Expense + Net Tabs -->
+    <!-- <ScrollingContent>
+      <ReportTab :state="state" tabName="income" />
+      <ReportTab :state="state" tabName="expenses" />
+      <ReportTab :state="state" tabName="net" />
+    </ScrollingContent> -->
+
     <div class="cell-1 totalsRow">
       <div class="grid">
         <div class="cell auto">
@@ -118,7 +124,7 @@
       </div>
 
       <!-- Selected Category Details List -->
-      <SelectedItems v-if="state.selectedTab.categoryName" :state="state" :categoryName="state.selectedTab.categoryName" />
+      <SelectedItems v-if="state.selectedTab.categoryName" :state="state" :categoryName="state.selectedTab.categoryName" class="p10" />
 
       <Transition>
       <div v-if="!state.selectedTab.items.length" class="cell-1 panel p30 text-center">        
@@ -145,6 +151,7 @@
   import ReportTab from '../components/ReportTab.vue';
   import AccountCategories from '../components/AccountCategories.vue';
   import SelectedItems from '../components/SelectedItems.vue';
+  import ScrollingContent from '../components/ScrollingContent.vue';
   import { useAppStore } from '../stores/app';
 
   const { api, State, sticky } = useAppStore();
@@ -225,7 +232,7 @@
     }
 
     async function fetchUserAccounts() {
-      const { items } = await api.get('api/plaid/accounts');
+      const items = await api.get('api/plaid/accounts');
 
       state.userAccounts = state.userAccounts.concat(items);
     }
@@ -243,7 +250,7 @@
     function isAnExpense({ amount }) {
       const numericAmount = Number(amount);
 
-      return numericAmount < 0;
+      return numericAmount > 0;
     }
 
     function loadScript(src) {
@@ -278,7 +285,7 @@
     }
 
     function sortByDate(data) {
-      return data.sort((a, b) => a?.date?.localeCompare(b?.date));
+      return data.sort((a, b) => b?.date?.localeCompare(a?.date));
     }
 
     function sortAndTotalAllSelectedTransactions(presets={}) {

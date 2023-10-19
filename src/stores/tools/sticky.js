@@ -51,7 +51,7 @@ const Sticky = function() {
 		
 		return ({ deRegistering }) => {
 			if(deRegistering) {
-				return makeElementUnsticky(elementData.selector);
+				return makeElementUnsticky(elementData);
 			}
 			
 			const currentWindowSize = window.innerWidth;
@@ -59,7 +59,7 @@ const Sticky = function() {
 			
 			previousWindowSize = currentWindowSize;
 			if (sizeDifference > 1) {
-				makeElementUnsticky(elementData.selector);
+				makeElementUnsticky(elementData);
 			}
 		}
 	}
@@ -82,6 +82,7 @@ const Sticky = function() {
 		
 		let elementData = {
 			boundingBox: null,
+			isSticky: false,
 			initialStyle: null,
 			...elementInstanceData
 		};
@@ -105,7 +106,7 @@ const Sticky = function() {
 			setScrollDirection(currentScrollPosition);
 			
 			if(currentScrollPosition <= stickingPoint) {
-				return makeElementUnsticky(selector);
+				return makeElementUnsticky(elementData);
 			}
 			
 			makeElementSticky(stickingPoint, elementData);
@@ -275,15 +276,18 @@ const Sticky = function() {
 	}
 	
 	function makeElementSticky (stickingPoint, elementData) {
-		const { element, boundingBox, selector } = elementData;
-		const { stuckElements } = stickyState;
-
-		if(stuckElements.hasOwnProperty(selector)) {
+		if(elementData.isSticky) {
 			return;
 		}
 
-		elementData.initialStyle = getUserDefinedStyles(element);
+		elementData.isSticky = true;
 
+		const { element, boundingBox, selector } = elementData;
+		const initialStyle = getUserDefinedStyles(element);
+		
+		elementData.initialStyle = initialStyle;
+
+		const { stuckElements } = stickyState;
 		let { top, left, height, width } = boundingBox;
 		
 		top = top - stickingPoint;
@@ -294,11 +298,6 @@ const Sticky = function() {
 			width: parseFloat(width) + 'px',
 			zIndex: Math.round(100 + stuckElements.height)
 		};
-
-		// Add data to state
-		const bottom = top + boundingBox.height;
-		stuckElements[selector] = { height, stickingPoint, top, bottom, ...elementData };
-		stuckElements.height += height;
 		
 		//Make sticky
 		element.classList.add('stickify');
@@ -307,31 +306,36 @@ const Sticky = function() {
 		//Add placeholder to dom
 		elementData.placeholder = elementData.placeholder || buildPlaceholderElement(boundingBox);
 		element.parentNode.insertBefore(elementData.placeholder, element.nextSibling);
+		
+		//Add data to state
+		const bottom = top + boundingBox.height;
+		stuckElements[selector] = { height, stickingPoint, top, bottom };
+		stuckElements.height += height;
 	}
 	
-	function makeElementUnsticky(selector) {
-		const { stuckElements } = stickyState;
+	function makeElementUnsticky(elementData) {
+		if(!elementData.isSticky) return;
 
-		if(!stuckElements[selector]) {
-			return;
-		}
+		elementData.isSticky = false;
 
-		const { boundingBox, element, initialStyle, placeholder } = stuckElements[selector];
-
-		delete stuckElements[selector];
-
+		const { boundingBox, element, initialStyle, placeholder, selector } = elementData;
+		
 		if(!boundingBox) {
 			return;
 		}
+		
+		const { stuckElements } = stickyState;
+		const { height } = boundingBox;
 		
 		for (const property in initialStyle) {
 			element.style[property] = initialStyle[property];
 		}
 
 		element.classList.remove('stickify');
-		const boundingBoxToRemove = buildBoundingBox(element);
+		elementData.boundingBox = buildBoundingBox(element);
 		
-		stuckElements.height -= boundingBoxToRemove.height;
+		stuckElements.height -= height;
+		delete stuckElements[selector];
 		
 		if (element.nextSibling === placeholder) {
 			element.parentNode.removeChild(placeholder);

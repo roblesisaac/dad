@@ -1,11 +1,19 @@
 <template>
 <div class="grid">    
-  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton section proper"><PlusVue class="icon" /> Link New Account</button>
-  <div v-else class="cell-1 section line50">
+  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
+  <div v-else class="cell-1 line50">
     <b>Loading <LoadingDots /></b>
   </div>
-  <button v-for="acct in state.userAccounts" @click="app.selectAccount(acct)" href="#" class="acctButton section b-top proper">
-    {{ acct.subtype }} {{  acct.mask }} <ChevronRight class="icon" />
+  <button v-for="acct in state.userAccounts" @click="app.selectAccount(acct)" href="#" class="acctButton b-top proper">
+    <div class="grid middle">
+      <div class="auto">
+        {{ acct.subtype }} {{  acct.mask }}
+        <br><small class="colorBlack">{{ formatPrice(acct.balances.available) }}</small>
+      </div>
+      <div class="shrink">
+        <ChevronRight class="icon" />
+      </div>
+    </div>
   </button>
 </div>
 </template>
@@ -15,6 +23,7 @@ import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/app';
+import { formatPrice } from '../utils';
 
 const { api } = useAppStore();
 const { state } = defineProps({ state: 'object' });

@@ -28,7 +28,7 @@ const encryptedValue = {
   get: decrypt
 };
 
-const plaidTransaction = AmptModel('plaidtransactions', {
+const transactionSchema = {
   userId: {
     set: (_, { req }) => req.user._id
   },
@@ -44,7 +44,10 @@ const plaidTransaction = AmptModel('plaidtransactions', {
   authorized_date: String,
   authorized_datetime: String,
   location: locationSchema,
-  name: String,
+  name: {
+    type: String,
+    lowercase: true
+  },
   merchant_name: String,
   payment_meta: paymentMetaSchema,
   payment_channel: String,
@@ -63,20 +66,15 @@ const plaidTransaction = AmptModel('plaidtransactions', {
   transaction_type: String,
   label1: {
     name: 'date',
-    concat: ['userId', 'account_id', 'date']
+    concat: ['account_id', 'date']
   },
   label2: {
     name: 'transaction_id',
-    concat: ['userId', 'account_id', 'transaction_id']
+    concat: ['account_id', 'transaction_id']
   },
   label3: {
     name: 'name',
-    computed: item => {
-      const { userId, account_id, name } = item;
-      const lowercaseName = (name || '').toLowerCase();
-
-      return userId+account_id+lowercaseName
-    }
+    concat: ['account_id', 'name']
   },
   label4: {
     name: 'category',
@@ -90,7 +88,7 @@ const plaidTransaction = AmptModel('plaidtransactions', {
   label5: {
     name: 'amount',
     concat: ['userId', 'account_id', 'amount']
-  },
-});
+  }
+}
 
-export default plaidTransaction;
+export default AmptModel(['plaidtransactions', 'userId'], transactionSchema);

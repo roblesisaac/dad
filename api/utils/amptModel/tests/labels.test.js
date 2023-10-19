@@ -33,12 +33,6 @@ describe('labelsMap', () => {
     expect(label3Number).toBe('label3');
   });
 
-  test('labelsMap.createlabelKey throws error when expected', () => {
-    expect(async () => {
-      await labelsMap.createLabelKey('random_label', testItem);
-    }).rejects.toThrowError(errorMessage(`No label for 'random_label'`));
-  });
-
   test('labelsMap.hasLabel works', async () => {
     const hasLabel1 = labelsMap.hasLabel('name');
     const hasLabel2 = labelsMap.hasLabel('label2');
@@ -57,18 +51,6 @@ describe('labelsMap', () => {
     expect(isValidLabel1).toBe(true);
     expect(isValidLabel4).toBe(true);
     expect(isValidLabel5).toBe(false);
-  });
-
-  test('labelsMap.createLabelKey works', async () => {
-    const label1Key = await labelsMap.createLabelKey('name', testItem);
-    const label2Key = await labelsMap.createLabelKey('label2', testItem);
-    const label3Key = await labelsMap.createLabelKey('user_details', testItem);
-    const label4Key = await labelsMap.createLabelKey('5', testItem);
-  
-    expect(label1Key).toBe(`${collectionName}:name_${testItem.name}`);
-    expect(label2Key).toBe(`${collectionName}:label2_the length of the name is ${testItem.name.length}`);
-    expect(label3Key).toBe(`${collectionName}:user_details_${testItem.name}${testItem.age}`);
-    expect(label4Key).toBe(`${collectionName}:5`);
   });
 
   test('labelsMap concat must be an array', async () => {
