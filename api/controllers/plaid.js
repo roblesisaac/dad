@@ -119,7 +119,7 @@ const app = function() {
     if(startDate) formatted += startDate;
 
     if(endDate) {
-      formatted += `|date_${userInfo}:${endDate}`;
+      formatted += `|date_${userInfo}${endDate}`;
     } else {
       formatted += '*';
     }
@@ -205,6 +205,35 @@ const app = function() {
     }
   }
 
+  async function syncUserAccounts(user) {
+    let retrievedAccounts = [];
+
+    for(const item of await fetchUserItems(user._id)) {
+      const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+
+      retrievedAccounts = retrievedAccounts.concat(
+        await retrieveAccountsFromPlaidForItem(access_token)
+      );
+    }
+
+    const userAccounts = await fetchUserAccounts(user._id);
+    const synced = [];
+
+    for(const retrieved of retrievedAccounts) {
+      if(hasMatch(userAccounts, retrieved)) {
+        const accountFilter = { account_id: retrieved.account_id, userId: user._id };
+        const updated = await plaidAccounts.update(accountFilter, retrieved);
+        synced.push(updated);
+        continue;
+      }
+
+      const newSavedAccount = await plaidAccounts.save({ ...retrieved, req: { user } });
+      synced.push(newSavedAccount);
+    }
+
+    return synced;
+  }
+
   function warn(userId, itemId, product) {
     console.warn(`Unauthorized attempt: User ${userId} tried to access Plaid ${product} (${itemId}) without proper authorization.`);
   }
@@ -262,7 +291,7 @@ const app = function() {
       const { _id: itemId, access_token } = await savePlaidAccessData(accessData, { user });
       const accounts = await saveAccountsForNewPlaidItem(access_token, { user });
 
-      // tasks.syncTransactions(itemId, user._id);
+      tasks.syncTransactions(itemId, user._id);
 
       res.json(accounts);
     },
@@ -331,35 +360,17 @@ const app = function() {
     syncAccounts: async function({ user }, res) {
       initClient();
 
-      let retrievedAccounts = [];
-
-      for(const item of await fetchUserItems(user._id)) {
-        const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
-
-        retrievedAccounts = retrievedAccounts.concat(
-          await retrieveAccountsFromPlaidForItem(access_token)
-        );
-      }
-
-      const userAccounts = await fetchUserAccounts(user._id);
-      const synced = [];
-
-      for(const retrieved of retrievedAccounts) {
-        if(hasMatch(userAccounts, retrieved)) {
-          const accountFilter = { account_id: retrieved.account_id, userId: user._id };
-          const updated = await plaidAccounts.update(accountFilter, retrieved);
-          synced.push(updated);
-          continue;
-        }
-
-        const newSavedAccount = await plaidAccounts.save({ ...retrieved, req: { user } });
-        synced.push(newSavedAccount);
-      }
+      const synced = await syncUserAccounts(user);
 
       res.json(synced);
     },
     syncAllUserData: async function({ user }, res) {
-      res.json('syncing all user data...');
+      const accounts = await syncUserAccounts(user);
+
+      res.json({
+        accounts,
+        // syncedTransactions: transactions.length
+      });
     }
   }
 }();
