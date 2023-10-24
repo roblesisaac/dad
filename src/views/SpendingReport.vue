@@ -423,10 +423,10 @@
     function processTabData(tab) {
       const { selected } = state;
       const { rules } = tab;
-      const transactions = selected.group.groupTransactions;
+      const allGroupTransactions = selected.group.groupTransactions;
       const { filter, sort, categorize } = getRules(rules);
 
-      const data = sort(transactions);
+      const data = sort(allGroupTransactions);
       const categorizedItems = {};
       let tabTotal = 0;
 
@@ -501,7 +501,7 @@
         const { selected } = state;
 
         state.selected.tab = currentlySelectedTab() || selectTab(0);
-        selected.group.transactions = [];
+        selected.group.groupTransactions = [];
 
         for(const { account_id } of selected.group.accounts) {
           selected.group.groupTransactions = [
@@ -519,7 +519,7 @@
 
   app.init();
 
-  watch(() => state.selected.tab.tabName, app.handleGroupChange);
+  // watch(() => state.selected.tab.tabName, app.handleGroupChange);
   watch(() => state.selected.group._id, app.handleGroupChange);
   watch(() => state.date.start, app.handleGroupChange);
   watch(() => state.date.end, app.handleGroupChange);
