@@ -2,8 +2,8 @@
   <nav class="grid topNav shadow middle">
     
     <!-- logo -->
-    <div class="cell auto text-left bold">
-      <img id="logo" src="../assets/icon.svg" height="30" />
+    <div class="cell auto text-left bold p20l">
+      <button @click="app.reload" class="logoBtn">T</button> TrackTabs
     </div>
 
     <!-- links -->
@@ -45,7 +45,8 @@ const app = function() {
       });
 
       getUserViews();
-    }
+    },
+    reload: () => window.location.reload()
   };
 }();
 
@@ -79,4 +80,20 @@ app.init();
   padding: 10px;
   display: block;
 }
+
+.logoBtn {
+  background-color: #000;
+  box-shadow: 3px 3px 0 #333;
+  /* border: 1px solid #fff; */
+  color: white;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+  border-radius: 5px;
+  padding: 5px 10px;
+}
+
 </style>

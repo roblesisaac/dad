@@ -24,7 +24,7 @@ const { categoryName, state } = defineProps({
 });
 
 const items = computed(() => {
-  return state.selectedTab.items;
+  return state.selected.tab.transactions;
 });
 </script>
 

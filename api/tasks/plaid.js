@@ -76,7 +76,7 @@ const tasks = (function() {
     const { next_cursor, has_more } = plaidData;
 
     if(isEmpty(plaidData, ['added', 'modified', 'removed']) && !has_more) {
-      return await updateItemCursorAndStatus(itemId, next_cursor, 'complete');
+      return await updateItemCursorAndStatus(itemId, next_cursor, 'complete', req);
     }
 
     return await applyTransactionUpdates({ access_token, itemId, cursor: next_cursor, req, has_more, plaidData });
@@ -124,10 +124,10 @@ const tasks = (function() {
     if(syncStatus === 'complete' && req?.user) {
       const { user } = req;
 
-      await notify.email(user.email, {
-        subject: 'Xmit Sync Complete!',
-        template: `Your Xymit account has been successfully synced. Your transactions are now up to date as of ${ nowInPST }.`
-      });
+      // await notify.email(user.email, {
+      //   subject: 'TepTab Sync Complete!',
+      //   template: `Your TepTab account has been successfully synced. Your transactions are now up to date as of ${ nowInPST }.`
+      // });
 
     }
 

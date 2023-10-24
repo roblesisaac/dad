@@ -1,60 +1,84 @@
 <template>
-  <div @click="state.selectedTab.tabName=tabName" class="relative pointer" :class="borders">
+  <div @click="selectTab(tab)" class="relative pointer" :class="borders">
     <small :class="[underline,'section-title']">
-      {{ tabName }}
+      {{ tab.tabName }}
     </small>
     <br/>
-    <a href="#" class="section-content">{{ tabTotal }}</a>
+    <a href="#" class="section-content">{{ formatPrice(tabTotal) }}</a>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick } from 'vue';
 import { formatPrice } from '../utils';
 
-const { state, tabName } = defineProps({
-  state: 'object',
-  tabName: 'string'
+const { state, tab } = defineProps({
+  tab: 'object',
+  state: 'object'
 });
 
-const tabs = ['income', 'expenses', 'net'];
+const { selected } = state;
+const { tabs } = selected.group;
+const tabIndex = getIndex(tabs, { tabName: tab.tabName });
 
 const borders = computed(() => {
-  const rightBorder = isLastInArray(tabName) || isSelected(tabName) ? '' : 'b-right';
-  const bottomBorder = isSelected(tabName) ? 'b-bottom-dashed' : 'b-bottom';
-  const borderLeft = isPreviousSelected(tabName) ? 'b-left' : '';
+  const rightBorder = isLastInArray() || isSelected(tab) ? '' : 'b-right';
+  const bottomBorder = isSelected(tab) ? 'b-bottom-dashed' : 'b-bottom';
+  const borderLeft = isPreviousSelected() ? 'b-left' : '';
 
   return ['section', bottomBorder, rightBorder, borderLeft];
 });
 
 const tabTotal = computed(() => {
-  return formatPrice(state.totals[tabName], {
-    thousands: true,
-    toFixed: 0
-  });
+  return tab.total || 0;
 });
 
 const underline = computed(() => {
-  return isSelected(tabName) ? 'underline' : '';
+  return isSelected(tab) ? 'underline' : '';
 });
 
-function isLastInArray(tabName) {
-  return tabs.indexOf(tabName) === tabs.length - 1;
+function isLastInArray() {
+  return tabIndex === tabs.length - 1;
 }
 
-function isSelected(tabName) {
-  return state.selectedTab.tabName === tabName;
+function isSelected(tab) {
+  return selected.tab.tabName === tab.tabName;
 }
 
-function isPreviousSelected(tabName) {
-  const currentIndex = tabs.indexOf(tabName);
+function isPreviousSelected() {
+  const previous = tabs[tabIndex-1];
 
-  if(!currentIndex) {
-    return;
+  return previous && isSelected(previous);
+}
+
+function getIndex(array, criteria) {
+  for (let i = 0; i < array.length; i++) {
+    const item = array[i];
+    let isMatch = true;
+
+    for (const key in criteria) {
+      if (criteria.hasOwnProperty(key)) {
+        if (item[key] !== criteria[key]) {
+          isMatch = false;
+          break;
+        }
+      }
+    }
+
+    if (isMatch) {
+      return i;
+    }
   }
 
-  const previous = tabs[currentIndex-1];
+  return -1;
+}
 
-  return isSelected(previous);
+function selectTab(tab) {
+  state.selected.tab.isSelected = false;
+
+  nextTick(() => {
+    tab.isSelected = true;
+    state.selected.tab = tab;
+  });
 }
 </script>

@@ -4,13 +4,13 @@
   <div @click="selectCategory(category)" :id="id+'title'" class="cell-1">
     <div class="grid">
       <div class="cell auto categoryTitle">
-        <b>{{ category.length }}</b> {{ categoryName }} <b>{{  categoryTotal }}</b>
+        <b>{{ category.length }}</b> {{ categoryName }} <b>{{ formatPrice(category.categoryTotal, { toFixed: 0}) }}</b>
       </div>
       <div class="cell shrink categoryExpand">
-        <a href="#"  class="bold colorJet icon">
+        <span class="bold colorJet icon">
           <Minus v-if="isSelected" />
           <Plus v-else />
-        </a>
+        </span>
       </div>
     </div>
   </div>
@@ -40,20 +40,15 @@ const { category, categoryName, state, key } = defineProps({
   categoryName: String
 });
 
-const id = (categoryName+state.selectedTab.tabName).replace(/\s/g, '');
+const id = (categoryName+state.selected.tab.tabName).replace(/\s/g, '');
 
 const isSelected = computed(() => {
-  return state.selectedTab.categoryName === categoryName;
-});
-
-const categoryTotal = computed(() => {
-  const total = category.reduce((acc, { amount }) => acc + parseFloat(amount), 0);
-  return formatPrice(total);
+  return state.selected.tab.categoryName === categoryName;
 });
 
 function selectCategory(category) {
-  state.selectedTab.categoryName = state.selectedTab.categoryName === categoryName ? null : categoryName;
-  state.selectedTab.items = isSelected.value ? category : [];
+  state.selected.tab.categoryName = state.selected.tab.categoryName === categoryName ? null : categoryName;
+  state.selected.tab.transactions = isSelected.value ? category : [];
 }
 
 watch(isSelected, () => {

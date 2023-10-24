@@ -7,13 +7,13 @@
   <!-- Small Screens -->
   <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
     
-    <!-- Account + Date -->
+    <!-- Selected Group + Date -->
     <div class="cell-1">
       <div class="grid middle">
 
-        <!-- Account Selector -->
+        <!-- Group Selector -->
         <div class="cell-6-24 section b-bottom b-right line50">
-          <button @click="state.view='accountList'" class="acctButton section-content proper" href="#" v-html="acctName">
+          <button @click="state.view='SelectGroup'" class="acctButton section-content proper" href="#" v-html="groupName">
           </button>
         </div>
 
@@ -33,23 +33,11 @@
       </div>
     </div>
 
-    <!-- Income Expense + Net Tabs -->
-    <!-- <ScrollingContent>
-      <ReportTab :state="state" tabName="income" />
-      <ReportTab :state="state" tabName="expenses" />
-      <ReportTab :state="state" tabName="net" />
-    </ScrollingContent> -->
-
-    <div class="cell-1 totalsRow">
+    <!-- Tab Selector -->
+   <div class="cell-1 totalsRow">
       <div class="grid">
-        <div class="cell auto">
-          <ReportTab :state="state" tabName="income" />
-        </div>
-        <div class="cell auto">
-          <ReportTab :state="state" tabName="expenses" />
-        </div>
-        <div class="cell auto">
-          <ReportTab :state="state" tabName="net" />
+        <div v-for="(tab, tabIndex) in state.selected.group.tabs" class="cell auto">
+          <ReportTab :state="state" :tab="tab" :key="tabIndex" />
         </div>
       </div>
     </div>
@@ -57,7 +45,7 @@
     <!-- Category Rows -->
     <Transition>
       <div v-if="!state.isLoading && state.is('home')" class="cell-1">
-        <AccountCategories :state="state" />
+        <CategoriesWrapper :state="state" />
       </div>
     </Transition>
     <Transition>
@@ -65,80 +53,9 @@
     </Transition>
   </div>
 
-  <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
-
-    <!-- Left Side: Account and Date Selector -->
-    <div id="leftPanel" class="cell-2-5 b-right panel">
-      <div class="grid">
-
-        <!-- Account Selector -->
-        <div class="cell-1 b-bottom section line50">
-          <button @click="state.view='accountList'" class="acctButton section-content proper" href="#" v-html="acctName">
-          </button>
-        </div>
-
-        <!-- Income Expense + Net Tabs -->
-        <div class="cell-1 totalsRow">
-          <div class="grid">
-            <div class="cell auto">
-              <ReportTab :state="state" tabName="income" />
-            </div>
-            <div class="cell auto">
-              <ReportTab :state="state" tabName="expenses" />
-            </div>
-            <div class="cell auto">
-              <ReportTab :state="state" tabName="net" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Category Rows -->
-        <Transition>
-        <div v-if="!state.isLoading && state.is('home')" class="cell-1">
-          <AccountCategories :state="state" />
-        </div>
-        </Transition>
-
-
-
-        <Transition>
-        <LoadingDots v-if="state.isLoading"></LoadingDots>
-        </Transition>
-
-      </div>
-    </div>
-
-    <!-- Right Side: Date and Selected Category Details List -->
-    <div id="rightPanel" class="cell-3-5">
-
-      <!-- Date Pickers -->
-      <div class="grid middle">
-        <div class="cell-10-24 section line50 b-bottom">
-          <DatePicker :date="state.date" when="start" />
-        </div>
-        <div class="cell-4-24 bold section line50 b-bottom">thru</div>
-        <div class="cell-10-24 section line50 b-bottom">
-          <DatePicker :date="state.date" when="end" />
-        </div>
-      </div>
-
-      <!-- Selected Category Details List -->
-      <SelectedItems v-if="state.selectedTab.categoryName" :state="state" :categoryName="state.selectedTab.categoryName" class="p10" />
-
-      <Transition>
-      <div v-if="!state.selectedTab.items.length" class="cell-1 panel p30 text-center">        
-        <b>« Choose an account and category to see detailed transactions here</b>
-      </div>
-      </Transition>
-
-    </div>
-
-  </div>
-
-    <!-- AccountList -->
+    <!-- SelectGroup -->
   <Transition>
-    <AccountList v-if="state.is('accountList')" :state="state"></AccountList>
+    <SelectGroup v-if="state.is('SelectGroup')" :state="state"></SelectGroup>
   </Transition>
 </template>
 
@@ -146,12 +63,12 @@
   import { computed, onMounted, nextTick, reactive, watch } from 'vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
   import LoadingDots from '../components/LoadingDots.vue';
-  import AccountList from '../components/AccountList.vue';
+  import SelectGroup from '../components/SelectGroup.vue';
   import DatePicker from '../components/DatePicker.vue';
   import ReportTab from '../components/ReportTab.vue';
-  import AccountCategories from '../components/AccountCategories.vue';
-  import SelectedItems from '../components/SelectedItems.vue';
-  import ScrollingContent from '../components/ScrollingContent.vue';
+  import CategoriesWrapper from '../components/CategoriesWrapper.vue';
+  // import SelectedItems from '../components/SelectedItems.vue';
+  // import ScrollingContent from '../components/ScrollingContent.vue';
   import { useAppStore } from '../stores/app';
 
   const { api, State, sticky } = useAppStore();
@@ -161,6 +78,10 @@
   });
 
   const state = reactive({
+    allUserAccounts: [],
+    allUserGroups: [],
+    allUserTabs: [],
+    allUserRules: [],
     date: {
       start: 'firstOfMonth',
       end: 'today'
@@ -168,6 +89,10 @@
     elems: {
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
+    },
+    global: {
+      tabs: [],
+      rules: []
     },
     isLoading: false,
     is(view) {
@@ -178,34 +103,56 @@
       return State.currentScreenSize() === 'small'
     },
     linkToken: null,
-    selectedTab: {
-      account: null,
-      categoryName: null,
-      tabName: 'income',
-      allTransactions: [],
-      items: []
+    selected: {
+      group: {},
+      tab: {}
     },
-    sorted: {},
-    totals: {
-      income: 0, expenses: 0, net: 0
-    },
-    userAccounts: [],
     view: 'home'
   });
 
-  const acctName = computed(() => {
-    const { selectedTab } = state;
+  const groupName = computed(() => {
+    const { group } = state.selected;
 
-    return selectedTab.account?.subtype ? 
-      `#${selectedTab.account.mask}` 
+    return group.name ? 
+      `${group.name}` 
       : `<span class="underline">Account</span>`
   });
 
   const app = function() {
+    function assignRulesAndTabsToGroup(group) {
+      let tabs = [
+        ...filterTabsForGroup(group._id),
+        ...state.global.tabs
+      ];
+
+      tabs = tabs.map(tab => ({
+        ...tab,
+        categorizedItems: {},
+        rules: [
+          ...filterRulesForTab(group._id, tab.tabName),
+          ...state.global.rules,
+        ]
+      }));
+
+      return {
+        ...group,
+        tabs,
+        groupTransactions: []
+      };
+    }
+
     function changeBgColor(color) {
       const { elems } = state;
 
       elems.topNav.backgroundColor = elems.body.backgroundColor = color;
+    }
+
+    function currentlySelectedGroup() {
+      return state.allUserGroups.find(group => group.isSelected);
+    }
+
+    function currentlySelectedTab() {
+      return state.selected.group.tabs.find(tab => tab.isSelected);
     }
 
     function extractDate() {
@@ -214,9 +161,21 @@
       return `${yyyyMmDd(start)}_${yyyyMmDd(end)}`;
     }
 
-    async function fetchTransactions({ account_id, date, select }) {
-      account_id = account_id || state.selectedTab?.account?.account_id;
-      date = date || extractDate();
+    async function fetchAndSyncData() {
+      return api.get('api/plaid/sync/all/user/data');
+    }
+
+    function filterRulesForTab(groupId, tabName) {
+      return state.allUserRules.filter(ruleItem => {
+        const matchesAccount = ruleItem.applyForGroups.includes(groupId);
+        const matchesTab = ruleItem.applyForTabs.includes(tabName);
+
+        return matchesAccount && matchesTab
+      });
+    }
+
+    async function fetchTransactions(account_id) {
+      const date = extractDate();
 
       if(!account_id || !date) {
         return;
@@ -224,17 +183,91 @@
 
       let url = `api/plaid/transactions?account_id=${account_id}&date=${date}`;
 
-      if(select) {
-        url += `&select=${select}`;
-      };
-
       return await api.get(url);
     }
 
-    async function fetchUserAccounts() {
-      const items = await api.get('api/plaid/accounts');
+    async function fetchUserTabs() {
+      const fetchedTabs = [
+        { 
+          tabName: 'positive',
+          showForGroup: ['_GLOBAL'],
+          isSelected: true,
+        }, 
+        { 
+          tabName: 'negative',
+          showForGroup: ['_GLOBAL'],
+          total: ['negative'], //defaults to itself
+          isSelected: false
+        }, 
+        { 
+          tabName: 'net',
+          showForGroup: ['_GLOBAL'], 
+          total: ['positive', '-negative'],
+          isSelected: false
+        },
+        {
+          tabName: 'shop related',
+          showForGroup: ['xxxx', 'xxxx'],
+          isSelected: false
+        },
+        {
+          tabName: 'nsr',
+          showForGroup: ['xxxx', 'xxxx'],
+          isSelected: false
+        }
+      ];
 
-      state.userAccounts = state.userAccounts.concat(items);
+      return fetchedTabs.map(tab => ({
+        ...tab,
+        data: []
+      }));
+    }
+
+    async function fetchUserRules() {
+      return [
+        {
+          applyForGroups: ['_GLOBAL'],
+          applyForTabs: ['_GLOBAL'],
+          categorize: [
+            ['name', 'includes', 'sparkfun', 'tracktab.com'],
+            ['date', 'includes', '-8-', 'august'],
+            // ['amount', '>', '0', 'income'],
+            ['name', 'includes', ['uber','sparkfun'], 'tracktabs', true],
+            ['amount', '<', '0', 'expense'],
+            // ['name', 'includes', ['united airlines', 'uber'], 'tracktabit'],
+            ['name', 'includes', ['classic'], 'payroll']
+          ],
+          filters: [
+            ['amount', '>', '0']
+          ],
+          sort: ['-date'] // default
+        },
+        {
+          applyForGroups: ['9139'],
+          applyForTabs: ['positive'],
+          filters: [
+            ['amount', '>', '0'],
+            // ['name', 'includes', ['magnaflow'], 'important']
+          ],
+        }
+      ]
+    }
+
+    function filterGlobalTabs() {
+      return state.allUserTabs.filter(tabItem => tabItem.showForGroup.includes('_GLOBAL'))
+    }
+
+    function filterGlobalRules() {
+      return state.allUserRules.filter(ruleItem => {
+        const accountIsGlobal = ruleItem.applyForGroups.includes('_GLOBAL');
+        const tabIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
+
+        return accountIsGlobal && tabIsGlobal;
+      });
+    }
+
+    function filterTabsForGroup(groupId) {
+      return state.allUserTabs.filter(tabItem => tabItem.showForGroup.includes(groupId));
     }
 
     function getCategoryName(item) {
@@ -244,13 +277,122 @@
         return;
       }
 
-      return category.split(',')[0];
+      const split = category.split(',');
+
+      return split[split.length-1];
     }
 
-    function isAnExpense({ amount }) {
-      const numericAmount = Number(amount);
+    const ruleMethods = {
+      '>=': (itemValue, valueToCheck) => itemValue >= valueToCheck,
+      '>': (itemValue, valueToCheck) => itemValue > valueToCheck,
+      '=': (itemValue, valueToCheck) => itemValue == valueToCheck,
+      '<=': (itemValue, valueToCheck) => itemValue <= valueToCheck,
+      '<': (itemValue, valueToCheck) => itemValue < valueToCheck,
+      includes: function (itemValue, valueToCheck) {
+        return makeArray(valueToCheck).some(valueToCheckItem => 
+          itemValue.includes(valueToCheckItem)
+        );
+      },
+      excludes: function(itemValue, valueToCheck) {
+        return !this.includes(itemValue, valueToCheck)
+      }
+    };
 
-      return numericAmount > 0;
+    function getRules(rules) {
+      const filterRules = rules.filter(rule => rule.hasOwnProperty('filters'));
+      const categorizerRules = rules.filter(rule => rule.hasOwnProperty('categorize'));
+      let propsToSortBy = [];
+      
+      for(const rule of rules) {
+        if(rule.sort) propsToSortBy = [...propsToSortBy, ...rule.sort];
+      }
+
+      if(!propsToSortBy.length) propsToSortBy.push('-date');
+
+      const sort = function (arrayOfObjects) {
+        return arrayOfObjects.sort((a, b) => {
+          let comparison = 0;
+          propsToSortBy.forEach(prop => {
+            if (comparison === 0) {
+              let reverse = false;
+              if (prop.startsWith('-')) {
+                prop = prop.substring(1);
+                reverse = true;
+              }
+              if (a[prop] > b[prop]) {
+                comparison = 1;
+              } else if (a[prop] < b[prop]) {
+                comparison = -1;
+              }
+              if (reverse) {
+                comparison *= -1;
+              }
+            }
+          });
+          return comparison;
+        });
+      };
+
+      const filter = filterRules.length > 0 ? function(transaction) {
+        let importantConditionMet = false;
+
+        return filterRules.every(rule => {
+          const allConditionsMet = [];
+
+          for(const filterRule of rule.filters) {
+            const [filterProp, filterMethodName, valueToCheck, _isImportant] = filterRule;
+            const itemValue = transaction[filterProp];
+            const filterMethod = ruleMethods[filterMethodName];
+
+            const conditionMet = filterMethod
+              ? filterMethod(itemValue, valueToCheck)
+              : itemValue?.[filterMethod]
+              ? itemValue[filterMethod](valueToCheck)
+              : console.error(`Invalid filter method '${filterMethodName}' found...`);
+
+            allConditionsMet.push(conditionMet);
+            if(!importantConditionMet && _isImportant==='important') importantConditionMet=conditionMet;
+          }
+
+          return importantConditionMet || !allConditionsMet.includes(false);
+        });
+      } : () => true;
+
+      const categorize = categorizerRules.length > 0 ? function(transaction) {
+        let categorizeAs;
+
+        for(const rule of categorizerRules) {
+          
+          for (const categorizer of rule.categorize) {
+            const [categoryProp, categoryMethodName, categegoryValueToCheck, categorizeAsName, _isImportant] = categorizer;
+            const itemValue = transaction[categoryProp];
+            const categoryMethod = ruleMethods[categoryMethodName];
+
+            if(categorizeAs && !_isImportant) {
+              continue;
+            }
+
+            if(categoryMethod) {
+              if(categoryMethod(itemValue, categegoryValueToCheck)) {
+                categorizeAs = categorizeAsName;
+              }
+
+              continue;
+            }
+
+            if(itemValue && itemValue?.[categoryMethodName] && itemValue[categoryMethodName](categegoryValueToCheck)) {
+              categorizeAs = categorizeAsName;
+            }
+
+          }
+
+        }
+
+        return categorizeAs || getCategoryName(transaction);
+
+      } : getCategoryName;
+
+      return { filter, sort, categorize };
     }
 
     function loadScript(src) {
@@ -273,61 +415,56 @@
         document.head.appendChild(el);
       });
     }
-    
-    function selectAccount(index) {
-      const { userAccounts } = state;
 
-      if(!userAccounts.length) {
-        return;
-      }
-
-      state.selectedTab.account = userAccounts[index];
+    function makeArray(value) {
+      return Array.isArray(value) ? value : [value];
     }
 
-    function sortByDate(data) {
-      return data.sort((a, b) => b?.date?.localeCompare(a?.date));
-    }
+    function processTabData(tab) {
+      const { selected } = state;
+      const { rules } = tab;
+      const transactions = selected.group.groupTransactions;
+      const { filter, sort, categorize } = getRules(rules);
 
-    function sortAndTotalAllSelectedTransactions(presets={}) {
-      const { byCategory=true, byDate=true, reverseOrder=false } = presets;
-      const { allTransactions } = state.selectedTab;
-      
-      if(!allTransactions) {
-        return;
-      }
-      
-      const sorted = {
-        income: {},
-        expenses: {}
-      };
+      const data = sort(transactions);
+      const categorizedItems = {};
+      let tabTotal = 0;
 
-      let unSorted = [...allTransactions];
-
-      state.totals = { income: 0, expenses: 0, net: 0 };
-
-      if(byDate) {
-        unSorted = sortByDate(unSorted);
-      }
-
-      if(reverseOrder) {
-        unSorted.reverse();
-      }
-
-      for(const item of unSorted) {
-        const transactionType = isAnExpense(item) ? 'expenses' : 'income';
-
-        if(byCategory) {
-          const categoryName = getCategoryName(item);
-
-          (sorted[transactionType][categoryName] ??= []).push(item);
-        } else {
-          sorted[transactionType].push(item);
+      for(const item of data) {
+        if(!filter(item)) {
+          continue;
         }
 
-        state.totals[transactionType] += parseFloat(item.amount);
+        const categoryName = categorize(item);
+        const amt = parseFloat(item.amount);
+
+        categorizedItems[categoryName] ??= {
+          categoryTotal: 0,
+          categoryItems: []
+        };
+
+        categorizedItems[categoryName].categoryItems.push(item);
+        categorizedItems[categoryName].categoryTotal += parseFloat(amt);
+        tabTotal += amt;
       }
 
-      return sorted;
+      tab.total = tabTotal;
+      tab.categorizedItems = categorizedItems;
+    }
+    
+    function selectGroup(index) {
+      state.selected.group = state.allUserGroups[index];
+      state.selected.group.isSelected = true;
+    }
+    
+    function selectTab(index) {
+      const { selected } = state;
+
+      selected.group.tabs.forEach((tab, tabIndex) => {
+        tab.isSelected = tabIndex === index;
+      });
+
+      selected.tab = selected.group.tabs[index];
     }
 
     function yyyyMmDd(dateObject) {
@@ -339,44 +476,53 @@
     }
 
     return {
-      fetchTransactionsForSelectedDate: async () => {
-        const { account_id } = state.selectedTab.account || {};
-
-        if(!account_id) {
-          return;
-        }
-
-        state.isLoading = true;
-        const date = extractDate();
-        state.selectedTab.allTransactions = await fetchTransactions({ account_id, date });
-
-        nextTick(() => state.isLoading = false);
-      },
       init: async () => {
         changeBgColor('rgb(243, 243, 238)');  
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
-        await fetchUserAccounts();
-        selectAccount(0);
+
+        state.allUserTabs = await fetchUserTabs();
+        state.global.tabs = filterGlobalTabs();
+
+        state.allUserRules = await fetchUserRules();
+        state.global.rules = filterGlobalRules();
+        
+        const { accounts, groups } = await fetchAndSyncData();
+
+        state.allUserAccounts = accounts;
+        state.allUserGroups = groups.map(assignRulesAndTabsToGroup);
+
+        if(currentlySelectedGroup()) {
+          state.selected.group = currentlySelectedGroup();
+        }
+       
+        selectGroup(0);
       },
-      handleAccountChange: async () => {
-        app.resetSelectedTab();
-        await app.fetchTransactionsForSelectedDate();
-        state.sorted = sortAndTotalAllSelectedTransactions();
-        state.totals.net = state.totals.income + state.totals.expenses;
-      },
-      resetSelectedTab: () => {
-        state.selectedTab.categoryName = null;
-        state.selectedTab.items = [];
+      handleGroupChange: async () => {
+        const { selected } = state;
+
+        state.selected.tab = currentlySelectedTab() || selectTab(0);
+        selected.group.transactions = [];
+
+        for(const { account_id } of selected.group.accounts) {
+          selected.group.groupTransactions = [
+            ...selected.group.groupTransactions,
+            ...await fetchTransactions(account_id) // fetches within selected date
+          ]
+        };
+
+        for(const tab of selected.group.tabs) {
+          processTabData(tab);
+        }
       }
     }
   }();
 
   app.init();
 
-  watch(() => state.selectedTab.tabName, app.resetSelectedTab);
-  watch(() => state.selectedTab.account, app.handleAccountChange);
-  watch(() => state.date.start, app.handleAccountChange);
-  watch(() => state.date.end, app.handleAccountChange);
+  watch(() => state.selected.tab.tabName, app.handleGroupChange);
+  watch(() => state.selected.group._id, app.handleGroupChange);
+  watch(() => state.date.start, app.handleGroupChange);
+  watch(() => state.date.end, app.handleGroupChange);
 
 </script>
 

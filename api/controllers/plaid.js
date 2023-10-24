@@ -5,6 +5,7 @@ import { decryptWithKey, decrypt } from '../utils/encryption';
 import { isEmptyObject, scrub } from '../../src/utils';
 
 import plaidAccounts from '../models/plaidAccounts';
+import plaidGroups from '../models/plaidGroups';
 import plaidItems from '../models/plaidItems';
 import plaidTransactions from '../models/plaidTransactions';
 
@@ -75,6 +76,14 @@ const app = function() {
     return items;
   }
 
+  function fetchUserGroups(userId, groupId) {
+    if(groupId) {
+      return plaidGroups.findOne(groupId);    
+    }
+
+    return plaidGroups.findAll({ name: '*', userId });
+  }
+
   async function fetchItemById(itemId, userId) {
     const item = await plaidItems.findOne(itemId);
     
@@ -127,8 +136,8 @@ const app = function() {
     return formatted;
   }
 
-  function hasMatch(userAccounts, retrieved) {
-    return userAccounts.find(itm => itm.account_id === retrieved.account_id);
+  function accountAlreadySynced(existingUserAccounts, retrievedAccount) {
+    return existingUserAccounts.find(itm => itm.account_id === retrievedAccount.account_id);
   }
 
   function initClient() {
@@ -190,48 +199,79 @@ const app = function() {
     }
   }
 
-  async function saveAccountsForNewPlaidItem(access_token, req) {
-    try {
-      const retrievedAccounts = await retrieveAccountsFromPlaidForItem(access_token);
-      const saved = [];
-  
-      for(const retrieved of retrievedAccounts) {
-        saved.push(await plaidAccounts.save({ ...retrieved, req }));
-      }
-  
-      return saved;
-    } catch (err) {
-      console.log(`Error at 'saveAccountsForNewPlaidItem'`, err);
-    }
-  }
-
   async function syncUserAccounts(user) {
     let retrievedAccounts = [];
 
     for(const item of await fetchUserItems(user._id)) {
       const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
 
-      retrievedAccounts = retrievedAccounts.concat(
-        await retrieveAccountsFromPlaidForItem(access_token)
-      );
+      retrievedAccounts = [
+        ...retrievedAccounts,
+        ...await retrieveAccountsFromPlaidForItem(access_token)
+      ]
     }
 
-    const userAccounts = await fetchUserAccounts(user._id);
-    const synced = [];
+    const existingUserAccounts = await fetchUserAccounts(user._id);
+    const synced = {
+      accounts: [],
+      groups: []
+    };
 
-    for(const retrieved of retrievedAccounts) {
-      if(hasMatch(userAccounts, retrieved)) {
-        const accountFilter = { account_id: retrieved.account_id, userId: user._id };
-        const updated = await plaidAccounts.update(accountFilter, retrieved);
-        synced.push(updated);
+    for(const retrievedAccount of retrievedAccounts) {
+      if(accountAlreadySynced(existingUserAccounts, retrievedAccount)) {
+        const updatedAccount = await updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
+
+        synced.accounts.push(updatedAccount);
+        synced.groups.push( await userGroupUpdate(user._id, updatedAccount) );
         continue;
       }
 
-      const newSavedAccount = await plaidAccounts.save({ ...retrieved, req: { user } });
-      synced.push(newSavedAccount);
+      const newSavedAccount = await plaidAccounts.save({ ...retrievedAccount, req: { user } });
+      
+      synced.accounts.push(newSavedAccount);
+      synced.groups.push( await userGroupSave(user, newSavedAccount) );
     }
 
     return synced;
+  }
+
+  function updateAccount(account_id, userId, retrievedAccount) {
+    return plaidAccounts.update({ account_id, userId }, retrievedAccount);
+  }
+
+  function userGroupSave(user, retrievedAccount) {
+    const { _id, account_id, mask, name, balances } = retrievedAccount;
+
+    return plaidGroups.save({ 
+      accounts: [
+        {
+          _id,
+          account_id,
+          mask,
+          name,
+          current: balances?.current
+        }
+      ],
+      name: mask,
+      req: { user } 
+     });
+  }
+
+  function userGroupUpdate(userId, updatedAccount) {
+    const { _id, account_id, mask, name, balances } = updatedAccount;
+
+    return plaidGroups.update({ name: mask, userId }, { 
+      accounts: [
+        {
+          _id,
+          account_id,
+          mask,
+          name,
+          current: balances?.current
+        }
+      ],
+      name: mask
+     });
   }
 
   function warn(userId, itemId, product) {
@@ -255,10 +295,10 @@ const app = function() {
     return duplicatesToRemove;
   }
 
-  async function removeDuplicates(duplicates) {
+  function removeFromDb(duplicates) {
     duplicates = Array.isArray(duplicates) ? duplicates : [duplicates];
 
-    return await data.remove(duplicates);
+    return data.remove(duplicates);
   }
 
   return {
@@ -271,33 +311,46 @@ const app = function() {
 
       const request = {
         user: { client_user_id: user._id },
-        client_name: 'LACRESTA SEED',
-        products: ['auth', 'transactions'],
+        client_name: 'StrumBook',
+        products: [
+          'transactions', 
+          // 'income',
+          // 'liabilities'
+        ],
         country_codes: ['US'],
         language: 'en',
         redirect_uri: `${AMPT_URL}/spendingreport`
       };
 
-      const { data } = await plaidClient.linkTokenCreate(request);
+      try {
+        const { data } = await plaidClient.linkTokenCreate(request);
 
-      res.json(data.link_token);
-      return data;
+        res.json(data.link_token);
+        return data;
+      } catch (error) {
+        throw new Error(`Error on plaid linkTokenCreater: ${error.message}`);
+      }
     },
     exchangeTokenAndSavePlaidItem: async function(req, res) {
       const { publicToken } = req.body;
       const { user } = req;
 
       const accessData = await exchangePublicToken(publicToken);
-      const { _id: itemId, access_token } = await savePlaidAccessData(accessData, { user });
-      const accounts = await saveAccountsForNewPlaidItem(access_token, { user });
+      const { _id: itemId } = await savePlaidAccessData(accessData, { user });
+      const { accounts, groups } = await syncUserAccounts(user);
 
       tasks.syncTransactions(itemId, user._id);
 
-      res.json(accounts);
+      res.json({ accounts, groups });
     },
     getAccounts: async (req, res) => {
       const accounts = await fetchUserAccounts(req.user._id);
       res.json(accounts);
+    },
+    getGroups: async (req, res) => {
+      const groups = await fetchUserGroups(req.user._id, req.params._id);
+      
+      res.json(groups);
     },
     getPlaidItems: async (req, res) => {    
       const { params, user } = req;
@@ -352,24 +405,38 @@ const app = function() {
 
       res.json(idsToRemove);
     },
-    removeDuplicates: async function(req, res) {
-      const removed = await data.remove(req.body);
+    removeFromDb: async function(req, res) {
+      const removed = await removeFromDb(req.body);
 
       res.json(removed)
     },
     syncAccounts: async function({ user }, res) {
       initClient();
 
-      const synced = await syncUserAccounts(user);
-
-      res.json(synced);
+      res.json( await syncUserAccounts(user) );
     },
     syncAllUserData: async function({ user }, res) {
-      const accounts = await syncUserAccounts(user);
+      const { accounts, groups } = await syncUserAccounts(user);
+      const items = await plaidItems.findAll({ itemId: '*', userId: user._id });
+      let itemsToSync = 0;
+      let itemsAlreadySyncing = 0;
+
+      for(const item of items) {
+        if(item.syncStatus !== 'complete') {
+          itemsAlreadySyncing++;
+          continue;
+        };
+
+        await plaidItems.update(item._id, { syncStatus: 'sync in progress...' });
+        tasks.syncTransactions(item._id, user._id);
+        itemsToSync++;
+      }
 
       res.json({
+        itemsAlreadySyncing,
+        itemsToSync,
         accounts,
-        // syncedTransactions: transactions.length
+        groups
       });
     }
   }

@@ -4,11 +4,11 @@
   <div v-else class="cell-1 line50">
     <b>Loading <LoadingDots /></b>
   </div>
-  <button v-for="acct in state.userAccounts" @click="app.selectAccount(acct)" href="#" class="acctButton b-top proper">
+  <button v-for="group in state.userGroups" @click="app.selectGroup(group)" href="#" class="acctButton b-top proper">
     <div class="grid middle">
       <div class="auto">
-        {{ acct.subtype }} {{  acct.mask }}
-        <br><small class="colorBlack">{{ formatPrice(acct.balances.available) }}</small>
+        {{ group.name }}
+        <br><small class="colorBlack">{{ formatPrice(group.totalBalance) }}</small>
       </div>
       <div class="shrink">
         <ChevronRight class="icon" />
@@ -34,8 +34,9 @@ const app = function() {
       token: state.linkToken,
       // receivedRedirectUri: window.location.href,
       onSuccess: async function(publicToken) {
-        const newAccounts = await api.post('api/plaid/exchange', { publicToken });
-        state.userAccounts = state.userAccounts.concat(newAccounts);
+        const { accounts, groups } = await api.post('api/plaid/exchange', { publicToken });
+        state.userGroups = state.userGroups.concat(groups);
+        state.userAccounts = state.userAccounts.concat(accounts);
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
@@ -56,8 +57,16 @@ const app = function() {
 
       link.open();
     },
-    selectAccount: (acct) => {
-      state.selectedTab.account = acct;
+    selectGroup: (groupToSelect) => {
+      const { selected } = state;
+      
+      selected.group._id = groupToSelect._id;
+      selected.group.name = groupToSelect.name;
+      selected.group.accounts = groupToSelect.accounts;
+      selected.group.tabs = [];
+      selected.group.totalBalance = 0;
+      selected.group.transactions = [];
+
       state.view = 'home';
     }
   }

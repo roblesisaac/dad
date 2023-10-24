@@ -86,6 +86,8 @@ Users.authLocalUser = async (email, password, done) => {
     return done(errorMessage, false);
   }
 
+  await Users.updateUser(email, {});
+
   return done(null, user);
 }
 
