@@ -1,10 +1,19 @@
 <template>
-<div class="grid">    
+<div class="grid">
+  <!-- LinkNewAccount -->
   <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
+  
+  <!-- LoadingMessage -->
   <div v-else class="cell-1 line50">
     <b>Loading <LoadingDots /></b>
   </div>
-  <button v-for="group in state.userGroups" @click="app.selectGroup(group)" href="#" class="acctButton b-top proper">
+
+  <!-- Select Group Buttons -->
+  <button v-for="group in state.allUserGroups" 
+    @click="app.selectGroup(group)"
+    @dblclick="app.editGroup(group)"
+    :group="group._id"
+    class="acctButton b-top proper">
     <div class="grid middle">
       <div class="auto">
         {{ group.name }}
@@ -35,8 +44,8 @@ const app = function() {
       // receivedRedirectUri: window.location.href,
       onSuccess: async function(publicToken) {
         const { accounts, groups } = await api.post('api/plaid/exchange', { publicToken });
-        state.userGroups = state.userGroups.concat(groups);
-        state.userAccounts = state.userAccounts.concat(accounts);
+        state.allUserGroups = state.allUserGroups.concat(groups);
+        state.allUserAccounts = state.allUserAccounts.concat(accounts);
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
@@ -49,6 +58,12 @@ const app = function() {
   }
 
   return {
+    editGroup: (group) => {
+      console.log({
+        message: 'edditing',
+        group
+      })
+    },
     init: async () => {
       await fetchLinkToken();
     },
@@ -60,12 +75,10 @@ const app = function() {
     selectGroup: (groupToSelect) => {
       const { selected } = state;
       
-      selected.group._id = groupToSelect._id;
-      selected.group.name = groupToSelect.name;
-      selected.group.accounts = groupToSelect.accounts;
-      selected.group.tabs = [];
-      selected.group.totalBalance = 0;
-      selected.group.transactions = [];
+      selected.group.isSelected = false;
+
+      groupToSelect.isSelected 
+      selected.group = groupToSelect;
 
       state.view = 'home';
     }

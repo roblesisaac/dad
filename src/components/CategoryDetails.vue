@@ -1,10 +1,10 @@
 <template>
-<div :id="id" class="grid categoryRow proper">
+<div :id="id" class="grid dottedRow proper">
 
   <div @click="selectCategory(category)" :id="id+'title'" class="cell-1">
     <div class="grid">
       <div class="cell auto categoryTitle">
-        <b>{{ category.length }}</b> {{ categoryName }} <b>{{ formatPrice(category.categoryTotal, { toFixed: 0}) }}</b>
+        <b>{{ category.categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
       </div>
       <div class="cell shrink categoryExpand">
         <span class="bold colorJet icon">
@@ -46,9 +46,11 @@ const isSelected = computed(() => {
   return state.selected.tab.categoryName === categoryName;
 });
 
+const catTotal = computed(() => formatPrice(category.categoryTotal, { toFixed: 0 }));
+
 function selectCategory(category) {
   state.selected.tab.categoryName = state.selected.tab.categoryName === categoryName ? null : categoryName;
-  state.selected.tab.transactions = isSelected.value ? category : [];
+  state.selected.tab.transactions = isSelected.value ? category.categoryItems : [];
 }
 
 watch(isSelected, () => {
@@ -106,14 +108,6 @@ function getInnerWidth(el) {
 </script>
 
 <style>
-.categoryRow {
-  border-bottom: 2px dotted #000;
-  padding: 20px;
-  text-align: left;
-  font-weight: bold;
-  cursor: pointer;
-
-}
 .categoryTitle {
   line-height: 2;
 }

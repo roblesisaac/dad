@@ -311,7 +311,7 @@ const app = function() {
 
       const request = {
         user: { client_user_id: user._id },
-        client_name: 'StrumBook',
+        client_name: 'TrackTabs',
         products: [
           'transactions', 
           // 'income',

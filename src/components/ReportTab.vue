@@ -1,6 +1,6 @@
 <template>
-  <div @click="selectTab(tab)" class="relative pointer" :class="borders">
-    <small :class="[underline,'section-title']">
+  <div @click="selectTab(tab)" @dblclick="editTab()" class="relative pointer" :class="borders">
+    <small class="section-title">
       {{ tab.tabName }}
     </small>
     <br/>
@@ -33,9 +33,9 @@ const tabTotal = computed(() => {
   return tab.total || 0;
 });
 
-const underline = computed(() => {
-  return isSelected(tab) ? 'underline' : '';
-});
+function editTab() {
+  state.view = 'EditTab';
+}
 
 function isLastInArray() {
   return tabIndex === tabs.length - 1;

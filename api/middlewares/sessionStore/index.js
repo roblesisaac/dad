@@ -3,11 +3,12 @@ import CustomSessionStore from './customStore.js';
 import session from 'express-session';
 const {
   SESSION_ID,
-  AMPT_URL
+  AMPT_URL,
+  ENV_NAME
 } = params().list();
 
 const hostName = AMPT_URL.replace('https://', '');
-const domain = '.'+hostName;
+const domain = ENV_NAME === 'prod' ? '.tracktabs.com' : '.'+hostName;
 
 const store = new (CustomSessionStore(session))();
 

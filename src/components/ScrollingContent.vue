@@ -79,10 +79,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scrolling-content {
-  width: 100%;
   overflow-x: scroll;
   cursor: pointer;
-  display: flex;
 }
 
 .hide-scrollbar::-webkit-scrollbar {
