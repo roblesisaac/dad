@@ -143,9 +143,13 @@
       '<=': (itemValue, valueToCheck) => parseFloat(itemValue) <= parseFloat(valueToCheck),
       '<': (itemValue, valueToCheck) => parseFloat(itemValue) < parseFloat(valueToCheck),
       includes: function (itemValue, valueToCheck) {
-        return makeArray(valueToCheck).some(valueToCheckItem => 
-          itemValue.includes(valueToCheckItem)
-        );
+        itemValue = String(itemValue || '');
+        valueToCheck = String(valueToCheck || '');
+        
+        return makeArray(valueToCheck.split(',')).some(valueToCheckItem => {
+          console.log(itemValue, valueToCheck);
+          return itemValue.toLowerCase().includes(valueToCheckItem.toLowerCase());
+        });
       },
       excludes: function(itemValue, valueToCheck) {
         return !this.includes(itemValue, valueToCheck)
@@ -374,7 +378,7 @@
         {
           applyForGroups: ['_GLOBAL'],
           applyForTabs: ['positive'],
-          rule: ['categorize', 'category', 'includes', 'supermarket', 'groceries'],
+          rule: ['categorize', 'category', 'includes', 'airline', 'airlines'],
           orderOfExecution: 2
         },
         {
@@ -420,104 +424,6 @@
 
     function filterTabsForGroup(groupName) {
       return state.allUserTabs.filter(tabItem => tabItem.showForGroup.includes(groupName));
-    }
-
-    function getRuleMethod(rules) {
-      const filterRules = rules.filter(rule => rule.rule[0] === 'filter');
-      const categorizerRules = rules.filter(rule => rule.rule[0] === 'categorize');
-      let propsToSortBy = [];
-      
-      for(const rule of rules) {
-        if(rule.rule[0] === 'sort') propsToSortBy = [...propsToSortBy, ...rule.sort];
-      }
-
-      if(!propsToSortBy.length) propsToSortBy.push('-date');
-
-      const sort = function (arrayOfObjects) {
-        return arrayOfObjects.sort((a, b) => {
-          let comparison = 0;
-          propsToSortBy.forEach(prop => {
-            if (comparison === 0) {
-              let reverse = false;
-              if (prop.startsWith('-')) {
-                prop = prop.substring(1);
-                reverse = true;
-              }
-              if (a[prop] > b[prop]) {
-                comparison = 1;
-              } else if (a[prop] < b[prop]) {
-                comparison = -1;
-              }
-              if (reverse) {
-                comparison *= -1;
-              }
-            }
-          });
-          return comparison;
-        });
-      };
-
-      const filter = filterRules.length > 0 ? function(transaction) {
-        let importantConditionMet = false;
-
-        return filterRules.every(rule => {
-          const allConditionsMet = [];
-
-          for(const filterRule of rule.filters) {
-            const [filterProp, filterMethodName, valueToCheck, _isImportant] = filterRule;
-            const itemValue = transaction[filterProp];
-            const filterMethod = ruleMethods[filterMethodName];
-
-            const conditionMet = filterMethod
-              ? filterMethod(itemValue, valueToCheck)
-              : itemValue?.[filterMethod]
-              ? itemValue[filterMethod](valueToCheck)
-              : console.error(`Invalid filter method '${filterMethodName}' found...`);
-
-            allConditionsMet.push(conditionMet);
-
-            if(!importantConditionMet && _isImportant) importantConditionMet=conditionMet;
-          }
-
-          return importantConditionMet || !allConditionsMet.includes(false);
-        });
-      } : () => true;
-
-      const categorize = categorizerRules.length > 0 ? function(transaction) {
-        let categorizeAs;
-
-        for(const rule of categorizerRules) {
-          
-          for (const categorizer of rule.categorize) {
-            const [categoryProp, categoryMethodName, categegoryValueToCheck, categorizeAsName, _isImportant] = categorizer;
-            const itemValue = transaction[categoryProp];
-            const categoryMethod = ruleMethods[categoryMethodName];
-
-            if(categorizeAs && !_isImportant) {
-              continue;
-            }
-
-            if(categoryMethod) {
-              if(categoryMethod(itemValue, categegoryValueToCheck)) {
-                categorizeAs = categorizeAsName;
-              }
-
-              continue;
-            }
-
-            if(itemValue && itemValue?.[categoryMethodName] && itemValue[categoryMethodName](categegoryValueToCheck)) {
-              categorizeAs = categorizeAsName;
-            }
-
-          }
-
-        }
-
-        return categorizeAs || defaultCategorize(transaction);
-
-      } : defaultCategorize;
-
-      return { filter, sort, categorize };
     }
 
     function loadScript(src) {
