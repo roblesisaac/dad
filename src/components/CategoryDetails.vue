@@ -1,10 +1,10 @@
 <template>
 <div :id="id" class="grid dottedRow proper">
 
-  <div @click="selectCategory(category)" :id="id+'title'" class="cell-1">
+  <div @click="selectCategory()" :id="id+'title'" class="cell-1">
     <div class="grid">
       <div class="cell auto categoryTitle">
-        <b>{{ category.categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
+        <b>{{ categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
       </div>
       <div class="cell shrink categoryExpand">
         <span class="bold colorJet icon">
@@ -33,11 +33,11 @@ import { useAppStore } from '../stores/app';
 
 const { sticky } = useAppStore();
 
-const { category, categoryName, state, key } = defineProps({
-  key: String,
+const { state, categoryName, categoryItems, categoryTotal } = defineProps({
   state: Object,
-  category: Object,
-  categoryName: String
+  categoryName: String,
+  categoryItems: Object,
+  categoryTotal: Number
 });
 
 const id = (categoryName+state.selected.tab.tabName).replace(/\s/g, '');
@@ -46,11 +46,11 @@ const isSelected = computed(() => {
   return state.selected.tab.categoryName === categoryName;
 });
 
-const catTotal = computed(() => formatPrice(category.categoryTotal, { toFixed: 0 }));
+const catTotal = computed(() => formatPrice(categoryTotal, { toFixed: 0 }));
 
-function selectCategory(category) {
+function selectCategory() {
   state.selected.tab.categoryName = state.selected.tab.categoryName === categoryName ? null : categoryName;
-  state.selected.tab.transactions = isSelected.value ? category.categoryItems : [];
+  state.selected.tab.transactions = isSelected.value ? categoryItems : [];
 }
 
 watch(isSelected, () => {

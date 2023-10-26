@@ -157,7 +157,8 @@
 
       tabs = tabs.map(tab => ({
         ...tab,
-        categorizedItems: {},
+        total: 0,
+        categorizedItems: [],
         rules: [
           ...filterRulesForTab(group.name, tab.tabName),
           ...filterGlobalRules(),
@@ -353,7 +354,7 @@
       return fetchedTabs.map(tab => ({
         ...tab,
         total: 0,
-        categorizedItems: {}
+        categorizedItems: []
       }));
     }
 
@@ -451,7 +452,7 @@
       const { filter, sort, categorize } = buildRuleMethods(tab.rules);
 
       sort(data);
-      const categorizedItems = {};
+      const categorizedItems = [];
       let tabTotal = 0;
 
       for(const item of data) {
@@ -460,15 +461,18 @@
         }
 
         const categoryName = categorize(item);
-        const amt = parseFloat(item.amount);
+        const amt = parseFloat(item.amount);        
+        const storedCategory = categorizedItems.find(([storedCategoryName]) => storedCategoryName === categoryName);
 
-        categorizedItems[categoryName] ??= {
-          categoryTotal: 0,
-          categoryItems: []
-        };
+        if(storedCategory) {
+          let [_, storedData, storedTotal] = storedCategory;
 
-        categorizedItems[categoryName].categoryItems.push(item);
-        categorizedItems[categoryName].categoryTotal += parseFloat(amt);
+          storedData.push(item);
+          storedTotal += amt;
+        } else {
+          categorizedItems.push([categoryName, [item], amt])
+        }
+
         tabTotal += amt;
       }
 

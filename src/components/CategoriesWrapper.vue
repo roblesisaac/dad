@@ -1,8 +1,9 @@
 <template>
-  <CategoryDetails v-for="(category, categoryName) in tab.categorizedItems"
-    :state="state" 
-    :category="category"
+  <CategoryDetails v-for="([categoryName, categoryItems, categoryTotal]) in tab.categorizedItems"
+    :state="state"
     :categoryName="categoryName"
+    :categoryItems="categoryItems"
+    :categoryTotal="categoryTotal"
     :key="categoryName+tab.tabName"  
   />
 </template>
