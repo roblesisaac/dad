@@ -1,15 +1,26 @@
 <template>
-  <div @click="selectTab(tab)" @dblclick="editTab()" class="relative pointer" :class="borders">
-    <small class="section-title">
-      {{ tab.tabName }}
-    </small>
-    <br/>
-    <a href="#" class="section-content">{{ formatPrice(tabTotal) }}</a>
+  <div @click="selectTab(tab)" :class="['grid middle', borders]">
+    <div v-if="tab.isSelected" class="cell-1-5">
+      <DotsVerticalCircleOutline />
+    </div>
+    <div class="cell auto">
+      <div class="relative pointer">
+        <small class="section-title">
+          {{ tab.tabName }}
+        </small>
+        <br/>
+        <LoadingDots v-if="state.isLoading" />
+        <span v-else href="#" class="section-content">{{ tabTotal }}</span>
+      </div>
+    </div>
   </div>
+
 </template>
 
 <script setup>
 import { computed, nextTick } from 'vue';
+import LoadingDots from './LoadingDots.vue';
+import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 import { formatPrice } from '../utils';
 
 const { state, tab } = defineProps({
@@ -30,7 +41,10 @@ const borders = computed(() => {
 });
 
 const tabTotal = computed(() => {
-  return tab.total || 0;
+  const total = tab.total || 0;
+  const toFixed = tab.isSelected ? 2 : 0;
+
+  return formatPrice(total, { toFixed });
 });
 
 function editTab() {
@@ -74,6 +88,11 @@ function getIndex(array, criteria) {
 }
 
 function selectTab(tab) {
+  if(tab.isSelected) {
+    editTab();
+    return;
+  }
+
   state.selected.tab.isSelected = false;
 
   nextTick(() => {

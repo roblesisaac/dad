@@ -7,6 +7,7 @@ const tabSchema = {
   tabName: String,
   showForGroup: [String],
   isSelected: Boolean,
+  order: Number
 };
 
 export default AmptModel(['tabs', 'userId'], tabSchema);

@@ -37,21 +37,15 @@
     <div class="cell-1 totalsRow">
       <ScrollingContent>
         <div v-for="(tab, tabIndex) in state.selected.group.tabs" class="cell auto reportTab">
-          <ReportTab :state="state" :tab="tab" :key="tabIndex" />
+          <TabButton :state="state" :tab="tab" :key="tabIndex" />
+        </div>
+        <div class="cell auto reportTab bold">
+          <div class="relative pointer section b-bottom b-left line50">
+            + New Tab
+          </div>
         </div>
       </ScrollingContent>
     </div>
-
-    <!-- Tab Selector
-    <Transition>
-      <div v-if="state.selected.group?.tabs" class="cell-1 totalsRow">
-      <div class="grid">
-        <div v-for="(tab, tabIndex) in state.selected.group.tabs" class="cell auto">
-          <ReportTab :state="state" :tab="tab" :key="tabIndex" />
-        </div>
-      </div>
-    </div>
-    </Transition> -->
 
     <!-- Category Rows -->
     <Transition>
@@ -81,7 +75,7 @@
   import LoadingDots from '../components/LoadingDots.vue';
   import SelectGroup from '../components/SelectGroup.vue';
   import DatePicker from '../components/DatePicker.vue';
-  import ReportTab from '../components/ReportTab.vue';
+  import TabButton from '../components/TabButton.vue';
   import EditTab from '../components/EditTab.vue';
   import CategoriesWrapper from '../components/CategoriesWrapper.vue';
   // import SelectedItems from '../components/SelectedItems.vue';
@@ -143,13 +137,12 @@
       '<=': (itemValue, valueToCheck) => parseFloat(itemValue) <= parseFloat(valueToCheck),
       '<': (itemValue, valueToCheck) => parseFloat(itemValue) < parseFloat(valueToCheck),
       includes: function (itemValue, valueToCheck) {
-        itemValue = String(itemValue || '');
-        valueToCheck = String(valueToCheck || '');
+        itemValue = String(itemValue || '').toLowerCase();
+        valueToCheck = String(valueToCheck || '').toLowerCase();
         
-        return makeArray(valueToCheck.split(',')).some(valueToCheckItem => {
-          console.log(itemValue, valueToCheck);
-          return itemValue.toLowerCase().includes(valueToCheckItem.toLowerCase());
-        });
+        return makeArray(valueToCheck.split(',')).some(valueToCheckItem => 
+          itemValue.includes(valueToCheckItem)
+        );
       },
       excludes: function(itemValue, valueToCheck) {
         return !this.includes(itemValue, valueToCheck)
@@ -208,8 +201,10 @@
         for(const categorizeConfig of categorizers) {
           if(!categorizeConfig.method) continue;
 
-          if(categorizeConfig.method(item)) {
-            categoryName = categorizeConfig.catetegorAs;
+          const conditionMet = categorizeConfig.method(item);
+
+          if(conditionMet) {
+            categoryName = categorizeConfig.categorizeAs;
             if(categorizeConfig._isImportant) _important = categorizeConfig.categorizeAs;
           }
         }
@@ -338,12 +333,14 @@
           tabName: 'positive',
           showForGroup: ['_GLOBAL'],
           isSelected: true,
+          order: 1
         }, 
         { 
           tabName: 'negative',
           showForGroup: ['_GLOBAL'],
           // total: ['negative'], //defaults to itself
-          isSelected: false
+          isSelected: false,
+          order: 2
         }, 
         // { 
         //   tabName: 'net',
@@ -366,20 +363,19 @@
           applyForGroups: ['_GLOBAL'],
           applyForTabs: ['_GLOBAL'],
           rule: ['categorize', 'name', 'includes', 'amazon', 'amazon'],
-          orderOfExecution: 1,
-          // _isImportant: true
+          orderOfExecution: 1
+        },
+        {
+          applyForGroups: ['_GLOBAL'],
+          applyForTabs: ['_GLOBAL'],
+          rule: ['categorize', 'category', 'includes', 'coffee', 'coffee'],
+          orderOfExecution: 1
         },
         {
           applyForGroups: ['_GLOBAL'],
           applyForTabs: ['_GLOBAL'],
           rule: ['sort', '-date'],
           orderOfExecution: 1
-        },
-        {
-          applyForGroups: ['_GLOBAL'],
-          applyForTabs: ['positive'],
-          rule: ['categorize', 'category', 'includes', 'airline', 'airlines'],
-          orderOfExecution: 2
         },
         {
           applyForGroups: ['_GLOBAL'],
@@ -519,8 +515,6 @@
           state.selected.group = currentlySelectedGroup();
         }
 
-        console.log(state.allUserGroups);
-       
         selectGroup(0);
       },
       handleGroupChange: async () => {

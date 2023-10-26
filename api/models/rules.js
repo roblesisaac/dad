@@ -2,11 +2,14 @@ import AmptModel from '../utils/amptModel';
 
 const ruleSchema = {
   userId: {
-    set: (_, { req }) => req.user._id
+    set: (_, { user }) => user._id
   },
   applyForGroups: [String],
   applyForTabs: [String],
-  rule: ['String']
+  rule: [String],
+  _isImportant: Boolean,
+  orderOfExecution: Number,
+  label1: 'userId'
 };
 
 export default AmptModel(['rules', 'userId'], ruleSchema);

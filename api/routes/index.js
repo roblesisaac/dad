@@ -8,6 +8,7 @@ import mongo from './mongo';
 import messages from './messages';
 import pages from './pages';
 import plaid from './plaid';
+import rules from './rules';
 import sites from './sites';
 import users from './users';
 
@@ -28,6 +29,7 @@ export default (app) => {
         sites,
         pages,
         plaid,
+        rules,
         users,
         // db
     ].forEach(route => route(api, '/api'));
