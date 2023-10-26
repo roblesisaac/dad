@@ -46,7 +46,11 @@ const isSelected = computed(() => {
   return state.selected.tab.categoryName === categoryName;
 });
 
-const catTotal = computed(() => formatPrice(categoryTotal, { toFixed: 0 }));
+const catTotal = computed(() => {
+  const toFixed = isSelected.value ? 2 : 0;
+
+  return formatPrice(categoryTotal, { toFixed })
+});
 
 function selectCategory() {
   state.selected.tab.categoryName = state.selected.tab.categoryName === categoryName ? null : categoryName;

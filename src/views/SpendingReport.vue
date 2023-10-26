@@ -468,7 +468,7 @@
           let [_, storedData, storedTotal] = storedCategory;
 
           storedData.push(item);
-          storedTotal += amt;
+          storedCategory[2] = storedTotal + amt;
         } else {
           categorizedItems.push([categoryName, [item], amt])
         }
