@@ -18,7 +18,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, nextTick } from 'vue';
 import LoadingDots from './LoadingDots.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 import { formatPrice } from '../utils';
@@ -60,7 +60,7 @@ const isPreviousTabSelected = computed(() => {
   return previousTab?.isSelected;
 });
 
-async function selectTab(tabToSelect) {
+function selectTab(tabToSelect) {
   if(tabToSelect.isSelected) {
     return props.state.view = 'EditTab';
   }
@@ -69,11 +69,13 @@ async function selectTab(tabToSelect) {
 
   if(currentlySelectedTab) {
     currentlySelectedTab.isSelected = false;
-    await api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
+    api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
   }
 
-  tabToSelect.isSelected = true;
-  await api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+  nextTick(() => {
+    tabToSelect.isSelected = true;
+    api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+  });
 }
 
 </script>

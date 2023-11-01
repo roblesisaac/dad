@@ -419,7 +419,13 @@
           continue;
         }
 
-        const amt = parseFloat(item.amount); 
+        const amt = parseFloat(item.amount);
+        tabTotal += amt;
+
+        if(!tab.isSelected) {
+          continue;
+        }
+
         const storedCategory = categorizedItems.find(([storedCategoryName]) => storedCategoryName === categoryName);
 
         if(storedCategory) {
@@ -430,9 +436,9 @@
         } else {
           categorizedItems.push([categoryName, [item], amt])
         }
-
-        tabTotal += amt;
       }
+
+      categorizedItems.sort((a, b) =>  b[2] - a[2]); // sort categories by totals
 
       return { tabTotal, categorizedItems };
     }
@@ -540,12 +546,42 @@
 
         state.isLoading = false;
       },
+      handleTabChange: (newSelectedTab, oldSelectedTab) => {
+        if (newSelectedTab && oldSelectedTab && newSelectedTab._id === oldSelectedTab._id) {
+          return;
+        }
+
+        if(oldSelectedTab) {
+          oldSelectedTab.categorizedItems = [];
+        }
+
+        if(!newSelectedTab) {
+          return;
+        }
+        
+        const processed = processTabData(state.selected.allGroupTransactions, newSelectedTab);
+
+        newSelectedTab.categorizedItems = processed.categorizedItems;
+      },
+      handleViewChange: async (newView, oldView) => {
+        if(newView !== 'home') {
+          return;
+        }
+
+        if(oldView === 'SelectGroup') {
+          app.handleGroupChange();
+        } else {
+          await app.processAllTabsForSelectedGroup();
+        }
+      },
       processAllTabsForSelectedGroup: async () => {
         const tabsForGroup = state.selected.tabsForGroup;
 
         if(!tabsForGroup.length) {
           return;
         }
+
+        state.isLoading = true;
 
         const selectedTabs = selectedTabsInGroup();
 
@@ -556,8 +592,6 @@
         if(selectedTabs.length > 1) {
           await deselectOtherTabs(selectedTabs);
         }
-
-        state.isLoading = true;
 
         for(const tab of tabsForGroup) {
           tab.categorizedItems = [];
@@ -570,6 +604,7 @@
 
         state.isLoading = false;
       },
+      processTabData,
       syncTransactions
     }
   }();
@@ -578,15 +613,8 @@
 
   watch(() => state.date.start, app.handleGroupChange);
   watch(() => state.date.end, app.handleGroupChange);
-  watch(() => state.view, async (newView, oldView) => {
-    if(newView === 'home') {
-      if(oldView === 'SelectGroup') {
-        app.handleGroupChange();
-      } else {
-        await app.processAllTabsForSelectedGroup();
-      }
-    }
-  });
+  watch(() => state.view, app.handleViewChange);
+  watch(() => state.selected.tab, app.handleTabChange, { deep: true });
 
 </script>
 
