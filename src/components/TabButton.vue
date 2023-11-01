@@ -6,7 +6,7 @@
     <div class="cell auto">
       <div class="relative pointer">
         <small class="section-title">
-          {{ props.tab.tabName }} {{  tabsForGroup }}
+          {{ props.tab.tabName }}
         </small>
         <br/>
         <LoadingDots v-if="props.state.isLoading" />
@@ -31,7 +31,7 @@ const props = defineProps({
   tabIndex: Number
 });
 
-const tabsForGroup = props.state.selected.tabsForGroup;
+const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
 
 const isSelected = computed(() => {
   return props.tab.isSelected;
@@ -52,10 +52,10 @@ const tabTotal = computed(() => {
   return formatPrice(total, { toFixed });
 });
 
-const isLastInArray = computed(() => props.tabIndex === tabsForGroup.length - 1);
+const isLastInArray = computed(() => props.tabIndex === tabsForGroup.value.length - 1);
 
 const isPreviousTabSelected = computed(() => {
-  const previousTab = tabsForGroup[props.tabIndex-1];
+  const previousTab = tabsForGroup.value[props.tabIndex-1];
 
   return previousTab?.isSelected;
 });
