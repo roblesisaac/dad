@@ -411,6 +411,10 @@
 
         item.category = categoryName;
 
+        // if(groupByConfig) {
+        //   groupByConfig(item); // year, day, month, weekday, item.month = jan
+        // }
+
         if(!filter(item)) {
           continue;
         }

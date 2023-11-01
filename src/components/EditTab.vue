@@ -157,4 +157,10 @@ const app = function() {
   background: transparent;
   box-shadow: none;
 }
+
+.transaparent:focus {
+    outline: none;
+    border: 0 !important;
+    box-shadow: none !important;
+}
 </style>
