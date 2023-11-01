@@ -28,6 +28,7 @@
 </template>
 
 <script setup>
+import { nextTick } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import LoadingDots from './LoadingDots.vue';
@@ -76,13 +77,15 @@ const app = function() {
       const selectedGroup = state.selected.group;
 
       if(selectedGroup) {
-        await api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
+        api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
         selectedGroup.isSelected = false;
       }
 
-      await api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
-      groupToSelect.isSelected = true;   
-      state.view = 'home';
+      nextTick(() => {
+        api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
+        groupToSelect.isSelected = true;   
+        state.view = 'home';
+      });
     }
   }
 }();
