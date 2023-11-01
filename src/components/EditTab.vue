@@ -158,9 +158,9 @@ const app = function() {
   box-shadow: none;
 }
 
-.transaparent:focus {
-    outline: none;
-    border: 0 !important;
-    box-shadow: none !important;
+.transparent:focus {
+  outline: none;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 </style>
