@@ -6,7 +6,7 @@
     <div class="cell auto">
       <div class="relative pointer">
         <small class="section-title">
-          {{ props.tab.tabName }}
+          {{ props.tab.tabName }} {{  tabsForGroup }}
         </small>
         <br/>
         <LoadingDots v-if="props.state.isLoading" />
