@@ -10,6 +10,11 @@ const app = function() {
   }
 
   return {
+    deleteRule: async ({ params }, res) => {
+      const deletedRule = await Rules.erase(params._ruleId);
+
+      res.json(deletedRule);
+    },
     getRules: async (req, res) => {
       const userId = req.user._id;
       const rules = await Rules.find({ userId });

@@ -40,10 +40,12 @@ const { state, categoryName, categoryItems, categoryTotal } = defineProps({
   categoryTotal: Number
 });
 
-const id = (categoryName+state.selected.tab.tabName).replace(/\s/g, '');
+const selectedTab = state.selected.tab;
+
+const id = (categoryName+selectedTab.tabName).replace(/\s/g, '');
 
 const isSelected = computed(() => {
-  return state.selected.tab.categoryName === categoryName;
+  return selectedTab.categoryName === categoryName;
 });
 
 const catTotal = computed(() => {
@@ -53,8 +55,9 @@ const catTotal = computed(() => {
 });
 
 function selectCategory() {
-  state.selected.tab.categoryName = state.selected.tab.categoryName === categoryName ? null : categoryName;
-  state.selected.tab.transactions = isSelected.value ? categoryItems : [];
+  const isCategorySelected = selectedTab.categoryName === categoryName;
+  selectedTab.categoryName = isCategorySelected ? null : categoryName;
+  selectedTab.transactions = isSelected.value ? categoryItems : [];
 }
 
 watch(isSelected, () => {

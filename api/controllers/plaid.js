@@ -1,15 +1,18 @@
 import { params } from '@ampt/sdk';
 import { data } from '@ampt/data';
+
 import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
 import { decryptWithKey, decrypt } from '../utils/encryption';
 import { isEmptyObject, scrub } from '../../src/utils';
+import notify from '../utils/notify';
+
+import tasks from '../tasks/plaid';
 
 import plaidAccounts from '../models/plaidAccounts';
 import plaidGroups from '../models/plaidGroups';
 import plaidItems from '../models/plaidItems';
 import plaidTransactions from '../models/plaidTransactions';
-
-import tasks from '../tasks/plaid';
+import Users from '../models/users';
 
 const {
   AMPT_URL,
@@ -21,6 +24,129 @@ const {
 
 const app = function() {
   let plaidClient;
+
+  //start sync methods
+  async function applyTransactionUpdates({ access_token, itemId, cursor, req, has_more, plaidData }) {
+    const { added, modified, removed } = plaidData;
+
+    const shouldFetchTransactions = !isEmpty(plaidData, ['added', 'removed']);
+    const transactionsInDatabase = shouldFetchTransactions
+      ? await plaidTransactions.findAll({ name: '*', userId: req.user._id })
+      : [];
+
+    const existingTransactionsAdded = [];
+    const existingTransactionsModified = [];
+    
+    for (const transaction of added) {
+      const existingTransaction = findExistingTransaction(transactionsInDatabase, transaction);
+
+      if(existingTransaction) existingTransactionsAdded.push(existingTransaction);
+
+      // if(!existingTransaction) {
+      //   await plaidTransactions.save({ ...transaction, req });
+      // }
+    }
+
+    for (const transaction of modified) {
+      const { transaction_id } = transaction;
+      const existingModified = transactionsInDatabase.find(t => t.transaction_id === transaction_id);
+
+      if(existingModified) existingTransactionsModified.push(existingModified);
+
+      // await plaidTransactions.update({ transaction_id }, transaction);
+    }
+
+    const removeIds = removed.map(removedItem => {
+      return transactionsInDatabase.find(dbItem => 
+        dbItem.transaction_id === removedItem.transaction_id
+      );
+    });
+    
+    // while (removeIds?.length) {
+    //   await data.remove(removeIds.slice(0, 25));
+    // }
+    
+    // await updateItemCursorAndStatus(itemId, cursor, 'update in progres');
+
+    return {
+      filter: {
+        name: '*', userId: req.user._id
+      }, 
+      shouldFetchTransactions, 
+      added, 
+      removed, 
+      modified, 
+      existingTransactionsAdded,
+      existingTransactionsModified,
+      removeIds,
+      transactionsInDatabase: transactionsInDatabase.length
+    }
+
+    // if(has_more) {
+    //   return await fetchTransactionsFromPlaid({ access_token, cursor, itemId, req })
+    // }
+
+    // return await updateItemCursorAndStatus(itemId, cursor, 'complete', req);
+  }
+
+  async function buildReq(userId) {
+    const user = await Users.findOne(userId);
+
+    return { user };
+  }
+
+  async function fetchTransactionsFromPlaid({ access_token, cursor, itemId, req }) {
+    const request = {
+      access_token,
+      cursor,
+      options: { include_personal_finance_category: true }
+    };
+
+    const { data: plaidData } = await plaidClient.transactionsSync(request);
+    const { next_cursor, has_more } = plaidData;
+
+    if(isEmpty(plaidData, ['added', 'modified', 'removed']) && !has_more) {
+      return await updateItemCursorAndStatus(itemId, next_cursor, 'complete', req);
+    }
+
+    return await applyTransactionUpdates({ access_token, itemId, cursor: next_cursor, req, has_more, plaidData });
+  }
+
+  function findExistingTransaction(transactionsInDatabase, transaction) {
+    return transactionsInDatabase.find(itm => {
+      return itm.transaction_id === transaction.transaction_id
+    });
+  }
+
+  function isEmpty(plaidData, propsToCheck) {
+    return propsToCheck.every(
+      arrName => plaidData[arrName] && plaidData[arrName].length === 0
+    );
+  }
+
+  async function updateItemCursorAndStatus(itemId, cursor, syncStatus, req) {  
+    const pstOptions = { timeZone: 'America/Los_Angeles' };
+    const nowInPST = new Date().toLocaleString('en-US', pstOptions);
+
+    await plaidItems.update(itemId, { 
+      lastSynced: nowInPST,
+      syncStatus, 
+      cursor
+    });
+
+    if(syncStatus === 'complete' && req?.user) {
+      const { user } = req;
+
+      // await notify.email(user.email, {
+      //   subject: 'TrackTabs.com Sync Complete!',
+      //   template: `Your TepTab account has been successfully synced. Your transactions are now up to date as of ${ nowInPST }.`
+      // });
+
+    }
+
+    return { itemId, lastSynced: nowInPST };
+  }
+  //end sync methods
 
   function buildUserQueryForTransactions(userId, query) {
     if (isEmptyObject(query)) {
@@ -295,10 +421,16 @@ const app = function() {
     return duplicatesToRemove;
   }
 
-  function removeFromDb(duplicates) {
+  async function removeFromDb(duplicates) {
     duplicates = Array.isArray(duplicates) ? duplicates : [duplicates];
+    
+    const idsToRemove = duplicates.splice(0, 25);
+    const removed = await data.remove(idsToRemove);
 
-    return data.remove(duplicates);
+    return {
+      removed,
+      duplicates
+    };
   }
 
   return {
@@ -408,7 +540,7 @@ const app = function() {
     removeFromDb: async function(req, res) {
       const removed = await removeFromDb(req.body);
 
-      res.json(removed)
+      res.json(removed);
     },
     syncAccounts: async function({ user }, res) {
       initClient();
@@ -418,7 +550,8 @@ const app = function() {
     syncAllUserData: async function({ user }, res) {
       const { accounts, groups } = await syncUserAccounts(user);
       const items = await plaidItems.findAll({ itemId: '*', userId: user._id });
-      let itemsToSync = 0;
+      const itemsSynced = [];
+      let itemsToSync = [];
       let itemsAlreadySyncing = 0;
 
       for(const item of items) {
@@ -427,17 +560,38 @@ const app = function() {
           continue;
         };
 
-        await plaidItems.update(item._id, { syncStatus: 'sync in progress...' });
-        tasks.syncTransactions(item._id, user._id);
-        itemsToSync++;
+        if(item.cursor === '') {
+          await plaidItems.update(item._id, { syncStatus: 'sync in progress...' });
+          tasks.syncTransactions(item._id, user._id);
+          itemsToSync.push(item);
+          continue;
+        }
+
+        // const syncedItem = await app.syncTransactions(item._id, user._id);
+        // itemsSynced.push(syncedItem);
       }
 
       res.json({
         itemsAlreadySyncing,
         itemsToSync,
+        itemsSynced,
         accounts,
         groups
       });
+    },
+    syncTransactions: async function(itemId, userId) {
+      plaidClient = plaidClient || initClient();
+  
+      const { accessToken, cursor } = await plaidItems.findOne(itemId);
+      const req = await buildReq(userId);
+  
+      const access_token = decryptAccessToken(accessToken, req.user.encryptionKey);
+  
+      return await fetchTransactionsFromPlaid({ access_token, cursor, itemId, req });
+    },
+    test: async function(req, res) {
+      const allTransactions = await plaidTransactions.findAll({ name: '*', userId: req.user._id });
+      res.json(allTransactions.length);
     }
   }
 }();

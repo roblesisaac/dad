@@ -16,4 +16,5 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/all/user/data', app.syncAllUserData);
   member.get('/plaid/get/duplicates', app.getDuplicates);
   member.post('/plaid/remove/duplicates', app.removeFromDb);
+  member.get('/plaid/all/transactions', app.test);
 }

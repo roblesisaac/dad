@@ -82,18 +82,23 @@ app.init();
 }
 
 .logoBtn {
-  background-color: #000;
-  box-shadow: 3px 3px 0 #333;
-  /* border: 1px solid #fff; */
-  color: white;
+  background-color: transparent;
+  /* box-shadow: 1px 1px #333; */
+  color: #000;
   text-align: center;
   text-decoration: none;
   display: inline-block;
   font-size: 16px;
-  transition-duration: 0.4s;
+  transition-duration: .4s;
   cursor: pointer;
-  border-radius: 5px;
+  /* border-radius: 5px; */
   padding: 5px 10px;
+  border: 2px solid #000;
+}
+
+.logoBtn:hover {
+  background-color: #000;
+  color: #fff;
 }
 
 </style>

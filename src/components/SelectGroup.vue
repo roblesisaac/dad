@@ -72,14 +72,16 @@ const app = function() {
 
       link.open();
     },
-    selectGroup: (groupToSelect) => {
-      const { selected } = state;
-      
-      selected.group.isSelected = false;
+    selectGroup: async (groupToSelect) => {
+      const selectedGroup = state.selected.group;
 
-      groupToSelect.isSelected 
-      selected.group = groupToSelect;
+      if(selectedGroup) {
+        await api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
+        selectedGroup.isSelected = false;
+      }
 
+      await api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
+      groupToSelect.isSelected = true;   
       state.view = 'home';
     }
   }

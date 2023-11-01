@@ -8,4 +8,5 @@ export default function(api, baseUrl) {
   member.get('/rules/:_id?', app.getRules);
   member.post('/rules', app.saveRule);
   member.put('/rules/:_ruleId', app.updateRule);
+  member.delete('/rules/:_ruleId', app.deleteRule);
 }

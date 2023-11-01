@@ -7,7 +7,7 @@ import { defineProps, ref, onMounted, watch } from 'vue';
 
 const { state, propToUpdate } = defineProps({
   state: Object,
-  propToUpdate: String
+  propToUpdate: Number
 });
 
 const inputRef = ref(null);

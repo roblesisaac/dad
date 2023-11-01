@@ -1,15 +1,15 @@
 <template>
-  <div @click="selectTab(tab)" :class="['grid middle', borders]">
+  <div @click="selectTab(props.tab)" :class="['grid middle', borders]">
     <div v-if="tab.isSelected" class="cell-1-5">
       <DotsVerticalCircleOutline />
     </div>
     <div class="cell auto">
       <div class="relative pointer">
         <small class="section-title">
-          {{ tab.tabName }}
+          {{ props.tab.tabName }}
         </small>
         <br/>
-        <LoadingDots v-if="state.isLoading" />
+        <LoadingDots v-if="props.state.isLoading" />
         <span v-else href="#" class="section-content">{{ tabTotal }}</span>
       </div>
     </div>
@@ -18,86 +18,68 @@
 </template>
 
 <script setup>
-import { computed, nextTick } from 'vue';
+import { computed } from 'vue';
 import LoadingDots from './LoadingDots.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 import { formatPrice } from '../utils';
+import { useAppStore } from '../stores/app';
 
-const { state, tab } = defineProps({
+const { api } = useAppStore();
+const props = defineProps({
   tab: 'object',
-  state: 'object'
+  state: 'object',
+  tabIndex: Number
 });
 
-const { selected } = state;
-const { tabs } = selected.group;
-const tabIndex = getIndex(tabs, { tabName: tab.tabName });
+const tabsForGroup = props.state.selected.tabsForGroup;
+
+const isSelected = computed(() => {
+  return props.tab.isSelected;
+});
 
 const borders = computed(() => {
-  const rightBorder = isLastInArray() || isSelected(tab) ? '' : 'b-right';
-  const bottomBorder = isSelected(tab) ? 'b-bottom-dashed' : 'b-bottom';
-  const borderLeft = isPreviousSelected() ? 'b-left' : '';
+  const rightBorder = isLastInArray.value || isSelected.value ? '' : 'b-right';
+  const bottomBorder = isSelected.value ? 'b-bottom-dashed' : 'b-bottom';
+  const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
 
   return ['section', bottomBorder, rightBorder, borderLeft];
 });
 
 const tabTotal = computed(() => {
-  const total = tab.total || 0;
-  const toFixed = tab.isSelected ? 2 : 0;
+  const total = props.tab.total || 0;
+  const toFixed = isSelected.value ? 2 : 0;
 
   return formatPrice(total, { toFixed });
 });
 
-function editTab() {
-  state.view = 'EditTab';
-}
+const isLastInArray = computed(() => props.tabIndex === tabsForGroup.length - 1);
 
-function isLastInArray() {
-  return tabIndex === tabs.length - 1;
-}
+const isPreviousTabSelected = computed(() => {
+  const previousTab = tabsForGroup[props.tabIndex-1];
 
-function isSelected(tab) {
-  return selected.tab.tabName === tab.tabName;
-}
+  return previousTab?.isSelected;
+});
 
-function isPreviousSelected() {
-  const previous = tabs[tabIndex-1];
-
-  return previous && isSelected(previous);
-}
-
-function getIndex(array, criteria) {
-  for (let i = 0; i < array.length; i++) {
-    const item = array[i];
-    let isMatch = true;
-
-    for (const key in criteria) {
-      if (criteria.hasOwnProperty(key)) {
-        if (item[key] !== criteria[key]) {
-          isMatch = false;
-          break;
-        }
-      }
-    }
-
-    if (isMatch) {
-      return i;
-    }
+async function selectTab(tabToSelect) {
+  if(tabToSelect.isSelected) {
+    return props.state.view = 'EditTab';
   }
 
-  return -1;
-}
+  const currentlySelectedTab = props.state.selected.tab;
 
-function selectTab(tab) {
-  if(tab.isSelected) {
-    editTab();
-    return;
+  if(currentlySelectedTab) {
+    currentlySelectedTab.isSelected = false;
+    await api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
   }
 
-  state.selected.tab.isSelected = false;
-
-  nextTick(() => {
-    tab.isSelected = true;
-    state.selected.tab = tab;
-  });
+  tabToSelect.isSelected = true;
+  await api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
 }
+
 </script>
+
+<style>
+/* .tabButton.isSelected {
+  background: #d3e3fe;
+} */
+</style>

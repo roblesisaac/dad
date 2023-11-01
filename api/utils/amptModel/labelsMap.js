@@ -23,7 +23,7 @@ export default function(collectionName, config) {
       }
 
       if(!concat.every(key => validated.hasOwnProperty(key))) {
-        handleError(`Concat key '${key}' is missing for '${labelName}'`);
+        handleError(`Concat key is missing for '${labelName}'`);
       }
       
       const concattedValue = concat.map(key => validated[key]).join(':');
@@ -123,7 +123,6 @@ export default function(collectionName, config) {
         
         createdLabelKeys[labelNumber] = labelKey;
       }
-
       return createdLabelKeys;
     },
     hasLabel(uniqueField) {

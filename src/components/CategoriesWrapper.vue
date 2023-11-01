@@ -1,19 +1,19 @@
 <template>
-  <CategoryDetails v-for="([categoryName, categoryItems, categoryTotal]) in tab.categorizedItems"
+  <CategoryDetails v-for="([categoryName, categoryItems, categoryTotal]) in selectedTab.categorizedItems"
     :state="state"
     :categoryName="categoryName"
     :categoryItems="categoryItems"
     :categoryTotal="categoryTotal"
-    :key="categoryName+tab.tabName"  
+    :key="categoryName"  
   />
 </template>
 
 <script setup>
 
-import { computed, defineProps } from 'vue';
+import { defineProps } from 'vue';
 import CategoryDetails from './CategoryDetails.vue';
 
 const { state } = defineProps({ state: Object });
-const tab = computed(() => state.selected.tab);
+const selectedTab = state.selected.tab;
 
 </script>
