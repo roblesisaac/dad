@@ -5,16 +5,14 @@ export default function(api, baseUrl) {
   const protect = Protect.route(api, 'plaiditems', baseUrl);
   const member = protect('member');
 
-  member.post('/plaid/connect', app.connectLink);
-  member.post('/plaid/exchange', app.exchangeTokenAndSavePlaidItem);
-  member.get('/plaid/accounts/:_id?', app.getAccounts);
-  member.get('/plaid/groups/:_id?', app.getGroups);
-  member.get('/plaid/items/:_id?', app.getPlaidItems);
-  member.get('/plaid/sync/accounts', app.syncAccounts);
-  member.get('/plaid/sync/transactions/:itemId', app.initSyncTransactions);
-  member.get('/plaid/transactions/:_id?', app.getTransactions);
-  member.get('/plaid/sync/all/user/data', app.syncAllUserData);
+  member.post('/plaid/connect/link', app.connectLink);
+  member.post('/plaid/exchange/token', app.exchangeTokenAndSavePlaidItem);
   member.get('/plaid/get/duplicates', app.getDuplicates);
+  member.get('/plaid/get/transaction/count', app.getAllTransactionCount);
+  member.get('/plaid/items/:_id?', app.getPlaidItems);
+  member.get('/plaid/remove/all/transactions', app.removeAllTransactionsFromDatabase);
   member.post('/plaid/remove/duplicates', app.removeFromDb);
-  member.get('/plaid/all/transactions', app.test);
+  member.get('/plaid/sync/accounts/and/groups', app.syncAccountsAndGroups);
+  member.get('/plaid/sync/all/transactions', app.syncAllUserTransactions);
+  member.get('/plaid/transactions/:_id?', app.getTransactions);
 }

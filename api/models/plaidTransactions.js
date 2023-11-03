@@ -1,41 +1,25 @@
 import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
-const locationSchema = {
-  address: String,
-  city: String,
-  region: String,
-  postal_code: String,
-  country: String,
-  lat: Number,
-  lon: Number,
-  store_number: String,
-};
-
-const paymentMetaSchema = {
-  by_order_of: String,
-  payee: String,
-  payer: String,
-  payment_method: String,
-  payment_processor: String,
-  ppd_id: String,
-  reason: String,
-  reference_number: String,
-};
-
 const encryptedValue = {
   set: encrypt,
   get: decrypt
 };
 
 const transactionSchema = {
-  userId: {
-    set: (_, { req }) => req.user._id
-  },
+  userId: String,
   account_id: String,
   amount: encryptedValue,
   iso_currency_code: String,
   unofficial_currency_code: String,
+  counterparties: [{
+    confidence_level: String,
+    entity_id: String,
+    logo_url: String,
+    name: String,
+    type: String,
+    website: String
+  }],
   category: (value) => Array.isArray(value) ? value.join() : value,
   category_id: String,
   check_number: String,
@@ -43,51 +27,65 @@ const transactionSchema = {
   datetime: String,
   authorized_date: String,
   authorized_datetime: String,
-  location: locationSchema,
+  location: {
+    address: String,
+    city: String,
+    region: String,
+    postal_code: String,
+    country: String,
+    lat: Number,
+    lon: Number,
+    store_number: String,
+  },
   name: {
     type: String,
     lowercase: true
   },
   merchant_name: String,
-  payment_meta: paymentMetaSchema,
+  payment_meta: {
+    by_order_of: String,
+    payee: String,
+    payer: String,
+    payment_method: String,
+    payment_processor: String,
+    ppd_id: String,
+    reason: String,
+    reference_number: String
+  },
+  logo_url: String,
   payment_channel: String,
   pending: Boolean,
   pending_transaction_id: String,
   personal_finance_category: {
+    confidence_level: String,
     primary: String,
     detailed: String,
   },
   account_owner: String,
+  syncId: String,
   transaction_id: {
     type: String,
     unique: true
   },
   transaction_code: String,
   transaction_type: String,
-  label1: {
-    name: 'date',
+  website: String,
+  label1: 'transaction_id',
+  label2: 'date',
+  label3: {
+    name: 'accountdate',
     concat: ['account_id', 'date']
   },
-  label2: {
-    name: 'transaction_id',
-    concat: ['account_id', 'transaction_id']
-  },
-  label3: {
-    name: 'name',
-    concat: ['account_id', 'name']
-  },
-  label4: {
+  label4: 'syncId',
+  label5: {
     name: 'category',
     computed: item => {
-      const { userId, account_id, category } = item;
-      const lowercaseCat = (category || '').toLowerCase();
+      const cat = item.personal_finance_category;
+      const details = cat.primary+cat.detailed+cat.confidence_level;
+      const response = details || '';
 
-      return userId+account_id+lowercaseCat
+      return response.toLowerCase();
     }
-  },
-  label5: {
-    name: 'amount',
-    concat: ['userId', 'account_id', 'amount']
   }
 }
 

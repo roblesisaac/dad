@@ -1,6 +1,13 @@
 <template>
   <!-- BackButton -->
   <Transition>
+    <div v-if="state.blueBarMessage" class="grid">
+      <div class="cell-1 p10l  bgBlue bold">
+        <small class="colorBleach">{{ state.blueBarMessage }}<LoadingDots /></small>
+      </div>
+    </div>
+  </Transition>
+  <Transition>
     <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
   </Transition>
 
@@ -98,6 +105,7 @@
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
     },
+    blueBarMessage: false,
     isLoading: false,
     is(view) {
       const views = Array.isArray(view) ? view : [view];
@@ -319,21 +327,6 @@
       return items;
     }
 
-    async function fetchSyncedTransactions(itemId) {
-      const url = `api/plaid/sync/transactions/${itemId}`;
-      const syncedData = await api.get(url);
-      let transactions = [];
-
-      while(syncedData.has_more) {
-        const response = await api.get(url);
-
-        syncedData.has_more = response.has_more;
-        transactions = [...transactions, ...response.transactions];
-      }
-
-      return transactions;
-    }
-
     function filterGlobalRules() {
       return state.allUserRules.filter(ruleItem => {
         const accountIsGlobal = ruleItem.applyForGroups.includes('_GLOBAL');
@@ -443,6 +436,31 @@
       return { tabTotal, categorizedItems };
     }
 
+    async function renderSyncStatus() {
+      let itemsSyncing = 0;
+
+      for (const item of await api.get('api/plaid/items') ) {
+        console.log(item.syncData);
+        if(item.syncData.status === 'completed') {
+          continue;
+        }
+
+        itemsSyncing++;
+      }
+
+      console.log({ itemsSyncing })
+
+      if(!itemsSyncing) {
+        state.blueBarMessage = false;
+        return;
+      }
+
+      const s = itemsSyncing > 1 ? 's' : '';
+      state.blueBarMessage = `Syncing transactions for ${itemsSyncing} bank${s}`;
+
+      setTimeout(renderSyncStatus, 5*1000);
+    }
+
     function selectFirstTab(selectedTabs) {
       const firstTab = selectedTabs[0];
 
@@ -465,19 +483,6 @@
       const day = String(dateObject.getDate()).padStart(2, '0');
       
       return `${year}-${month}-${day}`;
-    }
-
-    async function syncTransactions(itemId) {
-      state.blueBarMessage = 'syncing transactions';
-
-      const syncedData = await fetchSyncedTransactions(itemId);
-      const { added, modified, removed } = syncedData;
-
-      await addItems(added);
-      await modifyItems(modified);
-      await removeItems(removed);
-
-      state.blueBarMessage = false;
     }
 
     return {
@@ -515,7 +520,7 @@
         state.allUserTabs = await fetchUserTabs();          
         state.allUserRules = await fetchUserRules();
         
-        const { groups, accounts } = await api.get('api/plaid/sync/all/user/data');
+        const { groups, accounts } = await api.get('api/plaid/sync/accounts/and/groups');
 
         if(!groups.length) {
           state.view = 'SelectGroup';
@@ -524,13 +529,14 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
 
+        api.get('api/plaid/sync/all/transactions');
         app.handleGroupChange();
       },
       handleGroupChange: async () => {
         const selectedGroup = state.selected.group;
         const tabsForGroup = state.selected.tabsForGroup;
 
-        if(!selectedGroup || !tabsForGroup) return;
+        if(!selectedGroup) return;
 
         state.isLoading = true;
         state.selected.allGroupTransactions = [];
@@ -541,6 +547,12 @@
             ...await fetchTransactions(account.account_id, extractDateRange())
           ]
         };
+
+        if(!tabsForGroup.length) {
+          await app.createNewTab();
+          state.isLoading = false;
+          return;
+        }
 
         await app.processAllTabsForSelectedGroup();
 
@@ -569,6 +581,7 @@
         }
 
         if(oldView === 'SelectGroup') {
+          renderSyncStatus();
           app.handleGroupChange();
         } else {
           await app.processAllTabsForSelectedGroup();
@@ -604,8 +617,7 @@
 
         state.isLoading = false;
       },
-      processTabData,
-      syncTransactions
+      processTabData
     }
   }();
 

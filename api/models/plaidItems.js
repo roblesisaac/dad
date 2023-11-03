@@ -13,18 +13,43 @@ const itemSchema = {
       return encrypt(userEncryptedKey);
     },
     required: true
-   },
+  },
   itemId: { 
     set: String,
     required: true,
     unique: true
    },
   institutionId: String,
-  lastSyncedAt: Date,
+  syncData: {
+    cursor: {
+      type: String,
+      default: ''
+    },
+    lastSyncId: String,
+    lastSyncTime: Number,
+    result: {
+      itemsAddedCount: {
+        type: Number,
+        default: 0
+      }, 
+      itemsModifiedCount: {
+        type: Number,
+        default: 0
+      },
+      itemsRemovedCount: {
+        type: Number,
+        default: 0
+      },
+      errorMessage: String
+    },
+    status: {
+      type: String,
+      default: '',
+      enum: ['', 'queued', 'in_progress', 'completed', 'failed']
+    }
+  },
   accessTokenExpiration: String,
   institutionName: String,
-  cursor: String,
-  syncStatus: String,
   label1: 'itemId',
   label2: 'cursor'
 };

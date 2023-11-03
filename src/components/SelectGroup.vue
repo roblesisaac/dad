@@ -44,7 +44,7 @@ const app = function() {
       token: state.linkToken,
       // receivedRedirectUri: window.location.href,
       onSuccess: async function(publicToken) {
-        const { accounts, groups } = await api.post('api/plaid/exchange', { publicToken });
+        const { accounts, groups } = await api.post('api/plaid/exchange/token', { publicToken });
         state.allUserGroups = state.allUserGroups.concat(groups);
         state.allUserAccounts = state.allUserAccounts.concat(accounts);
       },
@@ -55,7 +55,7 @@ const app = function() {
   }
 
   async function fetchLinkToken() {
-    state.linkToken = state.linkToken || await api.post('api/plaid/connect');
+    state.linkToken = state.linkToken || await api.post('api/plaid/connect/link');
   }
 
   return {
@@ -73,7 +73,7 @@ const app = function() {
 
       link.open();
     },
-    selectGroup: async (groupToSelect) => {
+    selectGroup: (groupToSelect) => {
       const selectedGroup = state.selected.group;
 
       if(selectedGroup) {
