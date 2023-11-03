@@ -134,6 +134,7 @@
       }),
       tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) )
     },
+    syncCheckId: false,
     view: 'home'
   });
 
@@ -436,11 +437,14 @@
       return { tabTotal, categorizedItems };
     }
 
-    async function renderSyncStatus() {
+    async function renderSyncStatus(syncCheckId) {
+      if(state.syncCheckId !== syncCheckId) {
+        return;
+      }
+
       let itemsSyncing = 0;
 
       for (const item of await api.get('api/plaid/items') ) {
-        console.log(item.syncData);
         if(item.syncData.status === 'completed') {
           continue;
         }
@@ -448,9 +452,8 @@
         itemsSyncing++;
       }
 
-      console.log({ itemsSyncing })
-
       if(!itemsSyncing) {
+        state.syncCheckId = false;
         state.blueBarMessage = false;
         return;
       }
@@ -458,7 +461,7 @@
       const s = itemsSyncing > 1 ? 's' : '';
       state.blueBarMessage = `Syncing transactions for ${itemsSyncing} bank${s}`;
 
-      setTimeout(renderSyncStatus, 5*1000);
+      setTimeout(() =>  renderSyncStatus(syncCheckId), 5*1000);
     }
 
     function selectFirstTab(selectedTabs) {
@@ -486,6 +489,16 @@
     }
 
     return {
+      checkSyncStatus: () => {
+        if(state.syncCheckId !== false) {
+          return;
+        }
+
+        const syncCheckId = Date.now();
+        state.syncCheckId = syncCheckId();
+
+        renderSyncStatus(syncCheckId);
+      },
       createNewTab: async () => {
         const selectedGroup = state.selected.group;
         const selectedTab = state.selected.tab;
@@ -581,7 +594,7 @@
         }
 
         if(oldView === 'SelectGroup') {
-          renderSyncStatus();
+          app.checkSyncStatus();
           app.handleGroupChange();
         } else {
           await app.processAllTabsForSelectedGroup();
