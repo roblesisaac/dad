@@ -1,12 +1,13 @@
 <template>
-  <input :style="{width: `${inputWidth}px`}" v-model="state[propToUpdate]" ref="inputRef" type="text" />
+  <input :style="{width: `${inputWidth}px`}" v-model="state[propToUpdate]" ref="inputRef" type="text" :placeholder="placeholder" />
 </template>
 
 <script setup>
 import { defineProps, ref, onMounted, watch } from 'vue';
 
-const { state, propToUpdate } = defineProps({
+const { state, placeholder, propToUpdate } = defineProps({
   state: Object,
+  placeholder: String,
   propToUpdate: Number
 });
 
@@ -15,11 +16,12 @@ const inputWidth = ref(100);
 
 function adaptWidthToValue() {
   const $input = inputRef.value;
-  const typedLength = $input.value?.length*15;
-  const scrollWidth = $input.scrollWidth+2;
+  const inputValue = $input.value || placeholder;
+  const typedLength = inputValue.length*17;
+  const scrollWidth = $input.scrollWidth+3;
   const newWidth = Math.min(typedLength, scrollWidth);
 
-  inputWidth.value = Math.max(50, newWidth);
+  inputWidth.value = newWidth;
 }
     
 onMounted(adaptWidthToValue);

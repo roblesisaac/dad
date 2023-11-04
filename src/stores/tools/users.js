@@ -8,6 +8,10 @@ const app = function() {
     const json = await response.json();
 
     state.isLoggedIn = json.isLoggedIn;
+
+    if(!state.isLoggedIn && !['/login', '/logout'].includes(window.location.pathname)) {
+    //  setTimeout(() =>  window.location.href = '/login', 500);
+    }
   }
 
   return {

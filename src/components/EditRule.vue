@@ -1,6 +1,6 @@
 <template>
   <ScrollingContent>
-    <div class="cell shrink p10y p10r bold handle">
+    <div class="cell shrink p10y p5r bold handle">
       <small>
         <DragVertical />
       </small>
@@ -9,46 +9,28 @@
     <div v-if="ruleType === 'sort'" class="cell shrink p10y p10r bold handle"><small>By</small></div>
     <div v-if="ruleType === 'filter'" class="cell shrink p10y p10r bold handle"><small>Show if</small></div>
     <div v-if="app.shouldShow('itemProp')" class="cell shrink p10y p10r">
-      <select v-model="ruleConfig.rule[1]" class="bold editRule">
-        <option value="">Field Name</option>
-        <option v-for="(itemProp, index) in editRuleState.ruleTypes[ruleType].itemProps"
-          :key="index"
-          :value="itemProp"
-        >
-          {{ itemProp }}
-        </option>
-      </select>
+      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].itemProps" title="something" :data="ruleConfig.rule" :prop="1" />
     </div>
     <div v-if="app.shouldShow('ruleMethodName')" class="cell shrink p10y p10r">
-      <select v-model="ruleConfig.rule[2]" class="bold colorBlue editRule">
-        <option value="">Rule Type</option>
-        <option v-for="(ruleMethodName, index) in editRuleState.ruleTypes[ruleType].ruleMethodNames"
-          :key="index"
-          :value="ruleMethodName"
-        >
-          {{ ruleMethodName }}
-        </option>
-      </select>
+      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" />
     </div>
     <div v-if="app.shouldShow('testStandard')" class="cell shrink p10y p10r">
-      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" />
+      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
     </div>
     <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r bold"><small>Categorize As</small></div>
     <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r">
-      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="editRule" />
+      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="editRule" placeholder="something" />
     </div>
     <div v-if="!editRuleState.showDeleteButton && ruleConfig._id" class="cell shrink p10y p10r bold">
       <small>
-        <DotsVerticalCircleOutline
-          @click="editRuleState.showDeleteButton=!editRuleState.showDeleteButton" 
-        />
+        <DotsVerticalCircleOutline @click="editState.ruleSharer=ruleConfig" />
       </small>
     </div>
-    <Transition>
+    <!-- <Transition>
     <div v-if="editRuleState.showDeleteButton && ruleConfig._id"  class="cell shrink p10y p10r bold">
       <TrashCan @click="app.removeRule(ruleConfig)" class="colorRed" />
     </div>
-    </Transition>
+    </Transition> -->
   </ScrollingContent>
   </template>
     
@@ -59,10 +41,12 @@
     import TrashCan from 'vue-material-design-icons/TrashCan.vue';
     import ScrollingContent from './ScrollingContent.vue';
     import DynamicWidthInput from './DynamicWidthInput.vue';
+    import DynamicWidthSelect from './DynamicWidthSelect.vue';
     import { useAppStore } from '../stores/app';
     
     const { api } = useAppStore();
-    const { filteredRulesByType, ruleConfig, ruleType, state, key } = defineProps({
+    const { editState, filteredRulesByType, ruleConfig, ruleType, state, key } = defineProps({
+      editState: Object,
       filteredRulesByType: Array,
       ruleType: String,
       ruleConfig: Object,
@@ -198,12 +182,16 @@
   </script>
     
   <style>
-  .editRule {
-    height: 40px !important;
-  }
-  select.editRule {
-    box-shadow: 3px 3px 0 rgba(0,0,0,0.3);
-    text-align: center;
+  select.editRule, input.editRule {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    text-decoration: underline;
+    box-shadow: none;
     font-weight: bold;
+    color: #2400FF;
+    padding: 0;
+    background: transparent;
+    border: none;
   }
   </style>

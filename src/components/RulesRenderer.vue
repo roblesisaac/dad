@@ -1,6 +1,6 @@
 <template>
 <draggable class="grid draggable" v-model="filteredRulesByType" v-bind="dragOptions" handle=".handle" itemKey="dragRules">
-  <EditRule v-for="(ruleConfig, index) in filteredRulesByType" :filteredRulesByType="filteredRulesByType" :ruleConfig="ruleConfig" :state="state" :key="index" :ruleType="ruleType" />
+  <EditRule v-for="(ruleConfig, index) in filteredRulesByType" :filteredRulesByType="filteredRulesByType" :ruleConfig="ruleConfig" :state="state" :key="index" :ruleType="ruleType" :editState="editState" />
 </draggable>
 </template>
 
@@ -9,7 +9,8 @@ import { computed, defineProps, ref, watch } from 'vue';
 import EditRule from './EditRule.vue';
 import { VueDraggableNext as Draggable } from 'vue-draggable-next';
 
-const { ruleType, state } = defineProps({
+const { editState, ruleType, state } = defineProps({
+  editState: Object,
   ruleType: String,
   state: Object
 });
@@ -34,20 +35,20 @@ function filterGlobalRules() {
 }
 
 function filterRulesForTab() {
-  const groupId = selectedGroup._id;
+  // const groupId = selectedGroup._id;
   const tabId = selectedTab._id;
 
   return state.allUserRules.filter(ruleItem => {
-    const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
+    // const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
 
-    if(!groupIdMatches) {
-      return false;
-    }
+    // if(!groupIdMatches) {
+    //   return false;
+    // }
 
     const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
     const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
 
-    return groupIdMatches && (applyForTabsIsGlobal || applyForTabMatchesTabId)
+    return applyForTabsIsGlobal || applyForTabMatchesTabId
   });
 }
 

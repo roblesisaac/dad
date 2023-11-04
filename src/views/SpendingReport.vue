@@ -1,14 +1,14 @@
 <template>
   <!-- BackButton -->
   <Transition>
-    <div v-if="state.blueBarMessage" class="grid">
+    <div v-if="state.blueBar.message" class="grid">
       <div class="cell-1 p10l  bgBlue bold">
-        <small class="colorBleach">{{ state.blueBarMessage }}<LoadingDots /></small>
+        <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
       </div>
     </div>
   </Transition>
   <Transition>
-    <button @click="state.view='home'" v-if="!state.is(['home', 'loading'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
+    <button @click="state.view='home'" v-if="!state.is(['home', 'loading', 'EditTab'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
   </Transition>
 
   <!-- Small Screens -->
@@ -66,7 +66,7 @@
 
   <!-- SelectGroup -->
   <Transition>
-    <SelectGroup v-if="state.is('SelectGroup')" :state="state"></SelectGroup>
+    <SelectGroup v-if="state.is('SelectGroup')" :state="state" :App="app"></SelectGroup>
   </Transition>
 
   <!-- EditTab -->
@@ -76,8 +76,9 @@
 </template>
 
 <script setup>
-  import { computed, onMounted, reactive, watch } from 'vue';
+  import { computed, nextTick, onMounted, reactive, watch } from 'vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
+  // import CheckBold from 'vue-material-design-icons/CheckBold.vue';
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import SelectGroup from '../components/SelectGroup.vue';
@@ -100,12 +101,15 @@
     allUserGroups: [],
     allUserTabs: [],
     allUserRules: [],
+    blueBar: {
+      message: false,
+      loading: false
+    },
     date: { start: 'firstOfMonth', end: 'today' },
     elems: {
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
     },
-    blueBarMessage: false,
     isLoading: false,
     is(view) {
       const views = Array.isArray(view) ? view : [view];
@@ -132,7 +136,8 @@
 
         return tabs.sort((a,b) => a.sort - b.sort);
       }),
-      tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) )
+      tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) ),
+      transaction: false
     },
     syncCheckId: false,
     view: 'home'
@@ -191,7 +196,7 @@
           const conditionMet = categorizeConfig.method(item);
 
           if(conditionMet) {
-            categoryName = categorizeConfig.categorizeAs;
+            categoryName = String(categorizeConfig.categorizeAs).toLowerCase();
             if(categorizeConfig._isImportant) _important = categorizeConfig.categorizeAs;
           }
         }
@@ -235,15 +240,15 @@
     }
     
     function defaultCategorize(item) {
-      const { category } = item;
+      const { primary } = item.personal_finance_category;
 
-      if(!category) {
-        return;
+      if(!primary) {
+        return 'misc';
       }
 
-      const split = category.split(',');
+      const words = primary.toLowerCase().split('_');
 
-      return split[split.length-1];
+      return words.join(' ');
     }
 
     async function deselectOtherTabs(selectedTabs) {
@@ -337,18 +342,18 @@
       });
     }
 
-    function filterRulesForTab(groupId, tabId) {
+    function filterRulesForTab(tabId, groupId) {
       return state.allUserRules.filter(ruleItem => {
-        const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
+        // const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
 
-        if(!groupIdMatches) {
-          return false;
-        }
+        // if(!groupIdMatches) {
+        //   return false;
+        // }
 
         const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
         const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
 
-        return groupIdMatches && (applyForTabsIsGlobal || applyForTabMatchesTabId)
+        return applyForTabsIsGlobal || applyForTabMatchesTabId;
       });
     }
 
@@ -390,7 +395,7 @@
       const selectedGroup = state.selected.group;
 
       const tabRules = [
-        ...filterRulesForTab(selectedGroup._id, tab._id),
+        ...filterRulesForTab(tab._id, selectedGroup._id),
         ...filterGlobalRules()
       ];
 
@@ -442,26 +447,48 @@
         return;
       }
 
-      let itemsSyncing = 0;
+      let itemsSyncing = [];
+      const items = await api.get('api/plaid/items');
 
-      for (const item of await api.get('api/plaid/items') ) {
+      if(!items.length) {
+        state.syncCheckId = false;
+        return;
+      }
+
+      for (const item of items ) {
         if(item.syncData.status === 'completed') {
           continue;
         }
 
-        itemsSyncing++;
+        itemsSyncing.push(item.syncData.status);
       }
 
-      if(!itemsSyncing) {
-        state.syncCheckId = false;
-        state.blueBarMessage = false;
+      if(!itemsSyncing.length) {
+        state.blueBar.message = `All transactions synced successfully!`;
+        state.blueBar.loading = false;
+        setTimeout(() => {
+          state.syncCheckId = false;
+          state.blueBar.message = false;
+          state.syncCheckId = false;
+        }, 3000);
+
         return;
       }
 
-      const s = itemsSyncing > 1 ? 's' : '';
-      state.blueBarMessage = `Syncing transactions for ${itemsSyncing} bank${s}`;
+      const s = itemsSyncing.length > 1 ? 's' : '';
+      const syncStatus = itemsSyncing.includes('queued') ? 'Queued' : itemsSyncing[0];
+      state.blueBar.message = `Sync status is '${syncStatus}' across ${itemsSyncing.length} bank${s}.`;
+      state.blueBar.loading = true;
 
-      setTimeout(() =>  renderSyncStatus(syncCheckId), 5*1000);
+      setTimeout(() => renderSyncStatus(syncCheckId), 5*1000);
+    }
+
+    function selectFirstGroup() {
+      const firstGroup = state.allUserGroups[0];
+
+      firstGroup.isSelected = true;
+      api.put(`api/groups/${firstGroup._id}`, { isSelected: true });
+      return firstGroup;
     }
 
     function selectFirstTab(selectedTabs) {
@@ -495,8 +522,7 @@
         }
 
         const syncCheckId = Date.now();
-        state.syncCheckId = syncCheckId();
-
+        state.syncCheckId = syncCheckId;
         renderSyncStatus(syncCheckId);
       },
       createNewTab: async () => {
@@ -510,7 +536,7 @@
         }
 
         const newTab = await api.post('api/tabs', {
-          tabName: `New Tab ${tabsForGroup.length+1}`,
+          tabName: `Tab ${tabsForGroup.length+1}`,
           showForGroup: [selectedGroup._id],
           isSelected: true,
           sort: tabsForGroup.length+1
@@ -544,12 +570,19 @@
 
         api.get('api/plaid/sync/all/transactions');
         app.handleGroupChange();
+        app.checkSyncStatus();
       },
       handleGroupChange: async () => {
-        const selectedGroup = state.selected.group;
+        let selectedGroup = state.selected.group;
         const tabsForGroup = state.selected.tabsForGroup;
 
-        if(!selectedGroup) return;
+        if(!selectedGroup) {
+          if(!state.allUserGroups.length) {
+            return;
+          }
+
+          selectedGroup = selectFirstGroup();
+        }
 
         state.isLoading = true;
         state.selected.allGroupTransactions = [];
@@ -562,8 +595,10 @@
         };
 
         if(!tabsForGroup.length) {
-          await app.createNewTab();
-          state.isLoading = false;
+          nextTick(async () => {
+            await app.createNewTab();
+            state.isLoading = false;
+          });
           return;
         }
 
@@ -594,7 +629,6 @@
         }
 
         if(oldView === 'SelectGroup') {
-          app.checkSyncStatus();
           app.handleGroupChange();
         } else {
           await app.processAllTabsForSelectedGroup();

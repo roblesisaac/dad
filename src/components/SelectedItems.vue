@@ -1,21 +1,34 @@
 <template>
 <div v-if="items.length" class="grid items">
+
   <div class="cell-1">
     <div class="grid bottom p10b" v-for="(item, i) in items">
-      <div class="cell-19-24 left dottedBottom">
-        <small class="colorDarkGreen">#{{ i+1 }}. {{ item.date }}</small>
-        <br>{{  item.name }}  <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
-      </div>
-      <div class="cell-5-24 p10l colorBlue right">
-        {{ formatPrice(item.amount) }}
+      <div class="cell-1">
+        
+        <!-- Minimized Transaction -->
+        <div @click="selectTransaction(item)" class="grid">
+          <div class="cell-19-24 left dottedBottom">
+            <small class="colorDarkGreen">#{{ i+1 }}. {{ item.date }}</small>
+            <br>{{  item.name }}  <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
+          </div>
+          <div class="cell-5-24 p10l colorBlue right">
+            {{ formatPrice(item.amount) }}
+          </div>
+        </div>
+
+        <!-- Expanded Transaction -->
+        <TransactionDetails v-if="itemIsSelected(item._id)" :item="item" />
+
       </div>
     </div>
   </div>
+
 </div>
 </template>
 
 <script setup>
 import { computed, defineProps } from 'vue';
+import TransactionDetails from './TransactionDetails.vue';
 import { formatPrice } from '../utils';
 
 const { categoryName, state } = defineProps({
@@ -26,6 +39,25 @@ const { categoryName, state } = defineProps({
 const items = computed(() => {
   return state.selected.tab.transactions;
 });
+
+function itemIsSelected(itemId) {
+  if(!state.selected.transaction) {
+    return;
+  }
+
+  return state.selected.transaction._id === itemId;
+};
+
+function selectTransaction(item) {
+  console.log('selecting transaction...');
+  if(itemIsSelected(item._id)) {
+    state.selected.transaction = false;
+    return;
+  }
+
+  state.selected.transaction=item;
+}
+
 </script>
 
 <style>

@@ -1,7 +1,7 @@
 <template>
 <div class="grid">
   <!-- LinkNewAccount -->
-  <button v-if="state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
+  <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
   
   <!-- LoadingMessage -->
   <div v-else class="cell-1 line50">
@@ -9,7 +9,7 @@
   </div>
 
   <!-- Select Group Buttons -->
-  <button v-for="group in state.allUserGroups" 
+  <button v-for="group in props.state.allUserGroups" 
     @click="app.selectGroup(group)"
     @dblclick="app.editGroup(group)"
     :group="group._id"
@@ -17,7 +17,8 @@
     <div class="grid middle">
       <div class="auto">
         {{ group.name }}
-        <br><small class="colorBlack">{{ formatPrice(group.totalBalance) }}</small>
+        <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(group.totalCurrentBalance) }}</small>
+        <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(group.totalAvailableBalance) }}</small>
       </div>
       <div class="shrink">
         <ChevronRight class="icon" />
@@ -36,17 +37,21 @@ import { useAppStore } from '../stores/app';
 import { formatPrice } from '../utils';
 
 const { api } = useAppStore();
-const { state } = defineProps({ state: 'object' });
+const props = defineProps({
+  App: Object,
+  state: Object
+});
 
 const app = function() {
   function createLink() {
     return Plaid.create({
-      token: state.linkToken,
+      token: props.state.linkToken,
       // receivedRedirectUri: window.location.href,
       onSuccess: async function(publicToken) {
         const { accounts, groups } = await api.post('api/plaid/exchange/token', { publicToken });
-        state.allUserGroups = state.allUserGroups.concat(groups);
-        state.allUserAccounts = state.allUserAccounts.concat(accounts);
+        props.state.allUserGroups = [ ...props.state.allUserGroups, ...groups ];
+        props.state.allUserAccounts = [ ...props.state.allUserAccounts, ...accounts ];
+        props.App.checkSyncStatus();
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
@@ -55,7 +60,7 @@ const app = function() {
   }
 
   async function fetchLinkToken() {
-    state.linkToken = state.linkToken || await api.post('api/plaid/connect/link');
+    props.state.linkToken = props.state.linkToken || await api.post('api/plaid/connect/link');
   }
 
   return {
@@ -74,7 +79,7 @@ const app = function() {
       link.open();
     },
     selectGroup: (groupToSelect) => {
-      const selectedGroup = state.selected.group;
+      const selectedGroup = props.state.selected.group;
 
       if(selectedGroup) {
         api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
@@ -84,7 +89,7 @@ const app = function() {
       nextTick(() => {
         api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
         groupToSelect.isSelected = true;   
-        state.view = 'home';
+        props.state.view = 'home';
       });
     }
   }

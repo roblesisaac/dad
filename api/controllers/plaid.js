@@ -88,20 +88,21 @@ const app = function() {
     }
   }
 
+  const delay = async () => new Promise(resolve => setTimeout(resolve, 1200));
+
   async function fetchTransactionsFromPlaid({ access_token, cursor }) {
     plaidClient = plaidClient || initClient();
-
+  
     let added = [];
     let modified = [];
     let removed = [];
-
+  
     try {
       let hasMore = true;
       let next_cursor;
   
       while (hasMore) {
         const request = { access_token, cursor: next_cursor || cursor };
-
         const { data } = await plaidClient.transactionsSync(request);
   
         added = added.concat(data.added);
@@ -110,6 +111,8 @@ const app = function() {
   
         hasMore = data.has_more;
         next_cursor = data.next_cursor;
+  
+        if (hasMore) await delay();
       }
   
       return { added, modified, removed, next_cursor };
@@ -117,7 +120,7 @@ const app = function() {
       return {
         success: false,
         result: {
-          errorMessage: error.message
+         errorMessage: error.message
         }
       }
     }
@@ -268,12 +271,12 @@ const app = function() {
     ].includes(str);
   }
 
-  async function itemsAdd(itemsToAdd, userId) {
+  async function itemsAdd(itemsToAdd, userId, syncId) {
     let itemsAddedCount = 0;
 
     try {
       for (const transaction of itemsToAdd) {
-        await plaidTransactions.save({ ...transaction, userId });
+        await plaidTransactions.save({ ...transaction, userId, syncId });
         itemsAddedCount++;
       }
   
@@ -393,7 +396,10 @@ const app = function() {
       const item = await plaidItems.save({
         accessToken: access_token,
         itemId: item_id,
-        syncData: { result: {} },
+        syncData: { 
+          result: {},
+          status: 'queued'
+        },
         req
       });
   
@@ -537,7 +543,7 @@ const app = function() {
       return await handleSyncError(item._id, nextSyncData, itemsModifiedCount, 'itemsModifiedCount');
     }
 
-    const itemsAddedCount = await itemsAdd(added, userId);
+    const itemsAddedCount = await itemsAdd(added, userId, userId+currentTime);
 
     if(hasSyncError(itemsAddedCount)) {
       itemsAddedCount.result = { ...itemsAddedCount.result, itemsRemovedCount, itemsModifiedCount };
@@ -545,8 +551,7 @@ const app = function() {
     }
 
     const nowInPST = new Date(Date.now() - (12 * 60 * 60 * 1000));
-
-    await emailSiteOwner({
+    const emailData = {
       subject: `TrackTabs Sync Complete!`,
       template: `<p>Congratulations! Your TrackTabs account has been synced successfully.</p>
       <p>As of ${nowInPST}, all of your transactions are up to date.</p>
@@ -556,7 +561,10 @@ const app = function() {
         <br /><b>Items Modified Count:</b> ${itemsModifiedCount}
         <br /><b>Items Removed Count:</b> ${itemsRemovedCount}
       </p>`
-    });
+    };
+
+    await
+    await emailSiteOwner(emailData);
 
     return await updatePlaidItemSyncData(item._id, {
       ...nextSyncData,
@@ -589,7 +597,8 @@ const app = function() {
           account_id,
           mask,
           name,
-          current: balances?.current
+          current: balances?.current,
+          available: balances?.available
         }
       ],
       name: mask,
@@ -600,6 +609,8 @@ const app = function() {
   function userGroupUpdate(userId, updatedAccount) {
     const { _id, account_id, mask, name, balances } = updatedAccount;
 
+    // console.log(balances.available);
+
     return plaidGroups.update({ name: mask, userId }, { 
       accounts: [
         {
@@ -607,7 +618,8 @@ const app = function() {
           account_id,
           mask,
           name,
-          current: balances?.current
+          current: balances?.current,
+          available: balances?.available
         }
       ],
       name: mask

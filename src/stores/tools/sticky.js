@@ -89,7 +89,7 @@ const Sticky = function() {
 		
 		return () => {
 			if(!document.contains(element)) {
-				deregisterElement(selector);
+				makeElementUnsticky(elementData);
 				Sticky.stickify(stickyConfig);
 				return;
 			}
