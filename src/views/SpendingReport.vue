@@ -283,8 +283,12 @@
         }
 
         if(ruleType === 'categorize') {
+          const itemValue = itemPropName === 'category'
+            ? getCategoryName(item.personal_finance_category.primary)
+            : item[itemPropName];
+
           categorizers.push({
-            method: (item) => ruleMethod(item[itemPropName], testStandard),
+            method: (item) => ruleMethod(itemValue, testStandard),
             categorizeAs,
             orderOfExecution,
             _isImportant
@@ -355,6 +359,11 @@
 
         return applyForTabsIsGlobal || applyForTabMatchesTabId;
       });
+    }
+
+    function getCategoryName(category='') {
+      const lower = category.toLowerCase();
+      return lower.split(_).join(' ');
     }
 
     function includes(itemValue, valueToCheck) {
