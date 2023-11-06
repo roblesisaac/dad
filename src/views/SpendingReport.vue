@@ -455,7 +455,12 @@
         }
       }
 
-      categorizedItems.sort((a, b) =>  b[2] - a[2]); // sort categories by totals
+      // sort categories by totals
+      if(tabTotal > 0) {
+        categorizedItems.sort((a, b) =>  b[2] - a[2]);
+      } else {
+        categorizedItems.sort((a, b) =>  a[2] - b[2]);
+      }
 
       return { tabTotal, categorizedItems };
     }
