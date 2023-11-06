@@ -570,6 +570,8 @@
         await app.processAllTabsForSelectedGroup();
       },
       init: async () => {
+        state.blueBar.message = 'Beginning sync';
+        state.blueBar.loading = true;
         state.isLoading = true;        
         changeBgColor('rgb(243, 243, 238)');  
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
@@ -586,8 +588,6 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
 
-        state.blueBar.message = 'Beginning sync';
-        state.blueBar.loading = true;
         await app.checkSyncStatus();
         await api.get('api/plaid/sync/all/transactions');
         app.handleGroupChange();
