@@ -92,7 +92,7 @@
         </div>
       </div>
       <div v-if="editState.selectedRuleType==='sharing'" class="cell-1">
-        <b>Groups Tabs Is Shared With:</b>
+        <b>Groups Tab Is Shared With:</b>
         <div class="dropHere">
           <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
           <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="dragOptions">
@@ -108,6 +108,8 @@
         </Draggable>
         </ScrollingContent>
       </div>
+
+      <button @click="app.makeTabUnique" class="bgBlack expanded">Make Tab Unique?</button>
     </div>
 
     <!-- Delete Tab -->
@@ -214,6 +216,13 @@ const app = function() {
       }
 
       state.view = 'home';
+    },
+    makeTabUnique: () => {
+      if(!prompt(`Please enter the tabName ('${selectedTab.value.tabName}') to make this tab unique`)) {
+        return;
+      }
+
+      console.log('made unique!');
     },
     saveGroups: async () => {
       const { _id, showForGroup } = selectedTab.value;
