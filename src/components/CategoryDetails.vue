@@ -57,7 +57,6 @@ const catTotal = computed(() => {
 function selectCategory() {
   const isCategorySelected = selectedTab.categoryName === categoryName;
   selectedTab.categoryName = isCategorySelected ? null : categoryName;
-  selectedTab.transactions = isSelected.value ? categoryItems : [];
 }
 
 watch(isSelected, () => {

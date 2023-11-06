@@ -163,7 +163,7 @@
       const [ sorters, categorizers, filters ] = extractAndSortRuleTypes(tabRules);
 
       const sort = (arrayToSort) => {
-        const arrayCopy = arrayToSort.map(item => ({ ...item }));
+        const arrayCopy = arrayToSort.map(item => (JSON.parse(JSON.stringify(item))));
 
         if(!sorters.length) sorters.push({ itemPropName: '-date' });
 
@@ -183,25 +183,28 @@
       };
 
       const categorize = (item) => {
+        formatPersonalFinanceCategory(item);
+
         if(!categorizers.length) {
-          return defaultCategorize(item);
+          return item.personal_finance_category.primary;
         }
 
-        let categoryName;
         let _important;
 
         for(const categorizeConfig of categorizers) {
-          if(!categorizeConfig.method) continue;
+          if(!categorizeConfig.method || _important) continue;
 
           const conditionMet = categorizeConfig.method(item);
 
           if(conditionMet) {
-            categoryName = String(categorizeConfig.categorizeAs).toLowerCase();
+            const categoryName = categorizeConfig.categorizeAs;
             if(categorizeConfig._isImportant) _important = categorizeConfig.categorizeAs;
+
+            item.personal_finance_category.primary = (_important || categoryName).toLowerCase();
           }
         }
 
-        return _important || categoryName || defaultCategorize(item);
+        return item.personal_finance_category.primary;
       }
 
       const filter = (item) => {
@@ -238,18 +241,6 @@
 
       elems.topNav.backgroundColor = elems.body.backgroundColor = color;
     }
-    
-    function defaultCategorize(item) {
-      const { primary } = item.personal_finance_category;
-
-      if(!primary) {
-        return 'misc';
-      }
-
-      const words = primary.toLowerCase().split('_');
-
-      return words.join(' ');
-    }
 
     async function deselectOtherTabs(selectedTabs) {
       for(const tab of selectedTabs.splice(1)) {
@@ -272,7 +263,17 @@
 
       for(const ruleConfig of tabRules) {
         const [ruleType, itemPropName, ruleMethodName, testStandard, categorizeAs] = ruleConfig.rule;
-        const ruleMethod = ruleMethods[ruleMethodName];
+
+        const ruleMethod = (item) => {
+          const itemValue = getItemValue(item, itemPropName);
+
+          return ruleMethods.hasOwnProperty(ruleMethodName)
+            ? ruleMethods[ruleMethodName](itemValue, testStandard)
+            : typeof itemValue[ruleMethodName] === 'function'
+            ? itemValue[ruleMethodName](testStandard)
+            : false;          
+        }
+
         const { orderOfExecution, _isImportant } = ruleConfig;
 
         if(ruleType === 'sort') {
@@ -283,12 +284,8 @@
         }
 
         if(ruleType === 'categorize') {
-          const itemValue = itemPropName === 'category'
-            ? getCategoryName(item.personal_finance_category.primary)
-            : item[itemPropName];
-
           categorizers.push({
-            method: (item) => ruleMethod(itemValue, testStandard),
+            method: ruleMethod,
             categorizeAs,
             orderOfExecution,
             _isImportant
@@ -297,7 +294,7 @@
 
         if(ruleType === 'filter') {
           filters.push({
-            method: (item) => ruleMethod(item[itemPropName], testStandard),
+            method: ruleMethod,
             orderOfExecution,
             _isImportant
           });
@@ -305,7 +302,7 @@
       }
 
       return [sorters, categorizers, filters]
-        .map(ruleTypeConfig => ruleTypeConfig.sort(sortBy('orderOfExecution')));
+        .map(ruleTypeConfigArray => ruleTypeConfigArray.sort(sortBy('orderOfExecution')));
     }
 
     function extractDateRange() {
@@ -361,9 +358,22 @@
       });
     }
 
-    function getCategoryName(category='') {
-      const lower = category.toLowerCase();
-      return lower.split(_).join(' ');
+    function formatPersonalFinanceCategory(item) {
+      const { primary } = item.personal_finance_category;
+
+      if(!primary) {
+        return 'misc';
+      }
+
+      const lower = primary.toLowerCase();
+
+      item.personal_finance_category.primary = lower.split('_').join(' ');
+    }
+
+    function getItemValue(item, propName) {
+      return propName === 'category'
+        ? item.personal_finance_category.primary
+        : item[propName];
     }
 
     function includes(itemValue, valueToCheck) {
@@ -415,9 +425,8 @@
       let tabTotal = 0;
 
       for(const item of dataCopy) {
+        
         const categoryName = categorize(item);
-
-        item.category = categoryName;
 
         // if(groupByConfig) {
         //   groupByConfig(item); // year, day, month, weekday, item.month = jan
@@ -437,9 +446,9 @@
         const storedCategory = categorizedItems.find(([storedCategoryName]) => storedCategoryName === categoryName);
 
         if(storedCategory) {
-          let [_, storedData, storedTotal] = storedCategory;
+          let [_, storedTransactions, storedTotal] = storedCategory;
 
-          storedData.push(item);
+          storedTransactions.push(item);
           storedCategory[2] = storedTotal + amt;
         } else {
           categorizedItems.push([categoryName, [item], amt])
@@ -525,14 +534,14 @@
     }
 
     return {
-      checkSyncStatus: () => {
+      checkSyncStatus: async () => {
         if(state.syncCheckId !== false) {
           return;
         }
 
         const syncCheckId = Date.now();
         state.syncCheckId = syncCheckId;
-        renderSyncStatus(syncCheckId);
+        await renderSyncStatus(syncCheckId);
       },
       createNewTab: async () => {
         const selectedGroup = state.selected.group;
@@ -541,7 +550,7 @@
 
         if(selectedTab) {
           selectedTab.isSelected = false;
-          await api.put(`api/tabs/${selectedTab._id}`, { isSelected: false });
+          api.put(`api/tabs/${selectedTab._id}`, { isSelected: false });
         }
 
         const newTab = await api.post('api/tabs', {
@@ -577,9 +586,11 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
 
-        api.get('api/plaid/sync/all/transactions');
+        state.blueBar.message = 'Beginning sync';
+        state.blueBar.loading = true;
+        await app.checkSyncStatus();
+        await api.get('api/plaid/sync/all/transactions');
         app.handleGroupChange();
-        app.checkSyncStatus();
       },
       handleGroupChange: async () => {
         let selectedGroup = state.selected.group;
@@ -638,10 +649,10 @@
         }
 
         if(oldView === 'SelectGroup') {
-          app.handleGroupChange();
-        } else {
-          await app.processAllTabsForSelectedGroup();
+          return app.handleGroupChange();
         }
+
+        await app.processAllTabsForSelectedGroup();
       },
       processAllTabsForSelectedGroup: async () => {
         const tabsForGroup = state.selected.tabsForGroup;
@@ -671,7 +682,7 @@
           tab.categorizedItems = processed.categorizedItems;
         }
 
-        state.isLoading = false;
+        nextTick(state.isLoading = false);
       },
       processTabData
     }

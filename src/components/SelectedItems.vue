@@ -37,7 +37,11 @@ const { categoryName, state } = defineProps({
 });
 
 const items = computed(() => {
-  return state.selected.tab.transactions;
+  const selectedCategory = state.selected.tab.categorizedItems.find(categorized => {
+    return state.selected.tab.categoryName === categorized[0];
+  });
+
+  return selectedCategory[1];
 });
 
 function itemIsSelected(itemId) {
@@ -49,7 +53,6 @@ function itemIsSelected(itemId) {
 };
 
 function selectTransaction(item) {
-  console.log('selecting transaction...');
   if(itemIsSelected(item._id)) {
     state.selected.transaction = false;
     return;

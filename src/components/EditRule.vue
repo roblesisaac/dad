@@ -26,11 +26,6 @@
         <DotsVerticalCircleOutline @click="editState.ruleSharer=ruleConfig" />
       </small>
     </div>
-    <!-- <Transition>
-    <div v-if="editRuleState.showDeleteButton && ruleConfig._id"  class="cell shrink p10y p10r bold">
-      <TrashCan @click="app.removeRule(ruleConfig)" class="colorRed" />
-    </div>
-    </Transition> -->
   </ScrollingContent>
   </template>
     
@@ -38,7 +33,6 @@
     import { defineProps, reactive, watch } from 'vue';
     import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
     import DragVertical from 'vue-material-design-icons/DragVertical.vue';
-    import TrashCan from 'vue-material-design-icons/TrashCan.vue';
     import ScrollingContent from './ScrollingContent.vue';
     import DynamicWidthInput from './DynamicWidthInput.vue';
     import DynamicWidthSelect from './DynamicWidthSelect.vue';
@@ -101,14 +95,6 @@
         return arrayOfRules.findIndex(rule => rule._id === _id);
       }
 
-      function removeFromAllUserRules(_idToRemove) {
-        const existingRuleIndex = findRuleIndex(state.allUserRules, _idToRemove);
-
-        if (existingRuleIndex !== -1) {
-          state.allUserRules.splice(existingRuleIndex, 1);
-        }
-      }
-
       function updateAllUserRules(filteredRulesByType, updatedRule) {
         const existingRuleIndex = findRuleIndex(filteredRulesByType, updatedRule._id);
 
@@ -125,18 +111,6 @@
       }
   
       return {
-        removeRule: async function(ruleConfig) {
-          const { _id } = ruleConfig;
-
-          removeFromAllUserRules(_id);
-
-          if(!_id) {
-            return;
-          }
-
-          await api.delete('api/rules/'+_id);
-          filteredRulesByType.splice(key, 1);
-        },
         saveRule: async function() {
           const { propNamesToSave } = editRuleState.ruleTypes[ruleType];
 

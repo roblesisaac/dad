@@ -563,7 +563,7 @@ const app = function() {
       </p>`
     };
 
-    await
+    await notify.email(user.email, emailData);
     await emailSiteOwner(emailData);
 
     return await updatePlaidItemSyncData(item._id, {
@@ -608,8 +608,6 @@ const app = function() {
 
   function userGroupUpdate(userId, updatedAccount) {
     const { _id, account_id, mask, name, balances } = updatedAccount;
-
-    // console.log(balances.available);
 
     return plaidGroups.update({ name: mask, userId }, { 
       accounts: [

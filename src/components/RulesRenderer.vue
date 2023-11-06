@@ -35,16 +35,9 @@ function filterGlobalRules() {
 }
 
 function filterRulesForTab() {
-  // const groupId = selectedGroup._id;
   const tabId = selectedTab._id;
 
   return state.allUserRules.filter(ruleItem => {
-    // const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
-
-    // if(!groupIdMatches) {
-    //   return false;
-    // }
-
     const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
     const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
 
