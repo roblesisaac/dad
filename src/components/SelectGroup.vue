@@ -1,5 +1,12 @@
 <template>
 <div class="grid">
+  <div class="cell-1">
+    <!-- SpecialGoBack -->
+    <button @click="app.goBack" class="section b-bottom acctButton"><ChevronLeft class="icon" /> Back</button>
+  </div>
+  
+  <div v-if="!selectGroupState.editingGroup" class="cell-1">
+
   <!-- LinkNewAccount -->
   <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
   
@@ -9,29 +16,53 @@
   </div>
 
   <!-- Select Group Buttons -->
-  <button v-for="group in props.state.allUserGroups" 
-    @click="app.selectGroup(group)"
-    @dblclick="app.editGroup(group)"
-    :group="group._id"
-    class="acctButton b-top proper">
+  <div v-for="group in props.state.allUserGroups"    
+    :key="group._id"
+    class="cell-1 b-top proper">
     <div class="grid middle">
-      <div class="auto">
-        {{ group.name }}
+
+      <div class="cell-2-24 pointer" @click="selectGroupState.editingGroup=group">
+        <DotsVerticalCircleOutline class="colorBlue" />
+      </div>
+
+      <div class="cell-20-24 p20y pointer" @click="app.selectGroup(group)">
+        <b>{{ group.name }}</b>
         <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(group.totalCurrentBalance) }}</small>
         <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(group.totalAvailableBalance) }}</small>
       </div>
-      <div class="shrink">
+
+      <div class="cell-2-24" @click="app.selectGroup(group)">
         <ChevronRight class="icon" />
       </div>
+
     </div>
-  </button>
+  </div>
+
+  <!-- Create New Group -->
+  <div class="cell-1 b-top proper">
+    <button @click="app.createNewGroup" class="button expanded bgBlack">Create New Group +</button>
+  </div>
+
+  </div>
+
+  <!-- Edit Group -->
+  <Transition>
+    <div v-if="selectGroupState.editingGroup" class="cell-1">
+      <EditGroup :editingGroup="selectGroupState.editingGroup" :selectGroupState="selectGroupState" :state="state" />
+    </div>
+  </Transition>
+
 </div>
 </template>
 
 <script setup>
-import { nextTick } from 'vue';
+import { nextTick, reactive } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
+import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
 import PlusVue from 'vue-material-design-icons/Plus.vue';
+import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
+
+import EditGroup from './EditGroup.vue';
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/app';
 import { formatPrice } from '../utils';
@@ -40,6 +71,10 @@ const { api } = useAppStore();
 const props = defineProps({
   App: Object,
   state: Object
+});
+
+const selectGroupState = reactive({
+  editingGroup: null
 });
 
 const app = function() {
@@ -64,11 +99,24 @@ const app = function() {
   }
 
   return {
-    editGroup: (group) => {
-      console.log({
-        message: 'edditing',
-        group
-      })
+    createNewGroup: async () => {
+      const newGroupData = {
+        accounts: [],
+        isSelected: false,
+        name: `New Group ${props.state.allUserGroups.length}`
+      }
+
+      const savedNewGroup = await api.post('api/groups', newGroupData);
+      props.state.allUserGroups.push(savedNewGroup);
+    },
+    goBack: () => {
+      if(selectGroupState.editingGroup) {
+        selectGroupState.editingGroup = null;
+        console.log(props.state.allUserGroups);
+        return;
+      }
+
+      props.state.view = 'home';
     },
     init: async () => {
       await fetchLinkToken();
@@ -97,3 +145,16 @@ const app = function() {
 
 app.init();
 </script>
+
+<style>
+.acctButton, .acctButton:hover {
+  background: transparent;
+  color: blue;
+  box-shadow: none;
+  width: 100%;
+}
+
+.acctButton:hover {
+  color: blue;
+}
+</style>

@@ -1,5 +1,6 @@
 <template>
-  <!-- BackButton -->
+  
+  <!-- BlueBar -->
   <Transition>
     <div v-if="state.blueBar.message" class="grid">
       <div class="cell-1 p10l  bgBlue bold">
@@ -7,8 +8,10 @@
       </div>
     </div>
   </Transition>
+
+  <!-- BackButton -->
   <Transition>
-    <button @click="state.view='home'" v-if="!state.is(['home', 'loading', 'EditTab'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
+    <button @click="state.view='home'" v-if="!state.is(['home', 'loading', 'EditTab', 'SelectGroup'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
   </Transition>
 
   <!-- Small Screens -->
@@ -144,6 +147,8 @@
   });
 
   const app = function() {
+    const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
     const ruleMethods = {
       '>=': (itemValue, valueToCheck) => parseFloat(itemValue) >= parseFloat(valueToCheck),
       '>': (itemValue, valueToCheck) => parseFloat(itemValue) > parseFloat(valueToCheck),
@@ -160,7 +165,7 @@
     };
 
     function buildRuleMethods(tabRules) {
-      const [ sorters, categorizers, filters ] = extractAndSortRuleTypes(tabRules);
+      const [ sorters, categorizers, filters, propToGroupBy ] = extractAndSortRuleTypes(tabRules);
 
       const sort = (arrayToSort) => {
         const arrayCopy = arrayToSort.map(item => (JSON.parse(JSON.stringify(item))));
@@ -203,8 +208,6 @@
             item.personal_finance_category.primary = (_important || categoryName).toLowerCase();
           }
         }
-
-        return item.personal_finance_category.primary;
       }
 
       const filter = (item) => {
@@ -229,9 +232,39 @@
         return itemPassesEveryFilter || _isImportant;
       }
 
+      const groupBy = (item) => {
+        return {
+          category: () => item.personal_finance_category.primary,
+          year: () => {
+            const [year] = item.date.split('-');
+            return year;
+          },
+          month: () => {
+            const [_, month] = item.date.split('-');
+
+            return months[Number(month-1)];
+          },
+          year_month: () => {
+            const [year, month] = item.date.split('-');
+
+            return `${year} ${months[Number(month-1)]}`;
+          },
+          day: () => {
+            const day = item.date.split('-')[2];
+
+            return day;
+          },
+          weekday: () => {
+            return getDayOfWeek(item.date)
+          }
+        }[propToGroupBy[0] || 'category']();
+      }
+
       return {
         sort, 
-        categorize, 
+        categorize,
+        propToGroupBy: propToGroupBy || 'category',
+        groupBy, 
         filter
       };
     }
@@ -259,7 +292,7 @@
     }
 
     function extractAndSortRuleTypes(tabRules) {
-      const sorters = [], categorizers = [], filters = [];
+      const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
 
       for(const ruleConfig of tabRules) {
         const [ruleType, itemPropName, ruleMethodName, testStandard, categorizeAs] = ruleConfig.rule;
@@ -275,6 +308,10 @@
         }
 
         const { orderOfExecution, _isImportant } = ruleConfig;
+
+        if(ruleType === 'groupBy') {
+          propToGroupBy.push(itemPropName);
+        }
 
         if(ruleType === 'sort') {
           sorters.push({
@@ -301,8 +338,10 @@
         }
       }
 
-      return [sorters, categorizers, filters]
+      const sortedRuleTypes = [sorters, categorizers, filters]
         .map(ruleTypeConfigArray => ruleTypeConfigArray.sort(sortBy('orderOfExecution')));
+
+      return [...sortedRuleTypes, propToGroupBy];
     }
 
     function extractDateRange() {
@@ -370,6 +409,13 @@
       item.personal_finance_category.primary = lower.split('_').join(' ');
     }
 
+    function getDayOfWeek(dateString) {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const date = new Date(dateString);
+      const dayOfWeek = date.getDay();
+      return days[dayOfWeek];
+    }
+
     function getItemValue(item, propName) {
       return propName === 'category'
         ? item.personal_finance_category.primary
@@ -418,19 +464,17 @@
         ...filterGlobalRules()
       ];
 
-      const { filter, sort, categorize } = buildRuleMethods(tabRules);
+      const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules);
 
       const dataCopy = sort(data);
       const categorizedItems = [];
       let tabTotal = 0;
 
       for(const item of dataCopy) {
-        
-        const categoryName = categorize(item);
 
-        // if(groupByConfig) {
-        //   groupByConfig(item); // year, day, month, weekday, item.month = jan
-        // }
+        categorize(item);
+
+        const typeToGroupBy = groupBy(item) // defaults to category
 
         if(!filter(item)) {
           continue;
@@ -443,7 +487,7 @@
           continue;
         }
 
-        const storedCategory = categorizedItems.find(([storedCategoryName]) => storedCategoryName === categoryName);
+        const storedCategory = categorizedItems.find(([storedGroupByName]) => storedGroupByName === typeToGroupBy);
 
         if(storedCategory) {
           let [_, storedTransactions, storedTotal] = storedCategory;
@@ -451,15 +495,19 @@
           storedTransactions.push(item);
           storedCategory[2] = storedTotal + amt;
         } else {
-          categorizedItems.push([categoryName, [item], amt])
+          categorizedItems.push([typeToGroupBy, [item], amt])
         }
       }
 
-      // sort categories by totals
-      if(tabTotal > 0) {
-        categorizedItems.sort((a, b) =>  b[2] - a[2]);
+      // sort grouped items
+      if(!['year', 'month', 'day', 'year_month'].includes(propToGroupBy[0])) {
+        if(tabTotal > 0) {
+          categorizedItems.sort((a, b) =>  b[2] - a[2]);
+        } else {
+          categorizedItems.sort((a, b) =>  a[2] - b[2]);
+        }        
       } else {
-        categorizedItems.sort((a, b) =>  a[2] - b[2]);
+        categorizedItems.sort(groupByDate);
       }
 
       return { tabTotal, categorizedItems };
@@ -529,6 +577,22 @@
       return (a, b) => a[prop] - b[prop];
     }
 
+    function groupByDate(a, b) {
+      const months = {
+        jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+        jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+      };
+
+      const [yearA, monthA] = a[0].split(' ');
+      const [yearB, monthB] = b[0].split(' ');
+
+      if (yearA !== yearB) {
+        return yearB - yearA;
+      } else {
+        return months[monthB] - months[monthA];
+      }
+    }
+
     function yyyyMmDd(dateObject) {
       if(!dateObject) return;
       const year = dateObject.getFullYear();
@@ -565,13 +629,7 @@
           sort: tabsForGroup.length+1
         });
 
-        const newTabData = {
-          ...newTab,
-          total: 0,
-          categorizedItems: []
-        }
-
-        state.allUserTabs.push(newTabData);
+        state.allUserTabs.push(newTab);
         await app.processAllTabsForSelectedGroup();
       },
       init: async () => {
@@ -703,17 +761,6 @@
 </script>
 
 <style>
-.acctButton, .acctButton:hover {
-  background: transparent;
-  color: blue;
-  box-shadow: none;
-  width: 100%;
-}
-
-.acctButton:hover {
-  color: blue;
-}
-
 .dottedRow {
   border-bottom: 2px dotted #000;
   padding: 20px;

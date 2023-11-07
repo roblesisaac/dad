@@ -74,6 +74,10 @@
           propNamesToSave: ['ruleType', 'itemProp', 'ruleMethodName', 'testStandard'],
           itemProps: allProps,
           ruleMethodNames: allMethods
+        },
+        groupBy: {
+          propNamesToSave: ['ruleType', 'itemProp'],
+          itemProps: ['category', 'year', 'month', 'year_month', 'day', 'weekday']
         }
       },
       showDeleteButton: false,

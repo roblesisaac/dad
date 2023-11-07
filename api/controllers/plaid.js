@@ -249,7 +249,7 @@ const app = function() {
     plaidClient = plaidClient || new PlaidApi(config);
   }
 
-  function isAccountAlreadySynced(existingUserAccounts, retrievedAccount) {
+  function isAccountAlreadySaved(existingUserAccounts, retrievedAccount) {
     return existingUserAccounts.find(itm => itm.account_id === retrievedAccount.account_id);
   }
 
@@ -449,29 +449,29 @@ const app = function() {
   }
 
   async function syncUserAccounts(user) {
-    let retrievedAccounts = [];
+    let retrievedAccountsFromPlaid = [];
 
     for(const item of await fetchUserItems(user._id)) {
       const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
 
-      retrievedAccounts = [
-        ...retrievedAccounts,
+      retrievedAccountsFromPlaid = [
+        ...retrievedAccountsFromPlaid,
         ...await retrieveAccountsFromPlaidForItem(access_token)
       ]
     }
 
     const existingUserAccounts = await fetchUserAccounts(user._id);
+
     const synced = {
       accounts: [],
       groups: []
     };
 
-    for(const retrievedAccount of retrievedAccounts) {
-      if(isAccountAlreadySynced(existingUserAccounts, retrievedAccount)) {
+    for(const retrievedAccount of retrievedAccountsFromPlaid) {
+      if(isAccountAlreadySaved(existingUserAccounts, retrievedAccount)) {
         const updatedAccount = await updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
 
         synced.accounts.push(updatedAccount);
-        synced.groups.push( await userGroupUpdate(user._id, updatedAccount) );
         continue;
       }
 
@@ -479,6 +479,19 @@ const app = function() {
       
       synced.accounts.push(newSavedAccount);
       synced.groups.push( await userGroupSave(user, newSavedAccount) );
+    }
+
+    const existingGrops = await plaidGroups.findAll({ userId: user._id, name: '*' });
+
+    for(const group of existingGrops) {
+      
+      const updatedAccounts = group.accounts.map(account => {
+        const updatedAccount = synced.accounts.find(itm => itm.account_id === account.account_id);
+        return updatedAccount || account;
+      });
+
+      synced.groups.push( await userGroupUpdate(group._id, updatedAccounts) );
+
     }
 
     return synced;
@@ -606,22 +619,17 @@ const app = function() {
      });
   }
 
-  function userGroupUpdate(userId, updatedAccount) {
-    const { _id, account_id, mask, name, balances } = updatedAccount;
+  function userGroupUpdate(groupId, updatedAccounts) {
+    const accounts = updatedAccounts.map(account => ({
+      _id: account._id,
+      account_id: account.account_id,
+      mask: account.mask,
+      name: account.name,
+      current: account.balances?.current,
+      available: account.balances?.available
+    }));
 
-    return plaidGroups.update({ name: mask, userId }, { 
-      accounts: [
-        {
-          _id,
-          account_id,
-          mask,
-          name,
-          current: balances?.current,
-          available: balances?.available
-        }
-      ],
-      name: mask
-     });
+    return plaidGroups.update(groupId, { accounts });
   }
 
   function warn(userId, itemId, product) {

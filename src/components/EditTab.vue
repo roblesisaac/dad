@@ -78,6 +78,25 @@
       </div>
     </div>
 
+    <!-- GroupBy -->
+    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+      <div @click="app.select('groupBy')" class="cell-1">
+        <div class="grid">
+          <div class="cell auto">
+            Group By
+          </div>
+          <div class="cell auto right">        
+            <Minus v-if="editState.selectedRuleType==='filter'" />
+            <Plus v-else />
+          </div>
+        </div>
+      </div>
+
+      <div class="cell-1">
+        <RulesRenderer v-if="editState.selectedRuleType==='groupBy'" :editState="editState" ruleType="groupBy" :state="state" />
+      </div>
+    </div>
+
     <!-- Share -->
     <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
       <div @click="app.select('sharing')" class="cell-1">
@@ -109,12 +128,17 @@
         </ScrollingContent>
       </div>
 
-      <button @click="app.makeTabUnique" class="bgBlack expanded">Make Tab Unique?</button>
+      <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="cell-1">
+        <button @click="app.makeTabUnique" class="bgBlack expanded">Make Tab Unique?</button>
+      </div>
     </div>
 
-    <!-- Delete Tab -->
+    <!-- Delete And Duplicate Buttons -->
     <div v-if="!editState.ruleSharer" class="grid middle">
       <div class="cell-1 p20">
+        <button @click="app.duplicateTab" class="button bgBlack expanded">Duplicate Tab</button>
+      </div>
+      <div class="cell-1 p20b">
         <button @click="app.deleteTab" class="button transparent colorDarkRed expanded">Delete Tab</button>
       </div>
     </div>
@@ -125,7 +149,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, nextTick, reactive, watch } from 'vue';
 
 import { VueDraggableNext as Draggable } from 'vue-draggable-next';
 import ScrollingContent from './ScrollingContent.vue';
@@ -163,8 +187,58 @@ const unselectedGroupsInTab = computed(() => {
 });
 
 const app = function() {
+  async function cloneRules(newTabId, currentTabId) {
+    for(const rule of state.allUserRules) {
+
+      if(!rule.applyForTabs.includes(currentTabId)) {
+        continue;
+      }
+
+      const newRule = { 
+        rule: rule.rule,
+        _isImportant: rule._isImportant,
+        orderOfExecution: rule.orderOfExecution,
+        applyForTabs: [newTabId],
+        applyForGroups: [state.selected.group._id]
+      };
+
+      const savedRule = await api.post('api/rules', newRule);
+
+      state.allUserRules.push(savedRule);
+    }
+  }
+
+  async function createNewTab() {
+    const selectedGroup = state.selected.group;
+    const tabsForGroup = state.selected.tabsForGroup;
+
+    const newTab = await api.post('api/tabs', {
+      tabName: `${selectedTab.value.tabName} Copy`,
+      showForGroup: [selectedGroup._id],
+      isSelected: true,
+      sort: tabsForGroup.length+1
+    });
+
+    return newTab;
+  }
+
   function findTab(_id) {
     return state.allUserTabs.find(tab => tab._id === _id);
+  }
+
+  async function removeAndDeselectGroupFromCurrentTab() {
+    const currentGroupId = state.selected.group._id;
+
+    const showForGroup = selectedTab.value.showForGroup
+      .filter(groupId => groupId !== currentGroupId);
+
+    await api.put(`api/tabs/${selectedTab.value._id}`, {
+      isSelected: false,
+      showForGroup
+    });
+
+    selectedTab.value.isSelected = false;
+    selectedTab.value.showForGroup = showForGroup;
   }
 
   async function updateTabName() {
@@ -209,6 +283,38 @@ const app = function() {
       state.allUserTabs.splice(tabIndex, 1);
       await api.delete(`api/tabs/${selectedTabId}`);
     },
+    duplicateTab: async () => {
+      const tabName = selectedTab.value.tabName;
+      const promptValue = prompt(`Please enter the tabName ('${tabName}') to duplicate.`);
+
+      if(promptValue !== tabName) {
+        return;
+      }
+
+      state.blueBar.message = 'Duplicating Tab';
+      state.blueBar.loading = true;
+      state.isLoading = true;
+      state.view = 'home';
+
+      nextTick(async () => {
+        state.blueBar.message = 'Cloning Rules';
+        const newTab = await createNewTab();
+        await cloneRules(newTab._id, selectedTab.value._id);
+
+        await api.put(`api/tabs/${selectedTab.value._id}`, {
+          isSelected: false
+        });
+
+        selectedTab.value.isSelected = false;
+
+        editState.ruleSharer = null;
+        state.allUserTabs.push(newTab);
+        state.blueBar.message = false;
+        state.blueBar.loading = false;
+        state.view = 'EditTab';
+        state.isLoading = false;
+      });
+    },
     goBack: () => {
       if(editState.ruleSharer) {
         editState.ruleSharer = null;
@@ -217,12 +323,35 @@ const app = function() {
 
       state.view = 'home';
     },
-    makeTabUnique: () => {
-      if(!prompt(`Please enter the tabName ('${selectedTab.value.tabName}') to make this tab unique`)) {
+    makeTabUnique: async () => {
+      const tabName = selectedTab.value.tabName;
+      const promptValue = prompt(`Please enter the tabName ('${tabName}') to make this tab unique.`);
+
+      if(promptValue !== tabName) {
         return;
       }
 
-      console.log('made unique!');
+      state.blueBar.message = 'Making Tab Unique';
+      state.blueBar.loading = true;
+      state.isLoading = true;
+      state.view = 'home';
+
+      const currentTabId = selectedTab.value._id;
+      const newTab = await createNewTab();
+
+      nextTick(async () => {
+        state.blueBar.message = 'Cloning Rules';
+        await cloneRules(newTab._id, currentTabId);
+
+        await removeAndDeselectGroupFromCurrentTab();
+
+        editState.ruleSharer = null;
+        state.allUserTabs.push(newTab);
+        state.blueBar.message = false;
+        state.blueBar.loading = false;
+        state.view = 'EditTab';
+        state.isLoading = false;
+      });
     },
     saveGroups: async () => {
       const { _id, showForGroup } = selectedTab.value;
