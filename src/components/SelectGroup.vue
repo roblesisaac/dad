@@ -26,7 +26,7 @@
       </div>
 
       <div class="cell-20-24 p20y pointer" @click="app.selectGroup(group)">
-        <b>{{ group.name }}</b>
+        <b>{{ group.name }}</b><CheckDecagram v-if="group.isSelected" class="colorBlue" />
         <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(group.totalCurrentBalance) }}</small>
         <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(group.totalAvailableBalance) }}</small>
       </div>
@@ -59,6 +59,7 @@
 import { nextTick, reactive } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
+import CheckDecagram from 'vue-material-design-icons/CheckDecagram.vue'
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 
