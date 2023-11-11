@@ -30,7 +30,7 @@ export default function(State) {
     return seconds;
   }
 
-  function onLoginPage() {
+  function isOnLoginPage() {
     return window.location.pathname === '/login';
   }
 
@@ -43,11 +43,11 @@ export default function(State) {
 
     const secondsUntilLogout = getSecondsUntilLogout();
 
-    if(secondsUntilLogout > 0 && secondsUntilLogout < 5) {
+    if(secondsUntilLogout > 0 && secondsUntilLogout < 60) {
       State.showStayLoggedInForm = true;
     }
 
-    if(secondsUntilLogout <= 0 && !onLoginPage()) {
+    if(secondsUntilLogout <= 0 && !isOnLoginPage()) {
       State.showStayLoggedInForm = false;
       State.showLoginForm = true;
       session.isLoggedIn = false;
@@ -59,29 +59,7 @@ export default function(State) {
   State.session = session;
 
   return {
-    logBackIn: async () => {
-
-    },
     touch,
     watchSession
   }
-}
-
-function convertToReadableTimeWithSeconds(utcTimestamp) {
-  // Convert the UTC timestamp to a Date object
-  const date = new Date(utcTimestamp);
-
-  // Adjust to Pacific Time (PST/PDT)
-  const pacificTime = new Date(date.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-
-  // Format the time as hh:mm:ss AM/PM
-  const options = {
-    hour: 'numeric',
-    minute: 'numeric',
-    second: 'numeric',
-    hour12: true,
-    timeZoneName: 'short',
-  };
-
-  return pacificTime.toLocaleTimeString('en-US', options);
 }

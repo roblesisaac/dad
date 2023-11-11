@@ -22,7 +22,7 @@ export default function customSessions() {
       httpOnly: true,
       sameSite: 'strict',
       domain,
-      maxAge: (15) * 1000,
+      maxAge: 30*60*1000,
       signed: true
     }
   });
