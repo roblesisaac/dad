@@ -31,7 +31,7 @@ export default function(State) {
   }
 
   function isOnLoginPage() {
-    return window.location.pathname === '/login' || window.location.pathname === '';
+    return window.location.pathname === '/login' || window.location.pathname === '/';
   }
 
   async function watchSession() {

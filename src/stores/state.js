@@ -42,7 +42,8 @@ export const useAppStore = defineStore('state', () => ({
   api: api(State),
   utils: utils(State),
   cart,
-  sticky,
+	sticky,
+  // sticky: sticky(State),
   State,
 	Session: Session(State)
 }));

@@ -42,6 +42,7 @@
 import { reactive } from 'vue';
 import { isValidEmail } from '../utils';
 import { useAppStore } from '../stores/state';
+import LoadingDots from './LoadingDots.vue';
 
 const { api, State } = useAppStore();
 
