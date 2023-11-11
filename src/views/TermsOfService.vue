@@ -89,7 +89,7 @@
 
 <script setup>
 import { reactive } from 'vue';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 const { api } = useAppStore();
 
 const state = reactive({

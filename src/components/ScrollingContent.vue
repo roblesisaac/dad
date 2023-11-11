@@ -17,7 +17,7 @@ import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 
 const { State } = useAppStore();
 

@@ -27,7 +27,7 @@ import { load } from 'recaptcha-v3';
 import { router } from '../main';
 import LoadingDots from '../components/LoadingDots.vue';
 import { isValidEmail } from '../utils';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 const { api } = useAppStore();
 
 const { value:state } = ref({

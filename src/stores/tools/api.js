@@ -1,5 +1,5 @@
 import { router } from '../../main';
-import { useAppStore } from '../app';
+import { useAppStore } from '../state';
 
 export default function(State) {
   async function buildPayload(method, body) {
@@ -28,7 +28,10 @@ export default function(State) {
   }
   
   async function handle(url, payload, settings) {
+    const { Session } = useAppStore();
     const response = await fetch(url, payload);
+
+    Session.touch();
     const { redirected, url: redirectUrl } = response;
     
     if (redirected) {

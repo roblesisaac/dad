@@ -21,6 +21,7 @@ const protect = function() {
       const routeMiddlewares = [
         permit(requiredRoles),
         defineParam(collectionName),
+        touchSession,
         ...middlewares
       ];
   
@@ -50,6 +51,14 @@ const protect = function() {
         userRole
       });
     }
+  }
+
+  function touchSession(req, _, next) {
+    // if(req.session) {
+    //   req.session.lastAccess = new Date().getTime();
+    // }
+
+    next();
   }
 
   return {

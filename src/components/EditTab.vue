@@ -158,7 +158,7 @@ import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import RulesRenderer from './RulesRenderer.vue';
 import RuleSharer from './RuleSharer.vue';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 const { state } = defineProps({ state: 'object' });
@@ -208,12 +208,12 @@ const app = function() {
     }
   }
 
-  async function createNewTab() {
+  async function createNewTab(tabName) {
     const selectedGroup = state.selected.group;
     const tabsForGroup = state.selected.tabsForGroup;
 
     const newTab = await api.post('api/tabs', {
-      tabName: `${selectedTab.value.tabName} Copy`,
+      tabName: `${tabName} Copy`,
       showForGroup: [selectedGroup._id],
       isSelected: true,
       sort: tabsForGroup.length+1
@@ -298,7 +298,7 @@ const app = function() {
 
       nextTick(async () => {
         state.blueBar.message = 'Cloning Rules';
-        const newTab = await createNewTab();
+        const newTab = await createNewTab(tabName);
         await cloneRules(newTab._id, selectedTab.value._id);
 
         await api.put(`api/tabs/${selectedTab.value._id}`, {

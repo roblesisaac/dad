@@ -54,12 +54,7 @@ const userSchema = {
     type: Boolean,
     default: false
   },
-  lastLoggedIn: () => {
-    const now = new Date();
-    const pstOptions = { timeZone: 'America/Los_Angeles' };
-
-    return now.toLocaleString('en-US', pstOptions);
-  },
+  lastLoggedIn: String,
   label1: 'email',
   label2: 'email_verified',
   label3: 'role'
@@ -86,7 +81,11 @@ Users.authLocalUser = async (email, password, done) => {
     return done(errorMessage, false);
   }
 
-  await Users.updateUser(email, {});
+  const now = new Date();
+  const pstOptions = { timeZone: 'America/Los_Angeles' };
+  const lastLoggedIn = now.toLocaleString('en-US', pstOptions);
+
+  await Users.updateUser(email, { lastLoggedIn });
 
   return done(null, user);
 }

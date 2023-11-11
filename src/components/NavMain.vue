@@ -30,7 +30,7 @@
 import { onMounted } from 'vue';
 import MenuIcon from 'vue-material-design-icons/Menu.vue';
 
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 const { State, api, utils, sticky } = useAppStore();
 
 const app = function() {

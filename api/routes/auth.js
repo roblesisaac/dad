@@ -1,76 +1,65 @@
 import { checkLoggedIn, rateLimiter, recaptcha } from '../middlewares/auth';
 
-import {
-  isLoggedIn,
-  googleCallback,
-  loginGoogle,
-  loginLocal,
-  logoutUser,
-  resendVerificationCode,
-  resetTemporaryPassword,
-  sendPasswordResetRequest,
-  signupUser, 
-  verifyUser
-} from '../controllers/auth';
+import app from '../controllers/auth';
 
 export default (api, baseUrl) => {
   api.get(
     baseUrl + '/login/check/auth',
-    isLoggedIn
+    app.isLoggedIn
   );
   
   api.get(
     baseUrl + '/login/auth/google/callback',
-    googleCallback
+    app.googleCallback
   );
 
   api.get(
     baseUrl + '/login/auth/google', 
     rateLimiter, 
-    loginGoogle
+    app.loginGoogle
   );
 
   api.post(
     baseUrl + '/login/native', 
     rateLimiter, 
     recaptcha, 
-    loginLocal
+    app.loginLocal
   );
 
   api.get(
     '/logout',
     checkLoggedIn,
-    logoutUser
+    app.logoutUser
   );
 
   api.post(
     baseUrl + '/signup/resend', 
     checkLoggedIn, 
-    resendVerificationCode
+    app.resendVerificationCode
   );
 
   api.get(
     baseUrl + '/resetpasswordtemporary/:code',
-    resetTemporaryPassword
+    app.resetTemporaryPassword
   );
 
   api.post(
     baseUrl + '/requestpasswordreset/:email',
     recaptcha, 
-    sendPasswordResetRequest
+    app.sendPasswordResetRequest
   );
 
   api.post(
     baseUrl + '/signup/native',
     rateLimiter,
     recaptcha, 
-    signupUser
+    app.signupUser
   );
 
   api.post(
     baseUrl + '/signup/verify',
     rateLimiter,
     checkLoggedIn, 
-    verifyUser
+    app.verifyUser
   );
 }

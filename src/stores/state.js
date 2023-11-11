@@ -5,11 +5,14 @@ import api from './tools/api';
 import sticky from './tools/sticky';
 import cart from './tools/cart';
 import utils from './tools/utils';
-import User from './tools/users';
+import Session from './tools/session';
 
 const State = reactive({
 	showingOffCanvasLinks: false,
   recaptcha: null,
+	lastTouched: null,
+	showLoginForm: false,
+	showStayLoggedInForm: false,
 	currentScreenSize() {
 		const screenSize = ref('large');
 		const small = '(max-width: 47.9375em)';
@@ -41,5 +44,5 @@ export const useAppStore = defineStore('state', () => ({
   cart,
   sticky,
   State,
-	User
+	Session: Session(State)
 }));

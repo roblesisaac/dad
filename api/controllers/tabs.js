@@ -15,9 +15,9 @@ const app = function() {
 
       res.json(deletedTab);
     },
-    getTab: async (req, res) => {
+    getTabs: async (req, res) => {
       const userId = req.user._id;
-      const s = await Tabs.find({ userId });
+      const s = await Tabs.findAll({ userId });
 
       res.json(s);
     },

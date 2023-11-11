@@ -29,7 +29,7 @@ const app = function() {
         return res.json(foundGroup);
       }
 
-      const groups = await Groups.find({ userId, name: '*' });
+      const groups = await Groups.findAll({ userId, name: '*' });
 
       res.json(groups);
     },

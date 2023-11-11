@@ -46,7 +46,7 @@ import { computed, defineProps, watch } from 'vue';
 import { VueDraggableNext as Draggable } from 'vue-draggable-next';
 import ScrollingContent from './ScrollingContent.vue';
 
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 

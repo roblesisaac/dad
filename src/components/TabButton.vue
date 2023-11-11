@@ -1,20 +1,14 @@
 <template>
-  <div @click="selectTab(props.tab)" :class="['grid middle', borders]">
-    <div v-if="tab.isSelected" class="cell-1-5">
-      <DotsVerticalCircleOutline />
-    </div>
-    <div class="cell auto">
-      <div class="relative pointer">
-        <small class="section-title">
-          {{ props.tab.tabName }}<span v-if="props.tab.showForGroup.length > 1">*</span>
-        </small>
-        <br/>
-        <LoadingDots v-if="props.state.isLoading" />
-        <span v-else href="#" class="section-content">{{ tabTotal }}</span>
-      </div>
-    </div>
+<div @click="selectTab(props.tab)" :class="borders" class="container">
+  <div class="dots-container">
+    <DotsVerticalCircleOutline v-if="tab.isSelected" class="dots" />
   </div>
-
+  <div class="content text-left">
+    <small class="section-title">{{ props.tab.tabName }}<span v-if="props.tab.showForGroup.length > 1">*</span></small>
+    <br /><LoadingDots v-if="props.state.isLoading" />
+    <a v-else href="#" class="section-content">{{ tabTotal }}</a>
+  </div>
+</div>
 </template>
 
 <script setup>
@@ -22,7 +16,7 @@ import { computed, nextTick } from 'vue';
 import LoadingDots from './LoadingDots.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 import { formatPrice } from '../utils';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 const props = defineProps({
@@ -39,7 +33,7 @@ const isSelected = computed(() => {
 
 const borders = computed(() => {
   const rightBorder = isLastInArray.value || isSelected.value ? '' : 'b-right';
-  const bottomBorder = isSelected.value ? 'b-bottom-dashed' : 'b-bottom';
+  const bottomBorder = isSelected.value ? 'b-bottom-none' : 'b-bottom';
   const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
 
   return ['section', bottomBorder, rightBorder, borderLeft];
@@ -81,7 +75,30 @@ function selectTab(tabToSelect) {
 </script>
 
 <style>
-/* .tabButton.isSelected {
-  background: #d3e3fe;
+.container {
+  display: flex;
+  align-items: center;
+}
+
+.dots-container {
+  margin-right: 5px; /* Optional margin for space between dots and text */
+}
+
+.dots {
+  float: left; /* Align the dots to the left */
+}
+/* .section {
+  height: 50px;
 } */
+
+.section-title {
+  padding-left: 5px;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+.section-content {
+  padding-left: 5px;
+  color: blue;
+  font-weight: 900;
+}
 </style>

@@ -44,16 +44,7 @@
 
     <!-- Scrolling Tabs -->
     <div class="cell-1 totalsRow">
-      <ScrollingContent>
-        <div v-for="(tab, tabIndex) in state.selected.tabsForGroup" class="cell auto reportTab">
-          <TabButton :state="state" :tab="tab" :key="tabIndex" :tabIndex="tabIndex" />
-        </div>
-        <div @click="app.createNewTab()" class="cell auto reportTab bold">
-          <div class="relative pointer section b-bottom b-left line50">
-            + Tab
-          </div>
-        </div>
-      </ScrollingContent>
+    <ScrollingTabButtons :state="state" :app="app" />
     </div>
 
     <!-- Category Rows -->
@@ -81,19 +72,17 @@
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
-  // import CheckBold from 'vue-material-design-icons/CheckBold.vue';
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import SelectGroup from '../components/SelectGroup.vue';
   import DatePicker from '../components/DatePicker.vue';
-  import TabButton from '../components/TabButton.vue';
+  import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
   import EditTab from '../components/EditTab.vue';
-  import CategoriesWrapper from '../components/CategoriesWrapper.vue';
+  import CategoriesWrapper from '../components/CategoriesWrapper.vue'; 
   // import SelectedItems from '../components/SelectedItems.vue';
-  import ScrollingContent from '../components/ScrollingContent.vue';
-  import { useAppStore } from '../stores/app';
+  import { useAppStore } from '../stores/state';
 
-  const { api, State, sticky } = useAppStore();
+  const { api, State, sticky} = useAppStore();
 
   onMounted(() => {
     sticky.stickify('.totalsRow');
@@ -142,6 +131,7 @@
       tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) ),
       transaction: false
     },
+    showStayLoggedIn: false,
     syncCheckId: false,
     view: 'home'
   });
@@ -362,15 +352,11 @@
     }
 
     async function fetchUserTabs() {
-      const { items } = await api.get('api/tabs');
-
-      return items;
+      return await api.get('api/tabs');
     }
 
     async function fetchUserRules() {
-      const { items } = await api.get('api/rules');
-
-      return items;
+      return await api.get('api/rules');
     }
 
     function filterGlobalRules() {
@@ -659,6 +645,10 @@
         let selectedGroup = state.selected.group;
         const tabsForGroup = state.selected.tabsForGroup;
 
+        if(state.date.start > state.date.end) {
+          return;
+        }
+
         if(!selectedGroup) {
           if(!state.allUserGroups.length) {
             return;
@@ -782,10 +772,6 @@
   height: 100vh;
 }
 
-.section {
-  height: 50px;
-}
-
 .b-right {
   border-right: 2px solid #000;
 }
@@ -802,6 +788,10 @@
   border-bottom: 2px dotted #000;
 }
 
+.b-bottom-none {
+  border-bottom: none !important;
+}
+
 .b-top {
   border-top: 2px solid #000;
 }
@@ -815,19 +805,9 @@
 }
 
 .reportTab {
-  min-width: 150px;
-}
-
-.section-title {
-  position: absolute;
-  top: 0px;
-  left: 5px;
-  text-transform: uppercase;
-  font-weight: 900;
-}
-.section-content {
-  color: blue;
-  font-weight: 900;
+  cursor: pointer;
+  height: 50px;
+  padding: 0 80px 0 10px;
 }
 
 .underline {

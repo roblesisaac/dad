@@ -36,7 +36,7 @@
     import ScrollingContent from './ScrollingContent.vue';
     import DynamicWidthInput from './DynamicWidthInput.vue';
     import DynamicWidthSelect from './DynamicWidthSelect.vue';
-    import { useAppStore } from '../stores/app';
+    import { useAppStore } from '../stores/state';
     
     const { api } = useAppStore();
     const { editState, filteredRulesByType, ruleConfig, ruleType, state, key } = defineProps({

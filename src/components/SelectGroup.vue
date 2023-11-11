@@ -26,7 +26,7 @@
       </div>
 
       <div class="cell-20-24 p20y pointer" @click="app.selectGroup(group)">
-        <b>{{ group.name }}</b><CheckDecagram v-if="group.isSelected" class="colorBlue" />
+        <b>{{ group.name }}</b><CheckBold v-if="group.isSelected" class="colorBlack" />
         <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(group.totalCurrentBalance) }}</small>
         <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(group.totalAvailableBalance) }}</small>
       </div>
@@ -59,13 +59,13 @@
 import { nextTick, reactive } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
-import CheckDecagram from 'vue-material-design-icons/CheckDecagram.vue'
+import CheckBold from 'vue-material-design-icons/CheckBold.vue'
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 
 import EditGroup from './EditGroup.vue';
 import LoadingDots from './LoadingDots.vue';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 import { formatPrice } from '../utils';
 
 const { api } = useAppStore();
@@ -113,7 +113,6 @@ const app = function() {
     goBack: () => {
       if(selectGroupState.editingGroup) {
         selectGroupState.editingGroup = null;
-        console.log(props.state.allUserGroups);
         return;
       }
 

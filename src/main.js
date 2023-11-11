@@ -32,7 +32,6 @@ const routerPromise = new Promise((resolve) => {
   }
 });
 
-
 let router;
 
 routerPromise.then(routes => {
@@ -48,6 +47,5 @@ routerPromise.then(routes => {
     .use(pinia)
     .mount('#app');
 });
-
 
 export { router };

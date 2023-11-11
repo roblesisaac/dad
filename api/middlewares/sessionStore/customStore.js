@@ -1,71 +1,54 @@
 'use strict';
 
 import { data } from '@ampt/data';
+import expressSession from 'express-session';
 
-export default function (connect) {
-  const Store = connect.Store || connect.sessionStore;
+export default class CustomStore extends expressSession.Store {
+  constructor() {
+    super();
+  }  
 
-  return class CustomStore extends Store {
-    storeInstance = null;
+  async get(sessionId, callback) {
+    try {
+      const sessionData = await data.get(`sessions:${sessionId}`);
 
-    constructor() {
-      super();
-      this.storeInstance = new Store();
+      callback(null, JSON.parse(sessionData));
+    } catch (error) {
+      callback(error);
     }
+  }
 
-    async get(sessionId, callback) {
-      try {
-        const sessionData = await data.get(`sessions:${sessionId}`);
-
-        if (!sessionData) {
-          return callback(null, null);
-        }
-
-        const session = JSON.parse(sessionData);
-        const cookie = session ? session.cookie : null;
-
-        if (cookie && cookie.expires) {
-          cookie.expires = new Date(cookie.expires);
-        }
-
-        if (cookie.expires < new Date()) {
-          await this.destroy(sessionId);
-          return callback(null, null);
-        }
-
-        return callback(null, session);
-      } catch (error) {
-        callback(error);
-      }
+  async set(sessionId, session, callback) {
+    try {
+      session.cookie.expires = new Date(session.cookie.expires);
+      session.cookie.originalMaxAge = session.cookie.maxAge;
+      const payload = JSON.stringify(session);
+      const ttl = Math.round((session.cookie.expires - Date.now()) / 1000);
+  
+      const result = await data.set(`sessions:${sessionId}`, payload, { ttl });
+      callback(null, result);
+    } catch (error) {
+      callback(error);
     }
+  }
 
-    async set(sessionId, session, callback) {
-      try {
-        const id = `sessions:${sessionId}`;
-        const payload = JSON.stringify(session);
-        const maxAge = session.cookie.originalMaxAge || 0;
-        const ttl = Math.round(maxAge / 1000);
+  async touch(sessionId, session, callback) {
+    try {
+      session.lastAccess = new Date().getTime();
+  
+      this.set(sessionId, session, callback);
+    } catch (error) {
+      callback(error);
+    }    
+  
+  }
 
-        const result = await data.set(id, payload, { ttl });
-        callback(null, result);
-      } catch (error) {
-        callback(error);
-      }
+  async destroy(sessionId, callback) {
+    try {
+      await data.remove(`sessions:${sessionId}`);
+      callback(null, true);
+    } catch (error) {
+      callback(error);
     }
-
-    async destroy(sessionId, callback) {
-      try {
-        const result = await data.remove(`sessions:${sessionId}`);
-
-        if (typeof callback === 'function') {
-          callback(null, result);
-        }
-      } catch (error) {
-        console.log(error);
-        if (typeof callback === 'function') {
-          callback(error);
-        }
-      }
-    }
-  };
+  }
 }

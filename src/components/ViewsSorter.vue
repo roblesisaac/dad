@@ -86,7 +86,7 @@
 <script setup>
 import { reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import CloseCircle from 'vue-material-design-icons/CloseCircle.vue';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 import ViewDragger from './ViewDragger.vue';
 import ScrollingContent from './ScrollingContent.vue';
 import { arraysMatch } from '../utils';

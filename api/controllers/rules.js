@@ -17,7 +17,7 @@ const app = function() {
     },
     getRules: async (req, res) => {
       const userId = req.user._id;
-      const rules = await Rules.find({ userId });
+      const rules = await Rules.findAll({ userId });
 
       res.json(rules);
     },

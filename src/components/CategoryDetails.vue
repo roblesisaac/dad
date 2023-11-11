@@ -29,7 +29,7 @@ import Minus from 'vue-material-design-icons/Minus.vue';
 import SelectedItems from './SelectedItems.vue';
 
 import { formatPrice } from '../utils';
-import { useAppStore } from '../stores/app';
+import { useAppStore } from '../stores/state';
 
 const { sticky } = useAppStore();
 
