@@ -240,9 +240,9 @@
             return `${year} ${months[Number(month-1)]}`;
           },
           day: () => {
-            const day = item.date.split('-')[2];
+            const [_, month, day] = item.date.split('-');
 
-            return day;
+            return `${months[Number(month-1)]}, ${day}`;
           },
           weekday: () => {
             return getDayOfWeek(item.date)
@@ -457,6 +457,7 @@
       let tabTotal = 0;
 
       for(const item of dataCopy) {
+        item.amount *= -1;
 
         categorize(item);
 

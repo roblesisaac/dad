@@ -10,10 +10,10 @@
 
     <!-- Tab Name -->
     <div v-if="!editState.ruleSharer" class="grid middle b-bottom">
-      <div class="cell-1-5 section b-right bold line50">
-        <small>TabName</small>
+      <div class="cell-2-5 section b-right bold line50">
+        <small>Tab Name</small>
       </div>
-      <div class="cell-4-5 section">
+      <div class="cell-3-5 section">
         <input v-model="editState.changeTabNameTo" class="transparent bold section colorBlue" type="text" />
       </div>
       <!-- <div v-if="editState.changeTabNameTo !== selectedTab.tabName" class="cell-1-5 b-left section line50">
@@ -86,7 +86,7 @@
             Group By
           </div>
           <div class="cell auto right">        
-            <Minus v-if="editState.selectedRuleType==='filter'" />
+            <Minus v-if="editState.selectedRuleType==='groupBy'" />
             <Plus v-else />
           </div>
         </div>

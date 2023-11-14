@@ -2,21 +2,9 @@ export default function(State) {
   const session = {
     expires: null,
     isLoggedIn: false,
-    watchingSession: false
+    watchingSession: false,
+    maxAge: 0
   };
-
-  async function touch() {
-    const response = await fetch('api/login/check/auth');
-    const json = await response.json();
-
-    session.isLoggedIn = json.isLoggedIn;
-    session.expires = json.expires;
-
-    if(session.isLoggedIn) {
-      State.showStayLoggedInForm = false;
-      State.showLoginForm = false;
-    }
-  }
 
   function getSecondsUntilLogout() {
     if(!session.isLoggedIn) {
@@ -32,6 +20,28 @@ export default function(State) {
 
   function isOnLoginPage() {
     return window.location.pathname === '/login' || window.location.pathname === '/';
+  }
+
+  function retouch() {
+    if(!session.isLoggedIn || !session.maxAge) {
+      return touch();
+    }
+
+    session.expires = new Date(Date.now() + session.maxAge);
+  }
+
+  async function touch() {
+    const response = await fetch('api/login/check/auth');
+    const json = await response.json();
+
+    session.isLoggedIn = json.isLoggedIn;
+    session.expires = json.expires;
+    session.maxAge = json.maxAge;
+
+    if(session.isLoggedIn) {
+      State.showStayLoggedInForm = false;
+      State.showLoginForm = false;
+    }
   }
 
   async function watchSession() {
@@ -59,6 +69,7 @@ export default function(State) {
   State.session = session;
 
   return {
+    retouch,
     touch,
     watchSession
   }

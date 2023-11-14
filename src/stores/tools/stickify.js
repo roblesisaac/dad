@@ -3,7 +3,17 @@ import { reactive } from 'vue';
 const stickyState = reactive({
   currentBreakingPoint: 0,
   initiated: false,
-  registeredConfigs: []
+  registeredConfigs: [],
+  stickyOptions: () => ({
+    selector: '.carousel',
+    stickUnder: {
+      target: '.selectorA'
+    },
+    unstickWhen: {
+      target: '.selectorB',
+      action: 'isSticky'
+    }
+  })
 });
 
 const Sticky = function (State) {

@@ -1,5 +1,5 @@
 <template>
-  <input :style="{width: `${inputWidth}px`}" v-model="state[propToUpdate]" ref="inputRef" type="text" :placeholder="placeholder" />
+  <input :style="{width: `${inputWidth}ch`}" v-model="state[propToUpdate]" ref="inputRef" type="text" :placeholder="placeholder" />
 </template>
 
 <script setup>
@@ -17,11 +17,8 @@ const inputWidth = ref(100);
 function adaptWidthToValue() {
   const $input = inputRef.value;
   const inputValue = $input.value || placeholder;
-  const typedLength = inputValue.length*17;
-  const scrollWidth = $input.scrollWidth+3;
-  const newWidth = Math.min(typedLength, scrollWidth);
 
-  inputWidth.value = newWidth;
+  inputWidth.value = inputValue.length;
 }
     
 onMounted(adaptWidthToValue);

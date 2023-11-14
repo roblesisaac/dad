@@ -45,7 +45,8 @@ export default {
     res.json({
       isLoggedIn: !!user,
       email_verified,
-      expires: new Date(Date.now() + session?.cookie?.originalMaxAge)
+      expires: new Date(Date.now() + session?.cookie?.originalMaxAge),
+      maxAge: session?.cookie?.originalMaxAge
     });
   },
 

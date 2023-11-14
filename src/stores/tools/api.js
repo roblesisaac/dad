@@ -31,7 +31,7 @@ export default function(State) {
     const { Session } = useAppStore();
     const response = await fetch(url, payload);
 
-    Session.touch();
+    Session.retouch();
     const { redirected, url: redirectUrl } = response;
     
     if (redirected) {

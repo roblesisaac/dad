@@ -18,6 +18,11 @@ const { editState, ruleType, state } = defineProps({
 const selectedGroup = state.selected.group;
 const selectedTab = state.selected.tab;
 
+const dragOptions = {
+  touchStartThreshold: 100,
+  animation: 200
+}
+
 const allRulesForTab = computed(() => {
   return [
     ...filterRulesForTab(),
@@ -62,10 +67,6 @@ function filterByRuleType() {
 }
 
 const filteredRulesByType = ref(filterByRuleType());
-
-const dragOptions = {
-  animation: 200
-}
 
 watch(filteredRulesByType, (newRules) => {
   newRules.forEach((rule, ruleIndex) => rule.orderOfExecution = ruleIndex);

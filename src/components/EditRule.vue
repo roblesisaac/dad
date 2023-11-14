@@ -5,9 +5,13 @@
         <DragVertical />
       </small>
     </div>
-    <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold handle"><small>If</small></div>
+    <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold handle"><small>As</small></div>
     <div v-if="ruleType === 'sort'" class="cell shrink p10y p10r bold handle"><small>By</small></div>
     <div v-if="ruleType === 'filter'" class="cell shrink p10y p10r bold handle"><small>Show if</small></div>
+    <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r">
+      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="editRule" placeholder="something" />
+    </div>
+    <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold handle"><small>If</small></div>
     <div v-if="app.shouldShow('itemProp')" class="cell shrink p10y p10r">
       <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].itemProps" title="something" :data="ruleConfig.rule" :prop="1" />
     </div>
@@ -17,10 +21,7 @@
     <div v-if="app.shouldShow('testStandard')" class="cell shrink p10y p10r">
       <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
     </div>
-    <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r bold"><small>Categorize As</small></div>
-    <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r">
-      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="editRule" placeholder="something" />
-    </div>
+    <!-- <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r bold"><small>Categorize As</small></div> -->
     <div v-if="!editRuleState.showDeleteButton && ruleConfig._id" class="cell shrink p10y p10r bold">
       <small>
         <DotsVerticalCircleOutline @click="editState.ruleSharer=ruleConfig" />
