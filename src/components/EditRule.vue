@@ -1,7 +1,7 @@
 <template>
 <div class="grid">
   <div class="cell-1">
-    <ScrollingContent>
+  <ScrollingContent>
     <div v-if="ruleConfig._id && editState" class="cell shrink p10y p5r bold handle">
       <small><DragVertical /></small>
     </div>
