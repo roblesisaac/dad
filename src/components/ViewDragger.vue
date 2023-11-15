@@ -1,20 +1,21 @@
 <template>
-  <draggable class="grid draggable" v-model="state[listName]" v-bind="dragOptions">
-    <div :class="' cell-1-'+columns" v-for="view in state[listName]" :key="view+randomNumber()">
-      <div class="p5r p5b">
-        <button @dblclick="specialClick($event, view)" class="grid viewButton">
-          <div class="cell-1 proper center middle">
-            {{ view }}
-          </div>
-        </button>
+  <Draggable class="grid draggable" v-model="state[listName]" v-bind="dragOptions">
+    <template #item="{element}">
+      <div :class="' cell-1-'+columns">
+        <div class="p5r p5b">
+          <button @dblclick="specialClick($event, element)" class="grid viewButton">
+            <div class="cell-1 proper center middle">
+              {{ element }}
+            </div>
+          </button>
+        </div>
       </div>
-    </div>
-  </draggable>
+    </template>
+  </Draggable>
   </template>
   
   <script setup>
-  import { VueDraggableNext as draggable } from 'vue-draggable-next';
-  import { randomNumber } from '../utils';
+  import Draggable from 'vuedraggable';
   
   const props = defineProps({
     cols: Number,

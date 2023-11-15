@@ -1,13 +1,32 @@
 <template>
-<draggable class="grid draggable" v-model="filteredRulesByType" v-bind="dragOptions" handle=".handle" itemKey="dragRules">
-  <EditRule v-for="(ruleConfig, index) in filteredRulesByType" :filteredRulesByType="filteredRulesByType" :ruleConfig="ruleConfig" :state="state" :key="index" :ruleType="ruleType" :editState="editState" />
-</draggable>
+<div class="grid">
+  <div class="cell-1">
+    <Draggable
+      v-if="filteredRulesByType.length"
+      class="draggable" 
+      v-model="filteredRulesByType" 
+      group="rules" 
+      handle=".handle"
+      v-bind="dragOptions" 
+      item-key="_id">
+
+        <template #item="{element}">
+          <EditRule :ruleConfig="element" :state="state" :editState="editState" />
+        </template>
+        
+    </Draggable>
+  </div>
+
+  <div class="cell-1">
+    <EditRule :ruleConfig="newRule" :state="state" :editState="editState" />
+  </div>
+</div>
 </template>
 
 <script setup>
 import { computed, defineProps, ref, watch } from 'vue';
 import EditRule from './EditRule.vue';
-import { VueDraggableNext as Draggable } from 'vue-draggable-next';
+import Draggable from 'vuedraggable';
 
 const { editState, ruleType, state } = defineProps({
   editState: Object,
@@ -15,7 +34,6 @@ const { editState, ruleType, state } = defineProps({
   state: Object
 });
 
-const selectedGroup = state.selected.group;
 const selectedTab = state.selected.tab;
 
 const dragOptions = {
@@ -24,22 +42,6 @@ const dragOptions = {
 }
 
 const allRulesForTab = computed(() => {
-  return [
-    ...filterRulesForTab(),
-    ...filterGlobalRules()
-  ];
-});
-
-function filterGlobalRules() {
-  return state.allUserRules.filter(ruleItem => {
-    const accountIsGlobal = ruleItem.applyForGroups.includes('_GLOBAL');
-    const tabIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
-
-    return accountIsGlobal && tabIsGlobal;
-  });
-}
-
-function filterRulesForTab() {
   const tabId = selectedTab._id;
 
   return state.allUserRules.filter(ruleItem => {
@@ -48,28 +50,26 @@ function filterRulesForTab() {
 
     return applyForTabsIsGlobal || applyForTabMatchesTabId
   });
+});
+
+const filteredRulesByType = ref(setFilteredRulesByType());
+
+function setFilteredRulesByType() {
+  return allRulesForTab.value.filter(ruleConfig => ruleType === ruleConfig.rule[0]).sort(byOrderOfExecution);
 }
+
+const newRule = ref({
+  rule: [ruleType, '', '', '', '']
+});
 
 function byOrderOfExecution(a, b) {
   return a.orderOfExecution - b.orderOfExecution;
 }
 
-function filterByRuleType() {
-  const filteredRules = allRulesForTab.value.filter(ruleConfig => ruleType === ruleConfig.rule[0]);
-  const newRule = {
-    applyForGroups: [selectedGroup._id], 
-    applyForTabs: [selectedTab._id], 
-    orderOfExecution: filteredRules.length, 
-    rule: [ruleType, '', '', '', '']
-  };
-
-  return [...filteredRules, newRule].sort(byOrderOfExecution);
-}
-
-const filteredRulesByType = ref(filterByRuleType());
-
+watch(() => state.allUserRules.length, () => filteredRulesByType.value = setFilteredRulesByType());
 watch(filteredRulesByType, (newRules) => {
   newRules.forEach((rule, ruleIndex) => rule.orderOfExecution = ruleIndex);
 }, { deep: true });
+
 
 </script>

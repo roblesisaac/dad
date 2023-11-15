@@ -361,21 +361,14 @@
 
     function filterGlobalRules() {
       return state.allUserRules.filter(ruleItem => {
-        const accountIsGlobal = ruleItem.applyForGroups.includes('_GLOBAL');
         const tabIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
 
-        return accountIsGlobal && tabIsGlobal;
+        return tabIsGlobal;
       });
     }
 
-    function filterRulesForTab(tabId, groupId) {
+    function filterRulesForTab(tabId) {
       return state.allUserRules.filter(ruleItem => {
-        // const groupIdMatches = ruleItem.applyForGroups.includes(groupId);
-
-        // if(!groupIdMatches) {
-        //   return false;
-        // }
-
         const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
         const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
 
@@ -443,10 +436,8 @@
     }
 
     function processTabData(data, tab) {
-      const selectedGroup = state.selected.group;
-
       const tabRules = [
-        ...filterRulesForTab(tab._id, selectedGroup._id),
+        ...filterRulesForTab(tab._id),
         ...filterGlobalRules()
       ];
 

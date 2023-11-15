@@ -19,7 +19,9 @@
     <div class="dropHere">
       <span v-if="!props.editingGroup.accounts.length">Drag and drop groups here.</span>
       <Draggable class="draggable" group="accountDragger" v-model="props.editingGroup.accounts" v-bind="dragOptions">
-        <button v-for="account in props.editingGroup.accounts" class="sharedWith">{{ account.mask }}</button>
+        <template #item="{element}">
+          <button class="sharedWith">{{ element.mask }}</button>
+        </template>
       </Draggable>
     </div>
   </div>
@@ -28,9 +30,11 @@
   <div class="cell-1 p30y">
     <b>Accounts Not In Group:</b>
     <ScrollingContent class="">
-    <Draggable class="draggable dropHere" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions">
-      <button v-for="account in accountsNotInGroup" class="button sharedWith">{{ account.mask }}</button>
-    </Draggable>
+      <Draggable class="draggable dropHere" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions">
+        <template #item="{element}">
+          <button class="button sharedWith">{{ element.mask }}</button>
+        </template>
+      </Draggable>
     </ScrollingContent>
   </div>
 
@@ -43,7 +47,7 @@
 
 <script setup>
 import { computed, defineProps, watch } from 'vue';
-import { VueDraggableNext as Draggable } from 'vue-draggable-next';
+import Draggable from 'vuedraggable';
 import ScrollingContent from './ScrollingContent.vue';
 
 import { useAppStore } from '../stores/state';

@@ -115,7 +115,8 @@
         <div class="dropHere">
           <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
           <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="dragOptions">
-            <button v-for="groupId in selectedTab.showForGroup" class="sharedWith">{{ getGroupName(groupId) }}</button>
+            <template #item="{element}">
+              <button class="sharedWith">{{ getGroupName(element) }}</button></template>
           </Draggable>
         </div>
       </div>
@@ -123,7 +124,9 @@
       <div v-if="editState.selectedRuleType==='sharing'" class="cell-1">
         <ScrollingContent class="p30y">
         <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="dragOptions">
-          <button v-for="groupId in unselectedGroupsInTab" class="button sharedWith">{{ getGroupName(groupId) }}</button>
+          <template #item="{element}">
+          <button class="button sharedWith">{{ getGroupName(element) }}</button>
+          </template>
         </Draggable>
         </ScrollingContent>
       </div>
@@ -151,7 +154,7 @@
 <script setup>
 import { computed, nextTick, reactive, watch } from 'vue';
 
-import { VueDraggableNext as Draggable } from 'vue-draggable-next';
+import Draggable from 'vuedraggable';
 import ScrollingContent from './ScrollingContent.vue';
 import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
@@ -198,8 +201,7 @@ const app = function() {
         rule: rule.rule,
         _isImportant: rule._isImportant,
         orderOfExecution: rule.orderOfExecution,
-        applyForTabs: [newTabId],
-        applyForGroups: [state.selected.group._id]
+        applyForTabs: [newTabId]
       };
 
       const savedRule = await api.post('api/rules', newRule);
