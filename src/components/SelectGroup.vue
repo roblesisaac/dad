@@ -1,9 +1,5 @@
 <template>
 <div class="grid">
-  <div class="cell-1">
-    <!-- SpecialGoBack -->
-    <button @click="app.goBack" class="section b-bottom acctButton"><ChevronLeft class="icon" /> Back</button>
-  </div>
   
   <div v-if="!selectGroupState.editingGroup" class="cell-1">
 
@@ -110,14 +106,6 @@ const app = function() {
       const savedNewGroup = await api.post('api/groups', newGroupData);
       props.state.allUserGroups.push(savedNewGroup);
     },
-    goBack: () => {
-      if(selectGroupState.editingGroup) {
-        selectGroupState.editingGroup = null;
-        return;
-      }
-
-      props.state.view = 'home';
-    },
     init: async () => {
       await fetchLinkToken();
     },
@@ -136,8 +124,8 @@ const app = function() {
 
       nextTick(() => {
         api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
-        groupToSelect.isSelected = true;   
-        props.state.view = 'home';
+        groupToSelect.isSelected = true;
+        props.App.goBack();
       });
     }
   }

@@ -2,14 +2,9 @@
 <div class="grid">
 
   <div class="cell-1">
-    <!-- SpecialGoBack -->
-    <button @click="app.goBack" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
-
-    <!-- RuleSharer -->
-    <RuleSharer v-if="editState.ruleSharer" :editState="editState" :ruleConfig="editState.ruleSharer" :state="state" />
 
     <!-- Tab Name -->
-    <div v-if="!editState.ruleSharer" class="grid middle b-bottom">
+    <div v-if="!state.is('EditRule')" class="grid middle b-bottom">
       <div class="cell-2-5 section b-right bold line50">
         <small>Tab Name</small>
       </div>
@@ -22,7 +17,7 @@
     </div>
 
     <!-- Sort -->
-    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
       <div @click="app.select('sort')" class="cell-1">
         <div class="grid">
           <div class="cell auto">
@@ -36,12 +31,12 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='sort'" :editState="editState" ruleType="sort" :selectedTab="selectedTab" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='sort'" ruleType="sort" :selectedTab="selectedTab" :state="state" />
       </div>
     </div>
 
     <!-- Categorize -->
-    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
       <div @click="app.select('categorize')" class="cell-1">
         <div class="grid">
           <div class="cell auto">
@@ -55,12 +50,12 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='categorize'" :editState="editState" ruleType="categorize" :selectedTab="selectedTab" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='categorize'" ruleType="categorize" :selectedTab="selectedTab" :state="state" />
       </div>
     </div>
 
     <!-- Filter -->
-    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
       <div @click="app.select('filter')" class="cell-1">
         <div class="grid">
           <div class="cell auto">
@@ -74,12 +69,12 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='filter'" :editState="editState" ruleType="filter" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='filter'" ruleType="filter" :state="state" />
       </div>
     </div>
 
     <!-- GroupBy -->
-    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
       <div @click="app.select('groupBy')" class="cell-1">
         <div class="grid">
           <div class="cell auto">
@@ -93,12 +88,12 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='groupBy'" :editState="editState" ruleType="groupBy" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='groupBy'" ruleType="groupBy" :state="state" />
       </div>
     </div>
 
     <!-- Share -->
-    <div v-if="!editState.ruleSharer" class="grid middle dottedRow">
+    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
       <div @click="app.select('sharing')" class="cell-1">
         <div class="grid">
           <div class="cell auto">
@@ -137,7 +132,7 @@
     </div>
 
     <!-- Delete And Duplicate Buttons -->
-    <div v-if="!editState.ruleSharer" class="grid middle">
+    <div v-if="!state.is('EditRule')" class="grid middle">
       <div class="cell-1 p20">
         <button @click="app.duplicateTab" class="button bgBlack expanded">Duplicate Tab</button>
       </div>
@@ -156,15 +151,13 @@ import { computed, nextTick, reactive, watch } from 'vue';
 
 import Draggable from 'vuedraggable';
 import ScrollingContent from './ScrollingContent.vue';
-import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import RulesRenderer from './RulesRenderer.vue';
-import RuleSharer from './RuleSharer.vue';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
-const { state } = defineProps({ state: 'object' });
+const { App, state } = defineProps({ state: Object, App: Object });
 
 const dragOptions = {
   animation: 200,
@@ -281,7 +274,7 @@ const app = function() {
 
       //delete all rules specific to tab
 
-      state.view = 'home';
+      state.views.pop();
       state.allUserTabs.splice(tabIndex, 1);
       await api.delete(`api/tabs/${selectedTabId}`);
     },
@@ -296,7 +289,7 @@ const app = function() {
       state.blueBar.message = 'Duplicating Tab';
       state.blueBar.loading = true;
       state.isLoading = true;
-      state.view = 'home';
+      App.goBack();
 
       nextTick(async () => {
         state.blueBar.message = 'Cloning Rules';
@@ -313,17 +306,9 @@ const app = function() {
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
-        state.view = 'EditTab';
+        state.views.push('EditTab');
         state.isLoading = false;
       });
-    },
-    goBack: () => {
-      if(editState.ruleSharer) {
-        editState.ruleSharer = null;
-        return;
-      }
-
-      state.view = 'home';
     },
     makeTabUnique: async () => {
       const tabName = selectedTab.value.tabName;
@@ -336,7 +321,7 @@ const app = function() {
       state.blueBar.message = 'Making Tab Unique';
       state.blueBar.loading = true;
       state.isLoading = true;
-      state.view = 'home';
+      state.views.pop();
 
       const currentTabId = selectedTab.value._id;
       const newTab = await createNewTab();
@@ -351,7 +336,7 @@ const app = function() {
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
-        state.view = 'EditTab';
+        state.views.push('EditTab');
         state.isLoading = false;
       });
     },

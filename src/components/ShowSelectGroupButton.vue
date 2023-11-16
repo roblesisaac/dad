@@ -1,5 +1,5 @@
 <template>
-  <button @click="state.view='SelectGroup'" 
+  <button @click="state.views.push('SelectGroup')" 
     class="acctButton section-content proper" 
     href="#"  v-html="groupName">
   </button>

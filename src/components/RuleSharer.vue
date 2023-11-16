@@ -47,7 +47,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, nextTick, watch } from 'vue';
+import { computed, defineProps, nextTick, watch, onMounted } from 'vue';
 import ScrollingContent from './ScrollingContent.vue';
 import Draggable from 'vuedraggable';
 import EditRule from './EditRule.vue';
@@ -57,7 +57,6 @@ import { useAppStore } from '../stores/state';
 const { api } = useAppStore();
 
 const props = defineProps({
-  editState: Object,
   ruleConfig: Object,
   state: Object
 });
@@ -70,7 +69,7 @@ const dragOptions = {
 const ruleType = props.ruleConfig.rule[0];
 
 function getTabName(tabId) {
-  return props.state.allUserTabs.find(tab => tab._id === tabId)?.tabName;
+  return props.state.allUserTabs.find(tab => tab._id === tabId)?.tabName || tabId;
 }
 
 function removeRule() {
@@ -85,7 +84,7 @@ function removeRule() {
   api.delete(`api/rules/${_id}`);
 
   nextTick(() => {
-    props.editState.ruleSharer = null;
+    props.state.editingRule = null;
   });
 }
 

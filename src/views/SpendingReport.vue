@@ -11,7 +11,12 @@
 
   <!-- BackButton -->
   <Transition>
-    <button @click="state.view='home'" v-if="!state.is(['home', 'loading', 'EditTab', 'SelectGroup'])" class="acctButton section b-bottom"><ChevronLeft class="icon" /> Back</button>
+    <button 
+    v-if="!state.is(['home'])"
+    @click="app.goBack" 
+    class="acctButton section b-bottom">
+      <ChevronLeft class="icon" /> Back
+    </button>
   </Transition>
 
   <!-- Small Screens -->
@@ -65,7 +70,12 @@
 
   <!-- EditTab -->
   <Transition>
-    <EditTab v-if="state.is('EditTab')" :state="state"></EditTab>
+    <EditTab v-if="state.is('EditTab')" :state="state" :App="app"></EditTab>
+  </Transition>
+
+  <!-- RuleSharer -->
+  <Transition>
+    <RuleSharer v-if="state.is('RuleSharer')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
 </template>
 
@@ -79,6 +89,7 @@
   import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
   import EditTab from '../components/EditTab.vue';
   import CategoriesWrapper from '../components/CategoriesWrapper.vue'; 
+  import RuleSharer from '../components/RuleSharer.vue';
   // import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/state';
 
@@ -98,6 +109,7 @@
       loading: false
     },
     date: { start: 'firstOfMonth', end: 'today' },
+    editingRule: null,
     elems: {
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
@@ -105,10 +117,11 @@
     isLoading: false,
     is(view) {
       const views = Array.isArray(view) ? view : [view];
-      return views.includes(this.view);
+      return views.includes(state.view);
     },
     isSmallScreen: () => State.currentScreenSize() === 'small',
     linkToken: null,
+    showReorder: false,
     selected: {
       allGroupTransactions: [],
       group: computed(() => state.allUserGroups.find(group => group.isSelected) ),
@@ -133,7 +146,10 @@
     },
     showStayLoggedIn: false,
     syncCheckId: false,
-    view: 'home'
+    views: ['home'],
+    view: computed(function() {
+      return state.views[state.views.length -1];
+    })
   });
 
   const app = function() {
@@ -610,6 +626,10 @@
         state.allUserTabs.push(newTab);
         await app.processAllTabsForSelectedGroup();
       },
+      goBack: () => {
+        state.isLoading = true;
+        state.views.pop();
+      },
       init: async () => {
         state.blueBar.message = 'Beginning sync';
         state.blueBar.loading = true;
@@ -623,7 +643,7 @@
         const { groups, accounts } = await api.get('api/plaid/sync/accounts/and/groups');
 
         if(!groups.length) {
-          state.view = 'SelectGroup';
+          state.views.push('SelectGroup');
         }
 
         state.allUserAccounts = accounts;
@@ -697,7 +717,7 @@
           return app.handleGroupChange();
         }
 
-        await app.processAllTabsForSelectedGroup();
+        setTimeout(app.processAllTabsForSelectedGroup, 500);
       },
       processAllTabsForSelectedGroup: async () => {
         const tabsForGroup = state.selected.tabsForGroup;

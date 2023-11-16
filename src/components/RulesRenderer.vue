@@ -11,14 +11,19 @@
       item-key="_id">
 
         <template #item="{element}">
-          <EditRule :ruleConfig="element" :state="state" :editState="editState" />
+          <EditRule :ruleConfig="element" :state="state" :showReorder="showReorder" />
         </template>
         
     </Draggable>
   </div>
 
   <div class="cell-1">
-    <EditRule :ruleConfig="newRule" :state="state" :editState="editState" />
+    <hr>
+    <EditRule :ruleConfig="newRule" :state="state" :showReorder="showReorder" />
+    <button @click="state.showReorder=!state.showReorder" class="button bgBlack">
+      <span v-if="!state.showReorder">Reorder</span>
+      <span v-else>Cancel</span>
+    </button>
   </div>
 </div>
 </template>
@@ -28,18 +33,19 @@ import { computed, defineProps, ref, watch } from 'vue';
 import EditRule from './EditRule.vue';
 import Draggable from 'vuedraggable';
 
-const { editState, ruleType, state } = defineProps({
-  editState: Object,
+state.showReorder = false;
+
+const { ruleType, state } = defineProps({
   ruleType: String,
   state: Object
 });
 
 const selectedTab = state.selected.tab;
 
-const dragOptions = {
+const dragOptions = ref({
   touchStartThreshold: 100,
   animation: 200
-}
+});
 
 const allRulesForTab = computed(() => {
   const tabId = selectedTab._id;

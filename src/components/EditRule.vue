@@ -2,7 +2,7 @@
 <div class="grid">
   <div class="cell-1">
   <ScrollingContent>
-    <div v-if="ruleConfig._id && editState" class="cell shrink p10y p5r bold handle">
+    <div v-if="ruleConfig._id && state.showReorder" class="cell shrink p10y p5r bold handle">
       <small><DragVertical /></small>
     </div>
     <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold"><small>As</small></div>
@@ -18,24 +18,24 @@
     <div v-if="app.shouldShow('ruleMethodName')" class="cell shrink p10y p10r">
       <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" />
     </div>
-    <div v-if="app.shouldShow('testStandard') && editState" class="cell shrink p10y p10r">
+    <div v-if="app.shouldShow('testStandard') && state.is('EditTab')" class="cell shrink p10y p10r">
       <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
     </div>
-    <div v-if="ruleConfig._id && editState" class="cell shrink p10y p10r bold">
+    <div v-if="ruleConfig._id && state.is('EditTab')" class="cell shrink p10y p10r bold">
       <small>
-        <DotsVerticalCircleOutline @click="editState.ruleSharer=ruleConfig" />
+        <DotsVerticalCircleOutline @click="app.editRule" />
       </small>
     </div>
   </ScrollingContent>
   </div>
-  <div v-if="app.shouldShow('testStandard') && !editState" class="cell-1">
-    <DynamicTextArea :data="ruleConfig.rule" prop="3" />
+  <div v-if="app.shouldShow('testStandard') && state.is('RuleSharer')" class="cell-1">
+    <DynamicTextArea :data="ruleConfig.rule" prop="3" class="code-editor" />
   </div>
 </div>
 </template>
     
 <script setup>
-  import { defineProps, reactive, watch } from 'vue';
+  import { computed, defineProps, reactive, watch } from 'vue';
   import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
   import DragVertical from 'vue-material-design-icons/DragVertical.vue';
   import ScrollingContent from './ScrollingContent.vue';
@@ -45,8 +45,7 @@
   import { useAppStore } from '../stores/state';
   
   const { api } = useAppStore();
-  const { editState, ruleConfig, state } = defineProps({
-    editState: Object,
+  const { ruleConfig, state } = defineProps({
     ruleConfig: Object,
     state: Object
   });
@@ -103,6 +102,10 @@
     }
 
     return {
+      editRule: () => {
+        state.editingRule=ruleConfig;
+        state.views.push('RuleSharer');
+      },
       saveRule: async function() {
         const { propNamesToSave } = editRuleState.ruleTypes[ruleType];
 
@@ -121,7 +124,7 @@
         
         const newRule = {
           ...ruleConfig,
-          applyForTabs: ruleType === 'categorize' ? state.allUserTabs.map(tab => tab._id) : [state.selected.tab._id],
+          applyForTabs: ruleType === 'categorize' ? ['_GLOBAL'] : [state.selected.tab._id],
           orderOfExecution: state.allUserRules.length
         };
 
@@ -145,17 +148,35 @@
 
 </script>
     
-  <style>
-  select.editRule, input.editRule {
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    text-decoration: underline;
-    box-shadow: none;
-    font-weight: bold;
-    color: #2400FF;
-    padding: 0;
-    background: transparent;
-    border: none;
-  }
-  </style>
+<style>
+select.editRule, input.editRule {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  text-decoration: underline;
+  box-shadow: none;
+  font-weight: bold;
+  color: #2400FF;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.code-editor {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 14px;
+  font-weight: bold;
+  padding: 10px;
+  background-color: #282c34;
+  color: #abb2bf;
+  border: 1px solid #3e4451;
+  border-radius: 5px;
+  transition: border-color 0.3s ease-in-out;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: dodgerblue;
+  box-shadow: 0 0 5px rgba(30, 144, 255, 0.5);
+}
+</style>

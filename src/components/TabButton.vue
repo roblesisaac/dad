@@ -56,7 +56,7 @@ const isPreviousTabSelected = computed(() => {
 
 function selectTab(tabToSelect) {
   if(tabToSelect.isSelected) {
-    return props.state.view = 'EditTab';
+    return props.state.views.push('EditTab');
   }
 
   const currentlySelectedTab = props.state.selected.tab;
