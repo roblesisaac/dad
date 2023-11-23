@@ -2,18 +2,19 @@ const sticky = (() => {
   const configs = [];
   let currentStuckHeight = 0;
   let initiated = false;
+  let currentIndex = 0;
 
   function onScroll() {
-    configs.forEach(config => {
-      const rect = config.element.getBoundingClientRect();
-      const isSticky = rect.top <= currentStuckHeight;
 
-      if (isSticky) {
-        makeSticky(config.element, config);
-      } else {
-        unmakeSticky(config.element, config);
-      }
-    });
+    const config = configs[0];
+    const rect = config.element.getBoundingClientRect();
+    const isSticky = rect.top <= currentStuckHeight;
+
+    if (isSticky) {
+      makeSticky(config.element, config);
+    } else {
+      unmakeSticky(config.element, config);
+    }
 
   }
 
@@ -21,7 +22,7 @@ const sticky = (() => {
     if(config.isSticky === true) {
       return;
     }
-
+    
     config.isSticky = true;
     config.originalStyle = element.getAttribute('style') || '';
     element.classList.add('stickified');
@@ -30,6 +31,7 @@ const sticky = (() => {
     element.style.width = element.offsetWidth + 'px'; // Maintain width
     element.style.left = element.getBoundingClientRect().left + 'px'; // Maintain position left
     currentStuckHeight += element.getBoundingClientRect().height;
+    currentIndex++;
   }
 
   function unmakeSticky(element, config) {
@@ -40,7 +42,8 @@ const sticky = (() => {
     config.isSticky = false;
     element.setAttribute('style', config.originalStyle || '');
     element.classList.remove('stickified');
-    currentStuckHeight -= element.getBoundingClientRect().height;    
+    currentStuckHeight -= element.getBoundingClientRect().height;
+    currentIndex--;   
     delete config.originalStyle;
   }
 
@@ -68,7 +71,7 @@ const sticky = (() => {
       });
 
       // Sort elements based on their position.top
-      // configs.sort((a, b) => a.element.getBoundingClientRect().top - b.element.getBoundingClientRect().top);
+      configs.sort((a, b) => a.element.getBoundingClientRect().top - b.element.getBoundingClientRect().top);
 
       // Attach scroll event listener
       if(!initiated) {
