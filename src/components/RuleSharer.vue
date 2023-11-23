@@ -18,7 +18,7 @@
           <b>Tabs Shared With:</b>
           <div class="dropHere">
             <span v-if="!ruleConfig.applyForTabs.length">Drag and drop tabs here.</span>
-            <Draggable class="draggable" group="tabDragger" v-model="ruleConfig.applyForTabs" v-bind="dragOptions">
+            <Draggable class="draggable" group="tabDragger" v-model="ruleConfig.applyForTabs" v-bind="props.state.dragOptions(100)">
               <template #item="{element}">
                 <button class="button sharedWith proper">{{ getTabName(element) }}</button>
               </template>
@@ -28,7 +28,7 @@
 
         <div class="cell-1">
           <ScrollingContent class="p30y">
-          <Draggable class="draggable" group="tabDragger" v-model="unselectedTabsInRule" v-bind="dragOptions">
+          <Draggable class="draggable" group="tabDragger" v-model="unselectedTabsInRule" v-bind="props.state.dragOptions(100)">
             <template #item="{element}">
               <button class="button sharedWith proper">{{ getTabName(element) }}</button>
             </template>
@@ -61,11 +61,6 @@ const props = defineProps({
   state: Object
 });
 
-const dragOptions = {
-  animation: 200,
-  touchStartThreshold: 100
-};
-
 const ruleType = props.ruleConfig.rule[0];
 
 function getTabName(tabId) {
@@ -80,10 +75,11 @@ function removeRule() {
   const { _id } = props.ruleConfig;
   const ruleIndex = props.state.allUserRules.findIndex(rule => rule._id === _id);
 
-  props.state.allUserRules.splice(ruleIndex, 1);
   api.delete(`api/rules/${_id}`);
 
   nextTick(() => {
+    props.state.views.pop();
+    props.state.allUserRules.splice(ruleIndex, 1);
     props.state.editingRule = null;
   });
 }

@@ -31,7 +31,7 @@ import SelectedItems from './SelectedItems.vue';
 import { formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
-const { sticky } = useAppStore();
+const { sticky, stickify } = useAppStore();
 
 const { state, categoryName, categoryItems, categoryTotal } = defineProps({
   state: Object,

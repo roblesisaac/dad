@@ -1,31 +1,36 @@
 <template>
-<div @click="selectTab(props.tab)" :class="borders" class="container">
-  <div class="dots-container">
-    <DotsVerticalCircleOutline v-if="tab.isSelected" class="dots" />
-  </div>
-  <div class="content text-left">
-    <small class="section-title">{{ props.tab.tabName }}<span v-if="props.tab.showForGroup.length > 1">*</span></small>
-    <br /><LoadingDots v-if="props.state.isLoading" />
-    <a v-else href="#" class="section-content">{{ tabTotal }}</a>
-  </div>
-</div>
+  <button @click="selectTab(props.tab)" :class="['tab-button', borders]">
+    <!-- Dots -->
+    <DotsVertical v-if="tab.isSelected" @click="editTab()" />
+  
+    <!-- Title & Total -->
+    <div class="title-total">
+      <small class="section-title bold"><b v-if="tabIsShared(tab)">*</b>{{ props.tab.tabName }}</small>
+      <LoadingDots v-if="props.state.isLoading" />
+      <span v-else class="section-content">{{ tabTotal }}</span>
+    </div>
+
+    <!-- Drag Handle -->
+    <DragVertical v-if="tab.isSelected" class="handleTab" />    
+  </button>
 </template>
 
 <script setup>
-import { computed, nextTick } from 'vue';
+import { computed, nextTick, watch } from 'vue';
 import LoadingDots from './LoadingDots.vue';
-import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
+import DragVertical from 'vue-material-design-icons/DragVertical.vue';
+import DotsVertical from 'vue-material-design-icons/DotsVertical.vue';
 import { formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 const props = defineProps({
   tab: 'object',
-  state: 'object',
-  tabIndex: Number
+  state: 'object'
 });
 
 const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
+const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === props.tab._id));
 
 const isSelected = computed(() => {
   return props.tab.isSelected;
@@ -36,7 +41,7 @@ const borders = computed(() => {
   const bottomBorder = isSelected.value ? 'b-bottom-none' : 'b-bottom';
   const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
 
-  return ['section', bottomBorder, rightBorder, borderLeft];
+  return [bottomBorder, rightBorder, borderLeft];
 });
 
 const tabTotal = computed(() => {
@@ -46,17 +51,21 @@ const tabTotal = computed(() => {
   return formatPrice(total, { toFixed });
 });
 
-const isLastInArray = computed(() => props.tabIndex === tabsForGroup.value.length - 1);
+const isLastInArray = computed(() => tabIndex.value === tabsForGroup.value.length - 1);
 
 const isPreviousTabSelected = computed(() => {
-  const previousTab = tabsForGroup.value[props.tabIndex-1];
+  const previousTab = tabsForGroup.value[tabIndex.value-1];
 
   return previousTab?.isSelected;
 });
 
+function editTab() {
+  props.state.views.push('EditTab');
+}
+
 function selectTab(tabToSelect) {
   if(tabToSelect.isSelected) {
-    return props.state.views.push('EditTab');
+    return 
   }
 
   const currentlySelectedTab = props.state.selected.tab;
@@ -72,33 +81,55 @@ function selectTab(tabToSelect) {
   });
 }
 
+function tabIsShared(tab) {
+  return tab.showForGroup.length > 1 || tab.showForGroup.includes('_GLOBAL')
+}
+
+watch(() => props.tab.sort, (newSort) => {
+  api.put(`api/tabs/${props.tab._id}`, { sort: newSort });
+});
+
 </script>
 
 <style>
-.container {
+.tab-button {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-}
-
-.dots-container {
-  margin-right: 5px; /* Optional margin for space between dots and text */
-}
-
-.dots {
-  float: left; /* Align the dots to the left */
-}
-/* .section {
   height: 50px;
-} */
+  padding: 0 10px 0 0;
+  background: #f3f3ee;
+  text-align: left;
+  color: blue;
+  border-radius: 0 0 3px 3px;
+}
+
+.tab-button:hover,
+.tab-button:active,
+.tab-button:focus {
+  background: #f3f3ee;
+  color: blue;
+  outline: none;
+}
+
+.title-total {
+  display: flex;
+  flex-direction: column;
+  padding-left: 10px;
+  padding-right: 50px;
+}
 
 .section-title {
-  padding-left: 5px;
   text-transform: uppercase;
   font-weight: 900;
+  color: #000
 }
-.section-content {
-  padding-left: 5px;
-  color: blue;
-  font-weight: 900;
+
+.handleTab {
+  margin-right: auto;
+}
+
+.DotsVertical {
+  margin-left: auto;
 }
 </style>

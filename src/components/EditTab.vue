@@ -31,7 +31,7 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='sort'" ruleType="sort" :selectedTab="selectedTab" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='sort'" ruleType="sort" :state="state" />
       </div>
     </div>
 
@@ -50,7 +50,7 @@
       </div>
 
       <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='categorize'" ruleType="categorize" :selectedTab="selectedTab" :state="state" />
+        <RulesRenderer v-if="editState.selectedRuleType==='categorize'" ruleType="categorize" :state="state" />
       </div>
     </div>
 
@@ -109,7 +109,7 @@
         <b>Groups Tab Is Shared With:</b>
         <div class="dropHere">
           <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="dragOptions">
+          <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="state.dragOptions()">
             <template #item="{element}">
               <button class="sharedWith">{{ getGroupName(element) }}</button></template>
           </Draggable>
@@ -118,7 +118,7 @@
 
       <div v-if="editState.selectedRuleType==='sharing'" class="cell-1">
         <ScrollingContent class="p30y">
-        <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="dragOptions">
+        <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="state.dragOptions()">
           <template #item="{element}">
           <button class="button sharedWith">{{ getGroupName(element) }}</button>
           </template>
@@ -158,11 +158,6 @@ import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 const { App, state } = defineProps({ state: Object, App: Object });
-
-const dragOptions = {
-  animation: 200,
-  touchStartThreshold: 100
-};
 
 const selectedTab = computed(() => state.selected.tab);
 
@@ -256,7 +251,8 @@ const app = function() {
   }
 
   return {
-    changeTabNam: async () => {
+    changeTabName: async () => {
+      console.log('changetabname...');
       if(editState.changeTabNameTo == selectedTab.value.tabName) {
         return;
       }
@@ -340,7 +336,8 @@ const app = function() {
         state.isLoading = false;
       });
     },
-    saveGroups: async () => {
+    saveGroups: async (newv, oldv) => {
+      console.log('savegroup', {newv, oldv})
       const { _id, showForGroup } = selectedTab.value;
 
       await api.put(`api/tabs/${_id}`, {
@@ -355,7 +352,7 @@ const app = function() {
   }
 }();
 
-watch(() => editState.changeTabNameTo, app.changeTabNam);
+watch(() => editState.changeTabNameTo, app.changeTabName);
 watch(() => selectedTab.value.showForGroup, app.saveGroups, { deep: true });
 </script>
 

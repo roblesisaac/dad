@@ -1,8 +1,6 @@
 <template>
 <div class="grid">
   
-  <div v-if="!selectGroupState.editingGroup" class="cell-1">
-
   <!-- LinkNewAccount -->
   <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
   
@@ -17,7 +15,7 @@
     class="cell-1 b-top proper">
     <div class="grid middle">
 
-      <div class="cell-2-24 pointer" @click="selectGroupState.editingGroup=group">
+      <div class="cell-2-24 pointer" @click="app.editGroup(group)">
         <DotsVerticalCircleOutline class="colorBlue" />
       </div>
 
@@ -39,27 +37,16 @@
     <button @click="app.createNewGroup" class="button expanded bgBlack">Create New Group +</button>
   </div>
 
-  </div>
-
-  <!-- Edit Group -->
-  <Transition>
-    <div v-if="selectGroupState.editingGroup" class="cell-1">
-      <EditGroup :editingGroup="selectGroupState.editingGroup" :selectGroupState="selectGroupState" :state="state" />
-    </div>
-  </Transition>
-
 </div>
 </template>
 
 <script setup>
-import { nextTick, reactive } from 'vue';
+import { nextTick } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
-import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
 import CheckBold from 'vue-material-design-icons/CheckBold.vue'
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
 
-import EditGroup from './EditGroup.vue';
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/state';
 import { formatPrice } from '../utils';
@@ -68,10 +55,6 @@ const { api } = useAppStore();
 const props = defineProps({
   App: Object,
   state: Object
-});
-
-const selectGroupState = reactive({
-  editingGroup: null
 });
 
 const app = function() {
@@ -105,6 +88,10 @@ const app = function() {
 
       const savedNewGroup = await api.post('api/groups', newGroupData);
       props.state.allUserGroups.push(savedNewGroup);
+    },
+    editGroup: (group) => {
+      props.state.editingGroup=group;
+      props.state.views.push('EditGroup')
     },
     init: async () => {
       await fetchLinkToken();

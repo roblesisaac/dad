@@ -3,6 +3,7 @@ import { reactive, ref, watchEffect } from 'vue';
 
 import api from './tools/api';
 import sticky from './tools/sticky';
+import stickify from './tools/stickify';
 import cart from './tools/cart';
 import utils from './tools/utils';
 import Session from './tools/session';
@@ -43,7 +44,7 @@ export const useAppStore = defineStore('state', () => ({
   utils: utils(State),
   cart,
 	sticky,
-  // sticky: sticky(State),
+  stickify,
   State,
 	Session: Session(State)
 }));

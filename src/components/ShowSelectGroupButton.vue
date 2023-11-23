@@ -1,8 +1,10 @@
 <template>
-  <button @click="state.views.push('SelectGroup')" 
-    class="acctButton section-content proper" 
-    href="#"  v-html="groupName">
-  </button>
+  <div @click="state.views.push('SelectGroup')" 
+    class="acctButton section-content proper pointer bold">
+    <b v-html="groupName"></b>
+    <!-- <br />
+    <small>{{ props.state.selected?.group?.totalAvailableBalance }}</small> -->
+  </div>
 </template>
 
 <script setup>

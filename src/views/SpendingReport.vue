@@ -23,16 +23,16 @@
   <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
     
     <!-- Selected Group + Date -->
-    <div class="cell-1">
+    <div class="cell-1 dateRow">
       <div class="grid middle">
 
         <!-- Group Selector Button -->
-        <div class="cell-6-24 section b-bottom b-right line50">
+        <div class="cell-8-24 section b-bottom b-right line50">
           <ShowSelectGroupButton :state="state" />
         </div>
 
         <!-- Date Pickers -->
-        <div class="cell-18-24 section b-bottom line50">          
+        <div class="cell-16-24 section b-bottom line50">          
           <div class="grid">
             <div class="cell-10-24">
               <DatePicker :date="state.date" when="start" />
@@ -49,7 +49,7 @@
 
     <!-- Scrolling Tabs -->
     <div class="cell-1 totalsRow">
-    <ScrollingTabButtons :state="state" :app="app" />
+      <ScrollingTabButtons :state="state" :app="app" />
     </div>
 
     <!-- Category Rows -->
@@ -77,10 +77,25 @@
   <Transition>
     <RuleSharer v-if="state.is('RuleSharer')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
+
+    <!-- Edit Group -->
+  <Transition>
+    <div v-if="state.is('EditGroup')" class="cell-1">
+      <EditGroup :state="state" />
+    </div>
+  </Transition>
+
+  <!-- AllTabs -->
+  <Transition>
+    <div v-if="state.is('AllTabs')" class="cell-1">
+      <AllTabs :state="state" :app="app" />
+    </div>
+  </Transition>
 </template>
 
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
+  import AllTabs from '../components/AllTabs.vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';
@@ -90,13 +105,14 @@
   import EditTab from '../components/EditTab.vue';
   import CategoriesWrapper from '../components/CategoriesWrapper.vue'; 
   import RuleSharer from '../components/RuleSharer.vue';
+  import EditGroup from '../components/EditGroup.vue';
   // import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/state';
 
-  const { api, State, sticky} = useAppStore();
+  const { api, State, sticky, stickify } = useAppStore();
 
   onMounted(() => {
-    sticky.stickify('.totalsRow');
+    stickify.stickify('.totalsRow');
   });
 
   const state = reactive({
@@ -109,7 +125,13 @@
       loading: false
     },
     date: { start: 'firstOfMonth', end: 'today' },
+    dragOptions: (delayMs=0) => ({
+      animation: 200,
+      delay: delayMs,
+      touchStartThreshold: 100
+    }),
     editingRule: null,
+    editingGroup: null,
     elems: {
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
@@ -125,21 +147,26 @@
     selected: {
       allGroupTransactions: [],
       group: computed(() => state.allUserGroups.find(group => group.isSelected) ),
-      tabsForGroup: computed(() => {
-        const selectedGroup = state.selected.group;
+      tabsForGroup: computed({
+        get: () => {
+          const selectedGroup = state.selected.group;
 
-        if(!selectedGroup) {
-          return [];
+          if(!selectedGroup) {
+            return [];
+          }
+
+          const tabs = state.allUserTabs.filter(tab => {
+            const tabMatchesGroupId = tab.showForGroup.includes(selectedGroup._id);
+            const tabIsGlobal = tab.showForGroup.includes('_GLOBAL');
+
+            return tabMatchesGroupId || tabIsGlobal;
+          });
+
+          return tabs.sort((a,b) => a.sort - b.sort);
+        },
+        set: (reorderedTabs) => {
+          reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);
         }
-
-        const tabs = state.allUserTabs.filter(tab => {
-          const tabMatchesGroupId = tab.showForGroup.includes(selectedGroup._id);
-          const tabIsGlobal = tab.showForGroup.includes('_GLOBAL');
-
-          return tabMatchesGroupId || tabIsGlobal;
-        });
-
-        return tabs.sort((a,b) => a.sort - b.sort);
       }),
       tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) ),
       transaction: false
@@ -690,6 +717,7 @@
         await app.processAllTabsForSelectedGroup();
 
         state.isLoading = false;
+        nextTick(() => stickify.stickify('#personalcareExpensestitle'));
       },
       handleTabChange: (newSelectedTab, oldSelectedTab) => {
         if (newSelectedTab && oldSelectedTab && newSelectedTab._id === oldSelectedTab._id) {
@@ -814,12 +842,6 @@
 
 .relative {
   position: relative;
-}
-
-.reportTab {
-  cursor: pointer;
-  height: 50px;
-  padding: 0 80px 0 10px;
 }
 
 .underline {

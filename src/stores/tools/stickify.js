@@ -1,86 +1,82 @@
-import { reactive } from 'vue';
+const sticky = (() => {
+  const configs = [];
+  let currentStuckHeight = 0;
+  let initiated = false;
 
-const stickyState = reactive({
-  currentBreakingPoint: 0,
-  initiated: false,
-  registeredConfigs: [],
-  stickyOptions: () => ({
-    selector: '.carousel',
-    stickUnder: {
-      target: '.selectorA'
-    },
-    unstickWhen: {
-      target: '.selectorB',
-      action: 'isSticky'
-    }
-  })
-});
+  function onScroll() {
+    configs.forEach(config => {
+      const rect = config.element.getBoundingClientRect();
+      const isSticky = rect.top <= currentStuckHeight;
 
-const Sticky = function (State) {
+      if (isSticky) {
+        makeSticky(config.element, config);
+      } else {
+        unmakeSticky(config.element, config);
+      }
+    });
 
-  function findEl(selectorConfig) {
-    return document.querySelector(selectorConfig.selector);
-  }
-  
-  function formatted(selectorConfig) {
-    if (typeof selectorConfig === 'string') {
-      return { selector: selectorConfig };
-    }
-    
-    return selectorConfig;
   }
 
-  function scrollHandler() {
-    let closest = null;
-    let closestBreakingPoint = Number.POSITIVE_INFINITY;
-
-    for (const selectorConfig of stickyState.registeredConfigs) {
-
-      selectorConfig.el = selectorConfig.el || findEl(selectorConfig);
-
-      if (!document.contains(selectorConfig.el)) {
-        selectorConfig.el = findEl(selectorConfig);
-        if (!selectorConfig.el) return;
-      }
-
-      const rect = selectorConfig.el.getBoundingClientRect();
-      const isSticky = !!selectorConfig.el.classList.contains('sticky');
-
-      if (isSticky && rect.top > selectorConfig.breakingPoint) {
-        selectorConfig.el.classList.remove('sticky');
-        stickyState.currentBreakingPoint -= rect.height;
-        return;
-      }
-      
-      if(isSticky) {
-        return;
-      }
-
-      if (rect.top > stickyState.currentBreakingPoint && rect.top < closestBreakingPoint) {
-        closest = selectorConfig;
-        closestBreakingPoint = rect.top;
-      }
+  function makeSticky(element, config) {
+    if(config.isSticky === true) {
+      return;
     }
 
-    if (closest && closestBreakingPoint <= closest.breakingPoint) {
-      closest.el.classList.add('sticky');
-      stickyState.currentBreakingPoint = closest.breakingPoint;
-    }
+    config.isSticky = true;
+    config.originalStyle = element.getAttribute('style') || '';
+    element.classList.add('stickified');
+    element.style.top = `${currentStuckHeight}px`;
+    element.style.zIndex = 100 + currentStuckHeight;
+    element.style.width = element.offsetWidth + 'px'; // Maintain width
+    element.style.left = element.getBoundingClientRect().left + 'px'; // Maintain position left
+    currentStuckHeight += element.getBoundingClientRect().height;
   }
 
+  function unmakeSticky(element, config) {
+    if(config.isSticky === false) {
+      return;
+    }
+
+    config.isSticky = false;
+    element.setAttribute('style', config.originalStyle || '');
+    element.classList.remove('stickified');
+    currentStuckHeight -= element.getBoundingClientRect().height;    
+    delete config.originalStyle;
+  }
+
+  // Public API
   return {
-    state: stickyState,
-    stickify(selectorConfig) {
-      if (!stickyState.initiated) {
-        document.addEventListener('scroll', scrollHandler);
-        stickyState.initiated = true;
+    stickify(configsToRegister) {
+      if (!Array.isArray(configsToRegister)) {
+        configsToRegister = [configsToRegister];
       }
 
-      stickyState.registeredConfigs.push(
-        formatted(selectorConfig)
-      )
+      // Flatten screen size specific configs into one
+      configsToRegister.forEach(config => {
+        // Handle simple string selectors
+        if (typeof config === 'string') {
+          config = { selector: config };
+        }
+
+        // Register configurations sorted by their position on the page
+        config.element = document.querySelector(config.selector);
+        config.isSticky = false;
+
+        if (config.element) {
+          configs.push(config);
+        }
+      });
+
+      // Sort elements based on their position.top
+      // configs.sort((a, b) => a.element.getBoundingClientRect().top - b.element.getBoundingClientRect().top);
+
+      // Attach scroll event listener
+      if(!initiated) {
+        initiated = true;
+        window.addEventListener('scroll', onScroll);
+      }
     }
   };
-};
+})();
 
-export default Sticky;
+export default sticky;

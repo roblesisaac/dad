@@ -1,13 +1,19 @@
 <template>
 <div class="grid">
-  <div class="cell-1">
+  <div v-if="filteredRulesByType.length > 1" class="cell-1 p15t">
+    <div class="underline bold colorBlue">
+      <span @click="state.showReorder=true" v-if="!state.showReorder">Reorder</span>
+      <span v-else @click="state.showReorder=false">Done</span>
+    </div>
+  </div>
+  <div class="cell-1 p15b">
     <Draggable
       v-if="filteredRulesByType.length"
       class="draggable" 
       v-model="filteredRulesByType" 
       group="rules" 
       handle=".handle"
-      v-bind="dragOptions" 
+      v-bind="state.dragOptions()" 
       item-key="_id">
 
         <template #item="{element}">
@@ -18,12 +24,14 @@
   </div>
 
   <div class="cell-1">
-    <hr>
+    <hr v-if="filteredRulesByType.length">
+    <div class="grid" v-if="filteredRulesByType.length">
+      <div class="cell-1 proper p10t">
+        New {{ ruleType }} Rule ↓
+      </div>
+    </div>
+
     <EditRule :ruleConfig="newRule" :state="state" :showReorder="showReorder" />
-    <button @click="state.showReorder=!state.showReorder" class="button bgBlack">
-      <span v-if="!state.showReorder">Reorder</span>
-      <span v-else>Cancel</span>
-    </button>
   </div>
 </div>
 </template>
@@ -41,11 +49,6 @@ const { ruleType, state } = defineProps({
 });
 
 const selectedTab = state.selected.tab;
-
-const dragOptions = ref({
-  touchStartThreshold: 100,
-  animation: 200
-});
 
 const allRulesForTab = computed(() => {
   const tabId = selectedTab._id;

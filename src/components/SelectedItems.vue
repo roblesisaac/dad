@@ -7,11 +7,14 @@
         
         <!-- Minimized Transaction -->
         <div @click="selectTransaction(item)" class="grid">
-          <div class="cell-19-24 left dottedBottom">
+          <div class="cell shrink">
+            <img v-if="item.logo_url" :src="item.logo_url" style="height: 50px;" alt="Logo" />
+          </div>
+          <div class="cell auto p10l">
             <small class="colorDarkGreen">#{{ i+1 }}. {{ item.date }}</small>
             <br>{{  item.name }}  <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
           </div>
-          <div class="cell-5-24 p10l colorBlue right">
+          <div class="cell shrink">
             {{ formatPrice(item.amount) }}
           </div>
         </div>

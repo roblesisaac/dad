@@ -2,9 +2,12 @@
 <div class="grid">
   <div class="cell-1">
   <ScrollingContent>
-    <div v-if="ruleConfig._id && state.showReorder" class="cell shrink p10y p5r bold handle">
-      <small><DragVertical /></small>
-    </div>
+    <Transition>
+      <div v-if="ruleConfig._id && state.showReorder" class="cell shrink p10y p5r bold handle">
+        <small><DragHorizontalVariant /></small>
+      </div>
+    </Transition>
+    <div v-if="ruleIsShared" class="cell shrink p10y bold">*</div>
     <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold"><small>As</small></div>
     <div v-if="ruleType === 'sort'" class="cell shrink p10y p10r bold"><small>By</small></div>
     <div v-if="ruleType === 'filter'" class="cell shrink p10y p10r bold"><small>Show if</small></div>
@@ -37,7 +40,7 @@
 <script setup>
   import { computed, defineProps, reactive, watch } from 'vue';
   import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
-  import DragVertical from 'vue-material-design-icons/DragVertical.vue';
+  import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
   import ScrollingContent from './ScrollingContent.vue';
   import DynamicWidthInput from './DynamicWidthInput.vue';
   import DynamicWidthSelect from './DynamicWidthSelect.vue';
@@ -53,6 +56,10 @@
   const ruleType = ruleConfig.rule[0];
   const allMethods = ['>=', '>', '=', 'is not', '<=', '<', 'includes', 'excludes', 'startsWith', 'endsWith' ];
   const allProps = ['amount', 'category', 'date', 'name'];
+
+  const ruleIsShared = computed(() => {
+    return ruleConfig?.applyForTabs?.includes('_GLOBAL') || ruleConfig?.applyForTabs?.length > 1;
+  });
 
   const editRuleState = reactive({
     ruleTypes: {

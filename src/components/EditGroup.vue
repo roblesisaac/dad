@@ -8,7 +8,7 @@
         Name:
       </div>
       <div class="cell-4-5">
-        <input type="text" v-model="props.editingGroup.name" class="transparent bold colorBlue" />
+        <input type="text" v-model="props.state.editingGroup.name" class="transparent bold colorBlue" />
       </div>
     </div>
   </div>
@@ -17,8 +17,8 @@
   <div class="cell-1">
     <b>Accounts In Group:</b>
     <div class="dropHere">
-      <span v-if="!props.editingGroup.accounts.length">Drag and drop groups here.</span>
-      <Draggable class="draggable" group="accountDragger" v-model="props.editingGroup.accounts" v-bind="dragOptions">
+      <span v-if="!props.state.editingGroup.accounts.length">Drag and drop groups here.</span>
+      <Draggable class="draggable" group="accountDragger" v-model="props.state.editingGroup.accounts" v-bind="props.state.dragOptions()">
         <template #item="{element}">
           <button class="sharedWith">{{ element.mask }}</button>
         </template>
@@ -29,13 +29,13 @@
   <!-- Accounts Not In Group -->
   <div class="cell-1 p30y">
     <b>Accounts Not In Group:</b>
-    <ScrollingContent class="">
-      <Draggable class="draggable dropHere" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions">
+    <div class="dropHere">
+      <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="props.state.dragOptions()">
         <template #item="{element}">
           <button class="button sharedWith">{{ element.mask }}</button>
         </template>
-      </Draggable>
-    </ScrollingContent>
+    </Draggable>
+    </div>
   </div>
 
   <div class="cell-1">
@@ -48,25 +48,16 @@
 <script setup>
 import { computed, defineProps, watch } from 'vue';
 import Draggable from 'vuedraggable';
-import ScrollingContent from './ScrollingContent.vue';
-
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
 
-const dragOptions = {
-  animation: 200,
-  touchStartThreshold: 100
-};
-
 const props = defineProps({
-  editingGroup: Object,
-  selectGroupState: Object,
   state: Object
 });
 
 const accountsNotInGroup = computed(() => {
-  const accountsInGroup = props.editingGroup.accounts.map(account => account._id);
+  const accountsInGroup = props.state.editingGroup.accounts.map(account => account._id);
 
   return props.state.allUserAccounts.filter(account => {
     return !accountsInGroup.includes(account._id);
@@ -101,7 +92,7 @@ const app = function() {
   }
 
   function saveGroup(group) {
-    const groupId = props.editingGroup._id;
+    const groupId = props.state.editingGroup._id;
 
     return api.put(`api/groups/${groupId}`, group);
   }
@@ -111,7 +102,7 @@ const app = function() {
   }
 
   function updateMemory(newGroupData) {
-    const groupToUpdate = props.state.allUserGroups.find(group => group._id === props.editingGroup._id);
+    const groupToUpdate = props.state.allUserGroups.find(group => group._id === props.state.editingGroup._id);
 
     groupToUpdate.totalAvailableBalance = newGroupData.totalAvailableBalance;
     groupToUpdate.totalCurrentBalance = newGroupData.totalCurrentBalance;
@@ -130,24 +121,24 @@ const app = function() {
         return;
       }
 
-      const idToRemove = props.editingGroup._id
+      const idToRemove = props.state.editingGroup._id
 
-      props.selectGroupState.editingGroup = null;
+      props.state.views.pop();
+      props.state.editingGroup = null;
       removeFromMemory(props.state.allUserGroups, idToRemove);
       api.delete(`api/groups/${idToRemove}`);
-      // remove all tabs that only have showForGroup = idToRemove
     },
     updateGroupName: async() => {
       await waitUntilTypingStops();
       await saveGroup({
-        name: props.editingGroup.name
+        name: props.state.editingGroup.name
       });
     },
     updateGroup: async () => {
-      const accounts = formatAccounts(props.editingGroup.accounts);
+      const accounts = formatAccounts(props.state.editingGroup.accounts);
 
       const newGroupData = {
-        name: props.editingGroup.name,
+        name: props.state.editingGroup.name,
         accounts,
         totalCurrentBalance: sumOf(accounts, 'current'),
         totalAvailableBalance: sumOf(accounts, 'available')
@@ -160,7 +151,7 @@ const app = function() {
 
 }()
 
-watch(() => props.editingGroup.name, app.updateGroupName);
-watch(() => props.editingGroup.accounts.length, app.updateGroup);
+watch(() => props.state.editingGroup.name, app.updateGroupName);
+watch(() => props.state.editingGroup.accounts.length, app.updateGroup);
 
 </script>

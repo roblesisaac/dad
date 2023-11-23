@@ -508,6 +508,10 @@
     position: fixed;  
 }
 
+.stickified {
+    position: sticky;  
+}
+
 .stretch-y {
     height: 100vh;
 }
