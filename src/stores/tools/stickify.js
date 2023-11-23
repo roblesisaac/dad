@@ -6,7 +6,12 @@ const sticky = (() => {
 
   function onScroll() {
 
-    const config = configs[0];
+    const config = configs[currentIndex] || configs[currentIndex-1];
+
+    if(!config) {
+      return;
+    }
+
     const rect = config.element.getBoundingClientRect();
     const isSticky = rect.top <= currentStuckHeight;
 
@@ -50,6 +55,7 @@ const sticky = (() => {
   // Public API
   return {
     stickify(configsToRegister) {
+      console.log(configsToRegister);
       if (!Array.isArray(configsToRegister)) {
         configsToRegister = [configsToRegister];
       }
@@ -63,6 +69,7 @@ const sticky = (() => {
 
         // Register configurations sorted by their position on the page
         config.element = document.querySelector(config.selector);
+        config.originalRect = config
         config.isSticky = false;
 
         if (config.element) {
