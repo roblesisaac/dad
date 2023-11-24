@@ -8,7 +8,7 @@ import cart from './tools/cart';
 import utils from './tools/utils';
 import Session from './tools/session';
 
-const State = reactive({
+export const State = reactive({
 	showingOffCanvasLinks: false,
   recaptcha: null,
 	lastTouched: null,

@@ -41,7 +41,7 @@ const app = function() {
   return {
     init: function () {
       onMounted(() => {
-        stickify.stickify('.topNav');
+        stickify.register('.topNav');
       });
 
       getUserViews();

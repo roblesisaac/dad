@@ -112,7 +112,7 @@
   const { api, State, sticky, stickify } = useAppStore();
 
   onMounted(() => {
-    stickify.stickify('.totalsRow');
+    stickify.register('.totalsRow');
   });
 
   const state = reactive({
@@ -717,7 +717,9 @@
         await app.processAllTabsForSelectedGroup();
 
         state.isLoading = false;
-        nextTick(() => stickify.stickify('#personalcareExpensestitle'));
+        nextTick(() => stickify.register('#personalcareExpensestitle'));
+
+        // setTimeout(() => stickify.deregister('#personalcareExpensestitle'), 20000)
       },
       handleTabChange: (newSelectedTab, oldSelectedTab) => {
         if (newSelectedTab && oldSelectedTab && newSelectedTab._id === oldSelectedTab._id) {
