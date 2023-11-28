@@ -1,7 +1,7 @@
 const sticky = (() => {
-  const configs = [];
   const uniqueSelectorNames = new Set();
 
+  let configs = [];
   let currentStuckHeight = 0;
   let initiated = false;
   let focusedConfigs = [];
@@ -10,12 +10,15 @@ const sticky = (() => {
   let scrollDirection = 1;
 
   function focusOnConfigs(newIndex) {
-    if(newIndex < 0 || newIndex > configs.length) {
+    if (newIndex < 0 || newIndex > configs.length) {
       return;
     }
 
     focusedIndex = newIndex;
-    focusedConfigs = [configs[newIndex-1], configs[newIndex]];
+    focusedConfigs = [
+      newIndex > 0 ? configs[newIndex - 1] : undefined,
+      configs[newIndex],
+    ];
   }
 
   function getScrollDirection() {
@@ -29,11 +32,12 @@ const sticky = (() => {
     return Array.isArray(items) ? items : [items];
   }
 
-  function makeSticky(config) {
+  function makeSticky(config, rect) {
     if(config.isSticky === true) {
       return;
     }
-        
+
+    config.rect = rect;
     config.isSticky = true;
 
     const { element } = config;
@@ -42,9 +46,11 @@ const sticky = (() => {
 
     element.classList.add('stickified');
     element.style.top = `${currentStuckHeight}px`;
-    element.style.zIndex = 100 + focusedIndex;
+    element.style.zIndex = Math.min(100 + focusedIndex, 2147483647);
 
-    currentStuckHeight += element.getBoundingClientRect().height;
+    const height = rect?.height || element.getBoundingClientRect().height;
+
+    currentStuckHeight += height;
 
     focusOnConfigs(focusedIndex+1);
   }
@@ -61,7 +67,9 @@ const sticky = (() => {
     element.setAttribute('style', config.originalStyle || '');
     element.classList.remove('stickified');
 
-    currentStuckHeight -= element.getBoundingClientRect().height; 
+    const height = config.rect?.height || element.getBoundingClientRect().height;
+
+    currentStuckHeight -= height; 
     delete config.originalStyle;
 
     focusOnConfigs(focusedIndex-1);
@@ -72,13 +80,14 @@ const sticky = (() => {
 
     const focusedConfig = focusedConfigs[scrollDirection] || focusedConfigs[1] || focusedConfigs[0];
 
-    const { top } = focusedConfig.element?.getBoundingClientRect() || {};
+    if(!focusedConfig) {
+      return resetElements();
+    }
 
-    if(!focusedConfig.element || (top === 0 && !focusedConfig.isSticky) ) {
-      // console.log(focusedConfig.selector);
-      // focusedConfig.element = document.querySelector(focusedConfig.selector);
-      resetElements();
-      return;
+    const rect = focusedConfig.element?.getBoundingClientRect() || {};
+
+    if(!focusedConfig.element || (rect.top === 0 && !focusedConfig.isSticky) ) {
+      return resetElements();
     }
 
     if(focusedConfig.isSticky) {
@@ -89,8 +98,8 @@ const sticky = (() => {
       return;
     }
 
-    if (top <= currentStuckHeight) {
-      makeSticky(focusedConfig);
+    if (rect.top <= currentStuckHeight) {
+      makeSticky(focusedConfig, rect);
     } else {
       makeUnSticky(focusedConfig);
     }
@@ -102,11 +111,8 @@ const sticky = (() => {
       const config = configs[i];
 
       if(document.contains(config.element)) {
-        console.log('has', config.selector);
         continue;
       }
-
-      console.log('missing', config.selector);
 
       config.element = document.querySelector(config.selector);
 
@@ -115,13 +121,15 @@ const sticky = (() => {
   }
 
   return {
-    deregister: (selectorNames) => {      
-      makeArray(selectorNames).forEach(selectorName => {
+    deregister: (selectorNames) => {
+      const selectorNamesSet = new Set(makeArray(selectorNames));
+
+      selectorNamesSet.forEach(selectorName => {
         sticky.unstick(selectorName);
         uniqueSelectorNames.delete(selectorName);
       });
 
-      configs = configs.filter(config => !makeArray(selectorNames).includes(config.selector));
+      configs = configs.filter(config => !selectorNamesSet.has(config.selector));
     },
     register: (configsToRegister) => {
 
