@@ -1,42 +1,28 @@
 const sticky = (() => {
   const configs = [];
+  const uniqueSelectorNames = new Set();
+
   let currentStuckHeight = 0;
   let initiated = false;
-  let focusedConfig;
+  let focusedConfigs = [];
   let focusedIndex = 0;
-  let focusDirection = 1;
   let lastScrollPosition = 0;
   let scrollDirection = 1;
 
-  function focusConfig(n) {
-    focusDirection = n;
-
-    if(n < 0) {
-      if(focusedIndex === 0) {
-        return;
-      }
-
-      focusedConfig = configs[--focusedIndex];
+  function focusOnConfigs(newIndex) {
+    if(newIndex < 0 || newIndex > configs.length) {
       return;
     }
 
-    if(focusedIndex < configs.length-1) {
-      focusedConfig = configs[++focusedIndex];
-    }
+    focusedIndex = newIndex;
+    focusedConfigs = [configs[newIndex-1], configs[newIndex]];
   }
 
   function getScrollDirection() {
     let currentScrollPosition = document.documentElement.scrollTop || window.scrollY;
-    let newScrollDirection = currentScrollPosition > lastScrollPosition ? 1 : -1;
-
+    const direction = currentScrollPosition > lastScrollPosition ? 1 : 0;
     lastScrollPosition = currentScrollPosition <= 0 ? 0 : currentScrollPosition;
-
-    if(scrollDirection === newScrollDirection) {
-      return;
-    }
-
-    scrollDirection = newScrollDirection;
-    focusConfig(newScrollDirection);
+    return direction;
   }
 
   function makeArray(items) {
@@ -47,21 +33,20 @@ const sticky = (() => {
     if(config.isSticky === true) {
       return;
     }
-    
+        
     config.isSticky = true;
 
     const { element } = config;
-    
     config.originalStyle = element.getAttribute('style') || '';
-    config.breakingPoint = window.scrollY;
+    config.stickingPoint = window.scrollY;
+
     element.classList.add('stickified');
     element.style.top = `${currentStuckHeight}px`;
-    element.style.zIndex = 100 + currentStuckHeight;
-    element.style.width = element.offsetWidth + 'px';
-    element.style.left = element.getBoundingClientRect().left + 'px';
+    element.style.zIndex = 100 + focusedIndex;
+
     currentStuckHeight += element.getBoundingClientRect().height;
 
-    focusConfig(1);
+    focusOnConfigs(focusedIndex+1);
   }
 
   function makeUnSticky(config) {
@@ -69,39 +54,42 @@ const sticky = (() => {
       return;
     }
 
+    config.isSticky = false;
+
     const { element } = config;
 
-    config.isSticky = false;
     element.setAttribute('style', config.originalStyle || '');
     element.classList.remove('stickified');
+
     currentStuckHeight -= element.getBoundingClientRect().height; 
     delete config.originalStyle;
 
-    focusConfig(-1);
+    focusOnConfigs(focusedIndex-1);
   }
 
   function onScroll() {
-    getScrollDirection();
+    scrollDirection = getScrollDirection();  // 0 or 1
 
-    if(!document.contains(focusedConfig.element)) {
-      console.log(focusedConfig.selector)
-      focusedConfig.element = document.querySelector(focusedConfig.selector);
+    const focusedConfig = focusedConfigs[scrollDirection] || focusedConfigs[1] || focusedConfigs[0];
+
+    const { top } = focusedConfig.element?.getBoundingClientRect() || {};
+
+    if(!focusedConfig.element || (top === 0 && !focusedConfig.isSticky) ) {
+      // console.log(focusedConfig.selector);
+      // focusedConfig.element = document.querySelector(focusedConfig.selector);
+      resetElements();
       return;
     }
 
     if(focusedConfig.isSticky) {
-
-      if(window.scrollY <= focusedConfig.breakingPoint) {
+      if(window.scrollY < focusedConfig.stickingPoint) {
         makeUnSticky(focusedConfig);
       }
 
       return;
     }
 
-    const rect = focusedConfig.element.getBoundingClientRect();
-    const isSticky = rect.top <= currentStuckHeight;
-
-    if (isSticky) {
+    if (top <= currentStuckHeight) {
       makeSticky(focusedConfig);
     } else {
       makeUnSticky(focusedConfig);
@@ -109,42 +97,66 @@ const sticky = (() => {
 
   }
 
+  function resetElements() {
+    for (let i = configs.length - 1; i >= 0; i--) {
+      const config = configs[i];
+
+      if(document.contains(config.element)) {
+        console.log('has', config.selector);
+        continue;
+      }
+
+      console.log('missing', config.selector);
+
+      config.element = document.querySelector(config.selector);
+
+      makeUnSticky(config);
+    }
+  }
+
   return {
     deregister: (selectorNames) => {      
       makeArray(selectorNames).forEach(selectorName => {
         sticky.unstick(selectorName);
+        uniqueSelectorNames.delete(selectorName);
       });
 
       configs = configs.filter(config => !makeArray(selectorNames).includes(config.selector));
     },
     register: (configsToRegister) => {
 
-     makeArray(configsToRegister).forEach(config => {
-        
-      if (typeof config === 'string') {
-        config = { selector: config };
-      }
+      makeArray(configsToRegister).forEach(config => {
+          
+        if (typeof config === 'string') {
+          config = { selector: config };
+        }
 
-      const element = config.element || document.querySelector(config.selector);
+        if(uniqueSelectorNames.has(config.selector)) {
+          return;
+        }
 
-      if (!element) {
-        return;
-      }
+        uniqueSelectorNames.add(config.selector);
 
-      configs.push({
-        ...config,
-        element,
-        isSticky: false,
-        originalRect: element.getBoundingClientRect()
+        const element = config.element || document.querySelector(config.selector);
+
+        if (!element) {
+          return;
+        }
+
+        configs.push({
+          ...config,
+          element,
+          isSticky: false,
+          originalRect: element.getBoundingClientRect()
+        });
+          
       });
-        
-    });
       
       configs.sort((a, b) => a.originalRect.top - b.originalRect.top);
 
       if(!initiated) {
         initiated = true;
-        focusedConfig = configs[focusedIndex];
+        focusedConfigs = [configs[0]];
         window.addEventListener('scroll', onScroll);
       }
     },
