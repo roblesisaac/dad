@@ -717,9 +717,9 @@
         await app.processAllTabsForSelectedGroup();
 
         state.isLoading = false;
-        nextTick(() => stickify.register('#personalcare'));
+        nextTick(() => stickify.register('#personalcaretitle'));
 
-        // setTimeout(() => stickify.deregister('#personalcare'), 20000)
+        // setTimeout(() => stickify.deregister('#personalcaretitle'), 20000)
       },
       handleTabChange: (newSelectedTab, oldSelectedTab) => {
         if (newSelectedTab && oldSelectedTab && newSelectedTab._id === oldSelectedTab._id) {

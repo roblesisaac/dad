@@ -1,7 +1,7 @@
 <template>
 <div :id="id" class="grid dottedRow proper">
 
-  <div @click="selectCategory()" :id="id" class="cell-1">
+  <div @click="selectCategory()" :id="id+'title'" class="cell-1">
     <div class="grid">
       <div class="cell auto categoryTitle">
         <b>{{ categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
