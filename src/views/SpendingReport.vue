@@ -1,5 +1,4 @@
 <template>
-  
   <!-- BlueBar -->
   <Transition>
     <div v-if="state.blueBar.message" class="grid">
@@ -48,7 +47,7 @@
     </div>
 
     <!-- Scrolling Tabs -->
-    <div class="cell-1 totalsRow">
+    <div v-if="!state.isLoading" class="cell-1 totalsRow">
       <ScrollingTabButtons :state="state" :app="app" />
     </div>
 
@@ -109,7 +108,7 @@
   // import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/state';
 
-  const { api, State, sticky, stickify } = useAppStore();
+  const { api, State, stickify } = useAppStore();
 
   onMounted(() => {
     stickify.register('.totalsRow');
@@ -136,7 +135,7 @@
       body: document.documentElement.style,
       topNav: document.querySelector('.topNav').style
     },
-    isLoading: false,
+    isLoading: true,
     is(view) {
       const views = Array.isArray(view) ? view : [view];
       return views.includes(state.view);
@@ -174,9 +173,7 @@
     showStayLoggedIn: false,
     syncCheckId: false,
     views: ['home'],
-    view: computed(function() {
-      return state.views[state.views.length -1];
-    })
+    view: computed(() => state.views[state.views.length -1])
   });
 
   const app = function() {
@@ -660,7 +657,7 @@
       init: async () => {
         state.blueBar.message = 'Beginning sync';
         state.blueBar.loading = true;
-        state.isLoading = true;        
+
         changeBgColor('rgb(243, 243, 238)');  
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
@@ -676,8 +673,8 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
 
-        await app.checkSyncStatus();
         await api.get('api/plaid/sync/all/transactions');
+        await app.checkSyncStatus();
         app.handleGroupChange();
       },
       handleGroupChange: async () => {
@@ -715,28 +712,25 @@
         }
 
         await app.processAllTabsForSelectedGroup();
-
-        state.isLoading = false;
-        nextTick(() => stickify.register('#personalcaretitle'));
-
-        // setTimeout(() => stickify.deregister('#personalcaretitle'), 20000)
       },
-      handleTabChange: (newSelectedTab, oldSelectedTab) => {
-        if (newSelectedTab && oldSelectedTab && newSelectedTab._id === oldSelectedTab._id) {
+      handleTabChange: (newSelectedTabId, oldSelectedTabId) => {
+        if (newSelectedTabId === oldSelectedTabId) {
           return;
         }
 
-        if(oldSelectedTab) {
+        if(oldSelectedTabId) {
+          const oldSelectedTab = state.allUserTabs.find(({ _id }) =>  _id === oldSelectedTabId);
+
           oldSelectedTab.categorizedItems = [];
         }
 
-        if(!newSelectedTab) {
+        if(!newSelectedTabId) {
           return;
         }
         
-        const processed = processTabData(state.selected.allGroupTransactions, newSelectedTab);
+        const processed = processTabData(state.selected.allGroupTransactions, state.selected.tab);
 
-        newSelectedTab.categorizedItems = processed.categorizedItems;
+        state.selected.tab.categorizedItems = processed.categorizedItems;
       },
       handleViewChange: async (newView, oldView) => {
         if(newView !== 'home') {
@@ -777,7 +771,7 @@
           tab.categorizedItems = processed.categorizedItems;
         }
 
-        nextTick(state.isLoading = false);
+        state.isLoading = false;
       },
       processTabData
     }
@@ -788,7 +782,7 @@
   watch(() => state.date.start, app.handleGroupChange);
   watch(() => state.date.end, app.handleGroupChange);
   watch(() => state.view, app.handleViewChange);
-  watch(() => state.selected.tab, app.handleTabChange, { deep: true });
+  watch(() => state.selected.tab?._id, app.handleTabChange);
 
 </script>
 

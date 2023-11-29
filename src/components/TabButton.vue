@@ -1,5 +1,5 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', borders]">
+  <button @click="selectTab(props.tab)" :class="['tab-button', uniqueTabClassName, borders]">
     <!-- Dots -->
     <DotsVertical v-if="tab.isSelected" @click="editTab()" />
   
@@ -29,6 +29,11 @@ const props = defineProps({
   state: 'object'
 });
 
+function validIdString(inputString) {
+  return inputString.replace(/[:\-]/g, '_');
+}
+
+const uniqueTabClassName = computed(() => validIdString(props.tab._id));
 const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
 const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === props.tab._id));
 

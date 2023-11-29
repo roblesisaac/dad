@@ -8,6 +8,7 @@ const sticky = (() => {
   let focusedIndex = 0;
   let lastScrollPosition = 0;
   let scrollDirection = 1;
+  let resetInProgress = false;
 
   function focusOnConfigs(newIndex) {
     if (newIndex < 0 || newIndex > configs.length) {
@@ -80,6 +81,10 @@ const sticky = (() => {
 
     const focusedConfig = focusedConfigs[scrollDirection] || focusedConfigs[1] || focusedConfigs[0];
 
+    if(resetInProgress) {
+      return;
+    }
+
     if(!focusedConfig) {
       return resetElements();
     }
@@ -107,6 +112,8 @@ const sticky = (() => {
   }
 
   function resetElements() {
+    resetInProgress = true;
+
     for (let i = configs.length - 1; i >= 0; i--) {
       const config = configs[i];
 
@@ -118,6 +125,8 @@ const sticky = (() => {
 
       makeUnSticky(config);
     }
+
+    resetInProgress = false;
   }
 
   return {
@@ -147,20 +156,16 @@ const sticky = (() => {
 
         const element = config.element || document.querySelector(config.selector);
 
-        if (!element) {
-          return;
-        }
-
         configs.push({
           ...config,
           element,
           isSticky: false,
-          originalRect: element.getBoundingClientRect()
+          originalRect: element?.getBoundingClientRect()
         });
           
       });
       
-      configs.sort((a, b) => a.originalRect.top - b.originalRect.top);
+      configs.sort((a, b) => a.originalRect?.top - b.originalRect?.top);
 
       if(!initiated) {
         initiated = true;

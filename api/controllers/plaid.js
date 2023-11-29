@@ -414,10 +414,10 @@ const app = function() {
     const syncResults = [];
 
     const days = (n) => n * 24 * 60 * 60 * 1000;
-    const fiveDaysAgo = Date.now() - days(5);
+    const fifteenDaysAgo = Date.now() - days(15);
 
     for(const item of items) {
-      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
+      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fifteenDaysAgo) {
 
         const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
         
@@ -430,7 +430,7 @@ const app = function() {
           continue;
         }
 
-        await updatePlaidItemSyncData(item._id, { status: 'queued' });
+        await updatePlaidItemSyncData(item._id, { ...item.syncData, status: 'queued' });
 
         syncResults.push({
           taskQueued: true,

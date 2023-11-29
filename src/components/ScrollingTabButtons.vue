@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import TabButton from './TabButton.vue';
 import Draggable from 'vuedraggable';
 
@@ -29,6 +29,32 @@ const props = defineProps({
 });
 
 const isSmallScreen = computed(() => props.state.isSmallScreen());
+
+function validIdString(inputString) {
+  return inputString.replace(/[:\-]/g, '_');
+}
+
+const uniqueTabClassName = computed(() => {
+  const selectedTab = props.state.selected.tab;
+
+  return validIdString(selectedTab?._id);
+});
+
+function scrollToSelectedTab(toTheLeft) {
+  const scrollableDiv = document.querySelector('.draggable');
+  const selectedTab = document.querySelector(`.${uniqueTabClassName.value}`);
+
+  if(!selectedTab) {
+    return;
+  }
+
+  const selectedTabPosition = selectedTab.getBoundingClientRect();
+  const newScrollPosition = scrollableDiv.scrollLeft + selectedTabPosition.left - toTheLeft;
+  
+  scrollableDiv.scrollLeft = newScrollPosition;
+}
+
+onMounted(() => scrollToSelectedTab(20));
 
 </script>
 
