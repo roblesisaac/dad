@@ -1,5 +1,5 @@
 <template>
-  <Draggable class="grid draggable" v-model="state[listName]" v-bind="props.state.dragOptions()">
+  <Draggable class="grid draggable" v-model="state[listName]" v-bind="dragOptions">
     <template #item="{element}">
       <div :class="' cell-1-'+columns">
         <div class="p5r p5b">
@@ -23,6 +23,12 @@
     state: Object,
     onDblClick: Function
   });
+
+  const dragOptions = {
+    animation: 200,
+    delay: 100,
+    touchStartThreshold: 100
+  }
   
   const columns = props.cols || 2;
 
