@@ -414,10 +414,10 @@ const app = function() {
     const syncResults = [];
 
     const days = (n) => n * 24 * 60 * 60 * 1000;
-    const fifteenDaysAgo = Date.now() - days(15);
+    const fiveDaysAgo = Date.now() - days(5);
 
     for(const item of items) {
-      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fifteenDaysAgo) {
+      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
 
         const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
         

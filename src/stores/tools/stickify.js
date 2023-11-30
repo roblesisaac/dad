@@ -10,6 +10,12 @@ const sticky = (() => {
   let scrollDirection = 1;
   let resetInProgress = false;
 
+  function findElement(selector) {
+    return selector.includes('.') ? 
+      document.querySelector(selector) 
+      : document.getElementById(selector);
+  }
+
   function focusOnConfigs(newIndex) {
     if (newIndex < 0 || newIndex > configs.length) {
       return;
@@ -121,7 +127,7 @@ const sticky = (() => {
         continue;
       }
 
-      config.element = document.querySelector(config.selector);
+      config.element = findElement(config.selector);
 
       makeUnSticky(config);
     }
@@ -130,13 +136,26 @@ const sticky = (() => {
   }
 
   return {
+    configs,
     deregister: (selectorNames) => {
       const selectorNamesSet = new Set(makeArray(selectorNames));
+      let deregistered = 0;
 
       selectorNamesSet.forEach(selectorName => {
+        const isRegistered = uniqueSelectorNames.has(selectorName);
+
+        if(!isRegistered) {
+          return;
+        }
+
         sticky.unstick(selectorName);
         uniqueSelectorNames.delete(selectorName);
+        deregistered++;
       });
+
+      if(!deregistered) {
+        return;
+      }
 
       configs = configs.filter(config => !selectorNamesSet.has(config.selector));
     },
@@ -154,7 +173,7 @@ const sticky = (() => {
 
         uniqueSelectorNames.add(config.selector);
 
-        const element = config.element || document.querySelector(config.selector);
+        const element = config.element || findElement(config.selector);
 
         configs.push({
           ...config,
@@ -169,9 +188,11 @@ const sticky = (() => {
 
       if(!initiated) {
         initiated = true;
-        focusedConfigs = [configs[0]];
         window.addEventListener('scroll', onScroll);
+        return;
       }
+
+      focusOnConfigs(focusedIndex);
     },
     unstick: (selectorName) => {
       const configToUnstick = configs.find(config => config.selector === selectorName);

@@ -1,7 +1,7 @@
 <template>
 <div :id="id" class="grid dottedRow proper">
 
-  <div @click="selectCategory()" :id="id+'title'" class="cell-1">
+  <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20">
     <div class="grid">
       <div class="cell auto categoryTitle">
         <b>{{ categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
@@ -16,14 +16,14 @@
   </div>
 
   <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
-    <SelectedItems :state="state" :categoryName="categoryName" />
+    <SelectedItems :state="state" :categoryName="categoryName" class="p15" />
   </div>
 
 </div>
 </template>
 
 <script setup>
-import { computed, defineProps, nextTick, watch } from 'vue';
+import { computed, defineProps, onBeforeUnmount, onMounted, watch } from 'vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import SelectedItems from './SelectedItems.vue';
@@ -31,7 +31,7 @@ import SelectedItems from './SelectedItems.vue';
 import { formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
-const { sticky, stickify } = useAppStore();
+const { stickify } = useAppStore();
 
 const { state, categoryName, categoryItems, categoryTotal } = defineProps({
   state: Object,
@@ -59,7 +59,7 @@ function selectCategory() {
   selectedTab.categoryName = isCategorySelected ? null : categoryName;
 }
 
-watch(isSelected, () => {
+function makeSelectedCategorySticky() {
   if(state.isSmallScreen()) {
     return;
   }
@@ -70,22 +70,26 @@ watch(isSelected, () => {
 
   if(isSelected.value) {
     hideRightBorder(el);
-    sticky.stickify(id);
-    nextTick(() => matchPanelSizes(leftPanel, rightPanel));  
+    stickify.register(id);
   } else {
-    sticky.unstick(id);
     showRightBorder(el);
-    leftPanel.style.height = null;
+    stickify.deregister(id);    
   }
-});
+
+  setPanelHeight(leftPanel, rightPanel);
+}
 
 function hideRightBorder(el) {
   el.style.width = getInnerWidth(el) + 2 + 'px';
   el.style.background = '#f3f4ee';
 }
 
-function matchPanelSizes(leftPanel, rightPanel) {
-  leftPanel.style.height = rightPanel.scrollHeight + 'px';
+function setPanelHeight(leftPanel, rightPanel) {
+  const leftHeight = leftPanel.getBoundingClientRect().height;
+  const leftHeightScroll = leftPanel.scrollHeight;
+  const rightHeight = rightPanel.scrollHeight;
+
+  leftPanel.style.height = Math.max(leftHeight, leftHeightScroll, rightHeight) + 'px';
 }
 
 function showRightBorder(el) {
@@ -110,6 +114,12 @@ function getInnerWidth(el) {
   return innerWidth;
 }
 
+watch(isSelected, makeSelectedCategorySticky);
+onMounted(makeSelectedCategorySticky);
+onBeforeUnmount(() => {
+  selectedTab.categoryName = null;
+  stickify.deregister(id);
+});
 
 </script>
 

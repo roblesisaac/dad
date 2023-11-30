@@ -1,21 +1,18 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-    <div v-if="state.blueBar.message" class="grid">
-      <div class="cell-1 p10l  bgBlue bold">
-        <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
-      </div>
+  <div v-if="state.blueBar.message" class="grid">
+    <div class="cell-1 p10l  bgBlue bold">
+      <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
     </div>
+  </div>
   </Transition>
 
   <!-- BackButton -->
   <Transition>
-    <button 
-    v-if="!state.is(['home'])"
-    @click="app.goBack" 
-    class="acctButton section b-bottom">
-      <ChevronLeft class="icon" /> Back
-    </button>
+  <button v-if="!state.is(['home'])" @click="app.goBack" class="acctButton section b-bottom">
+    <ChevronLeft class="icon" /> Back
+  </button>
   </Transition>
 
   <!-- Small Screens -->
@@ -62,6 +59,52 @@
     </Transition>
   </div>
 
+  <!-- Not Small Screens -->
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
+
+    <!-- Left Side: Account and Date Selector -->
+    <div id="leftPanel" class="cell-2-5 b-right panel">
+      <!-- Group Selector Button -->
+      <ShowSelectGroupButton  class="cell-1 section b-bottom line50" :state="state" />
+
+      <!-- Scrolling Tabs -->
+      <ScrollingTabButtons v-if="!state.isLoading" class="totalsRow" :state="state" :app="app" />
+
+      <!-- Category Rows -->
+      <Transition>
+        <CategoriesWrapper v-if="!state.isLoading && state.is('home') && state.selected.tab" :state="state" />
+      </Transition>
+
+      <Transition>
+        <LoadingDots v-if="state.isLoading"></LoadingDots>
+      </Transition>
+    </div>
+
+    <!-- Right Side: Date and Selected Category Details List -->
+    <div id="rightPanel" class="cell-3-5">
+      <!-- Date Pickers -->
+      <div class="grid line50 b-bottom">
+        <div class="cell-10-24">
+          <DatePicker :date="state.date" when="start" />
+        </div>
+        <div class="cell-4-24 bold">thru</div>
+        <div class="cell-10-24">
+          <DatePicker :date="state.date" when="end" />
+        </div>
+      </div>
+
+      <!-- Selected Category Details List -->
+      <SelectedItems v-if="!state.isLoading && state.selected.tab?.categoryName" :state="state" :categoryName="categoryName" class="p30 text-left" />
+
+      <Transition>
+      <div v-if="!state.selected.tab?.categoryName" class="cell-1 panel p30 text-center">        
+        <b>« Choose an account and category to see detailed transactions here</b>
+      </div>
+      </Transition>
+    </div>
+
+  </div>
+
   <!-- SelectGroup -->
   <Transition>
     <SelectGroup v-if="state.is('SelectGroup')" :state="state" :App="app"></SelectGroup>
@@ -105,7 +148,7 @@
   import CategoriesWrapper from '../components/CategoriesWrapper.vue'; 
   import RuleSharer from '../components/RuleSharer.vue';
   import EditGroup from '../components/EditGroup.vue';
-  // import SelectedItems from '../components/SelectedItems.vue';
+  import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/state';
 
   const { api, State, stickify } = useAppStore();
@@ -652,7 +695,7 @@
       },
       goBack: () => {
         state.isLoading = true;
-        state.views.pop();
+        if(state.views.length > 1) state.views.pop();
       },
       init: async () => {
         state.blueBar.message = 'Beginning sync';
@@ -674,7 +717,7 @@
         state.allUserGroups = groups;
 
         await api.get('api/plaid/sync/all/transactions');
-        await app.checkSyncStatus();
+        app.checkSyncStatus();
         app.handleGroupChange();
       },
       handleGroupChange: async () => {
@@ -789,7 +832,6 @@
 <style>
 .dottedRow {
   border-bottom: 2px dotted #000;
-  padding: 20px;
   text-align: left;
   font-weight: bold;
   cursor: pointer;

@@ -1,5 +1,5 @@
 <template>
-<div class="grid">
+<div class="grid p20x">
   <div v-if="filteredRulesByType.length > 1" class="cell-1 p15t">
     <div class="underline bold colorBlue">
       <span @click="state.showReorder=true" v-if="!state.showReorder">Reorder</span>

@@ -18,7 +18,7 @@
 
     <!-- Sort -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('sort')" class="cell-1">
+      <div @click="app.select('sort')" class="cell-1 p20">
         <div class="grid">
           <div class="cell auto">
             Sort
@@ -37,7 +37,7 @@
 
     <!-- Categorize -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('categorize')" class="cell-1">
+      <div @click="app.select('categorize')" class="cell-1 p20">
         <div class="grid">
           <div class="cell auto">
             Categorize
@@ -56,7 +56,7 @@
 
     <!-- Filter -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('filter')" class="cell-1">
+      <div @click="app.select('filter')" class="cell-1 p20">
         <div class="grid">
           <div class="cell auto">
             Filter
@@ -75,7 +75,7 @@
 
     <!-- GroupBy -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('groupBy')" class="cell-1">
+      <div @click="app.select('groupBy')" class="cell-1 p20">
         <div class="grid">
           <div class="cell auto">
             Group By
@@ -94,7 +94,7 @@
 
     <!-- Share -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('sharing')" class="cell-1">
+      <div @click="app.select('sharing')" class="cell-1 p20">
         <div class="grid">
           <div class="cell auto">
             Share
