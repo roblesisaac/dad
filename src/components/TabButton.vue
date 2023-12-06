@@ -1,5 +1,5 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', uniqueTabClassName, borders]">
+  <button @click="selectTab(props.tab)" :class="['tab-button', uniqueTabClassName, borders, isSelectedClass]">
     <!-- Dots -->
     <DotsVertical v-if="tab.isSelected" @click="editTab()" />
   
@@ -39,6 +39,10 @@ const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === 
 
 const isSelected = computed(() => {
   return props.tab.isSelected;
+});
+
+const isSelectedClass = computed(() => {
+  return isSelected.value ? 'selected' : '';
 });
 
 const borders = computed(() => {
@@ -103,7 +107,6 @@ watch(() => props.tab.sort, (newSort) => {
   align-items: center;
   height: 50px;
   padding: 0 10px 0 0;
-  background: #f3f3ee;
   text-align: left;
   color: blue;
   border-radius: 0 0 3px 3px;
@@ -112,7 +115,6 @@ watch(() => props.tab.sort, (newSort) => {
 .tab-button:hover,
 .tab-button:active,
 .tab-button:focus {
-  background: #f3f3ee;
   color: blue;
   outline: none;
 }

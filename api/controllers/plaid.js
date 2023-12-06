@@ -377,16 +377,20 @@ const app = function() {
   }
 
   async function retrieveAccountsFromPlaidForItem(access_token) {
-    const { data } = await plaidClient.accountsGet({ access_token });
+    try {
+      const { data } = await plaidClient.accountsGet({ access_token });
 
-    if(!data.accounts) {
-      return [];
+      if(!data.accounts) {
+        return [];
+      }
+      
+      return data.accounts.map(account => ({ 
+        ...account, 
+        itemId: data.item.item_id 
+      }));
+    } catch (error) {
+      return [error.toString()];
     }
-    
-    return data.accounts.map(account => ({ 
-      ...account, 
-      itemId: data.item.item_id 
-    }));
   }
 
   async function savePlaidAccessData(accessData, req) {
@@ -448,16 +452,32 @@ const app = function() {
     return { syncResults }
   }
 
+  async function syncItem(access_token) {
+    try {
+      const response = await plaidClient.itemGet({ access_token });
+
+      return response.data.item;
+    } catch(error) {
+      return error.toString();
+    }
+  }
+
   async function syncUserAccounts(user) {
     let retrievedAccountsFromPlaid = [];
 
-    for(const item of await fetchUserItems(user._id)) {
-      const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+    const userItems = await fetchUserItems(user._id);
 
-      retrievedAccountsFromPlaid = [
-        ...retrievedAccountsFromPlaid,
-        ...await retrieveAccountsFromPlaidForItem(access_token)
-      ]
+    for(const item of userItems) {
+      try {
+        const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+
+        retrievedAccountsFromPlaid = [
+          ...retrievedAccountsFromPlaid,
+          ...await retrieveAccountsFromPlaidForItem(access_token)
+        ]
+      } catch (retrieveAccountError) {
+        throw new Error(retrieveAccountError)
+      }
     }
 
     const existingUserAccounts = await fetchUserAccounts(user._id);
@@ -475,22 +495,28 @@ const app = function() {
         continue;
       }
 
+      if(typeof retrievedAccount === 'string') {
+        continue;
+      }
+
       const newSavedAccount = await plaidAccounts.save({ ...retrievedAccount, req: { user } });
       
       synced.accounts.push(newSavedAccount);
       synced.groups.push( await userGroupSave(user, newSavedAccount) );
     }
 
-    const existingGrops = await plaidGroups.findAll({ userId: user._id, name: '*' });
+    const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
-    for(const group of existingGrops) {
+    for(const group of existingGroups) {
       
       const updatedAccounts = group.accounts.map(account => {
         const updatedAccount = synced.accounts.find(itm => itm.account_id === account.account_id);
         return updatedAccount || account;
       });
 
-      synced.groups.push( await userGroupUpdate(group._id, updatedAccounts) );
+      const updatedGroup = await userGroupUpdate(group._id, updatedAccounts);
+
+      synced.groups.push(updatedGroup);
 
     }
 
@@ -589,8 +615,12 @@ const app = function() {
     });
   }
 
-  function updateAccount(account_id, userId, retrievedAccount) {
-    return plaidAccounts.update({ account_id, userId }, retrievedAccount);
+  async function updateAccount(account_id, userId, retrievedAccount) {
+    try {
+      return await plaidAccounts.update({ account_id, userId }, retrievedAccount);
+    } catch (error) {
+      return error.toString();
+    }
   }
 
   async function updatePlaidItemSyncData(itemId, syncData) {
@@ -619,7 +649,7 @@ const app = function() {
      });
   }
 
-  function userGroupUpdate(groupId, updatedAccounts) {
+  async function userGroupUpdate(groupId, updatedAccounts) {
     const accounts = updatedAccounts.map(account => ({
       _id: account._id,
       account_id: account.account_id,
@@ -629,7 +659,16 @@ const app = function() {
       available: account.balances?.available
     }));
 
-    return plaidGroups.update(groupId, { accounts });
+    try {  
+      return await plaidGroups.update(groupId, { accounts });
+    } catch (error) {
+      return {
+        accounts,
+        error: error.toString(),
+        groupId,
+        updatedAccounts
+      };
+    }
   }
 
   function warn(userId, itemId, product) {
@@ -735,6 +774,23 @@ const app = function() {
       const removed = await removeFromDb(req.body);
 
       res.json(removed);
+    },
+    retreivePlaidItems: async function({ user} , res) {
+      initClient();
+
+      const userItems = await fetchUserItems(user._id);
+      let syncedItems = [];
+      
+      for(const item of userItems) {
+        const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+
+        syncedItems = [
+          ...syncedItems,
+          await syncItem(access_token)
+        ]
+      }
+
+      res.json({ userItems, syncedItems });
     },
     syncAccountsAndGroups: async function({ user }, res) {
       initClient();

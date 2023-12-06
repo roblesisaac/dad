@@ -60,7 +60,6 @@ app.init();
 .dp__input_reg {
   background: transparent;
   border: 0;
-  color: blue;
   font-weight: bold;
   font-family: "Fira Code", monospace;
   padding: 0;

@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import TabButton from './TabButton.vue';
 import Draggable from 'vuedraggable';
 
@@ -55,6 +55,9 @@ function scrollToSelectedTab(toTheLeft) {
 }
 
 onMounted(() => scrollToSelectedTab(20));
+watch(() => props.state.selected.tab?._id, (newId) => {
+  if(newId) scrollToSelectedTab(20);
+})
 
 </script>
 
@@ -82,15 +85,12 @@ onMounted(() => scrollToSelectedTab(20));
 
 .view-all {
   height: 50px;
-  background: #f3f3ee;
-  color: blue;
   border-radius: 0 0 3px 3px;
 }
 
 .view-all:hover,
 .view-all:active,
 .view-all:focus {
-  background: #f3f3ee;
   color: blue;
   outline: none;
 }

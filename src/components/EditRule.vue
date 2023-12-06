@@ -7,7 +7,8 @@
         <small><DragHorizontalVariant /></small>
       </div>
     </Transition>
-    <div v-if="ruleIsShared" class="cell shrink p10y bold">*</div>
+    <div v-if="ruleIsGlobal" class="cell shrink p10y bold">*</div>
+    <div v-if="ruleIsShared" class="cell shrink p10y bold">**</div>
     <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold"><small>As</small></div>
     <div v-if="ruleType === 'sort'" class="cell shrink p10y p10r bold"><small>By</small></div>
     <div v-if="ruleType === 'filter'" class="cell shrink p10y p10r bold"><small>Show if</small></div>
@@ -31,7 +32,7 @@
     </div>
   </ScrollingContent>
   </div>
-  <div v-if="app.shouldShow('testStandard') && state.is('RuleSharer')" class="cell-1">
+  <div v-if="app.shouldShow('testStandard') && state.is('RuleDetails')" class="cell-1">
     <DynamicTextArea :data="ruleConfig.rule" prop="3" class="code-editor" />
   </div>
 </div>
@@ -58,7 +59,10 @@
   const allProps = ['amount', 'category', 'date', 'name'];
 
   const ruleIsShared = computed(() => {
-    return ruleConfig?.applyForTabs?.includes('_GLOBAL') || ruleConfig?.applyForTabs?.length > 1;
+    return ruleConfig?.applyForTabs?.length > 1;
+  });
+  const ruleIsGlobal = computed(() => {
+    return ruleConfig?.applyForTabs?.includes('_GLOBAL');
   });
 
   const editRuleState = reactive({
@@ -111,7 +115,7 @@
     return {
       editRule: () => {
         state.editingRule=ruleConfig;
-        state.views.push('RuleSharer');
+        state.views.push('RuleDetails');
       },
       saveRule: async function() {
         const { propNamesToSave } = editRuleState.ruleTypes[ruleType];

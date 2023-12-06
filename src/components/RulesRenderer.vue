@@ -23,7 +23,7 @@
     </Draggable>
   </div>
 
-  <div class="cell-1">
+  <div class="cell-1 p20b">
     <hr v-if="filteredRulesByType.length">
     <div class="grid" v-if="filteredRulesByType.length">
       <div class="cell-1 proper p10t">

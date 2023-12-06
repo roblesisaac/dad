@@ -106,6 +106,7 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
 
     const _id = buildSchema_Id(filter);
     const { labelNumber, labelValue } = labelsMap.getArgumentsForGetByLabel(_id, filter);
+
     const foundResponse = await data.getByLabel(labelNumber, labelValue, options);
     const { items: foundItems, lastKey, next } = foundResponse;
     const validatedItems = await validateItems(foundItems);

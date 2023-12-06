@@ -31,7 +31,7 @@ import { onMounted } from 'vue';
 import MenuIcon from 'vue-material-design-icons/Menu.vue';
 
 import { useAppStore } from '../stores/state';
-const { State, api, utils, sticky, stickify } = useAppStore();
+const { State, api, utils, stickify } = useAppStore();
 
 const app = function() {
   async function getUserViews() {
@@ -60,7 +60,6 @@ app.init();
 }
 
 .topNav {
-  background: rgb(243 243 238);
   transition: all .3s;
   border-bottom: 2px solid #000;
 }

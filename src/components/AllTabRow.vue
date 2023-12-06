@@ -69,10 +69,6 @@ watch(() => props.element.sort, (newSort) => {
 </script>
 
 <style>
-.allTabRow {
-  background: #f3f4ee;
-}
-
 .sectionContent {
   color: blue
 }

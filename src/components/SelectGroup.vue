@@ -122,14 +122,8 @@ app.init();
 </script>
 
 <style>
-.acctButton, .acctButton:hover {
-  background: transparent;
-  color: blue;
+.acctButton {
   box-shadow: none;
   width: 100%;
-}
-
-.acctButton:hover {
-  color: blue;
 }
 </style>

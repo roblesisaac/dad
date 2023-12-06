@@ -5,92 +5,25 @@
 
     <!-- Tab Name -->
     <div v-if="!state.is('EditRule')" class="grid middle b-bottom">
-      <div class="cell-2-5 section b-right bold line50">
-        <small>Tab Name</small>
+      <div class="cell-1-5 section b-right bold line50">
+        <small>Name</small>
       </div>
-      <div class="cell-3-5 section">
+      <div class="cell-4-5 section">
         <input v-model="editState.changeTabNameTo" class="transparent bold section colorBlue" type="text" />
       </div>
-      <!-- <div v-if="editState.changeTabNameTo !== selectedTab.tabName" class="cell-1-5 b-left section line50">
-        <button @click="app.saveTabConfig()" class="colorBlue transparent bold saveTabName">Save</button>
-      </div> -->
     </div>
 
     <!-- Sort -->
-    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('sort')" class="cell-1 p20">
-        <div class="grid">
-          <div class="cell auto">
-            Sort
-          </div>
-          <div class="cell auto right">        
-            <Minus v-if="editState.selectedRuleType==='sort'" />
-            <Plus v-else />
-          </div>
-        </div>
-      </div>
-
-      <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='sort'" ruleType="sort" :state="state" />
-      </div>
-    </div>
+    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="sort" />
 
     <!-- Categorize -->
-    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('categorize')" class="cell-1 p20">
-        <div class="grid">
-          <div class="cell auto">
-            Categorize
-          </div>
-          <div class="cell auto right">        
-            <Minus v-if="editState.selectedRuleType==='categorize'" />
-            <Plus v-else />
-          </div>
-        </div>
-      </div>
-
-      <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='categorize'" ruleType="categorize" :state="state" />
-      </div>
-    </div>
+    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="categorize" />
 
     <!-- Filter -->
-    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('filter')" class="cell-1 p20">
-        <div class="grid">
-          <div class="cell auto">
-            Filter
-          </div>
-          <div class="cell auto right">        
-            <Minus v-if="editState.selectedRuleType==='filter'" />
-            <Plus v-else />
-          </div>
-        </div>
-      </div>
-
-      <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='filter'" ruleType="filter" :state="state" />
-      </div>
-    </div>
+    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="filter" />
 
     <!-- GroupBy -->
-    <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
-      <div @click="app.select('groupBy')" class="cell-1 p20">
-        <div class="grid">
-          <div class="cell auto">
-            Group By
-          </div>
-          <div class="cell auto right">        
-            <Minus v-if="editState.selectedRuleType==='groupBy'" />
-            <Plus v-else />
-          </div>
-        </div>
-      </div>
-
-      <div class="cell-1">
-        <RulesRenderer v-if="editState.selectedRuleType==='groupBy'" ruleType="groupBy" :state="state" />
-      </div>
-    </div>
+    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="groupBy" />
 
     <!-- Share -->
     <div v-if="!state.is('EditRule')" class="grid middle dottedRow">
@@ -105,8 +38,8 @@
           </div>
         </div>
       </div>
-      <div v-if="editState.selectedRuleType==='sharing'" class="cell-1">
-        <b>Groups Tab Is Shared With:</b>
+      <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
+        <h4 class="bold">Groups Tab Is Shared With:</h4>
         <div class="dropHere">
           <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
           <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="state.dragOptions()">
@@ -116,7 +49,7 @@
         </div>
       </div>
 
-      <div v-if="editState.selectedRuleType==='sharing'" class="cell-1">
+      <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
         <ScrollingContent class="p30y">
         <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="state.dragOptions()">
           <template #item="{element}">
@@ -126,8 +59,8 @@
         </ScrollingContent>
       </div>
 
-      <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="cell-1">
-        <button @click="app.makeTabUnique" class="bgBlack expanded">Make Tab Unique?</button>
+      <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="cell-1 p10x p10b">
+        <button @click="app.makeTabUnique" class="uniqueBtn expanded">Make Tab Unique?</button>
       </div>
     </div>
 
@@ -153,7 +86,7 @@ import Draggable from 'vuedraggable';
 import ScrollingContent from './ScrollingContent.vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
-import RulesRenderer from './RulesRenderer.vue';
+import EditTabSection from './EditTabSection.vue';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
@@ -163,7 +96,7 @@ const selectedTab = computed(() => state.selected.tab);
 
 const editState = reactive({
   changeTabNameTo: selectedTab.value.tabName,
-  ruleSharer: null,
+  ruleDetails: null,
   selectedRuleType: '',
   typingTimer: 0
 });
@@ -252,7 +185,6 @@ const app = function() {
 
   return {
     changeTabName: async () => {
-      console.log('changetabname...');
       if(editState.changeTabNameTo == selectedTab.value.tabName) {
         return;
       }
@@ -298,7 +230,7 @@ const app = function() {
 
         selectedTab.value.isSelected = false;
 
-        editState.ruleSharer = null;
+        editState.ruleDetails = null;
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
@@ -328,7 +260,7 @@ const app = function() {
 
         await removeAndDeselectGroupFromCurrentTab();
 
-        editState.ruleSharer = null;
+        editState.ruleDetails = null;
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
@@ -337,7 +269,6 @@ const app = function() {
       });
     },
     saveGroups: async (newv, oldv) => {
-      console.log('savegroup', {newv, oldv})
       const { _id, showForGroup } = selectedTab.value;
 
       await api.put(`api/tabs/${_id}`, {
@@ -393,5 +324,10 @@ watch(() => selectedTab.value.showForGroup, app.saveGroups, { deep: true });
   outline: none;
   border: 0 !important;
   box-shadow: none !important;
+}
+
+.uniqueBtn {
+  background-color: #f9c844;
+  color: #3c3943;
 }
 </style>

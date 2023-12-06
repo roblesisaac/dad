@@ -1,9 +1,9 @@
 <template>
 <div :id="id" class="grid dottedRow proper">
 
-  <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20">
+  <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
     <div class="grid">
-      <div class="cell auto categoryTitle">
+      <div class="cell auto">
         <b>{{ categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
       </div>
       <div class="cell shrink categoryExpand">
@@ -60,6 +60,14 @@ function selectCategory() {
 }
 
 function makeSelectedCategorySticky() {
+  const selector = state.isSmallScreen() ? id+'title' : id;
+
+  if(isSelected.value) {
+    stickify.register(selector);
+  } else {
+    stickify.deregister(selector);  
+  }
+
   if(state.isSmallScreen()) {
     return;
   }
@@ -70,10 +78,8 @@ function makeSelectedCategorySticky() {
 
   if(isSelected.value) {
     hideRightBorder(el);
-    stickify.register(id);
   } else {
-    showRightBorder(el);
-    stickify.deregister(id);    
+    showRightBorder(el);  
   }
 
   setPanelHeight(leftPanel, rightPanel);
@@ -81,7 +87,6 @@ function makeSelectedCategorySticky() {
 
 function hideRightBorder(el) {
   el.style.width = getInnerWidth(el) + 2 + 'px';
-  el.style.background = '#f3f4ee';
 }
 
 function setPanelHeight(leftPanel, rightPanel) {

@@ -28,16 +28,8 @@
         </div>
 
         <!-- Date Pickers -->
-        <div class="cell-16-24 section b-bottom line50">          
-          <div class="grid">
-            <div class="cell-10-24">
-              <DatePicker :date="state.date" when="start" />
-            </div>
-            <div class="cell-4-24 bold">thru</div>
-            <div class="cell-10-24">
-              <DatePicker :date="state.date" when="end" />
-            </div>
-          </div>
+        <div class="cell-16-24 section line50">          
+          <DatePickers :state="state" />
         </div>
 
       </div>
@@ -83,15 +75,7 @@
     <!-- Right Side: Date and Selected Category Details List -->
     <div id="rightPanel" class="cell-3-5">
       <!-- Date Pickers -->
-      <div class="grid line50 b-bottom">
-        <div class="cell-10-24">
-          <DatePicker :date="state.date" when="start" />
-        </div>
-        <div class="cell-4-24 bold">thru</div>
-        <div class="cell-10-24">
-          <DatePicker :date="state.date" when="end" />
-        </div>
-      </div>
+      <DatePickers :state="state" class="line50 b-bottom" />
 
       <!-- Selected Category Details List -->
       <SelectedItems v-if="!state.isLoading && state.selected.tab?.categoryName" :state="state" :categoryName="categoryName" class="p30 text-left" />
@@ -115,9 +99,9 @@
     <EditTab v-if="state.is('EditTab')" :state="state" :App="app"></EditTab>
   </Transition>
 
-  <!-- RuleSharer -->
+  <!-- RuleDetails -->
   <Transition>
-    <RuleSharer v-if="state.is('RuleSharer')" :ruleConfig="state.editingRule" :state="state" />
+    <RuleDetails v-if="state.is('RuleDetails')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
 
     <!-- Edit Group -->
@@ -142,11 +126,11 @@
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import SelectGroup from '../components/SelectGroup.vue';
-  import DatePicker from '../components/DatePicker.vue';
+  import DatePickers from '../components/DatePickers.vue';
   import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
   import EditTab from '../components/EditTab.vue';
   import CategoriesWrapper from '../components/CategoriesWrapper.vue'; 
-  import RuleSharer from '../components/RuleSharer.vue';
+  import RuleDetails from '../components/RuleDetails.vue';
   import EditGroup from '../components/EditGroup.vue';
   import SelectedItems from '../components/SelectedItems.vue';
   import { useAppStore } from '../stores/state';
@@ -175,8 +159,7 @@
     editingRule: null,
     editingGroup: null,
     elems: {
-      body: document.documentElement.style,
-      topNav: document.querySelector('.topNav').style
+      body: document.documentElement.style
     },
     isLoading: true,
     is(view) {
@@ -340,12 +323,6 @@
         groupBy, 
         filter
       };
-    }
-
-    function changeBgColor(color) {
-      const { elems } = state;
-
-      elems.topNav.backgroundColor = elems.body.backgroundColor = color;
     }
 
     async function deselectOtherTabs(selectedTabs) {
@@ -701,7 +678,6 @@
         state.blueBar.message = 'Beginning sync';
         state.blueBar.loading = true;
 
-        changeBgColor('rgb(243, 243, 238)');  
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
         state.allUserTabs = await fetchUserTabs();          
@@ -830,11 +806,52 @@
 </script>
 
 <style>
+.topNav {
+  background: #fff;
+}
+
+.logoBtn {
+  box-shadow: 3px 3px darkgrey;
+}
+
+html, body, .divider-text, .tab-button.selected, .allTabRow, .dottedRow,
+button.acctButton:hover, button.tab-button:hover, button.view-all:hover,
+button.acctButton:focus, button.tab-button:focus, button.view-all:focus,
+button.acctButton:active, button.tab-button:active, button.view-all:active {
+  background: #fff;
+}
+
+/* .acctButton {
+  background: #659ef6;
+} */
+
+.datePickers, .tab-button, .acctButton, .logoBtn  {
+  background: #efeff5;
+}
+
+.view-all {
+  background-color: #d3d3d3;
+}
+
+.tab-button.selected {
+  z-index: 300;
+  box-shadow: 3px 3px #000;
+  border-radius: 0;
+}
+
+.acctButton, .dp__input_reg, .view-all, .acctButton:hover {
+  color: #000
+}
+
+.categoryTitle.stickified {
+  background: #fff;
+  box-shadow: 3px 3px lightblue;
+}
+
 .dottedRow {
   border-bottom: 2px dotted #000;
   text-align: left;
   font-weight: bold;
-  cursor: pointer;
 }
 
 .icon {
@@ -872,10 +889,6 @@
 
 .b-top {
   border-top: 2px solid #000;
-}
-
-.totalsRow {
-  background-color: rgb(243 243 238);
 }
 
 .relative {

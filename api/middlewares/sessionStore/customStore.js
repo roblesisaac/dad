@@ -11,7 +11,10 @@ export default class CustomStore extends expressSession.Store {
   async get(sessionId, callback) {
     try {
       const sessionData = await data.get(`sessions:${sessionId}`);
-
+      if(!sessionData) {
+        console.log('no session data for ', sessionId);
+        return callback(null, null);
+      }
       callback(null, JSON.parse(sessionData));
     } catch (error) {
       callback(error);

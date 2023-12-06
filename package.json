@@ -31,7 +31,7 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-local": "^1.0.0",
     "pinia": "^2.0.35",
-    "plaid": "^15.5.0",
+    "plaid": "^18.1.0",
     "recaptcha-v3": "^1.10.0",
     "swiper": "^9.2.4",
     "tls-check": "^1.0.0",
