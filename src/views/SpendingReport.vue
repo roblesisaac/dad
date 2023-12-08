@@ -117,12 +117,20 @@
       <AllTabs :state="state" :app="app" />
     </div>
   </Transition>
+
+  <!-- ItemRepair -->
+  <Transition>
+    <div v-if="state.is('ItemRepair')" class="cell-1">
+      <ItemRepair :state="state" :app="app" />
+    </div>
+  </Transition>
 </template>
 
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
   import AllTabs from '../components/AllTabs.vue';
   import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
+  import ItemRepair from '../components/ItemRepair.vue';
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';
   import SelectGroup from '../components/SelectGroup.vue';
@@ -572,6 +580,11 @@
         itemsSyncing.push(item.syncData.status);
       }
 
+      // if(!itemsSyncing.includes('failed')) {
+      //   state.views.push('ItemRepair');
+      //   return;
+      // }
+
       if(!itemsSyncing.length) {
         state.blueBar.message = `All transactions synced successfully!`;
         state.blueBar.loading = false;
@@ -588,6 +601,15 @@
       const syncStatus = itemsSyncing.includes('queued') ? 'Queued' : itemsSyncing[0];
       state.blueBar.message = `Sync status is '${syncStatus}' across ${itemsSyncing.length} bank${s}.`;
       state.blueBar.loading = true;
+
+      if(itemsSyncing.includes('failed')) {
+        state.views.push('ItemRepair');
+        state.blueBar.loading = false;
+        state.syncCheckId = false;
+        state.blueBar.message = false;
+        state.syncCheckId = false;
+        return;
+      }
 
       setTimeout(() => renderSyncStatus(syncCheckId), 5*1000);
     }

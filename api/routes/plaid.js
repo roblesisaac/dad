@@ -6,6 +6,7 @@ export default function(api, baseUrl) {
   const member = protect('member');
 
   member.post('/plaid/connect/link', app.connectLink);
+  member.get('/plaid/connect/link/update/:itemId', app.connectLinkUpdate);
   member.post('/plaid/exchange/token', app.exchangeTokenAndSavePlaidItem);
   member.get('/plaid/get/duplicates', app.getDuplicates);
   member.get('/plaid/get/transaction/count', app.getAllTransactionCount);

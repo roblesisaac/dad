@@ -1,4 +1,3 @@
-import { parse } from 'vue/compiler-sfc';
 import AmptModel from '../utils/amptModel';
 
 const accountGroupSchema = {

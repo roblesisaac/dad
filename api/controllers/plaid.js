@@ -166,9 +166,14 @@ const app = function() {
   }
 
   async function fetchUserItems(userId) {
-    const { items } = await plaidItems.find({ itemId: '*', userId });
+    try {
+      const { items } = await plaidItems.find({ itemId: '*', userId });
     
-    return items;
+      return items;
+    } catch (err) {
+      return err.toString();
+    }
+
   }
 
   function formatDateForQuery(userInfo, dateRange) {
@@ -421,7 +426,7 @@ const app = function() {
     const fiveDaysAgo = Date.now() - days(5);
 
     for(const item of items) {
-      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
+      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo*10000000000) {
 
         const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
         
@@ -705,6 +710,29 @@ const app = function() {
         throw new Error(`Error on plaid linkTokenCreater: ${error.message}`);
       }
     },
+    connectLinkUpdate: async (req, res) => {
+      const { user } = req;
+      const { itemId } = req.params;
+
+      const item = await plaidItems.findOne({ userId: user._id, itemId });
+      const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+
+      const request = {
+        user: { client_user_id: user._id },
+        client_name: 'TrackTabs',
+        country_codes: ['US'],
+        language: 'en',
+        access_token
+      };
+
+      try {
+        const { data } = await plaidClient.linkTokenCreate(request);
+
+        res.json(data.link_token);
+      } catch (error) {
+        throw new Error(`Error on plaid linkTokenCreater: ${error.message}`);
+      }
+    },
     exchangeTokenAndSavePlaidItem: async function(req, res) {
       const { publicToken } = req.body;
       const { user } = req;
@@ -790,7 +818,7 @@ const app = function() {
         ]
       }
 
-      res.json({ userItems, syncedItems });
+      res.json( scrub(syncedItems, 'accessToken') );
     },
     syncAccountsAndGroups: async function({ user }, res) {
       initClient();
