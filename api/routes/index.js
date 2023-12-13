@@ -43,19 +43,24 @@ export default (app) => {
         res.json(`Collection named '${req.params[0]}' not found`);
     });
 
-    // Serve index.html on all 404s
-    api.use(async (_, res) => {
-        const stream = await http.readStaticFile('index.html');
-        const decoder = new TextDecoder('utf-8');
-        let htmlContent = '';
-      
-        for await (const chunk of stream) {
-          const decodedChunk = decoder.decode(chunk, { stream: true });
-          htmlContent += decodedChunk;
+    // Handle 404s
+    api.use(async (req, res) => {
+        if (req.accepts('html')) {
+            const stream = await http.node.readStaticFile('index.html');
+            res.status(200).type('html');
+            stream.pipe(res);
+            return;
         }
-      
-        res.setHeader('Content-Type', 'text/html');
-        res.send(htmlContent);
+        
+        if (req.accepts('json')) {
+            return res.status(404).json({ message: 'Not found' });
+        }
+        
+        if (req.accepts('txt')) {
+            return res.status(404).type('txt').send('Not found')
+        }
+
+        res.status(404).end()
     });
 
     app.use('/', api);
