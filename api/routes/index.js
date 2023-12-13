@@ -43,7 +43,7 @@ export default (app) => {
         res.json(`Collection named '${req.params[0]}' not found`);
     });
 
-    // Handle 404s
+    // Serve index.html on 404s
     api.use(async (req, res) => {
         if (req.accepts('html')) {
             const stream = await http.node.readStaticFile('index.html');
