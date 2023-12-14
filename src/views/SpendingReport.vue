@@ -676,7 +676,7 @@
         if(!state.selected.group) {
           return;
         }
-        
+
         const selectedGroup = state.selected.group;
         const selectedTab = state.selected.tab;
         const tabsForGroup = state.selected.tabsForGroup;

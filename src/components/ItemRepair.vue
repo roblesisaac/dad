@@ -56,7 +56,7 @@ const app = function() {
       itemState.syncedItems = [ ...itemState.syncedItems, ... await syncItems() ];
     },
     repairItem: async (itemId) => {
-      const linkToken = await api.get(`api/plaid/connect/link/update/${itemId}`);
+      const linkToken = await api.post(`api/plaid/connect/link/${itemId}`);
       const link = createLink(linkToken);
 
       link.open();

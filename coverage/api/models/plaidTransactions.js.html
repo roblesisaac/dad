@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.68% </span>
+                <span class="strong">93.47% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>89/94</span>
+                <span class='fraction'>86/92</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/3</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.68% </span>
+                <span class="strong">93.47% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>89/94</span>
+                <span class='fraction'>86/92</span>
             </div>
         
             
@@ -154,9 +154,8 @@
 <a name='L89'></a><a href='#L89'>89</a>
 <a name='L90'></a><a href='#L90'>90</a>
 <a name='L91'></a><a href='#L91'>91</a>
-<a name='L92'></a><a href='#L92'>92</a>
-<a name='L93'></a><a href='#L93'>93</a>
-<a name='L94'></a><a href='#L94'>94</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L92'></a><a href='#L92'>92</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -242,37 +241,12 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span></td><td class="text"><pre class="prettyprint lang-js">import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
-&nbsp;
-const locationSchema = {
-  address: String,
-  city: String,
-  region: String,
-  postal_code: String,
-  country: String,
-  lat: Number,
-  lon: Number,
-  store_number: String,
-};
-&nbsp;
-const paymentMetaSchema = {
-  by_order_of: String,
-  payee: String,
-  payer: String,
-  payment_method: String,
-  payment_processor: String,
-  ppd_id: String,
-  reason: String,
-  reference_number: String,
-};
 &nbsp;
 const encryptedValue = {
   set: encrypt,
@@ -280,13 +254,19 @@ const encryptedValue = {
 };
 &nbsp;
 const transactionSchema = {
-  userId: {
-    set: <span class="fstat-no" title="function not covered" >(_, { req }) =&gt; req.user._id</span>
-  },
+  userId: String,
   account_id: String,
   amount: encryptedValue,
   iso_currency_code: String,
   unofficial_currency_code: String,
+  counterparties: [{
+    confidence_level: String,
+    entity_id: String,
+    logo_url: String,
+    name: String,
+    type: String,
+    website: String
+  }],
   category: <span class="fstat-no" title="function not covered" >(value) =&gt; Array.isArray(value) ? value.join() : value,</span>
   category_id: String,
   check_number: String,
@@ -294,51 +274,65 @@ const transactionSchema = {
   datetime: String,
   authorized_date: String,
   authorized_datetime: String,
-  location: locationSchema,
+  location: {
+    address: String,
+    city: String,
+    region: String,
+    postal_code: String,
+    country: String,
+    lat: Number,
+    lon: Number,
+    store_number: String,
+  },
   name: {
     type: String,
     lowercase: true
   },
   merchant_name: String,
-  payment_meta: paymentMetaSchema,
+  payment_meta: {
+    by_order_of: String,
+    payee: String,
+    payer: String,
+    payment_method: String,
+    payment_processor: String,
+    ppd_id: String,
+    reason: String,
+    reference_number: String
+  },
+  logo_url: String,
   payment_channel: String,
   pending: Boolean,
   pending_transaction_id: String,
   personal_finance_category: {
+    confidence_level: String,
     primary: String,
     detailed: String,
   },
   account_owner: String,
+  syncId: String,
   transaction_id: {
     type: String,
     unique: true
   },
   transaction_code: String,
   transaction_type: String,
-  label1: {
-    name: 'date',
+  website: String,
+  label1: 'transaction_id',
+  label2: 'date',
+  label3: {
+    name: 'accountdate',
     concat: ['account_id', 'date']
   },
-  label2: {
-    name: 'transaction_id',
-    concat: ['account_id', 'transaction_id']
-  },
-  label3: {
-    name: 'name',
-    concat: ['account_id', 'name']
-  },
-  label4: {
+  label4: 'syncId',
+  label5: {
     name: 'category',
     computed: <span class="fstat-no" title="function not covered" >item =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >      const { userId, account_id, category } = item;</span>
-<span class="cstat-no" title="statement not covered" >      const lowercaseCat = (category || '').toLowerCase();</span>
+<span class="cstat-no" title="statement not covered" >      const cat = item.personal_finance_category;</span>
+<span class="cstat-no" title="statement not covered" >      const details = cat.primary+cat.detailed+cat.confidence_level;</span>
+<span class="cstat-no" title="statement not covered" >      const response = details || '';</span>
 <span class="cstat-no" title="statement not covered" ></span>
-<span class="cstat-no" title="statement not covered" >      return userId+account_id+lowercaseCat</span>
+<span class="cstat-no" title="statement not covered" >      return response.toLowerCase();</span>
 <span class="cstat-no" title="statement not covered" >    }</span>
-  },
-  label5: {
-    name: 'amount',
-    concat: ['userId', 'account_id', 'amount']
   }
 }
 &nbsp;
@@ -349,7 +343,7 @@ export default AmptModel(['plaidtransactions', 'userId'], transactionSchema);</p
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2023-10-30T20:45:27.033Z
+                at 2023-12-14T01:45:36.919Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

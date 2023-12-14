@@ -14,6 +14,7 @@
     "ampt:commit": "npm run commit"
   },
   "dependencies": {
+    "@ampt/cli": "^1.0.24",
     "@ampt/data": "^1.0.10",
     "@ampt/sdk": "^1.0.7",
     "@fontsource/fira-code": "^5.0.8",

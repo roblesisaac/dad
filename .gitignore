@@ -13,7 +13,6 @@ dist
 static
 dist-ssr
 monospace.json
-MONOSPACE_DAEMON_PORT=44763
 *.local
 .env
 

@@ -19,7 +19,7 @@ export default (app) => {
 
     // Api startpoint
     api.get('/api', (_, res) => {
-        res.json(`Hi, you've reached the starting point of our API!`);
+        res.json(`You've reached the starting point of our API!`);
     });
 
     // Api routes
