@@ -53,7 +53,7 @@ const sticky = (() => {
 
     element.classList.add('stickified');
     element.style.top = `${currentStuckHeight}px`;
-    element.style.zIndex = Math.min(100 + focusedIndex, 2147483647);
+    element.style.zIndex = Math.min(100 - focusedIndex, 2147483647);
 
     const height = rect?.height || element.getBoundingClientRect().height;
 

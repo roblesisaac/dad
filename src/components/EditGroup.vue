@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, watch } from 'vue';
+import { computed, watch } from 'vue';
 import Draggable from 'vuedraggable';
 import { useAppStore } from '../stores/state';
 

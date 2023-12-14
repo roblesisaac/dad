@@ -68,7 +68,7 @@ app.init();
   padding: 10px 10px;
 }
 
-.topNav a {
+.topNav a, .topNav button {
   font-weight: bold;
   padding: 20px;
   display: inline-block;

@@ -9,8 +9,6 @@
 </template>
 
 <script setup>
-import { defineProps } from 'vue';
-
 const { item } = defineProps({
   item: Object
 });

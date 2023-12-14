@@ -55,7 +55,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, nextTick, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 import Switch from './Switch.vue';
 import ScrollingContent from './ScrollingContent.vue';
 import Draggable from 'vuedraggable';

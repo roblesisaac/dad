@@ -37,7 +37,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import EditRule from './EditRule.vue';
 import Draggable from 'vuedraggable';
 

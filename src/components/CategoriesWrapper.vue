@@ -9,8 +9,6 @@
 </template>
 
 <script setup>
-
-import { defineProps } from 'vue';
 import CategoryDetails from './CategoryDetails.vue';
 
 const { state } = defineProps({ state: Object });

@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import { defineProps, ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 
 const { state, placeholder, propToUpdate } = defineProps({
   state: Object,

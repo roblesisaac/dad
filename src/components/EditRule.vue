@@ -39,7 +39,7 @@
 </template>
     
 <script setup>
-  import { computed, defineProps, reactive, watch } from 'vue';
+  import { computed, reactive, watch } from 'vue';
   import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
   import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
   import ScrollingContent from './ScrollingContent.vue';

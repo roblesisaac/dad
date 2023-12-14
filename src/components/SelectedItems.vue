@@ -30,7 +30,7 @@
 </template>
 
 <script setup>
-import { computed, defineProps } from 'vue';
+import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
 import { formatPrice } from '../utils';
 
