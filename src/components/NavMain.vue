@@ -64,10 +64,6 @@ app.init();
   border-bottom: 2px solid #000;
 }
 
-.topNav.is-sticky {
-  padding: 10px 10px;
-}
-
 .topNav a {
   font-weight: bold;
   padding: 20px;
@@ -85,8 +81,6 @@ app.init();
 }
 
 .logoBtn {
-  background-color: transparent;
-  /* box-shadow: 1px 1px #333; */
   color: #000;
   text-align: center;
   text-decoration: none;
@@ -94,7 +88,6 @@ app.init();
   font-size: 16px;
   transition-duration: .4s;
   cursor: pointer;
-  /* border-radius: 5px; */
   padding: 5px 10px;
   border: 2px solid #000;
 }
