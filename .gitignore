@@ -6,12 +6,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+MONOSPACE_DAEMON_PORT
 
 node_modules
 dist
 static
 dist-ssr
 monospace.json
+MONOSPACE_DAEMON_PORT=44763
 *.local
 .env
 

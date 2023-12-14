@@ -673,6 +673,10 @@
         await renderSyncStatus(syncCheckId);
       },
       createNewTab: async () => {
+        if(!state.selected.group) {
+          return;
+        }
+        
         const selectedGroup = state.selected.group;
         const selectedTab = state.selected.tab;
         const tabsForGroup = state.selected.tabsForGroup;
@@ -820,8 +824,22 @@
 
   app.init();
 
-  watch(() => state.date.start, app.handleGroupChange);
-  watch(() => state.date.end, app.handleGroupChange);
+  watch(() => state.date.start, (_, prevStart) => {
+    if(prevStart === 'firstOfMonth') {  
+      return;
+    }
+
+    app.handleGroupChange();
+  });
+
+  watch(() => state.date.end, (_, prevEnd) => {
+    if(prevEnd === 'today') {
+      return;
+    }
+
+    app.handleGroupChange();
+  });
+  
   watch(() => state.view, app.handleViewChange);
   watch(() => state.selected.tab?._id, app.handleTabChange);
 

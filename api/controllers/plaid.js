@@ -424,9 +424,8 @@ const app = function() {
 
     const days = (n) => n * 24 * 60 * 60 * 1000;
     const fiveDaysAgo = Date.now() - days(5);
-
     for(const item of items) {
-      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo*10000000000) {
+      if(item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
 
         const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
         
