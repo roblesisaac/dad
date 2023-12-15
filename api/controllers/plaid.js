@@ -717,7 +717,10 @@ const app = function () {
       try {
         const { data } = await plaidClient.linkTokenCreate(request);
 
-        return res.json(data.link_token);
+        res.json(data.link_token);
+
+        // for testing purposes
+        return data;
       } catch (error) {
         throw new Error(`Error on plaid linkTokenCreater: ${error.message}`);
       }

@@ -4,8 +4,9 @@ import app from '../../api/controllers/plaid';
 describe('plaid controller', async () => {
   test('should return a token', async () => {
     const req = {
+      params: {},
       user: {
-        _id: 'test_ids',
+        _id: 'test_id',
       }
     };
   
