@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <!-- Scrolling Tabs -->
+    <!-- Scrolling Tabs Totals Row -->
     <div v-if="!state.isLoading" class="cell-1 totalsRow">
       <ScrollingTabButtons :state="state" :app="app" />
     </div>
@@ -860,7 +860,7 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
   background: #659ef6;
 } */
 
-.datePickers, .tab-button, .acctButton, .logoBtn  {
+.datePickers, .tab-button, .logoBtn, .acctButton  {
   background: #efeff5;
 }
 
@@ -928,6 +928,10 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 
 .relative {
   position: relative;
+}
+
+.totalsRow {
+  height: 50px;
 }
 
 .underline {

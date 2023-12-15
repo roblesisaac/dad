@@ -131,6 +131,7 @@ onBeforeUnmount(() => {
 <style>
 .categoryTitle {
   line-height: 2;
+  cursor: pointer;
 }
 .categoryTitle b {
   color: blue;

@@ -831,7 +831,7 @@ const app = function () {
         userId: ''
       });
 
-      res.json({accounts});
+      res.json(accounts);
     }
   }
 }();
