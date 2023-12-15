@@ -73,6 +73,11 @@ const app = function () {
   async function emailSiteOwner(emailData) {
     const site = await Sites.findOne();
 
+    if (!site) {
+      console.error('No site found');
+      return;
+    }
+
     await notify.email(site.email, emailData);
   }
 
@@ -486,10 +491,7 @@ const app = function () {
     const existingUserAccounts = await fetchUserAccounts(user._id);
     const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
-    const synced = {
-      accounts: [],
-      groups: []
-    };
+    const synced = { accounts: [], groups: [] };
 
     for (const retrievedAccount of retrievedAccountsFromPlaid) {
       if (isAccountAlreadySaved(existingUserAccounts, retrievedAccount)) {
@@ -817,7 +819,17 @@ const app = function () {
 
       res.json(response);
     },
-    syncTransactionsForItem
+    syncTransactionsForItem,
+    test: async (req, res) => {
+      const { user } = req;
+
+      const accounts = await plaidGroups.findAll({
+        name: `*`,
+        userId: ''
+      });
+
+      res.json({accounts});
+    }
   }
 }();
 

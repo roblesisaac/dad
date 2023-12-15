@@ -580,11 +580,6 @@
         itemsSyncing.push(item.syncData.status);
       }
 
-      // if(!itemsSyncing.includes('failed')) {
-      //   state.views.push('ItemRepair');
-      //   return;
-      // }
-
       if(!itemsSyncing.length) {
         state.blueBar.message = `All transactions synced successfully!`;
         state.blueBar.loading = false;

@@ -16,4 +16,5 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/accounts/and/groups', app.syncAccountsAndGroups);
   member.get('/plaid/sync/all/transactions', app.syncAllUserTransactions);
   member.get('/plaid/transactions/:_id?', app.getTransactions);
+  member.get('/plaid/test', app.test);
 }
