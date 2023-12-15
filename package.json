@@ -11,7 +11,7 @@
     "test": "vitest",
     "ampt:test": "vitest --coverage",
     "ampt:build": "npm run build",
-    "ampt:publish": "npm run commit;deploy prod",
+    "ampt:publish": "npm run commit;ampt deploy prod",
     "ampt:commit": "npm run commit"
   },
   "dependencies": {
