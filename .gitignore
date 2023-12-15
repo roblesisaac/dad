@@ -9,6 +9,7 @@ lerna-debug.log*
 MONOSPACE_DAEMON_PORT*
 
 node_modules
+coverage
 dist
 static
 dist-ssr
