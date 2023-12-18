@@ -90,6 +90,10 @@ app.init();
   cursor: pointer;
   padding: 5px 10px;
   border: 2px solid #000;
+  border-radius: 3px;
+  font-weight: bold;
+  height: 32px;
+  width: 32px;
 }
 
 .logoBtn:hover {

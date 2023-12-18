@@ -1,5 +1,5 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', uniqueTabClassName, borders, isSelectedClass]">
+  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor, uniqueTabClassName, borders, isSelectedClass]">
     <!-- Dots -->
     <DotsVertical v-if="tab.isSelected" @click="editTab()" />
   
@@ -51,6 +51,10 @@ const borders = computed(() => {
   const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
 
   return [bottomBorder, rightBorder, borderLeft];
+});
+
+const fontColor = computed(() => {
+  return props.tab.total > 0 ? 'font-color-positive' : 'font-color-negative';
 });
 
 const tabTotal = computed(() => {
@@ -108,7 +112,6 @@ watch(() => props.tab.sort, (newSort) => {
   height: 50px;
   padding: 0 10px 0 0;
   text-align: left;
-  color: blue;
   border-radius: 0 0 3px 3px;
 }
 

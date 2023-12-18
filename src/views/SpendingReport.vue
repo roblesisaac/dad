@@ -864,6 +864,14 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
   background: #efeff5;
 }
 
+.font-color-positive {
+  color: #00f;
+}
+
+.font-color-negative {
+  color: #f00
+}
+
 .view-all {
   background-color: #d3d3d3;
 }
@@ -932,6 +940,7 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 
 .totalsRow {
   height: 50px;
+  background: #fff;
 }
 
 .underline {

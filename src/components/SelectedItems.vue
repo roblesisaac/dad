@@ -1,32 +1,33 @@
 <template>
-<div v-if="items.length" class="grid items">
+  <div v-if="items.length" class="grid items">
 
-  <div class="cell-1">
-    <div class="grid bottom p10b" v-for="(item, i) in items">
-      <div class="cell-1">
-        
-        <!-- Minimized Transaction -->
-        <div @click="selectTransaction(item)" class="grid">
-          <div v-if="item.logo_url" class="cell-4-24 p10r">
-            <img :src="item.logo_url" style="height: 50px;" alt="Logo" />
+    <div class="cell-1">
+      <div class="grid bottom p10b" v-for="(item, i) in items">
+        <div class="cell-1">
+
+          <!-- Minimized Transaction -->
+          <div @click="selectTransaction(item)" class="grid">
+            <div class="cell-4-24 p10r">
+              <img v-if="item.logo_url" :src="item.logo_url" style="height: 50px;" alt="Logo" />
+              <img v-else :src="'/chart.svg'" style="height: 50px;" />
+            </div>
+            <div class="cell-15-24">
+              <small class="colorDarkGreen">#{{ i + 1 }}. {{ item.date }}</small>
+              <br>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
+            </div>
+            <div :class="['cell-5-24 p10 left', fontColor(item.amount)]">
+              {{ formatPrice(item.amount) }}
+            </div>
           </div>
-          <div class="cell-16-24">
-            <small class="colorDarkGreen">#{{ i+1 }}. {{ item.date }}</small>
-            <br>{{  item.name }}  <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
-          </div>
-          <div class="cell-4-25">
-            {{ formatPrice(item.amount) }}
-          </div>
+
+          <!-- Expanded Transaction -->
+          <TransactionDetails v-if="itemIsSelected(item._id)" :item="item" />
+
         </div>
-
-        <!-- Expanded Transaction -->
-        <TransactionDetails v-if="itemIsSelected(item._id)" :item="item" />
-
       </div>
     </div>
-  </div>
 
-</div>
+  </div>
 </template>
 
 <script setup>
@@ -47,8 +48,12 @@ const items = computed(() => {
   return selectedCategory[1];
 });
 
+const fontColor = (amt) => {
+  return amt > 0 ? 'font-color-positive' : 'font-color-negative';
+};
+
 function itemIsSelected(itemId) {
-  if(!state.selected.transaction) {
+  if (!state.selected.transaction) {
     return;
   }
 
@@ -56,12 +61,12 @@ function itemIsSelected(itemId) {
 };
 
 function selectTransaction(item) {
-  if(itemIsSelected(item._id)) {
+  if (itemIsSelected(item._id)) {
     state.selected.transaction = false;
     return;
   }
 
-  state.selected.transaction=item;
+  state.selected.transaction = item;
 }
 
 </script>
@@ -70,6 +75,7 @@ function selectTransaction(item) {
 .items {
   font-weight: normal;
 }
+
 .dottedBottom {
   border-bottom: 1px dotted lightblue;
 }

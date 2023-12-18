@@ -4,7 +4,7 @@
   <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
     <div class="grid">
       <div class="cell auto">
-        <b>{{ categoryItems.length }}</b> {{ categoryName }} <b>{{ catTotal }}</b>
+        <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor">{{ catTotal }}</b>
       </div>
       <div class="cell shrink categoryExpand">
         <span class="bold colorJet icon">
@@ -52,6 +52,10 @@ const catTotal = computed(() => {
   const toFixed = isSelected.value ? 2 : 0;
 
   return formatPrice(categoryTotal, { toFixed })
+});
+
+const fontColor = computed(() => {
+  return categoryTotal > 0 ? 'font-color-positive' : 'font-color-negative';
 });
 
 function selectCategory() {
@@ -133,8 +137,8 @@ onBeforeUnmount(() => {
   line-height: 2;
   cursor: pointer;
 }
-.categoryTitle b {
-  color: blue;
+.count {
+  color: #333;
 }
 
 .expandedCat {
