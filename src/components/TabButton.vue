@@ -118,7 +118,6 @@ watch(() => props.tab.sort, (newSort) => {
 .tab-button:hover,
 .tab-button:active,
 .tab-button:focus {
-  color: blue;
   outline: none;
 }
 

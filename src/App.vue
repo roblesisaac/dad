@@ -14,6 +14,7 @@
   </Transition>
 </template>
 
+
 <script setup>
 import NavMain from './components/NavMain.vue';
 import OffCanvasLinks from './components/OffCanvasLinks.vue';
