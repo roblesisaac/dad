@@ -85,10 +85,10 @@ function selectTransaction(item) {
 }
 
 .transaction-selected.grid {
-  background-image: radial-gradient(#000 10%, transparent 10%), radial-gradient(#000 10%, transparent 10%);
-  background-position: 0 0, 25px 25px;
-  background-size: 5px 5px;
-  padding: 10px;
+  background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
+  background-position: 0;
+  background-size: 10px 10px;
+  padding: 30px 20px;
 }
 
 .transaction-selected.cell-1 {

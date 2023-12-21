@@ -70,6 +70,8 @@ const transactionSchema = {
   transaction_code: String,
   transaction_type: String,
   website: String,
+  notes: String,
+  tags: [String],
   label1: 'transaction_id',
   label2: 'date',
   label3: {
