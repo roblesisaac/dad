@@ -12,6 +12,7 @@ import plaid from './plaid';
 import rules from './rules';
 import sites from './sites';
 import tabs from './tabs';
+import transactions from './transactions';
 import users from './users';
 
 export default (app) => {
@@ -34,6 +35,7 @@ export default (app) => {
         plaid,
         rules,
         tabs,
+        transactions,
         users,
         // db
     ].forEach(route => route(api, '/api'));

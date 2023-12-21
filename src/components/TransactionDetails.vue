@@ -34,12 +34,12 @@
           <b>Recategorize As:</b>
         </div>
         <div class="cell-1">
-          <input v-model="transactionState.recategorize" type="text" />
+          <input v-model="item.recategorizeAs" type="text" />
         </div>
         
         <!-- Apply-to options -->
         <Transition>
-        <div v-if="transactionState.recategorize" class="grid">
+        <div v-if="item.recategorizeAs !== transactionState.originalCategory" class="grid">
           <div class="cell-1 p10t">
             <b>Apply New Category To:</b>
           </div>
@@ -75,7 +75,10 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useAppStore } from '../stores/state';
+
+const { api } = useAppStore();
 
 const { item, state } = defineProps({
   item: Object,
@@ -83,8 +86,17 @@ const { item, state } = defineProps({
 });
 
 const transactionState = ref({
-  recategorize: ''
+  originalCategory: item.recategorizeAs,
+  changedCategory: false,
+  typingTimer: null
 });
+
+function waitUntilTypingStops(ms=500) {
+  return new Promise((resolve) => {
+    clearTimeout(transactionState.typingTimer);
+    transactionState.typingTimer = setTimeout(resolve, ms);
+  });
+}
 
 console.log({
   item,
@@ -99,6 +111,13 @@ const prettyCategory = computed(() => {
 
   return category.split(',').join(', ');
 });
+
+async function updateTransaction() {
+  await waitUntilTypingStops();
+  api.put(`api/transactions/${item._id}`, item);
+}
+
+watch(() => item.recategorizeAs, updateTransaction);
 
 </script>
 

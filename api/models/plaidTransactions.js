@@ -71,6 +71,7 @@ const transactionSchema = {
   transaction_type: String,
   website: String,
   notes: String,
+  recategorizeAs: String,
   tags: [String],
   label1: 'transaction_id',
   label2: 'date',
