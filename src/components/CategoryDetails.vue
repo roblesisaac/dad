@@ -137,9 +137,6 @@ onBeforeUnmount(() => {
   line-height: 2;
   cursor: pointer;
 }
-.count {
-  color: mediumblue;
-}
 
 .expandedCat {
   position: absolute;

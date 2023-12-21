@@ -884,8 +884,12 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
   background: #efeff5;
 }
 
+.count {
+  color: mediumblue;
+}
+
 .font-color-positive {
-  color: #00f;
+  color: darkblue;
 }
 
 .font-color-neutral {
