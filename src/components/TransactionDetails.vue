@@ -77,7 +77,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 
-const { item } = defineProps({
+const { item, state } = defineProps({
   item: Object,
   state: Object
 });
@@ -88,7 +88,7 @@ const transactionState = ref({
 
 console.log({
   item,
-  rules: props.state.allUserRules.find((rule) => rule._id === item.rulesApplied[0])
+  rules: state.allUserRules.find((rule) => rule._id === item.rulesApplied[0])
 });
 
 const prettyCategory = computed(() => {
