@@ -24,14 +24,14 @@
           <b>Add Note:</b>
         </div>
         <div class="cell-1">
-          <textarea rows="3" class="add-note"></textarea>
+          <textarea rows="3" class="add-note" v-model="item.notes"></textarea>
         </div>
       </div>
 
       <!-- Recategorize As -->
       <div class="grid">
         <div class="cell-1">
-          <b>Recategorize As:</b>
+          <b>Recategorize<span v-if="item.recategorizeAs">d</span> As:</b>
         </div>
         <div class="cell-1">
           <input v-model="item.recategorizeAs" type="text" />
@@ -118,6 +118,7 @@ async function updateTransaction() {
 }
 
 watch(() => item.recategorizeAs, updateTransaction);
+watch(() => item.notes, updateTransaction);
 
 </script>
 

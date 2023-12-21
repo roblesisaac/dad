@@ -104,5 +104,6 @@ function selectTransaction(item) {
   border-radius: 3px;
   padding: 10px;
   border: 1px solid;
+  cursor: pointer;
 }
 </style>
