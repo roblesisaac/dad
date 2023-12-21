@@ -56,7 +56,7 @@
 
   const ruleType = ruleConfig.rule[0];
   const allMethods = ['>=', '>', '=', 'is not', '<=', '<', 'includes', 'excludes', 'startsWith', 'endsWith' ];
-  const allProps = ['amount', 'category', 'date', 'name'];
+  const allProps = ['amount', 'category', 'date', 'name', 'notes'];
 
   const ruleIsShared = computed(() => {
     return ruleConfig?.applyForTabs?.length > 1;
@@ -78,11 +78,11 @@
           'amount', '-amount',
           'date', '-date',
           'name', '-name',
-          'category', '-category'
+          'category', '-category',
         ]
       },
       filter: {
-        propNamesToSave: ['ruleType', 'itemProp', 'ruleMethodName', 'testStandard'],
+        propNamesToSave: ['ruleType', 'itemProp', 'ruleMethodName', 'testStandard', 'notes'],
         itemProps: allProps,
         ruleMethodNames: allMethods
       },

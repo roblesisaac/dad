@@ -252,6 +252,11 @@
       };
 
       const categorize = (item) => {
+        if(item.recategorizeAs) {
+          item.personal_finance_category.primary = item.recategorizeAs;
+          return item.recategorizeAs;
+        }
+
         formatPersonalFinanceCategory(item);
 
         if(!categorizers.length) {
