@@ -893,7 +893,7 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 }
 
 .font-color-negative {
-  color: #f00
+  color: darkred;
 }
 
 .tab-button.selected {
