@@ -88,7 +88,10 @@ const transactionState = ref({
 
 console.log({
   item,
-  rules: state.allUserRules.find((rule) => rule._id === item.rulesApplied[0])
+  rules: state.allUserRules.find((rule) => {
+    const [firstItem] = item.rulesApplied || [];
+    return rule._id === firstItem;
+  })
 });
 
 const prettyCategory = computed(() => {
