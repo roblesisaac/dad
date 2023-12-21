@@ -2,7 +2,7 @@
   <!-- BlueBar -->
   <Transition>
   <div v-if="state.blueBar.message" class="grid">
-    <div class="cell-1 p10l  bgBlue bold">
+    <div class="cell-1 p10l blue-bar bold">
       <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
     </div>
   </div>
@@ -866,6 +866,10 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 
 .acctButton {
   background: lightsteelblue;
+}
+
+.blue-bar {
+  background-color: slateblue;
 }
 
 .datePickers {
