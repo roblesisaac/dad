@@ -15,12 +15,14 @@
               <img v-else :src="'/chart.svg'" style="height: 50px;" />
             </div>
             <div class="cell-15-24">
-              <small class="colorDarkGreen">#{{ i + 1 }}. {{ item.date }}</small>
+              <small class="colorDarkGreen bold">#{{ i + 1 }}. {{ item.date }}</small>
               <br>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
               <br v-if="itemIsSelected(item._id)">
-              <span v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">{{ formatPrice(item.amount) }}</span>
+              <b v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">
+                {{ formatPrice(item.amount) }}
+              </b>
             </div>
-            <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left', fontColor(item.amount)]">
+            <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left bold', fontColor(item.amount)]">
               {{ formatPrice(item.amount, { toFixed: 0 }) }}
             </div>
           </div>
