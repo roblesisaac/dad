@@ -269,6 +269,12 @@
             const categoryName = categorizeConfig.categorizeAs;
             if(categorizeConfig._isImportant) _important = categorizeConfig.categorizeAs;
 
+            item.rulesApplied = item.rulesApplied || new Set();
+
+            if(!item.rulesApplied.has(categorizeConfig._id)) {
+              item.rulesApplied.add(categorizeConfig._id);
+            }
+
             item.personal_finance_category.primary = (_important || categoryName).toLowerCase();
           }
         }
@@ -380,8 +386,10 @@
 
         if(ruleType === 'categorize') {
           categorizers.push({
+            _id: ruleConfig._id,
             method: ruleMethod,
             categorizeAs,
+            itemPropName, ruleMethodName, testStandard,
             orderOfExecution,
             _isImportant
           });

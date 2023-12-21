@@ -1,5 +1,5 @@
 <template>
-  <div class="grid">
+  <div class="grid p20y">
     <!-- Transaction Details -->
     <div class="cell-1 proper">
       <p>
@@ -18,44 +18,8 @@
     <!-- Transaction Controls -->
     <div class="cell-1">
 
-      <!-- Recategorize As -->
-      <div class="grid p20b">
-        <div class="cell-1">
-          <b>Recategorize As:</b>
-        </div>
-        <div class="cell-1">
-          <input type="text" />
-        </div>
-
-        <div class="cell-1 p10t">
-          <b>Apply To:</b>
-        </div>
-        <div class="cell-1">
-          <!-- This item only -->
-          <div class="grid">
-            <div class="cell shrink">
-              <input type="radio" id="this-item-only" name="apply-to" value="this-item-only" checked>
-            </div>
-            <div class="cell auto p10l">
-              <label for="this-item-only">This item only</label>
-            </div>
-          </div>
-
-          <!-- Anything that matches -->
-          <div class="grid">
-            <div class="cell shrink">
-              <input type="radio" id="anything-that-matches" name="apply-to" value="anything-that-matches">
-            </div>
-            <div class="cell auto p10l">
-              <label for="anything-that-matches">Anything that matches</label>
-            </div>
-          </div>
-        </div>
-
-      </div>
-
       <!-- Add Note -->
-      <div class="grid">
+      <div class="grid p20b">
         <div class="cell-1">
           <b>Add Note:</b>
         </div>
@@ -64,18 +28,68 @@
         </div>
       </div>
 
+      <!-- Recategorize As -->
+      <div class="grid">
+        <div class="cell-1">
+          <b>Recategorize As:</b>
+        </div>
+        <div class="cell-1">
+          <input v-model="transactionState.recategorize" type="text" />
+        </div>
+        
+        <!-- Apply-to options -->
+        <Transition>
+        <div v-if="transactionState.recategorize" class="grid">
+          <div class="cell-1 p10t">
+            <b>Apply New Category To:</b>
+          </div>
+
+          <div class="cell-1 p10l">
+            <!-- This item only -->
+            <div class="grid">
+              <div class="cell shrink">
+                <input type="radio" id="this-item-only" name="apply-to" value="this-item-only" checked>
+              </div>
+              <div class="cell auto p10l">
+                <label for="this-item-only">This item only</label>
+              </div>
+            </div>
+
+            <!-- Anything that matches -->
+            <div class="grid">
+              <div class="cell shrink">
+                <input type="radio" id="anything-that-matches" name="apply-to" value="anything-that-matches">
+              </div>
+              <div class="cell auto p10l">
+                <label for="anything-that-matches">Anything that matches</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        </Transition>
+
+      </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 
 const { item } = defineProps({
-  item: Object
+  item: Object,
+  state: Object
 });
 
-console.log(item);
+const transactionState = ref({
+  recategorize: ''
+});
+
+console.log({
+  item,
+  rules: props.state.allUserRules.find((rule) => rule._id === item.rulesApplied[0])
+});
 
 const prettyCategory = computed(() => {
   const category = item.category || '';

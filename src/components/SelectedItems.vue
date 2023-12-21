@@ -7,6 +7,9 @@
 
           <!-- Minimized Transaction -->
           <div @click="selectTransaction(item)" class="grid">
+            <!-- Hide Details (minus) icon -->
+            <div v-if="itemIsSelected(item._id)" class="cell-1 right"><Minus /></div>
+
             <div class="cell-4-24 p10r">
               <img v-if="item.logo_url" :src="item.logo_url" style="height: 50px;" alt="Logo" />
               <img v-else :src="'/chart.svg'" style="height: 50px;" />
@@ -14,14 +17,16 @@
             <div class="cell-15-24">
               <small class="colorDarkGreen">#{{ i + 1 }}. {{ item.date }}</small>
               <br>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
+              <br v-if="itemIsSelected(item._id)">
+              <span v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">{{ formatPrice(item.amount) }}</span>
             </div>
-            <div :class="['cell-5-24 p10 left', fontColor(item.amount)]">
+            <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left', fontColor(item.amount)]">
               {{ formatPrice(item.amount) }}
             </div>
           </div>
 
           <!-- Expanded Transaction -->
-          <TransactionDetails v-if="itemIsSelected(item._id)" :item="item" />
+          <TransactionDetails v-if="itemIsSelected(item._id)" :state="state" :item="item" />
 
         </div>
       </div>
@@ -34,6 +39,7 @@
 import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
 import { formatPrice } from '../utils';
+import Minus from 'vue-material-design-icons/Minus.vue';
 
 const { categoryName, state } = defineProps({
   categoryName: String,
