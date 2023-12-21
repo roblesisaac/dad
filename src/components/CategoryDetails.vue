@@ -16,7 +16,7 @@
   </div>
 
   <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
-    <SelectedItems :state="state" :categoryName="categoryName" class="p15" />
+    <SelectedItems :state="state" :categoryName="categoryName" />
   </div>
 
 </div>

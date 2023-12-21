@@ -56,7 +56,7 @@ button > *:nth-child(n) {
 
 button:hover {
   background-color: var(--dark-blue);
-  color: #fff;
+  /* color: #fff; */
 }
 
 button.bgDarkBlue:hover {

@@ -2,8 +2,8 @@
   <div v-if="items.length" class="grid items">
 
     <div class="cell-1">
-      <div class="grid bottom p10b" v-for="(item, i) in items">
-        <div class="cell-1">
+      <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x']" v-for="(item, i) in items">
+        <div :class="[ifSelectedClass(item._id), 'cell-1']">
 
           <!-- Minimized Transaction -->
           <div @click="selectTransaction(item)" class="grid">
@@ -60,6 +60,10 @@ function itemIsSelected(itemId) {
   return state.selected.transaction._id === itemId;
 };
 
+const ifSelectedClass = (itemId) => {
+  return itemIsSelected(itemId) ? 'transaction-selected' : '';
+};
+
 function selectTransaction(item) {
   if (itemIsSelected(item._id)) {
     state.selected.transaction = false;
@@ -78,5 +82,20 @@ function selectTransaction(item) {
 
 .dottedBottom {
   border-bottom: 1px dotted lightblue;
+}
+
+.transaction-selected.grid {
+  background-image: radial-gradient(#000 10%, transparent 10%), radial-gradient(#000 10%, transparent 10%);
+  background-position: 0 0, 25px 25px;
+  background-size: 5px 5px;
+  padding: 10px;
+}
+
+.transaction-selected.cell-1 {
+  background: #fff;
+  border-radius: 3px;
+  padding: 10px;
+  box-shadow: 3px 3px;
+  border: 1px solid;
 }
 </style>
