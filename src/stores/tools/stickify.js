@@ -16,22 +16,12 @@ const sticky = (() => {
       : document.getElementById(selector);
   }
 
-  function focusOnConfigs(newIndex) {
-    if (newIndex < 0 || newIndex > configs.length) {
-      return;
-    }
-
-    focusedIndex = newIndex;
-    focusedConfigs = [
-      newIndex > 0 ? configs[newIndex - 1] : undefined,
-      configs[newIndex],
-    ];
-  }
-
   function getScrollDirection() {
     let currentScrollPosition = document.documentElement.scrollTop || window.scrollY;
     const direction = currentScrollPosition > lastScrollPosition ? 1 : 0;
+
     lastScrollPosition = currentScrollPosition <= 0 ? 0 : currentScrollPosition;
+
     return direction;
   }
 
@@ -59,7 +49,7 @@ const sticky = (() => {
 
     currentStuckHeight += height;
 
-    focusOnConfigs(focusedIndex+1);
+    shiftFocus(focusedIndex+1);
   }
 
   function makeUnSticky(config) {
@@ -79,7 +69,7 @@ const sticky = (() => {
     currentStuckHeight -= height; 
     delete config.originalStyle;
 
-    focusOnConfigs(focusedIndex-1);
+    shiftFocus(focusedIndex-1);
   }
 
   function onScroll() {
@@ -133,6 +123,19 @@ const sticky = (() => {
     }
 
     resetInProgress = false;
+  }
+
+  function shiftFocus(newIndex) {
+    if (newIndex < 0 || newIndex > configs.length) {
+      currentStuckHeight = 0;
+      return;
+    }
+
+    focusedIndex = newIndex;
+    focusedConfigs = [
+      newIndex > 0 ? configs[newIndex - 1] : undefined,
+      configs[newIndex],
+    ];
   }
 
   return {
@@ -192,7 +195,7 @@ const sticky = (() => {
         return;
       }
 
-      focusOnConfigs(focusedIndex);
+      shiftFocus(focusedIndex);
     },
     unstick: (selectorName) => {
       const configToUnstick = configs.find(config => config.selector === selectorName);
