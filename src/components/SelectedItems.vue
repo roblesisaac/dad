@@ -2,7 +2,7 @@
   <div v-if="items.length" class="grid items">
 
     <div class="cell-1">
-      <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x']" v-for="(item, i) in items">
+      <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x item']" v-for="(item, i) in items">
         <div :class="[ifSelectedClass(item._id), 'cell-1']">
 
           <!-- Minimized Transaction -->
@@ -21,7 +21,7 @@
               <span v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">{{ formatPrice(item.amount) }}</span>
             </div>
             <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left', fontColor(item.amount)]">
-              {{ formatPrice(item.amount) }}
+              {{ formatPrice(item.amount, { toFixed: 0 }) }}
             </div>
           </div>
 
@@ -38,7 +38,7 @@
 <script setup>
 import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
-import { formatPrice } from '../utils';
+import { fontColor, formatPrice } from '../utils';
 import Minus from 'vue-material-design-icons/Minus.vue';
 
 const { categoryName, state } = defineProps({
@@ -53,10 +53,6 @@ const items = computed(() => {
 
   return selectedCategory[1];
 });
-
-const fontColor = (amt) => {
-  return amt > 0 ? 'font-color-positive' : 'font-color-negative';
-};
 
 function itemIsSelected(itemId) {
   if (!state.selected.transaction) {
@@ -82,26 +78,29 @@ function selectTransaction(item) {
 </script>
 
 <style>
-.items {
-  font-weight: normal;
-}
 
 .dottedBottom {
   border-bottom: 1px dotted lightblue;
 }
 
 .transaction-selected.grid {
+  padding: 30px 20px;
+}
+
+.items {
   background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
   background-position: 0;
   background-size: 10px 10px;
   padding: 30px 20px;
+  font-weight: normal;
 }
 
-.transaction-selected.cell-1 {
-  background: #fff;
+.item {
+  background-color: #fff;
+  box-shadow: 3px 3px;
+  margin-bottom: 20px;
   border-radius: 3px;
   padding: 10px;
-  box-shadow: 3px 3px;
   border: 1px solid;
 }
 </style>

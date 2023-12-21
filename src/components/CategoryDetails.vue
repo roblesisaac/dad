@@ -4,7 +4,7 @@
   <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
     <div class="grid">
       <div class="cell auto">
-        <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor">{{ catTotal }}</b>
+        <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
       </div>
       <div class="cell shrink categoryExpand">
         <span class="bold colorJet icon">
@@ -28,7 +28,7 @@ import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import SelectedItems from './SelectedItems.vue';
 
-import { formatPrice } from '../utils';
+import { fontColor, formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
 const { stickify } = useAppStore();
@@ -54,9 +54,9 @@ const catTotal = computed(() => {
   return formatPrice(categoryTotal, { toFixed })
 });
 
-const fontColor = computed(() => {
-  return categoryTotal > 0 ? 'font-color-positive' : 'font-color-negative';
-});
+// const fontColor = computed(() => {
+//   return categoryTotal > 0 ? 'font-color-positive' : 'font-color-negative';
+// });
 
 function selectCategory() {
   const isCategorySelected = selectedTab.categoryName === categoryName;
@@ -138,7 +138,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 .count {
-  color: #333;
+  color: mediumblue;
 }
 
 .expandedCat {

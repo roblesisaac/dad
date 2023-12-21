@@ -1,5 +1,5 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor, uniqueTabClassName, borders, isSelectedClass]">
+  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass]">
     <!-- Dots -->
     <DotsVertical v-if="tab.isSelected" @click="editTab()" />
   
@@ -20,7 +20,7 @@ import { computed, nextTick, watch } from 'vue';
 import LoadingDots from './LoadingDots.vue';
 import DragVertical from 'vue-material-design-icons/DragVertical.vue';
 import DotsVertical from 'vue-material-design-icons/DotsVertical.vue';
-import { formatPrice } from '../utils';
+import { fontColor, formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
@@ -53,9 +53,11 @@ const borders = computed(() => {
   return [bottomBorder, rightBorder, borderLeft];
 });
 
-const fontColor = computed(() => {
-  return props.tab.total > 0 ? 'font-color-positive' : 'font-color-negative';
-});
+// const fontColor = computed(() => {
+//   return props.tab.total > 0 ? 'font-color-positive' : 'font-color-negative';
+// });
+
+
 
 const tabTotal = computed(() => {
   const total = props.tab.total || 0;

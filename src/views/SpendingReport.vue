@@ -864,11 +864,23 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
   background: #fff;
 }
 
-/* .acctButton {
-  background: #659ef6;
-} */
+.acctButton {
+  background: lightsteelblue;
+}
 
-.datePickers, .tab-button, .logoBtn, .acctButton  {
+.datePickers {
+  background: ghostwhite;
+}
+
+.view-all {
+  background-color: whitesmoke;
+}
+
+.logoBtn {
+  background-color: #efeff5;
+}
+
+.tab-button  {
   background: #efeff5;
 }
 
@@ -876,12 +888,12 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
   color: #00f;
 }
 
-.font-color-negative {
-  color: #f00
+.font-color-neutral {
+  color: #333;
 }
 
-.view-all {
-  background-color: #d3d3d3;
+.font-color-negative {
+  color: #f00
 }
 
 .tab-button.selected {

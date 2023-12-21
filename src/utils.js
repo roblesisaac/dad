@@ -16,6 +16,14 @@ export async function delay(s) {
   return new Promise(resolve => setTimeout(resolve, s*1000));
 }
 
+export function fontColor(amt) {
+  return amt > 0
+    ? 'font-color-positive' 
+    : amt === 0
+    ? 'font-color-neutral'
+    : 'font-color-negative'
+}
+
 export function formatDate(inputDate) { // outputs YYYY-MM-DD
   const date = new Date(inputDate);
   
@@ -46,40 +54,6 @@ export function formatPrice(value, { toFixed = 2, thousands = true } = {}) {
   }
 
   return '$' + formatted;
-}
-
-export function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-export function proper(str) {
-  if (!str) return '';
-
-  return str.toLowerCase().replace(/\b(\w)/g, function(firstLetter) {
-      return firstLetter.toUpperCase();
-  });
-}
-
-export function randomString(length=8) {
-  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let result = '';
-  for (let i = 0; i < length; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-}
-
-export function randomNumber(length=6) {
-  // Calculate the minimum and maximum values for the random number
-  const min = 10 ** (length - 1);
-  const max = 10 ** length - 1;
-  
-  // Generate a random number between min and max
-  const randomNumber = Math.floor(Math.random() * (max - min + 1) + min);
-  
-  // Return the random number
-  return randomNumber;
 }
 
 export const generateDate = (function() {
@@ -127,6 +101,40 @@ export const generateDate = (function() {
       return `${year}-${month}-${day}T${hours}-${minutes}-${seconds}Z`;
   }
 })();
+
+export function isValidEmail(email) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+}
+
+export function proper(str) {
+  if (!str) return '';
+
+  return str.toLowerCase().replace(/\b(\w)/g, function(firstLetter) {
+      return firstLetter.toUpperCase();
+  });
+}
+
+export function randomString(length=8) {
+  const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
+export function randomNumber(length=6) {
+  // Calculate the minimum and maximum values for the random number
+  const min = 10 ** (length - 1);
+  const max = 10 ** length - 1;
+  
+  // Generate a random number between min and max
+  const randomNumber = Math.floor(Math.random() * (max - min + 1) + min);
+  
+  // Return the random number
+  return randomNumber;
+}
 
 export function isEmptyObject(obj) {
   if(!obj) return false;
