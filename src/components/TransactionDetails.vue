@@ -18,8 +18,7 @@
         <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
       </p>
       <p>
-        <b>Category:</b>
-        <br />{{ prettyCategory }}
+        <b>Category:</b> {{ prettyCategory }}
       </p>
     </div>
 
