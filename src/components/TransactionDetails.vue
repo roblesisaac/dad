@@ -129,8 +129,6 @@ const rulesAppliedToItem = computed(() => {
   });
 });
 
-console.log(rulesAppliedToItem.value)
-
 function waitUntilTypingStops(ms=500) {
   return new Promise((resolve) => {
     clearTimeout(transactionDetailsState.typingTimer);

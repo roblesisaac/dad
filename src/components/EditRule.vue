@@ -22,7 +22,7 @@
     <div v-if="app.shouldShow('ruleMethodName')" class="cell shrink p10y p10r">
       <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" />
     </div>
-    <div v-if="app.shouldShow('testStandard') && state.is('EditTab')" class="cell shrink p10y p10r">
+    <div v-if="app.shouldShow('testStandard') && state.is('EditTab') || state.is('home')" class="cell shrink p10y p10r">
       <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
     </div>
     <div v-if="ruleConfig._id && state.is('EditTab')" class="cell shrink p10y p10r bold">
@@ -146,6 +146,11 @@
         ruleConfig.rule = [ruleType, '', '', '', ''];
       },
       shouldShow: function(propName) {
+        console.log({
+          ruleConfig,
+          ruleType,
+          propNamesToSave: editRuleState.ruleTypes[ruleType].propNamesToSave
+        })
         return editRuleState.ruleTypes[ruleType].propNamesToSave.includes(propName);
       }
     }
