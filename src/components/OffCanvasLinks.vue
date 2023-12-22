@@ -16,7 +16,6 @@
 <script setup>
 import { useAppStore } from '../stores/state';
 const { api, State, utils } = useAppStore();
-import CloseThickIcon from 'vue-material-design-icons/CloseThick.vue';
 
 const app = function() {
   async function getUserViews() {
