@@ -3,7 +3,8 @@
     <!-- Transaction Details -->
     <div class="cell-1 proper">
       <p>
-        <b>Paid With:</b>
+        <b v-if="item.amount<0">Paid With:</b>
+        <p v-else>Deposited To:</p>
         <br />
         <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
         <br v-if="accountName && accountName !== accountData.name" />

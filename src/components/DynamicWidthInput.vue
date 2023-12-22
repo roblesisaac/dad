@@ -18,7 +18,7 @@ function adaptWidthToValue() {
   const $input = inputRef.value;
   const inputValue = $input.value || placeholder;
 
-  inputWidth.value = inputValue.length;
+  inputWidth.value = inputValue.length+1;
 }
     
 onMounted(adaptWidthToValue);

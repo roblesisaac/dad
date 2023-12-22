@@ -164,13 +164,16 @@ select.editRule, input.editRule {
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
-  text-decoration: underline;
   box-shadow: none;
   font-weight: bold;
   color: #2400FF;
   padding: 0;
   background: transparent;
-  border: none;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  border-bottom: 2px solid blue;
+  border-radius: 0;
 }
 
 .code-editor {
