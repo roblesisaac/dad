@@ -3,15 +3,24 @@
     <!-- Transaction Details -->
     <div class="cell-1 proper">
       <p>
-        <b>Category:</b>
-        <br />{{ prettyCategory }}
-      </p>
-      <p>
         <b>Paid:</b>
         <br />{{ item.payment_channel }}
       </p>
       <p>
         <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
+      </p>
+      <p>
+        <b>Account:</b>
+        <br />
+        <span>{{ accountData.name }} #{{ accountData.mask }}</span>
+        <br />
+        <span>{{ accountData.official_name }}</span>
+        <br />
+        <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
+      </p>
+      <p>
+        <b>Category:</b>
+        <br />{{ prettyCategory }}
       </p>
     </div>
 
@@ -77,6 +86,7 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useAppStore } from '../stores/state';
+import { formatPrice } from '../utils';
 
 const { api } = useAppStore();
 
@@ -90,6 +100,8 @@ const transactionState = ref({
   changedCategory: false,
   typingTimer: null
 });
+
+const accountData = computed(() => state.allUserAccounts.find(account => account.account_id === item.account_id) || {});
 
 function waitUntilTypingStops(ms=500) {
   return new Promise((resolve) => {
