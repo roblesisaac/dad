@@ -38,7 +38,7 @@ const tasks = (function() {
     return await plaid.syncTransactionsForItem(itemId, userId);
   });
 
-  const testTask = task('test.joined', { timeout: 30*1000 }, async ({ body }) => {
+  const testTask = task('test.joined', { timeout: 60*20*1000 }, async ({ body }) => {
     const token = generateToken({ test: 'true' });
   
     console.log({

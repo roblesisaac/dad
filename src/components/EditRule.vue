@@ -146,11 +146,6 @@
         ruleConfig.rule = [ruleType, '', '', '', ''];
       },
       shouldShow: function(propName) {
-        console.log({
-          ruleConfig,
-          ruleType,
-          propNamesToSave: editRuleState.ruleTypes[ruleType].propNamesToSave
-        })
         return editRuleState.ruleTypes[ruleType].propNamesToSave.includes(propName);
       }
     }
