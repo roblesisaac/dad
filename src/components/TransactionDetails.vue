@@ -12,9 +12,9 @@
       <p>
         <b>Account:</b>
         <br />
-        <span>{{ accountData.name }}</span> <span class="colorDarkestBlue bold">#{{ accountData.mask }}</span>
-        <br />
-        <span>{{ accountData.official_name }}</span>
+        <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
+        <br v-if="accountName" />
+        <span v-if="accountName">{{ accountName }}</span>
         <br />
         <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
       </p>
@@ -102,6 +102,8 @@ const transactionState = ref({
 });
 
 const accountData = computed(() => state.allUserAccounts.find(account => account.account_id === item.account_id) || {});
+
+const accountName = computed(() => accountData.value.official_name || accountData.value.name);
 
 function waitUntilTypingStops(ms=500) {
   return new Promise((resolve) => {
