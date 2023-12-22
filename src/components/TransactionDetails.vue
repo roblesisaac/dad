@@ -12,7 +12,7 @@
       <p>
         <b>Account:</b>
         <br />
-        <span>{{ accountData.name }}</span><span class="colorDarkestBlue">#{{ accountData.mask }}</span>
+        <span>{{ accountData.name }}</span> <span class="colorDarkestBlue bold">#{{ accountData.mask }}</span>
         <br />
         <span>{{ accountData.official_name }}</span>
         <br />
