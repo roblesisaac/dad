@@ -13,10 +13,10 @@
         <b>Account:</b>
         <br />
         <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
-        <br v-if="accountName" />
-        <span v-if="accountName">{{ accountName }}</span>
+        <br v-if="accountName && accountName !== accountData.name" />
+        <span v-if="accountName && accountName !== accountData.name">{{ accountName }}</span>
         <br />
-        <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
+        Current Balance: <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
       </p>
       <p>
         <b>Category:</b>
