@@ -1,5 +1,5 @@
 <template>
-  <div v-if="items.length" class="grid items">
+  <div v-if="items.length" class="grid items proper">
 
     <div class="cell-1">
       <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x item']" v-for="(item, i) in items">
