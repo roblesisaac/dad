@@ -48,7 +48,7 @@
         
         <!-- Apply-to options -->
         <Transition>
-        <div v-if="item.recategorizeAs !== transactionState.originalCategory" class="grid">
+        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="grid">
           <div class="cell-1 p10t">
             <b>Apply New Category To:</b>
           </div>
@@ -80,11 +80,17 @@
       </div>
 
     </div>
+
+    <!-- Rules Applied -->
+    <div class="cell-1" v-for="rule in rulesAppliedToItem" :key="rule._id">
+      <EditRule :ruleConfig="rule" :state="state" :showReorder="false" />
+    </div>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import EditRule from './EditRule.vue';
 import { useAppStore } from '../stores/state';
 import { formatPrice } from '../utils';
 
@@ -95,7 +101,7 @@ const { item, state } = defineProps({
   state: Object
 });
 
-const transactionState = ref({
+const transactionDetailsState = ref({
   originalCategory: item.recategorizeAs,
   changedCategory: false,
   typingTimer: null
@@ -105,26 +111,32 @@ const accountData = computed(() => state.allUserAccounts.find(account => account
 
 const accountName = computed(() => accountData.value.official_name || accountData.value.name);
 
-function waitUntilTypingStops(ms=500) {
-  return new Promise((resolve) => {
-    clearTimeout(transactionState.typingTimer);
-    transactionState.typingTimer = setTimeout(resolve, ms);
-  });
-}
-
-console.log({
-  item,
-  rules: state.allUserRules.find((rule) => {
-    const [firstItem] = item.rulesApplied || [];
-    return rule._id === firstItem;
-  })
-});
-
 const prettyCategory = computed(() => {
   const category = item.category || '';
 
   return category.split(',').join(', ');
 });
+
+const rulesAppliedToItem = computed(() => {
+  if(!item.rulesApplied?.size) {
+    return [];
+  }
+  
+  return [...item.rulesApplied].map((ruleId) => {
+    return state.allUserRules.find((rule) => {
+      return rule._id === ruleId;
+    });
+  });
+});
+
+console.log(rulesAppliedToItem.value)
+
+function waitUntilTypingStops(ms=500) {
+  return new Promise((resolve) => {
+    clearTimeout(transactionDetailsState.typingTimer);
+    transactionDetailsState.typingTimer = setTimeout(resolve, ms);
+  });
+}
 
 async function updateTransaction() {
   await waitUntilTypingStops();
