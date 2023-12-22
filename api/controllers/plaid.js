@@ -16,7 +16,6 @@ import Sites from '../models/sites';
 import Users from '../models/users';
 
 const {
-  AMPT_URL,
   PLAID_CLIENT_ID,
   PLAID_SECRET_DEVELOPMENT,
   PLAID_SECRET_SANDBOX,
@@ -430,6 +429,7 @@ const app = function () {
 
     const days = (n) => n * 24 * 60 * 60 * 1000;
     const fiveDaysAgo = Date.now() - days(5);
+
     for (const item of items) {
       if (item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
 
@@ -823,15 +823,9 @@ const app = function () {
       res.json(response);
     },
     syncTransactionsForItem,
-    test: async (req, res) => {
-      const { user } = req;
-
-      const accounts = await plaidGroups.findAll({
-        name: `*`,
-        userId: ''
-      });
-
-      res.json(accounts);
+    test: async (_, res) => {
+      const result = tasks.test();
+      res.json({ result });
     }
   }
 }();

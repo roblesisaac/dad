@@ -2,29 +2,23 @@ import { params } from '@ampt/sdk';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-const {
-  CRYPT_KEY,
-  CRYPT_IV,
-  RSA_PRIVATE,
-  RSA_PUBLIC
-} = params().list();
+function ENCRYPT_KEY() {
+  return JSON.parse(params('CRYPT_KEY'));
+}
 
-const RSA = {
-  PRIVATE: RSA_PRIVATE.replace(/\\n/g, '\n'),
-  PUBLIC: RSA_PUBLIC.replace(/\\n/g, '\n')
-};
-
-const ENCRYPT_KEY = JSON.parse(CRYPT_KEY);
-const ENCRYPT_IV = JSON.parse(CRYPT_IV);
+function ENCRYPT_IV() {
+  return JSON.parse(params('CRYPT_IV'));
+}
 
 export function decodeJWT(token) {
-  return jwt.verify(token, RSA.PUBLIC, { algorithm: 'RS256' });
+  const rsa_public = params('RSA_PUBLIC').replace(/\\n/g, '\n');
+  return jwt.verify(token, rsa_public, { algorithm: 'RS256' });
 }
 
 export function decrypt(encryptedData, dataType) {
   try {
     let encryptedText = Buffer.from(encryptedData, 'hex');
-    let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY, 'hex'), Buffer.from(ENCRYPT_IV, 'hex'));
+    let decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY(), 'hex'), Buffer.from(ENCRYPT_IV(), 'hex'));
     let decrypted = decipher.update(encryptedText);
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return {
@@ -66,7 +60,7 @@ export function encrypt(data) {
       data = data.toString();
     }
 
-    let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY, 'hex'), Buffer.from(ENCRYPT_IV, 'hex'));
+    let cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPT_KEY(), 'hex'), Buffer.from(ENCRYPT_IV(), 'hex'));
     let encrypted = cipher.update(data);
     encrypted = Buffer.concat([encrypted, cipher.final()]);
     return encrypted.toString('hex');
@@ -106,5 +100,7 @@ export function generateSymmetricKey() {
 
 export function generateToken(payload) {
   const exp = Math.floor(Date.now() / 1000) + (60 * 60);
-  return jwt.sign({ payload, exp }, RSA.PRIVATE, { algorithm: 'RS256' });
+  const rsa_private = params('RSA_PRIVATE').replace(/\\n/g, '\n');
+  
+  return jwt.sign({ payload, exp }, rsa_private, { algorithm: 'RS256' });
 }
