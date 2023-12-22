@@ -253,8 +253,10 @@
 
       const categorize = (item) => {
         if(item.recategorizeAs) {
-          item.personal_finance_category.primary = item.recategorizeAs;
-          return item.recategorizeAs;
+          let recategory = String(item.recategorizeAs).trim().toLowerCase();
+
+          item.personal_finance_category.primary = recategory;
+          return;
         }
 
         formatPersonalFinanceCategory(item);
