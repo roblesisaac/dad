@@ -3,13 +3,6 @@
     <!-- Transaction Details -->
     <div class="cell-1 proper">
       <p>
-        <b>Channel:</b>
-        <br />{{ item.payment_channel }}
-      </p>
-      <p>
-        <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
-      </p>
-      <p>
         <b>Paid With:</b>
         <br />
         <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
@@ -17,6 +10,12 @@
         <span v-if="accountName && accountName !== accountData.name">{{ accountName }}</span>
         <br />
         Current Balance: <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
+      </p>
+      <p>
+        <b>Channel:</b> {{ item.payment_channel }}
+      </p>
+      <p>
+        <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
       </p>
       <p>
         <b>Category:</b>
