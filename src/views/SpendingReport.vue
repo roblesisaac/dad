@@ -10,7 +10,7 @@
 
   <!-- BackButton -->
   <Transition>
-  <button v-if="!state.is(['home'])" @click="app.goBack" class="acctButton section b-bottom">
+  <button v-if="!state.is(['home'])" @click="app.goBack" class="backButton section b-bottom">
     <ChevronLeft class="icon" /> Back
   </button>
   </Transition>
@@ -740,7 +740,7 @@
         }
 
         state.allUserAccounts = accounts;
-        state.allUserGroups = groups;
+        state.allUserGroups = groups.sort(sortBy('sort'));
 
         await api.get('api/plaid/sync/all/transactions');
         app.checkSyncStatus();
@@ -887,6 +887,10 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 
 .acctButton {
   background: lightsteelblue;
+}
+
+.backButton {
+  background: deepskyblue;
 }
 
 .blue-bar {

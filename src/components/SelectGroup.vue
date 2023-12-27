@@ -12,23 +12,7 @@
   <div class="cell-1">
   <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions()" handle=".handlerGroup">
     <template #item="{element}">
-      <div class="grid middle b-top proper text-left" :key="element._id">
-        <div class="cell-3-24 p20">
-          <DragHorizontalVariant class="handlerGroup" />
-        </div>
-
-        <div class="cell-19-24 p20y pointer" @click="app.selectGroup(element)">
-          <b>{{ element.name }}</b><CheckBold v-if="element.isSelected" class="colorBlack" />
-          <br><small class="colorBlack"><b>Info:</b> {{ element.info }}</small>
-          <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(element.totalCurrentBalance) }}</small>
-          <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(element.totalAvailableBalance) }}</small>
-        </div>
-
-        <div class="cell-2-24" @click="app.selectGroup(element)">
-          <ChevronRight class="icon" />
-        </div>
-
-        </div>
+      <GroupRow :key="element._id" :app="app" :element="element" />
     </template>
   </Draggable>
   </div>
@@ -42,16 +26,13 @@
 </template>
 
 <script setup>
-import { nextTick } from 'vue';
-import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
-import CheckBold from 'vue-material-design-icons/CheckBold.vue'
+import { nextTick, watch } from 'vue';
+import GroupRow from './GroupRow.vue';
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import Draggable from 'vuedraggable';
-import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
 
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/state';
-import { formatPrice } from '../utils';
 
 const { api } = useAppStore();
 const props = defineProps({
@@ -125,6 +106,11 @@ const app = function() {
 }();
 
 app.init();
+
+watch(() => props.state.allUserGroups, (groups) => {
+  groups.forEach((group, groupIndex) => group.sort = groupIndex);
+});
+
 </script>
 
 <style>
