@@ -9,27 +9,28 @@
     <b>Loading <LoadingDots /></b>
   </div>
 
-  <!-- Select Group Buttons -->
-  <div v-for="group in props.state.allUserGroups"    
-    :key="group._id"
-    class="cell-1 b-top proper">
-    <div class="grid middle">
+  <div class="cell-1">
+  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions()" handle=".handlerGroup">
+    <template #item="{element}">
+      <div class="grid middle b-top proper text-left" :key="element._id">
+        <div class="cell-3-24 p20">
+          <DragHorizontalVariant class="handlerGroup" />
+        </div>
 
-      <div class="cell-2-24 pointer" @click="app.editGroup(group)">
-        <DotsVerticalCircleOutline class="colorBlue" />
-      </div>
+        <div class="cell-19-24 p20y pointer" @click="app.selectGroup(element)">
+          <b>{{ element.name }}</b><CheckBold v-if="element.isSelected" class="colorBlack" />
+          <br><small class="colorBlack"><b>Info:</b> {{ element.info }}</small>
+          <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(element.totalCurrentBalance) }}</small>
+          <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(element.totalAvailableBalance) }}</small>
+        </div>
 
-      <div class="cell-20-24 p20y pointer" @click="app.selectGroup(group)">
-        <b>{{ group.name }}</b><CheckBold v-if="group.isSelected" class="colorBlack" />
-        <br><small class="colorBlack"><b>Current:</b> {{ formatPrice(group.totalCurrentBalance) }}</small>
-        <br><small class="colorBlack"><b>Available:</b> {{ formatPrice(group.totalAvailableBalance) }}</small>
-      </div>
+        <div class="cell-2-24" @click="app.selectGroup(element)">
+          <ChevronRight class="icon" />
+        </div>
 
-      <div class="cell-2-24" @click="app.selectGroup(group)">
-        <ChevronRight class="icon" />
-      </div>
-
-    </div>
+        </div>
+    </template>
+  </Draggable>
   </div>
 
   <!-- Create New Group -->
@@ -45,7 +46,8 @@ import { nextTick } from 'vue';
 import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
 import CheckBold from 'vue-material-design-icons/CheckBold.vue'
 import PlusVue from 'vue-material-design-icons/Plus.vue';
-import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
+import Draggable from 'vuedraggable';
+import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
 
 import LoadingDots from './LoadingDots.vue';
 import { useAppStore } from '../stores/state';
@@ -80,6 +82,10 @@ const app = function() {
 
   return {
     createNewGroup: async () => {
+      if(!confirm('Are you sure you want to create a new group?')) {
+        return;
+      }
+
       const newGroupData = {
         accounts: [],
         isSelected: false,

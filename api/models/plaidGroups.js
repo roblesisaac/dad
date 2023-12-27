@@ -31,9 +31,12 @@ const accountGroupSchema = {
       acc + account.available, 0
     );
   },
+  info: String,
   isSelected: Boolean,
   name: String,
-  label1: 'name'
+  sort: Number,
+  label1: 'name',
+  label2: 'info'
 };
 
 export default AmptModel(['plaidgroups', 'userId'], accountGroupSchema);

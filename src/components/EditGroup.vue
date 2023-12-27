@@ -1,8 +1,9 @@
 <template>
-<div class="grid p20">
+<div class="grid p20 text-left">
 
   <!-- Group Name -->
   <div class="cell-1 p20b">
+
     <div class="grid middle">
       <div class="cell-1-5 bold">
         Name:
@@ -11,6 +12,14 @@
         <input type="text" v-model="props.state.editingGroup.name" class="transparent bold colorBlue" />
       </div>
     </div>
+
+    <div class="grid">
+      <div class="cell-1 bold ">Info:</div>
+      <div class="cell-1">
+        <textarea v-model="props.state.editingGroup.info" class="edit-info" ></textarea>
+      </div>
+    </div>
+
   </div>
 
   <!-- Accounts In Group -->
@@ -139,6 +148,7 @@ const app = function() {
 
       const newGroupData = {
         name: props.state.editingGroup.name,
+        info: props.state.editingGroup.info,
         accounts,
         totalCurrentBalance: sumOf(accounts, 'current'),
         totalAvailableBalance: sumOf(accounts, 'available')
@@ -152,6 +162,15 @@ const app = function() {
 }()
 
 watch(() => props.state.editingGroup.name, app.updateGroupName);
+watch(() => props.state.editingGroup.info, app.updateGroup);
 watch(() => props.state.editingGroup.accounts.length, app.updateGroup);
 
 </script>
+
+<style>
+.edit-info {
+  width: 100%;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+</style>

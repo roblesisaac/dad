@@ -683,13 +683,27 @@
         await renderSyncStatus(syncCheckId);
       },
       createNewTab: async () => {
+        if(location.pathname !== '/spendingreport') {
+          return;
+        }
+
+        const tabsForGroup = state.selected.tabsForGroup;
+        let tabName = `Tab ${tabsForGroup.length+1}`;
+
+        const response = prompt('What would you like to name this tab?', tabName)
+
+        if(!response) {
+          return;
+        }
+
+        tabName = response;
+
         if(!state.selected.group) {
           return;
         }
 
         const selectedGroup = state.selected.group;
         const selectedTab = state.selected.tab;
-        const tabsForGroup = state.selected.tabsForGroup;
 
         if(selectedTab) {
           selectedTab.isSelected = false;
@@ -697,7 +711,7 @@
         }
 
         const newTab = await api.post('api/tabs', {
-          tabName: `Tab ${tabsForGroup.length+1}`,
+          tabName,
           showForGroup: [selectedGroup._id],
           isSelected: true,
           sort: tabsForGroup.length+1
