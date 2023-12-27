@@ -10,7 +10,7 @@
   </div>
 
   <div class="cell-1">
-  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions()" handle=".handlerGroup">
+  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup">
     <template #item="{element}">
       <GroupRow :key="element._id" :app="app" :element="element" />
     </template>
