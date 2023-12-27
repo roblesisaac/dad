@@ -891,6 +891,8 @@ button.acctButton:active, button.tab-button:active, button.view-all:active {
 
 .backButton {
   background: deepskyblue;
+  width: 100%;
+  color: black;
 }
 
 .blue-bar {

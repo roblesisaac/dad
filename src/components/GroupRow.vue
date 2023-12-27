@@ -1,7 +1,7 @@
 <template>
 <div :class="['grid middle b-top proper text-left group-row', isSelected]">
     <div class="cell-3-24 p20">
-        <DragHorizontalVariant class="handlerGroup pointer" />
+        <DragHorizontalVariant @dblclick="app.editGroup(element)" class="handlerGroup pointer" />
     </div>
 
     <div class="cell-19-24 p20y pointer" @click="app.selectGroup(element)">
