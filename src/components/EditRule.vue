@@ -82,7 +82,7 @@
         ]
       },
       filter: {
-        propNamesToSave: ['ruleType', 'itemProp', 'ruleMethodName', 'testStandard', 'notes'],
+        propNamesToSave: ['ruleType', 'itemProp', 'ruleMethodName', 'testStandard'],
         itemProps: allProps,
         ruleMethodNames: allMethods
       },
