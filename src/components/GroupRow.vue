@@ -18,14 +18,14 @@
             <b>{{ element.name }}</b>
         </div>
 
-        <!-- Element Info -->
-        <div v-if="element.info" class="cell-1">
-            <small v-if="element.info">{{ element.info }}</small>
-        </div>
-
         <!-- Element Accounts -->
         <div v-if="isDefaultName" class="cell-1">
             <small>{{ accountInfo }}</small>
+        </div>
+
+        <!-- Cutom Info -->
+        <div v-if="element.info" class="cell-1">
+            <small v-if="element.info">{{ element.info }}</small>
         </div>
 
         <!-- Element Group -->
@@ -51,14 +51,15 @@
 
         <!-- Available Balance -->
         <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
-            <small>(Available {{ formatPrice(element.totalAvailableBalance) }})</small>
+            {{ formatPrice(element.totalAvailableBalance) }}
+            <br /><small>Available</small>
         </div>
 
     </div>
     </div>
 
     <!-- View Group -->
-    <div class="cell-1 right p10r">
+    <div class="cell-1 right p10r p10t">
         <a @click="app.selectGroup(element)" href="#" class="bold">View »</a>
     </div>
 
