@@ -10,7 +10,7 @@
   </div>
 
   <div class="cell-1 net-worth bold">
-     Net Worth: <NetWorth :accounts="props.state.allUserAccounts" />
+    Safe-To-Spend: <NetWorth :accounts="props.state.allUserAccounts" />
   </div>
 
   <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
