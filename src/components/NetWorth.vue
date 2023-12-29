@@ -13,11 +13,12 @@ const props = defineProps({
 
 const netWorth = computed(() => {
     return props.accounts.reduce((acc, account) => {
+        account = account.type ? account : getAccount(account._id);
+
         const currentBalance = account?.balances?.current;
         const balance = isNaN(currentBalance) ? 0 : Number(currentBalance);
-        const type = account.type || getAccountType(account._id);
 
-        return type === 'credit' ?
+        return account.type === 'credit' ?
             acc - balance || 0 :
             acc + balance || 0;
     }, 0);
@@ -31,8 +32,8 @@ const fontColor = computed(() => {
         : 'font-color-negative' 
 });
 
-function getAccountType(accountId) {
-    return props.state.accounts.find(account => account._id === accountId)?.type;
+function getAccount(accountId) {
+    return props.state.allUserAccounts.find(account => account._id === accountId) || {};
 }
 
 </script>
