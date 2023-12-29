@@ -879,13 +879,13 @@
 }
 
 html, body, .divider-text, .tab-button.selected, .allTabRow, .dottedRow,
-button.acctButton:hover, button.tab-button:hover, button.view-all:hover,
-button.acctButton:focus, button.tab-button:focus, button.view-all:focus,
-button.acctButton:active, button.tab-button:active, button.view-all:active {
+button.acctButton:hover, button.tab-button:hover, button.view-all:hover, button.linkAccount:hover,
+button.acctButton:focus, button.tab-button:focus, button.view-all:focus, button.linkAccount:focus,
+button.acctButton:active, button.tab-button:active, button.view-all:active, button.linkAccount:active {
   background: #fff;
 }
 
-.acctButton {
+.acctButton, .linkAccount {
   background: lightsteelblue;
 }
 

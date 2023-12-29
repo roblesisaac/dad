@@ -1,5 +1,5 @@
 <template>
-<div :class="['grid middle b-top proper text-left group-row', isSelected]">
+<div :class="['grid middle proper text-left group-row', isSelected]">
     <div class="cell-3-24 p20">
         <DragHorizontalVariant @dblclick="app.editGroup(element)" class="handlerGroup pointer" />
     </div>
@@ -43,9 +43,12 @@ watch( () => props.element.sort, (currSort) => {
 <style>
 .group-row {
     background-color: #fff;
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    box-shadow: 3px 3px #000;
 }
 .group-row.isSelected {
-    background-color: #f5f5f5;
+    background-color: lightgoldenrodyellow;
     color: blue
 }
 </style>

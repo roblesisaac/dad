@@ -1,21 +1,19 @@
 <template>
-<div class="grid">
+<div class="grid select-group">
   
   <!-- LinkNewAccount -->
-  <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="acctButton proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
+  <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
   
   <!-- LoadingMessage -->
   <div v-else class="cell-1 line50">
     <b>Loading <LoadingDots /></b>
   </div>
 
-  <div class="cell-1">
-  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup">
+  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
     <template #item="{element}">
       <GroupRow :key="element._id" :app="app" :element="element" />
     </template>
   </Draggable>
-  </div>
 
   <!-- Create New Group -->
   <div class="cell-1 b-top proper">
@@ -114,8 +112,18 @@ watch(() => props.state.allUserGroups, (groups) => {
 </script>
 
 <style>
-.acctButton {
-  box-shadow: none;
+.select-group {
+  background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
+  background-position: 0;
+  background-size: 10px 10px;
+  padding: 30px 20px;
+  font-weight: normal;
+}
+
+.linkAccount {
+  margin-bottom: 20px;
+  box-shadow: 3px 3px #000;
+  border: 1px solid #000;
   width: 100%;
 }
 </style>
