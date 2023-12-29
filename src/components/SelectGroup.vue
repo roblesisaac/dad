@@ -9,13 +9,14 @@
     <b>Loading <LoadingDots /></b>
   </div>
 
-  <div class="cell-1 net-worth bold">
-    Safe-To-Spend: <NetWorth :accounts="props.state.allUserAccounts" />
+  <!-- Net-worth -->
+  <div class="cell-1 net-worth bold p30">
+    Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" />
   </div>
 
   <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
     <template #item="{element}">
-      <GroupRow :key="element._id" :app="app" :element="element" />
+      <GroupRow :key="element._id" :app="app" :element="element" :state="state" />
     </template>
   </Draggable>
 
@@ -142,7 +143,8 @@ watch(() => props.state.allUserGroups, (groups) => {
   width: 100%;
 }
 
-.new-group {
-  background: blueviolet;
+.new-group, .linkAccount {
+  background: lightblue;
+  color: #000;
 }
 </style>

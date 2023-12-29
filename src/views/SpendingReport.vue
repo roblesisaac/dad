@@ -885,7 +885,7 @@ button.acctButton:active, button.tab-button:active, button.view-all:active, butt
   background: #fff;
 }
 
-.acctButton, .linkAccount {
+.acctButton {
   background: lightsteelblue;
 }
 
