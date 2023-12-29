@@ -30,9 +30,7 @@
 
         <!-- Element Group -->
         <div v-if="element.accounts.length > 1" class="cell-1">
-            <b>Accounts In Group:</b> 
-            <br>
-            <small v-for="(account, accountIndex) in element.accounts" :key="index">
+            <b><small>Accts: </small></b><small v-for="(account, accountIndex) in element.accounts" :key="index">
                 #{{ account.mask }} <b v-if="accountIndex < element.accounts.length - 1">+</b>
             </small>
         </div>
