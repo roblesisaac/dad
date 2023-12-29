@@ -11,7 +11,7 @@
     </div>
 
     <div class="cell-12-24">
-    <div class="grid">
+    <div class="grid p10r">
 
         <!-- Element Name -->
         <div class="cell-1">
