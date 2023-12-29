@@ -40,18 +40,19 @@
     </div>
     </div>
 
+    <!-- Balances + View -->
     <div class="cell-9-24 right p10r">
     <div class="grid">
 
         <!-- Current Balance -->
-        <div :class="['cell-1 bold right', fontColor]">
-            {{ formatPrice(element.totalCurrentBalance) }}
+        <div class="cell-1 bold right">
+            <span :class="fontColor(element.totalCurrentBalance)">{{ formatPrice(element.totalCurrentBalance) }}</span>
             <br /><small>Current Balance</small>
         </div>
 
         <!-- Available Balance -->
         <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
-            {{ formatPrice(element.totalAvailableBalance) }}
+            <span :class="fontColor(element.totalAvailableBalance)">{{ formatPrice(element.totalAvailableBalance) }}</span>
             <br /><small>Available</small>
         </div>
 
@@ -81,11 +82,13 @@ const props = defineProps( {
     state: Object
 } )
 
-const fontColor = computed( () => props.element.totalCurrentBalance > 0 
-    ? 'font-color-positive' 
-    : props.element.totalCurrentBalance < 0 
-    ? 'font-color-negative' 
-    : 'font-color-neutral' )
+function fontColor(amount) {
+    return amount > 0 
+        ? 'font-color-positive' 
+        : amount < 0 
+        ? 'font-color-negative' 
+        : 'font-color-neutral';
+}
 
 const accountInfo = computed( () => props.state.allUserAccounts.find( 
     account => account._id === props.element.accounts[0]._id ).subtype 
