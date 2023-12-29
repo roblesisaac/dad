@@ -9,6 +9,10 @@
     <b>Loading <LoadingDots /></b>
   </div>
 
+  <div class="cell-1 net-worth bold">
+     Net Worth: <NetWorth :accounts="props.state.allUserAccounts" />
+  </div>
+
   <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
     <template #item="{element}">
       <GroupRow :key="element._id" :app="app" :element="element" />
@@ -16,8 +20,8 @@
   </Draggable>
 
   <!-- Create New Group -->
-  <div class="cell-1 b-top proper">
-    <button @click="app.createNewGroup" class="button expanded bgBlack">Create New Group +</button>
+  <div class="cell-1 proper">
+    <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
   </div>
 
 </div>
@@ -26,6 +30,7 @@
 <script setup>
 import { nextTick, watch } from 'vue';
 import GroupRow from './GroupRow.vue';
+import NetWorth from './NetWorth.vue';
 import PlusVue from 'vue-material-design-icons/Plus.vue';
 import Draggable from 'vuedraggable';
 
@@ -112,6 +117,16 @@ watch(() => props.state.allUserGroups, (groups) => {
 </script>
 
 <style>
+.net-worth {
+  background-color: antiquewhite;
+  color: #0000;
+  margin-bottom: 20px;
+  border: 1px solid #000;
+  box-shadow: 3px 3px #000;
+  border-radius: 3px;
+  color: #000;
+}
+
 .select-group {
   background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
   background-position: 0;
@@ -120,10 +135,14 @@ watch(() => props.state.allUserGroups, (groups) => {
   font-weight: normal;
 }
 
-.linkAccount {
+.linkAccount, .new-group {
   margin-bottom: 20px;
   box-shadow: 3px 3px #000;
   border: 1px solid #000;
   width: 100%;
+}
+
+.new-group {
+  background: blueviolet;
 }
 </style>
