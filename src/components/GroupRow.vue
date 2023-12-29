@@ -44,7 +44,7 @@
 
         <!-- Current Balance -->
         <div class="cell-1 bold right">
-            <span :class="fontColor(element.totalCurrentBalance)">{{ formatPrice(element.totalCurrentBalance) }}</span>
+            <NetWorth :accounts="element.accounts" :state="state" />
             <br /><small>Current Balance</small>
         </div>
 
@@ -67,6 +67,7 @@
 
 <script setup>
 import { computed, watch } from 'vue';
+import NetWorth from './NetWorth.vue';
 import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
 import DotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue';
 import { formatPrice } from '../utils';
