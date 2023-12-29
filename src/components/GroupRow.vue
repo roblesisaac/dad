@@ -51,7 +51,7 @@
 
         <!-- Available Balance -->
         <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
-            <small>( Available {{ formatPrice(element.totalAvailableBalance) }} )</small>
+            <small>(Available {{ formatPrice(element.totalAvailableBalance) }})</small>
         </div>
 
     </div>
