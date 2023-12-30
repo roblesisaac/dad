@@ -19,16 +19,14 @@
   <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
     
     <!-- Selected Group + Date -->
-    <div class="cell-1 dateRow">
+    <div class="cell-1 dateRow b-bottom">
       <div class="grid middle">
 
         <!-- Group Selector Button -->
-        <div class="cell-8-24 section b-bottom b-right line50">
-          <ShowSelectGroupButton :state="state" />
-        </div>
+        <ShowSelectGroupButton class="cell-8-24 b-right" :state="state" />
 
         <!-- Date Pickers -->
-        <div class="cell-16-24 section line50">          
+        <div class="cell-16-24 line50">          
           <DatePickers :state="state" />
         </div>
 
@@ -57,7 +55,7 @@
     <!-- Left Side: Account and Date Selector -->
     <div id="leftPanel" class="cell-2-5 b-right panel">
       <!-- Group Selector Button -->
-      <ShowSelectGroupButton  class="cell-1 section b-bottom line50" :state="state" />
+      <ShowSelectGroupButton class="cell-1 b-bottom" :state="state" />
 
       <!-- Scrolling Tabs -->
       <ScrollingTabButtons v-if="!state.isLoading" class="totalsRow" :state="state" :app="app" />

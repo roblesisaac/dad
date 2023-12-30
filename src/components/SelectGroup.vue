@@ -2,16 +2,15 @@
 <div class="grid select-group">
   
   <!-- LinkNewAccount -->
-  <button v-if="props.state.linkToken" @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue"><PlusVue class="icon colorBlue" /> Link New Account</button>
-  
-  <!-- LoadingMessage -->
-  <div v-else class="cell-1 line50">
-    <b>Loading <LoadingDots /></b>
-  </div>
+  <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
+    <PlusVue class="icon colorBlue" />
+    <b v-if="props.state.linkToken">Link New Account</b>
+    <b v-else>Loading <LoadingDots /></b>
+  </button>
 
   <!-- Net-worth -->
   <div class="cell-1 net-worth bold p30">
-    Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" />
+    Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="state" />
   </div>
 
   <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">

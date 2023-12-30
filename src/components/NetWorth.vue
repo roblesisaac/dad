@@ -1,5 +1,5 @@
 <template>
-    <span :class="fontColor">{{ formatPrice(netWorth) }}</span>
+    <span :class="fontColor">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
 </template>
 
 <script setup>
@@ -7,8 +7,15 @@ import { computed } from 'vue';
 import { formatPrice } from '../utils';
 
 const props = defineProps({
-    accounts: Array,
-    state: Object
+    accounts: {
+        type: Array,
+        default: []
+    },
+    state: Object,
+    digits: {
+        type: Number,
+        default: 2
+    }
 });
 
 const netWorth = computed(() => {
