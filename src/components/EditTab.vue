@@ -42,7 +42,7 @@
         <h4 class="bold">Groups Tab Is Shared With:</h4>
         <div class="dropHere">
           <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="state.dragOptions()">
+          <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="state.dragOptions(100)">
             <template #item="{element}">
               <button class="sharedWith">{{ getGroupName(element) }}</button></template>
           </Draggable>

@@ -45,13 +45,13 @@
         <!-- Current Balance -->
         <div class="cell-1 bold right">
             <NetWorth :accounts="element.accounts" :state="state" />
-            <br /><small>Current Balance</small>
+            <br /><small>Available Balance</small>
         </div>
 
         <!-- Available Balance -->
         <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
             <span :class="fontColor(element.totalAvailableBalance)">{{ formatPrice(element.totalAvailableBalance) }}</span>
-            <br /><small>Available</small>
+            <br /><small>Current</small>
         </div>
 
     </div>

@@ -22,7 +22,7 @@ const netWorth = computed(() => {
     return props.accounts.reduce((acc, account) => {
         account = account.type ? account : getAccount(account._id);
 
-        const currentBalance = account?.balances?.current;
+        const currentBalance = account.type === 'credit' ? account?.balances?.current : account?.balances?.available;
         const balance = isNaN(currentBalance) ? 0 : Number(currentBalance);
 
         return account.type === 'credit' ?
