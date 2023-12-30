@@ -10,7 +10,7 @@
         <DragHorizontalVariant class="handlerGroup pointer" />
     </div>
 
-    <div class="cell-12-24">
+    <div class="cell-12-24 pointer" @click="app.selectGroup(element)">
     <div class="grid p10r">
 
         <!-- Element Name -->
@@ -39,7 +39,7 @@
     </div>
 
     <!-- Balances + View -->
-    <div class="cell-9-24 right p10r">
+    <div class="cell-9-24 right p10r pointer" @click="app.selectGroup(element)">
     <div class="grid">
 
         <!-- Current Balance -->
@@ -55,11 +55,6 @@
         </div>
 
     </div>
-    </div>
-
-    <!-- View Group -->
-    <div class="cell-1 right p10r p10t">
-        <a @click="app.selectGroup(element)" href="#" class="bold">View »</a>
     </div>
 
     </div>
@@ -109,6 +104,7 @@ watch( () => props.element.sort, (currSort) => {
     border: 1px solid #000;
     box-shadow: 3px 3px #000;
     padding: 0 5px 15px 15px;
+    border-radius: 3px;
 }
 .group-row.isSelected {
     background-color: lightgoldenrodyellow;
