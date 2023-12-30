@@ -51,7 +51,7 @@
 
       <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
         <ScrollingContent class="p30y">
-        <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="state.dragOptions()">
+        <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="state.dragOptions(100)">
           <template #item="{element}">
           <button class="button sharedWith">{{ getGroupName(element) }}</button>
           </template>
