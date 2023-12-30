@@ -43,7 +43,7 @@
     <div class="grid">
 
         <!-- Current Balance -->
-        <div class="cell-1 bold right">
+        <div v-if="element.accounts.length" class="cell-1 bold right">
             <NetWorth :accounts="element.accounts" :state="state" />
             <br /><small>Available Balance</small>
         </div>
@@ -85,11 +85,11 @@ function fontColor(amount) {
 }
 
 const accountInfo = computed( () => props.state.allUserAccounts.find( 
-    account => account._id === props.element.accounts[0]._id ).subtype 
+    account => account._id === props.element.accounts[0]?._id )?.subtype 
 );
 
 const isSelected = computed( () => props.element.isSelected ? 'isSelected' : '' );
-const isDefaultName = computed( () => props.element.name === props.element.accounts[0].mask );
+const isDefaultName = computed( () => props.element.name === props.element.accounts[0]?.mask );
 
 watch( () => props.element.sort, (currSort) => {
     api.put( `api/groups/${props.element._id}`, { sort: currSort } );
