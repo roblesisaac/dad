@@ -90,9 +90,8 @@ function selectTransaction(item) {
 }
 
 .items {
-  background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
-  background-position: 0;
-  background-size: 10px 10px;
+  background-color: lightblue;
+  border-top: 2px solid darkgray;
   padding: 30px 20px;
   font-weight: normal;
 }

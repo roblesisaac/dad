@@ -109,6 +109,7 @@ watch( () => props.element.sort, (currSort) => {
 .group-row.isSelected {
     background-color: whitesmoke;
     box-shadow: 1px 1px blue;
+    border: 1px solid blue;
     color: blue
 }
 </style>

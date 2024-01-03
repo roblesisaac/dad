@@ -125,9 +125,7 @@ watch(() => props.state.allUserGroups, (groups) => {
 }
 
 .select-group {
-  background-image: radial-gradient(#000 10%,transparent 10%),radial-gradient(#000 10%,transparent 10%);
-  background-position: 0;
-  background-size: 10px 10px;
+  background-color: lightgray;
   padding: 30px 20px;
   font-weight: normal;
 }
