@@ -13,8 +13,7 @@
 
   <!-- LinkNewAccount -->
   <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
-    <PlusVue class="icon colorBlue" />
-    <b v-if="props.state.linkToken">Link New Account</b>
+    <b v-if="props.state.linkToken">Link New Account +</b>
     <b v-else>Loading <LoadingDots /></b>
   </button>
 
@@ -30,7 +29,6 @@
 import { nextTick, watch } from 'vue';
 import GroupRow from './GroupRow.vue';
 import NetWorth from './NetWorth.vue';
-import PlusVue from 'vue-material-design-icons/Plus.vue';
 import Draggable from 'vuedraggable';
 
 import LoadingDots from './LoadingDots.vue';
