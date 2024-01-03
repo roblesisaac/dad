@@ -32,13 +32,13 @@ const tasks = (function() {
     return removeCount;
   });
 
-  const syncTransactions = task('sync.transactions', async ({ body }) => {
+  const syncTransactions = task('sync.transactions', { timeout: 60*30*1000 }, async ({ body }) => {
     let { itemId, userId } = body;
     
     return await plaid.syncTransactionsForItem(itemId, userId);
   });
 
-  const testTask = task('test.joined', { timeout: 60*20*1000 }, async ({ body }) => {
+  const testTask = task('test.joined', { timeout: 60*30*1000 }, async ({ body }) => {
     const token = generateToken({ test: 'true' });
   
     console.log({

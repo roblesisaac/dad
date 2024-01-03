@@ -354,7 +354,7 @@
 
     function equals(itemValue, valueToCheck) {
       if(isNaN(itemValue)) {
-        return itemValue == valueToCheck;
+        return lowercase(itemValue) == lowercase(valueToCheck);
       } else {
         return parseFloat(itemValue) == parseFloat(valueToCheck)
       }
@@ -510,6 +510,14 @@
 
         document.head.appendChild(el);
       });
+    }
+
+    function lowercase(string) {
+      if(typeof string === 'string') {
+        return string.toLowerCase();
+      }
+
+      return string;
     }
 
     function makeArray(value) {
