@@ -1,13 +1,5 @@
 <template>
 <div class="grid select-group">
-  
-  <!-- LinkNewAccount -->
-  <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
-    <PlusVue class="icon colorBlue" />
-    <b v-if="props.state.linkToken">Link New Account</b>
-    <b v-else>Loading <LoadingDots /></b>
-  </button>
-
   <!-- Net-worth -->
   <div class="cell-1 net-worth bold p30">
     Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="state" />
@@ -18,6 +10,13 @@
       <GroupRow :key="element._id" :app="app" :element="element" :state="state" />
     </template>
   </Draggable>
+
+  <!-- LinkNewAccount -->
+  <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
+    <PlusVue class="icon colorBlue" />
+    <b v-if="props.state.linkToken">Link New Account</b>
+    <b v-else>Loading <LoadingDots /></b>
+  </button>
 
   <!-- Create New Group -->
   <div class="cell-1 proper">

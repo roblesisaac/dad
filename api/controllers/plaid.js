@@ -434,7 +434,7 @@ const app = function () {
     for (const item of items) {
       if(item.syncData.cursor !== '' && item.syncData.lastSyncTime > fiveDaysAgo) {
         syncResults.push(await syncTransactionsForItem(item._id, user._id));
-
+ 
         continue;
       }
 
