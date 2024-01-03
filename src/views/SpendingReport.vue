@@ -903,6 +903,7 @@ button.acctButton:active, button.tab-button:active, button.view-all:active, butt
 
 .blue-bar {
   background-color: slateblue;
+  border-bottom: 2px solid darkblue;
 }
 
 .datePickers {
