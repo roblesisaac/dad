@@ -6,8 +6,6 @@ import plaidTransactions from '../models/plaidTransactions';
 import Sites from '../models/sites';
 import notify from '../utils/notify';
 
-import { generateToken } from '../utils/encryption';
-
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*20*1000 }, async ({ body }) => {
     const { user } = body;
@@ -38,14 +36,26 @@ const tasks = (function() {
     return await plaid.syncTransactionsForItem(itemId, userId);
   });
 
-  const testTask = task('test.joined', { timeout: 60*30*1000 }, async ({ body }) => {
-    const token = generateToken({ test: 'true' });
-  
-    console.log({
-      timeIs: Date.now(),
-      token: token.length,
-      body
-    });
+  const syncTransactionsForItems = task('sync.itemIds', { timeout: 60*30*1000 }, async ({ body }) => {
+    const { itemIds, userId } = body;
+
+    let results = [];
+
+    for (const itemId of itemIds) {
+      try {
+        const result = await plaid.syncTransactionsForItem(itemId, userId);
+
+        results.push(result);
+      } catch (e) {
+        console.error({
+          error: `Error with task 'syncTransactionsForItems' for itemId: ${itemId}`,
+          errorMessage: e.toString()
+        });
+      }
+    };
+
+    return results;
+
   });
   
   return {
@@ -55,15 +65,8 @@ const tasks = (function() {
     syncTransactionsForItem: async function(itemId, userId) {
       syncTransactions.run({ itemId, userId });
     },
-    test: function() {
-      console.log(Date.now(), 'test running...');
-
-      const result = testTask.run({ test: 'tasker12' })
-
-      return {
-        message: 'running',
-        result
-      };
+    syncTransactionsForItems: async function (itemIds, userId) {
+      syncTransactionsForItems.run({ itemIds, userId });
     }
   }
 })();

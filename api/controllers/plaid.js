@@ -426,37 +426,41 @@ const app = function () {
   async function syncAllUserTransactions(user) {
     const items = await plaidItems.findAll({ itemId: '*', userId: user._id });
     const syncResults = [];
+    const queuedItems = [];
 
     const days = (n) => n * 24 * 60 * 60 * 1000;
     const fiveDaysAgo = Date.now() - days(5);
 
     for (const item of items) {
-      if (item.syncData.cursor === '' || item.syncData.lastSyncTime < fiveDaysAgo) {
-
-        const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
-
-        if (syncAlreadyInProgress) {
-          syncResults.push({
-            taskAlreadyQueued: true,
-            itemId: item._id
-          });
-
-          continue;
-        }
-
-        await updatePlaidItemSyncData(item._id, { ...item.syncData, status: 'queued' });
-
-        syncResults.push({
-          taskQueued: true,
-          itemId: item._id
-        });
-
-        await tasks.syncTransactionsForItem(item._id, user._id);
+      if(item.syncData.cursor !== '' && item.syncData.lastSyncTime > fiveDaysAgo) {
+        syncResults.push(await syncTransactionsForItem(item._id, user._id));
 
         continue;
       }
 
-      syncResults.push(await syncTransactionsForItem(item._id, user._id))
+      const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
+
+      if (syncAlreadyInProgress) {
+        syncResults.push({
+          taskAlreadyQueued: true,
+          itemId: item._id
+        });
+
+        continue;
+      }
+
+      await updatePlaidItemSyncData(item._id, { ...item.syncData, status: 'queued' });
+
+      syncResults.push({
+        taskQueued: true,
+        itemId: item._id
+      });
+
+      queuedItems.push(item._id);      
+    }
+
+    if(queuedItems.length > 0) {
+      await tasks.syncTransactionsForItems(queuedItems, user._id);
     }
 
     return { syncResults }
@@ -822,11 +826,7 @@ const app = function () {
 
       res.json(response);
     },
-    syncTransactionsForItem,
-    test: async (_, res) => {
-      const result = tasks.test();
-      res.json({ result });
-    }
+    syncTransactionsForItem
   }
 }();
 
