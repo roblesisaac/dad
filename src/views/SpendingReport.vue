@@ -311,26 +311,26 @@
         return {
           category: () => item.personal_finance_category.primary,
           year: () => {
-            const [year] = item.date.split('-');
+            const [year] = item.authorized_date.split('-');
             return year;
           },
           month: () => {
-            const [_, month] = item.date.split('-');
+            const [_, month] = item.authorized_date.split('-');
 
             return months[Number(month-1)];
           },
           year_month: () => {
-            const [year, month] = item.date.split('-');
+            const [year, month] = item.authorized_date.split('-');
 
             return `${year} ${months[Number(month-1)]}`;
           },
           day: () => {
-            const [_, month, day] = item.date.split('-');
+            const [_, month, day] = item.authorized_date.split('-');
 
             return `${months[Number(month-1)]}, ${day}`;
           },
           weekday: () => {
-            return getDayOfWeek(item.date)
+            return getDayOfWeekPST(item.authorized_date)
           }
         }[propToGroupBy[0] || 'category']();
       }
@@ -469,11 +469,11 @@
       item.personal_finance_category.primary = lower.split('_').join(' ');
     }
 
-    function getDayOfWeek(dateString) {
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const date = new Date(dateString);
-      const dayOfWeek = date.getDay();
-      return days[dayOfWeek];
+    function getDayOfWeekPST(dateString) {
+      let date = new Date(dateString + 'T00:00:00');
+      let dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long', timeZone: 'America/Los_Angeles' });
+
+      return dayOfWeek;
     }
 
     function getItemValue(item, propName) {
