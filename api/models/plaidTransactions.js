@@ -74,10 +74,13 @@ const transactionSchema = {
   recategorizeAs: String,
   tags: [String],
   label1: 'transaction_id',
-  label2: 'date',
+  label2: {
+    name: 'date',
+    concat: ['authorized_date']
+  },
   label3: {
     name: 'accountdate',
-    concat: ['account_id', 'date']
+    concat: ['account_id', 'authorized_date']
   },
   label4: 'syncId',
   label5: {

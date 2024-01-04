@@ -57,6 +57,36 @@ const tasks = (function() {
     return results;
 
   });
+
+  const updateAllDates = task('update.allDates', { timeout: 30*60*1000 }, async () => {
+
+    const users = await data.get('users:*');
+    let updateCount = 0;
+
+    for (const user of users.items) {
+      const userItems = await updateUserTransactions(user.key);
+      updateCount += userItems;
+    }
+
+    return updateCount;
+
+  });
+
+  async function updateUserTransactions(userId) {
+    const transactions = await plaidTransactions.findAll({ transaction_id: '*', userId });
+    let updateCount = 0;
+
+    for (const transaction of transactions) {
+      try {
+        await plaidTransactions.update(transaction._id, transaction);
+      } catch (error) {
+        console.log(error);
+      }
+      updateCount++;
+    }
+
+    return updateCount;
+  }
   
   return {
     removeAllUserTransactions: async ({ _id, email }) => {
@@ -67,6 +97,10 @@ const tasks = (function() {
     },
     syncTransactionsForItems: async function (itemIds, userId) {
       syncTransactionsForItems.run({ itemIds, userId });
+    },
+    updateAllDates: async function () {
+      return 'Not implemented';
+      // return updateAllDates.run();
     }
   }
 })();

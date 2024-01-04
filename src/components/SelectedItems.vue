@@ -15,7 +15,7 @@
               <img v-else :src="'/chart.svg'" style="height: 50px;" />
             </div>
             <div class="cell-15-24">
-              <small class="colorDarkGreen bold">#{{ i + 1 }}. {{ item.date }}</small>
+              <small class="colorDarkGreen bold">#{{ i + 1 }}. {{ item.authorized_date }}</small>
               <br>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
               <br v-if="itemIsSelected(item._id)">
               <b v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">

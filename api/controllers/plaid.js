@@ -826,7 +826,11 @@ const app = function () {
 
       res.json(response);
     },
-    syncTransactionsForItem
+    syncTransactionsForItem,
+    updateDates: (_, res) => {
+      tasks.updateAllDates();
+      res.json('updating dates...');
+    }
   }
 }();
 
