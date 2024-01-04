@@ -57,6 +57,8 @@ const catTotal = computed(() => {
 function selectCategory() {
   selectedTab.categoryName = isSelected.value ? null : categoryName;
 
+  window.scrollTo(0, 0);
+
   nextTick(function() {
     scrollToElement(id);
   });
