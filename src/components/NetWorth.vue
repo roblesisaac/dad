@@ -1,10 +1,10 @@
 <template>
-    <span :class="fontColor">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
+    <span :class="fontColor(netWorth)">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { formatPrice } from '../utils';
+import { fontColor, formatPrice } from '../utils';
 
 const props = defineProps({
     accounts: {
@@ -29,14 +29,6 @@ const netWorth = computed(() => {
             acc - balance || 0 :
             acc + balance || 0;
     }, 0);
-});
-
-const fontColor = computed(() => {
-    return netWorth.value > 0 
-        ? 'font-color-positive'
-        : netWorth.value === 0
-        ? 'font-color-neutral'
-        : 'font-color-negative' 
 });
 
 function getAccount(accountId) {

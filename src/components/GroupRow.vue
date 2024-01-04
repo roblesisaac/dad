@@ -65,7 +65,7 @@ import { computed, watch } from 'vue';
 import NetWorth from './NetWorth.vue';
 import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
 import DotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue';
-import { formatPrice } from '../utils';
+import { fontColor, formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();
@@ -75,14 +75,6 @@ const props = defineProps( {
     app: Object,
     state: Object
 } )
-
-function fontColor(amount) {
-    return amount > 0 
-        ? 'font-color-positive' 
-        : amount < 0 
-        ? 'font-color-negative' 
-        : 'font-color-neutral';
-}
 
 const accountInfo = computed( () => props.state.allUserAccounts.find( 
     account => account._id === props.element.accounts[0]?._id )?.subtype 

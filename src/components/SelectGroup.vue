@@ -125,7 +125,7 @@ watch(() => props.state.allUserGroups, (groups) => {
 }
 
 .select-group {
-  background-color: lightgray;
+  background-color: #f4f8f9;
   padding: 30px 20px;
   font-weight: normal;
 }

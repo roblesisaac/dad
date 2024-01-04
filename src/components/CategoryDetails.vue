@@ -23,7 +23,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 import Plus from 'vue-material-design-icons/Plus.vue';
 import Minus from 'vue-material-design-icons/Minus.vue';
 import SelectedItems from './SelectedItems.vue';
@@ -54,13 +54,12 @@ const catTotal = computed(() => {
   return formatPrice(categoryTotal, { toFixed })
 });
 
-// const fontColor = computed(() => {
-//   return categoryTotal > 0 ? 'font-color-positive' : 'font-color-negative';
-// });
-
 function selectCategory() {
-  const isCategorySelected = selectedTab.categoryName === categoryName;
-  selectedTab.categoryName = isCategorySelected ? null : categoryName;
+  selectedTab.categoryName = isSelected.value ? null : categoryName;
+
+  nextTick(function() {
+    scrollToElement(id);
+  });
 }
 
 function makeSelectedCategorySticky() {
@@ -104,6 +103,16 @@ function setPanelHeight(leftPanel, rightPanel) {
 function showRightBorder(el) {
   el.style.width = '';
   el.style.background = '';
+}
+
+function scrollToElement(id) {
+  var element = document.getElementById(id);
+
+  if (!element) {
+    return;
+  }
+
+  element.scrollIntoView({behavior: 'smooth', block: 'start'});
 }
 
 function getInnerWidth(el) {

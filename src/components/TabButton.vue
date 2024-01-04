@@ -53,12 +53,6 @@ const borders = computed(() => {
   return [bottomBorder, rightBorder, borderLeft];
 });
 
-// const fontColor = computed(() => {
-//   return props.tab.total > 0 ? 'font-color-positive' : 'font-color-negative';
-// });
-
-
-
 const tabTotal = computed(() => {
   const total = props.tab.total || 0;
   const toFixed = isSelected.value ? 2 : 0;
