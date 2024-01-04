@@ -10,6 +10,10 @@ const sticky = (() => {
   let scrollDirection = 1;
   let resetInProgress = false;
 
+  function calcCurrentStuckHeight() {
+    return currentStuckHeight;
+  }
+
   function findElement(selector) {
     return selector.includes('.') ? 
       document.querySelector(selector) 
@@ -140,6 +144,7 @@ const sticky = (() => {
 
   return {
     configs,
+    calcCurrentStuckHeight,
     deregister: (selectorNames) => {
       const selectorNamesSet = new Set(makeArray(selectorNames));
       let deregistered = 0;
