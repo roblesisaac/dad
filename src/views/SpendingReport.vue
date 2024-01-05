@@ -748,9 +748,10 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups.sort(sortBy('sort'));
 
+        await app.handleGroupChange();
+
         await api.get('api/plaid/sync/all/transactions');
         app.checkSyncStatus();
-        app.handleGroupChange();
       },
       handleGroupChange: async () => {
         let selectedGroup = state.selected.group;

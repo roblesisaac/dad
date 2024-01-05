@@ -370,6 +370,8 @@ const app = function () {
           itemsMergedCount++;
         }
       }
+
+      return itemsMergedCount;
     } catch (error) {
       return {
         success: false,
@@ -497,7 +499,7 @@ const app = function () {
       await tasks.syncTransactionsForItems(queuedItems, user._id);
     }
 
-    return { syncResults }
+    return { syncResults };
   }
 
   async function syncItem(access_token) {
@@ -587,6 +589,7 @@ const app = function () {
       lastSyncTime: currentTime,
       result: {
         errorMessage: "",
+        itemsMergedCount: 0,
         itemsAddedCount: 0,
         itemsModifiedCount: 0,
         itemsRemovedCount: 0
