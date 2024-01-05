@@ -347,6 +347,40 @@ const app = function () {
     }
   }
 
+  async function mergePendingCustomNotesToSettled(added, userId ) {
+    let itemsMergedCount = 0;
+
+    try {
+      for (const item of added) {
+        const { pending_transaction_id } = item;
+  
+        const pendingTransaction = await plaidTransactions.findOne({ userId, transaction_id: pending_transaction_id });
+  
+        if (!pendingTransaction) {
+          continue;
+        }
+  
+        const { note, recategorizeAs, tags } = pendingTransaction;
+  
+        if (note || tags.length || recategorizeAs) {
+          item.note = note;
+          item.tags = tags;
+          item.recategorizeAs;
+
+          itemsMergedCount++;
+        }
+      }
+    } catch (error) {
+      return {
+        success: false,
+        result: {
+          itemsMergedCount,
+          errorMessage: error.message
+        }
+      }
+    }
+  }
+
   function renderErrorProperties(result) {
     let errorDetails = `<p style="font-family: 'Arial', sans-serif; font-size: 16px; margin-bottom: 10px;">Sync Error:</p>
       <table style="width:100%; border-collapse: collapse; font-family: 'Arial', sans-serif; font-size: 14px; color: #333;">`;
@@ -580,6 +614,12 @@ const app = function () {
 
     const { added, modified, removed, next_cursor } = response;
 
+    const itemsMergedCount = await mergePendingCustomNotesToSettled(added, userId);
+
+    if (hasSyncError(itemsMergedCount)) {
+      return await handleSyncError(item._id, nextSyncData, itemsMergedCount, 'mergePendingCustomNotesToSettled');
+    }
+
     const itemsRemovedCount = await itemsRemove(removed, userId);
 
     if (hasSyncError(itemsRemovedCount)) {
@@ -603,17 +643,18 @@ const app = function () {
     const nowInPST = new Date(Date.now() - (12 * 60 * 60 * 1000));
     const emailData = {
       subject: `TrackTabs Sync Complete!`,
-      template: `<p>Congratulations! Your TrackTabs account has been synced successfully.</p>
+      template: `<p>Your TrackTabs account for ${user.email} has been synced successfully.</p>
       <p>As of ${nowInPST}, all of your transactions are up to date.</p>
       <p>
         <b>Summary</b>
+        <br /><b>Custom Info Merged With Settled Items Count:</b> ${itemsMergedCount}
         <br /><b>Items Added Count:</b> ${itemsAddedCount}
         <br /><b>Items Modified Count:</b> ${itemsModifiedCount}
         <br /><b>Items Removed Count:</b> ${itemsRemovedCount}
       </p>`
     };
 
-    await notify.email(user.email, emailData);
+    // await notify.email(user.email, emailData);
     await emailSiteOwner(emailData);
 
     return await updatePlaidItemSyncData(item._id, {
