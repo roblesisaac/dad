@@ -31,7 +31,11 @@ const itemSchema = {
       itemsAddedCount: {
         type: Number,
         default: 0
-      }, 
+      },
+      itemsMergedCount: {
+        type: Number,
+        default: 0
+      },
       itemsModifiedCount: {
         type: Number,
         default: 0

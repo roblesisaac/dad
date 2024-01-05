@@ -664,7 +664,7 @@ const app = function () {
       ...nextSyncData,
       cursor: next_cursor,
       result: {
-        itemsAddedCount, itemsModifiedCount, itemsRemovedCount,
+        itemsMergedCount, itemsAddedCount, itemsModifiedCount, itemsRemovedCount,
       },
       status: 'completed'
     });
