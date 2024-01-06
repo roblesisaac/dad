@@ -612,7 +612,11 @@ const app = function () {
     }
 
     if (isEmpty(response, ['added', 'modified', 'removed'])) {
-      return await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'completed' });
+      return {
+        added: [],
+        removed: [],
+        item: await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'completed' })
+      };
     }
 
     const { added, modified, removed, next_cursor } = response;
@@ -660,14 +664,18 @@ const app = function () {
     // await notify.email(user.email, emailData);
     await emailSiteOwner(emailData);
 
-    return await updatePlaidItemSyncData(item._id, {
-      ...nextSyncData,
-      cursor: next_cursor,
-      result: {
-        itemsMergedCount, itemsAddedCount, itemsModifiedCount, itemsRemovedCount,
-      },
-      status: 'completed'
-    });
+    return {
+      added,
+      removed,
+      item: await updatePlaidItemSyncData(item._id, {
+        ...nextSyncData,
+        cursor: next_cursor,
+        result: {
+          itemsMergedCount, itemsAddedCount, itemsModifiedCount, itemsRemovedCount,
+        },
+        status: 'completed'
+      })
+    };
   }
 
   async function updateAccount(account_id, userId, retrievedAccount) {

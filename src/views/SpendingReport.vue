@@ -491,6 +491,10 @@
       );
     }
 
+    function isTransactionInGroup(transaction, group) {
+      return !!group.accounts.find(account => account.account_id === transaction.account_id);
+    }
+
     function loadScript(src) {
       return new Promise(function (resolve, reject) {
         if (document.querySelector('script[src="' + src + '"]')) {
@@ -750,7 +754,12 @@
 
         await app.handleGroupChange();
 
-        await api.get('api/plaid/sync/all/transactions');
+        const { added, removed } = await api.get('api/plaid/sync/all/transactions') || {};
+
+        if(added || removed) {
+          console.log({ added, removed });
+        }
+
         app.checkSyncStatus();
       },
       handleGroupChange: async () => {
