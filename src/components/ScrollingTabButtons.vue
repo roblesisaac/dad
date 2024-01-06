@@ -12,7 +12,7 @@
     </Draggable>
   </div>
   <div class="cell-4-24">
-    <button @click="props.state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
+    <button @click="state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
   </div>
 </div>
 

@@ -763,6 +763,7 @@
 
         if(!selectedGroup) {
           if(!state.allUserGroups.length) {
+            state.views.push('SelectGroup');
             return;
           }
 
