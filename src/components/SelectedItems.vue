@@ -89,10 +89,12 @@ function selectTransaction(item) {
 
 .transaction-selected.grid {
   padding: 30px 20px;
+  border: 1px solid blue;
+  box-shadow: 1px 1px blue;
 }
 
 .items {
-  background-color: lightblue;
+  background-color: #f4f8f9;
   border-top: 2px solid darkgray;
   padding: 30px 20px;
   font-weight: normal;
