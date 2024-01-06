@@ -754,11 +754,15 @@
 
         await app.handleGroupChange();
 
-        const { added, removed } = await api.get('api/plaid/sync/all/transactions') || {};
+        let added = [], removed = [];
+        const { syncResults } = await api.get('api/plaid/sync/all/transactions');
 
-        if(added || removed) {
-          console.log({ added, removed });
+        for(const syncedItem of syncResults) {
+          added = [...added, ...syncedItem.added];
+          removed = [...removed, ...syncedItem.removed];
         }
+
+        console.log({ added, removed });
 
         app.checkSyncStatus();
       },

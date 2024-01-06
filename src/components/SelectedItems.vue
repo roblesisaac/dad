@@ -24,6 +24,8 @@
             </div>
             <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left bold', fontColor(item.amount)]">
               {{ formatPrice(item.amount, { toFixed: 0 }) }}
+              <br v-if="item.pending">
+              <small v-if="item.pending" class="colorDarkGray">Pending</small>
             </div>
           </div>
 
