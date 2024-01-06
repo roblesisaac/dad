@@ -752,8 +752,6 @@
         state.allUserAccounts = accounts;
         state.allUserGroups = groups.sort(sortBy('sort'));
 
-        await app.handleGroupChange();
-
         let added = [], removed = [];
         const { syncResults } = await api.get('api/plaid/sync/all/transactions');
 
@@ -763,7 +761,8 @@
         }
 
         console.log({ added, removed });
-
+        
+        await app.handleGroupChange();
         app.checkSyncStatus();
       },
       handleGroupChange: async () => {
