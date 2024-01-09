@@ -360,10 +360,10 @@ const app = function () {
           continue;
         }
   
-        const { note, recategorizeAs, tags } = pendingTransaction;
+        const { notes, recategorizeAs, tags } = pendingTransaction;
   
-        if (note || tags.length || recategorizeAs) {
-          item.note = note;
+        if (notes || tags.length || recategorizeAs) {
+          item.notes = notes;
           item.tags = tags;
           item.recategorizeAs;
 
