@@ -6,15 +6,18 @@ const {
     GOOGLE_ID,
     GOOGLE_SECRET,
     AMPT_URL,
+    ENV_NAME
 } = params().list();
 
 const hostName = AMPT_URL.replace('https://', '');
-const domain = '.'+hostName;
+const environment = ENV_NAME === 'prod' ? 'development' : 'sandbox';
+const baseUrl = environment === 'sandbox' ? AMPT_URL : 'https://tracktabs.com';
+const domain = environment === 'sandbox' ? '.'+hostName : '.tracktabs.com';
 
 const GoogleConfig = {
     clientID: GOOGLE_ID,
     clientSecret: GOOGLE_SECRET,
-    callbackURL: `${AMPT_URL}/api/login/auth/google/callback`,
+    callbackURL: `${baseUrl}/api/login/auth/google/callback`,
     passReqToCallback: true
 };
 
@@ -25,7 +28,7 @@ function isValidClientHost(req) {
 
 async function authGoogleUser(req, accessToken, refreshToken, profile, done) {
     if(!isValidClientHost(req)) {
-      return done(new Error('Invalid hostname'));
+        return done(new Error('Invalid hostname'));
     }
 
     const { email } = profile._json;  

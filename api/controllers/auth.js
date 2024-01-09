@@ -73,6 +73,8 @@ export default {
         const { views } = await userApp.getUserPages(user);
         const redirectUrl = `/${views[0] || ''}`;
 
+        console.log({ redirectUrl });
+
         return res.redirect(redirectUrl);
       });
     })(req, res, next);
