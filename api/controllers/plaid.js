@@ -365,7 +365,7 @@ const app = function () {
         if (notes || tags.length || recategorizeAs) {
           item.notes = notes;
           item.tags = tags;
-          item.recategorizeAs;
+          item.recategorizeAs = recategorizeAs;
 
           itemsMergedCount++;
         }
