@@ -7,7 +7,7 @@
   <router-view v-if="!State.showingOffCanvasLinks" />
 
   <Transition>
-    <StayLoggedIn v-ifa="State.showStayLoggedInForm" />
+    <StayLoggedIn v-if="State.showStayLoggedInForm" />
   </Transition>
   <Transition>
     <ShowLoginForm v-if="State.showLoginForm" />

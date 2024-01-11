@@ -759,8 +759,6 @@
           added = [...added, ...syncedItem.added];
           removed = [...removed, ...syncedItem.removed];
         }
-
-        console.log({ added, removed });
         
         await app.handleGroupChange();
         app.checkSyncStatus();
