@@ -2,6 +2,7 @@
   channel = "stable-23.11";
   packages = [
     pkgs.nodejs
+    pkgs.xdg-utils
   ];
   idx.extensions = [
     "svelte.svelte-vscode"
@@ -23,10 +24,10 @@
         id = "web";
         manager = "web";
       }
-      {
-        id = "ios";
-        manager = "ios";
-      }
+      # {
+      #   id = "ios";
+      #   manager = "ios";
+      # }
     ];
   };
 }
