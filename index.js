@@ -5,7 +5,7 @@ import initApiRoutes from './api/routes';
 import initEvents from './api/events';
 
 import {
-    SessionStore, 
+    SessionStore,
     uuidv4,
     xss,
     passport
@@ -20,7 +20,7 @@ app
     .use(uuidv4)
     .use(xss())
     .use(passport.initialize())
-    .use(passport.session())  
+    .use(passport.session())
     .use(express.json());
 
 initApiRoutes(app);
