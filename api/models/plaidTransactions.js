@@ -25,7 +25,7 @@ const transactionSchema = {
   check_number: String,
   date: String,
   datetime: String,
-  authorized_date: String,
+  authorized_date: (value, item) => value || item.date,
   authorized_datetime: String,
   location: {
     address: String,

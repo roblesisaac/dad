@@ -754,8 +754,13 @@
 
         let added = [], removed = [];
         const { syncResults } = await api.get('api/plaid/sync/all/transactions');
+        
 
         for(const syncedItem of syncResults) {
+          if(!Array.isArray(syncedItem.added)) {
+            continue;
+          }
+
           added = [...added, ...syncedItem.added];
           removed = [...removed, ...syncedItem.removed];
         }

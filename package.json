@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@ampt/cli": "^1.0.24",
-    "@ampt/data": "^1.0.11",
+    "@ampt/data": "^1.0.18",
     "@ampt/sdk": "^1.0.8",
     "@fontsource/fira-code": "^5.0.8",
     "@vuepic/vue-datepicker": "^6.0.2",

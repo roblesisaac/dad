@@ -10,20 +10,20 @@
   ];
   idx.previews = {
     previews = [
-      {
-        command = [
-          "npm"
-          "run"
-          "dev"
-          "--"
-          "--port"
-          "$PORT"
-          "--host"
-          "0.0.0.0"
-        ];
-        id = "web";
-        manager = "web";
-      }
+      # {
+      #   command = [
+      #     "npm"
+      #     "run"
+      #     "dev"
+      #     "--"
+      #     "--port"
+      #     "$PORT"
+      #     "--host"
+      #     "0.0.0.0"
+      #   ];
+      #   id = "web";
+      #   manager = "web";
+      # }
       # {
       #   id = "ios";
       #   manager = "ios";

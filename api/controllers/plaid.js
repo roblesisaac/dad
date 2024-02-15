@@ -94,6 +94,17 @@ const app = function () {
 
   const delay = async () => new Promise(resolve => setTimeout(resolve, 1200));
 
+  async function fetchItemById(itemId, userId) {
+    const item = await plaidItems.findOne(itemId);
+
+    if (item.userId === userId) {
+      return item;
+    }
+
+    warn(userId, itemId, 'Item');
+    return false;
+  }
+
   async function fetchTransactionsFromPlaid({ access_token, cursor }) {
     plaidClient = plaidClient || initClient();
 
@@ -130,26 +141,6 @@ const app = function () {
     }
   }
 
-  async function fetchUserAccounts(userId) {
-    const { items } = await plaidAccounts.find({
-      account_id: `*`,
-      userId
-    });
-
-    return items;
-  }
-
-  async function fetchItemById(itemId, userId) {
-    const item = await plaidItems.findOne(itemId);
-
-    if (item.userId === userId) {
-      return item;
-    }
-
-    warn(userId, itemId, 'Item');
-    return false;
-  }
-
   function fetchAllTransactionsFromDb(query) {
     if (typeof query === 'string') {
       query = { name: `*`, userId: query }
@@ -167,6 +158,15 @@ const app = function () {
 
     warn(userId, _id, 'Transaction');
     return null;
+  }
+
+  async function fetchUserAccounts(userId) {
+    const { items } = await plaidAccounts.find({
+      account_id: `*`,
+      userId
+    });
+
+    return items;
   }
 
   async function fetchUserItems(userId) {
