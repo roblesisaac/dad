@@ -795,15 +795,14 @@
           ]
         };
 
-        if(!tabsForGroup.length) {
-          nextTick(async () => {
-            await app.createNewTab();
-            state.isLoading = false;
-          });
-          return;
+        if(!!tabsForGroup.length) {
+          return await app.processAllTabsForSelectedGroup();
         }
 
-        await app.processAllTabsForSelectedGroup();
+        nextTick(async () => {
+          await app.createNewTab();
+          state.isLoading = false;
+        });
       },
       handleTabChange: (newSelectedTabId, oldSelectedTabId) => {
         if (newSelectedTabId === oldSelectedTabId) {
