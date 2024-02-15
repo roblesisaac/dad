@@ -1,7 +1,7 @@
 <template>
 <div class="grid">
   <div class="cell-20-24">
-    <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="props.state.selected.tabsForGroup" v-bind="props.state.dragOptions(100)">
+    <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="state.selected.tabsForGroup" v-bind="state.dragOptions(100)">
       <template #item="{element}">
         <TabButton
           :state="state" 
@@ -12,7 +12,8 @@
     </Draggable>
   </div>
   <div class="cell-4-24">
-    <button @click="state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
+    <button v-if="state.selected.tabsForGroup.length>1" @click="state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
+    <button v-else @click="app.createNewTab" class="view-all b-bottom b-left expanded">+</button>
   </div>
 </div>
 

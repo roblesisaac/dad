@@ -1,17 +1,17 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass]">
+  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']">
     <!-- Dots -->
     <DotsVertical v-if="tab.isSelected" @click="editTab()" />
   
     <!-- Title & Total -->
-    <div class="title-total">
+    <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
       <small class="section-title bold"><b v-if="tabIsShared(tab)">*</b>{{ props.tab.tabName }}</small>
       <LoadingDots v-if="props.state.isLoading" />
       <span v-else class="section-content">{{ tabTotal }}</span>
     </div>
 
     <!-- Drag Handle -->
-    <DragVertical v-if="tab.isSelected" class="handleTab" />    
+    <DragVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
   </button>
 </template>
 
@@ -36,6 +36,8 @@ function validIdString(inputString) {
 const uniqueTabClassName = computed(() => validIdString(props.tab._id));
 const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
 const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === props.tab._id));
+const shouldShowDragHandle = computed(() => tabsForGroup.value.length > 1);
+const tabShouldExpand = !shouldShowDragHandle.value;
 
 const isSelected = computed(() => {
   return props.tab.isSelected;
@@ -101,6 +103,10 @@ watch(() => props.tab.sort, (newSort) => {
 </script>
 
 <style>
+.expandTab {
+  width: 100%;
+}
+
 .tab-button {
   display: flex;
   justify-content: space-between;

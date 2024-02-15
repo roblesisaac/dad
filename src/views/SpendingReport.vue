@@ -798,7 +798,7 @@
         if(!!tabsForGroup.length) {
           return await app.processAllTabsForSelectedGroup();
         }
-
+ 
         nextTick(async () => {
           await app.createNewTab();
           state.isLoading = false;
