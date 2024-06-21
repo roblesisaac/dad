@@ -58,7 +58,17 @@ const app = function() {
   }
 
   async function fetchLinkToken() {
-    props.state.linkToken = props.state.linkToken || await api.post('api/plaid/connect/link');
+    if(props.state.linkToken) {
+      return;
+    }
+    
+    try {
+      const fetchedLinkToken = await api.post('api/plaid/connect/link');
+
+      props.state.linkToken = fetchedLinkToken;
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   return {

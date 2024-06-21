@@ -17,7 +17,7 @@ import Users from '../models/users';
 
 const {
   PLAID_CLIENT_ID,
-  PLAID_SECRET_DEVELOPMENT,
+  PLAID_SECRET_PROD,
   PLAID_SECRET_SANDBOX,
   ENV_NAME
 } = params().list();
@@ -242,14 +242,14 @@ const app = function () {
   }
 
   function initClient() {
-    const environment = ENV_NAME === 'prod' ? 'development' : 'sandbox';
+    const environment = ENV_NAME === 'prod' ? 'production' : 'sandbox';
 
     const config = new Configuration({
       basePath: PlaidEnvironments[environment],
       baseOptions: {
         headers: {
           'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-          'PLAID-SECRET': environment === 'sandbox' ? PLAID_SECRET_SANDBOX : PLAID_SECRET_DEVELOPMENT,
+          'PLAID-SECRET': environment === 'production' ? PLAID_SECRET_PROD : PLAID_SECRET_SANDBOX,
           'Plaid-Version': '2020-09-14',
         },
       },
@@ -761,7 +761,6 @@ const app = function () {
         language: 'en'
       };
 
-
       if (req.params.itemId) {
         const item = await plaidItems.findOne({ userId: user._id, itemId: req.params.itemId });
         const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
@@ -771,13 +770,14 @@ const app = function () {
       }
 
       try {
-        const { data } = await plaidClient.linkTokenCreate(request);
+        const plaidLinkData = await plaidClient.linkTokenCreate(request);
+        const { data } = plaidLinkData;
 
         res.json(data.link_token);
 
-        // for testing purposes
         return data;
       } catch (error) {
+        console.log('error...', error)
         throw new Error(`Error on plaid linkTokenCreater: ${error.message}`);
       }
     },

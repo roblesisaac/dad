@@ -33,7 +33,7 @@ export function checkVerified(req, res, next) {
 }
 
 export const rateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 15 minutes
+  windowMs: 60 * 60 * 1000, // 15 mins
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests, please try again later.'
 });
@@ -44,7 +44,8 @@ export async function recaptcha(req, res, next) {
   const url = 'https://www.google.com/recaptcha/api/siteverify?'+params;
   
   const response = await fetch(url, { method: 'POST' });
-  const { score, success } = await response.json();
+  const json = await response.json();
+  const { score, success } = json;
   
   if(score >= 0.5 || success === true) {
     return next()

@@ -15,9 +15,9 @@
     "ampt:commit": "npm run commit"
   },
   "dependencies": {
-    "@ampt/cli": "^1.0.24",
-    "@ampt/data": "^1.0.18",
-    "@ampt/sdk": "^1.0.8",
+    "@ampt/cli": "^1.1.15",
+    "@ampt/data": "^1.0.23",
+    "@ampt/sdk": "^1.0.16",
     "@fontsource/fira-code": "^5.0.8",
     "@vuepic/vue-datepicker": "^6.0.2",
     "bcryptjs": "^2.4.3",
