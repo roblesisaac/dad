@@ -468,6 +468,8 @@ const app = function () {
     const fiveDaysAgo = Date.now() - days(5);
 
     for (const item of items) {
+
+      // sync transaction imediately if its been less than five days since last sync
       if(item.syncData.cursor !== '' && item.syncData.lastSyncTime > fiveDaysAgo) {
         syncResults.push(await syncTransactionsForItem(item._id, user._id));
  
@@ -485,6 +487,7 @@ const app = function () {
         continue;
       }
 
+      // add to queue if last sync was greater than 5 days and a sync is not already in progress or the cursor is blank
       await updatePlaidItemSyncData(item._id, { ...item.syncData, status: 'queued' });
 
       syncResults.push({
@@ -496,6 +499,11 @@ const app = function () {
     }
 
     if(queuedItems.length > 0) {
+      await emailSiteOwner({
+        subject: `Firing queue for ${user.email}`,
+        template: `<p>Queued Items: ${queuedItems}</p>
+        <p>User._id: ${user._id}</p>`
+      });
       await tasks.syncTransactionsForItems(queuedItems, user._id);
     }
 
@@ -882,6 +890,13 @@ const app = function () {
     updateDates: (_, res) => {
       tasks.updateAllDates();
       res.json('updating dates...');
+    },
+    test: async (_, res) => {
+      const taskResult = await tasks.test();
+      res.json({
+        message: 'test',
+        taskResult
+      });
     }
   }
 }();

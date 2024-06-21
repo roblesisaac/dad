@@ -17,4 +17,5 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/all/transactions', app.syncAllUserTransactions);
   member.get('/plaid/transactions/:_id?', app.getTransactions);
   member.get('/plaid/update/dates', app.updateDates);
+member.get('/plaid/test/task', app.test);
 }

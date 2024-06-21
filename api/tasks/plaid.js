@@ -1,4 +1,4 @@
-import { task } from '@ampt/sdk';
+import { task, events } from '@ampt/sdk';
 import { data } from '@ampt/data';
 
 import plaid from '../controllers/plaid';
@@ -7,7 +7,7 @@ import Sites from '../models/sites';
 import notify from '../utils/notify';
 
 const tasks = (function() {
-  const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*59*1000 }, async ({ body }) => {
+  const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*20*1000 }, async ({ body }) => {
     const { user } = body;
     const transactions = await plaidTransactions.findAll({ date: '*', userId: user._id });
     const idsToRemove = transactions.map(t => t._id);
@@ -30,13 +30,13 @@ const tasks = (function() {
     return removeCount;
   });
 
-  const syncTransactions = task('sync.transactions', { timeout: 60*59*1000 }, async ({ body }) => {
+  const syncTransactions = task('sync.transactions', { timeout: 60*30*1000 }, async ({ body }) => {
     let { itemId, userId } = body;
     
     return await plaid.syncTransactionsForItem(itemId, userId);
   });
 
-  const syncTransactionsForItems = task('sync.itemIds', { timeout: 60*59*1000 }, async ({ body }) => {
+  const syncTransactionsForItems = task('sync.itemIds', { timeout: 60*30*1000 }, async ({ body }) => {
     const { itemIds, userId } = body;
 
     let results = [];
@@ -58,7 +58,7 @@ const tasks = (function() {
 
   });
 
-  const updateAllDates = task('update.allDates', { timeout: 60*59*1000 }, async () => {
+  const updateAllDates = task('update.allDates', { timeout: 30*60*1000 }, async () => {
 
     const users = await data.get('users:*');
     let updateCount = 0;
@@ -87,6 +87,23 @@ const tasks = (function() {
 
     return updateCount;
   }
+
+  const syncTest = task('sync.test', { timeout: 10*1000 }, async ({ body }) => {
+    const { round } = body;
+
+    if(round > 3) {
+      await notify.email('irobles1030@gmail.com', {
+        subject: 'testing 456',
+        template: `test completed on round ${round}`
+      });
+
+      return 'completed';
+    }
+
+    events.publish('requeue-task', { after: 5000 }, { round: round+1 })
+    
+    return 'task still in progress incomplete...';
+  });
   
   return {
     removeAllUserTransactions: async ({ _id, email }) => {
@@ -99,10 +116,22 @@ const tasks = (function() {
       syncTransactionsForItems.run({ itemIds, userId });
     },
     updateAllDates: async function () {
-      return 'Not implemented';
+      return 'Not implemented yet';
       // return updateAllDates.run();
+    },
+    test: async function(round=1) {
+      return await syncTest.run({ round });
     }
   }
 })();
+
+//events.publish('requeue-task', { after: '1 minute' }, { name: 'name' })
+
+events.on('requeue-task', async (event) => {
+  const { round } = event.body;
+
+  
+  tasks.test(round);
+});
 
 export default tasks;
