@@ -28,6 +28,7 @@ const itemSchema = {
     lastSyncId: String,
     lastSyncTime: Number,
     result: {
+      sectionedOff: Boolean,
       itemsAddedCount: {
         type: Number,
         default: 0
