@@ -92,10 +92,6 @@ const tasks = (function() {
     const { round } = body;
 
     if(round > 3) {
-      await notify.email('irobles1030@gmail.com', {
-        subject: 'testing 456',
-        template: `test completed on round ${round}`
-      });
 
       return 'completed';
     }
