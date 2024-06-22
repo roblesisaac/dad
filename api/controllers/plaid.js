@@ -252,13 +252,15 @@ async function fetchTransactionsFromPlaid({ access_token, cursor, startTime }) {
   let modified = [];
   let removed = [];
 
+  const minutes = 60 * 1000;
+
   try {
     let hasMore = true;
     let next_cursor;
 
     while (hasMore) {
       
-      if (Date.now() - startTime > 3 * 1000) {
+      if (Date.now() - startTime > 40 * minutes) {
         return { added, modified, removed, next_cursor, sectionedOff: true };
       }
 
@@ -777,7 +779,7 @@ async function syncTransactionsForItem(item, userId) {
 
   if(response.sectionedOff) {
     await emailSiteOwner({
-      subject: '45 Minute Timeout Reached',
+      subject: '40 Minute Timeout Reached',
       template: `<p>Tracktabs sync timed lasted longer than 45 minutes. Saving progress and sectioning off the sync.</p>`
     })
   }
