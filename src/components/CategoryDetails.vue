@@ -57,7 +57,7 @@ const catTotal = computed(() => {
 async function selectCategory() {
   selectedTab.categoryName = isSelected.value ? null : categoryName;
   
-  window.scrollTo(0, 0);
+  // window.scrollTo(0, 0);
   
   await nextTick();
   
