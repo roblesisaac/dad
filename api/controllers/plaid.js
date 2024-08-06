@@ -629,17 +629,30 @@ async function syncAllUserTransactions(user) {
 
   const days = (n) => n * 24 * 60 * 60 * 1000;
   const fiveDaysAgo = Date.now() - days(5);
+  const hours = (h) => h * 60 * 60 * 1000;
 
   for (const item of items) {
 
+    const { cursor, lastSyncTime, result, status } = item.syncData;
+
+    if(lastSyncTime > Date.now() - hours(4)) {
+      syncResults.push({
+        taskAlreadyQueued: true,
+        syncedLessThanFourHoursAgo: true,
+        itemId: item._id
+      });
+
+      continue;
+    }
+
     // sync transaction imediately if its been less than five days since last sync..
-    if(item.syncData.cursor !== '' && item.syncData.lastSyncTime > fiveDaysAgo && !item.syncData.result.sectionedOff) {
+    if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
       syncResults.push(await syncTransactionsForItem(item._id, user._id));
 
       continue;
     }
 
-    const syncAlreadyInProgress = ['queued', 'in_progress'].includes(item.syncData.status);
+    const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);
 
     if (syncAlreadyInProgress) {
       syncResults.push({

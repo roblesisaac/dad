@@ -1,6 +1,6 @@
 <template>
   <div :id="id" class="grid dottedRow proper">
-  
+    
     <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
       <div class="grid">
         <div class="cell auto">
@@ -14,143 +14,152 @@
         </div>
       </div>
     </div>
-  
+    
     <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
       <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
-  
+    
   </div>
-  </template>
+</template>
+
+<script setup>
+import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
+import Plus from 'vue-material-design-icons/Plus.vue';
+import Minus from 'vue-material-design-icons/Minus.vue';
+import SelectedItems from './SelectedItems.vue';
+
+import { fontColor, formatPrice } from '../utils';
+import { useAppStore } from '../stores/state';
+
+const { stickify } = useAppStore();
+
+const { state, categoryName, categoryItems, categoryTotal } = defineProps({
+  state: Object,
+  categoryName: String,
+  categoryItems: Object,
+  categoryTotal: Number
+});
+
+const selectedTab = state.selected.tab;
+
+const id = (categoryName).replace(/\s/g, '');
+
+const isSelected = computed(() => {
+  return selectedTab.categoryName === categoryName;
+});
+
+const catTotal = computed(() => {
+  const toFixed = isSelected.value ? 2 : 0;
   
-  <script setup>
-  import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
-  import Plus from 'vue-material-design-icons/Plus.vue';
-  import Minus from 'vue-material-design-icons/Minus.vue';
-  import SelectedItems from './SelectedItems.vue';
+  return formatPrice(categoryTotal, { toFixed })
+});
+
+async function selectCategory() {
+  selectedTab.categoryName = isSelected.value ? null : categoryName;
   
-  import { fontColor, formatPrice } from '../utils';
-  import { useAppStore } from '../stores/state';
+  window.scrollTo(0, 0);
   
-  const { stickify } = useAppStore();
+  await nextTick();
   
-  const { state, categoryName, categoryItems, categoryTotal } = defineProps({
-    state: Object,
-    categoryName: String,
-    categoryItems: Object,
-    categoryTotal: Number
+  scrollToElement(id);
+}
+
+function makeSelectedCategorySticky() {
+  const selector = state.isSmallScreen() ? id+'title' : id;
+  
+  if(isSelected.value) {
+    stickify.register(selector);
+  } else {
+    stickify.deregister(selector);  
+  }
+  
+  if(state.isSmallScreen()) {
+    return;
+  }
+  
+  const el = document.getElementById(id);
+  const leftPanel = document.getElementById('leftPanel');
+  const rightPanel = document.getElementById('rightPanel');
+  
+  if(isSelected.value) {
+    hideRightBorder(el);
+  } else {
+    showRightBorder(el);  
+  }
+  
+  setPanelHeight(leftPanel, rightPanel);
+}
+
+function hideRightBorder(el) {
+  el.style.width = getInnerWidth(el) + 2 + 'px';
+}
+
+function setPanelHeight(leftPanel, rightPanel) {
+  const leftHeight = leftPanel.getBoundingClientRect().height;
+  const leftHeightScroll = leftPanel.scrollHeight;
+  const rightHeight = rightPanel.scrollHeight;
+  
+  leftPanel.style.height = Math.max(leftHeight, leftHeightScroll, rightHeight) + 'px';
+}
+
+function showRightBorder(el) {
+  el.style.width = '';
+  el.style.background = '';
+}
+
+function scrollToElement(id) {
+  const element = document.getElementById(id);
+  
+  if (!element) {
+    console.warn(`Element with id "${id}" not found.`);
+    return;
+  }
+  
+  const elementRect = element.getBoundingClientRect();
+  const headerHeight = document.querySelector('.totalsRow')?.offsetHeight || 0;
+  const scrollY = window.scrollY || window.pageYOffset;
+  const absoluteElementTop = elementRect.top + scrollY;
+  
+  window.scrollTo({
+    top: absoluteElementTop - headerHeight,
+    behavior: 'smooth'
   });
-  
-  const selectedTab = state.selected.tab;
-  
-  const id = (categoryName).replace(/\s/g, '');
-  
-  const isSelected = computed(() => {
-    return selectedTab.categoryName === categoryName;
-  });
-  
-  const catTotal = computed(() => {
-    const toFixed = isSelected.value ? 2 : 0;
-  
-    return formatPrice(categoryTotal, { toFixed })
-  });
-  
-  function selectCategory() {
-    selectedTab.categoryName = isSelected.value ? null : categoryName;
-  
-    window.scrollTo(0, 0);
-  
-    nextTick(function() {
-      scrollToElement(id);
-    });
+}
+
+function getInnerWidth(el) {
+  if (!(el instanceof HTMLElement)) {
+    console.error('Invalid element provided.');
+    return null;
   }
   
-  function makeSelectedCategorySticky() {
-    const selector = state.isSmallScreen() ? id+'title' : id;
+  const computedStyles = window.getComputedStyle(el);
+  const paddingLeft = parseFloat(computedStyles.paddingLeft);
+  const paddingRight = parseFloat(computedStyles.paddingRight);
+  const borderLeft = parseFloat(computedStyles.borderLeftWidth);
+  const borderRight = parseFloat(computedStyles.borderRightWidth);
   
-    if(isSelected.value) {
-      stickify.register(selector);
-    } else {
-      stickify.deregister(selector);  
-    }
+  const innerWidth = el.clientWidth - (paddingLeft + paddingRight + borderLeft + borderRight);
   
-    if(state.isSmallScreen()) {
-      return;
-    }
-  
-    const el = document.getElementById(id);
-    const leftPanel = document.getElementById('leftPanel');
-    const rightPanel = document.getElementById('rightPanel');
-  
-    if(isSelected.value) {
-      hideRightBorder(el);
-    } else {
-      showRightBorder(el);  
-    }
-  
-    setPanelHeight(leftPanel, rightPanel);
-  }
-  
-  function hideRightBorder(el) {
-    el.style.width = getInnerWidth(el) + 2 + 'px';
-  }
-  
-  function setPanelHeight(leftPanel, rightPanel) {
-    const leftHeight = leftPanel.getBoundingClientRect().height;
-    const leftHeightScroll = leftPanel.scrollHeight;
-    const rightHeight = rightPanel.scrollHeight;
-  
-    leftPanel.style.height = Math.max(leftHeight, leftHeightScroll, rightHeight) + 'px';
-  }
-  
-  function showRightBorder(el) {
-    el.style.width = '';
-    el.style.background = '';
-  }
-  
-  function scrollToElement(id) {
-    var element = document.getElementById(id);
-  
-    if (!element) {
-      return;
-    }
-  
-    element.scrollIntoView({behavior: 'smooth', block: 'start'});
-  }
-  
-  function getInnerWidth(el) {
-    if (!(el instanceof HTMLElement)) {
-      console.error('Invalid element provided.');
-      return null;
-    }
-  
-    const computedStyles = window.getComputedStyle(el);
-    const paddingLeft = parseFloat(computedStyles.paddingLeft);
-    const paddingRight = parseFloat(computedStyles.paddingRight);
-    const borderLeft = parseFloat(computedStyles.borderLeftWidth);
-    const borderRight = parseFloat(computedStyles.borderRightWidth);
-  
-    const innerWidth = el.clientWidth - (paddingLeft + paddingRight + borderLeft + borderRight);
-  
-    return innerWidth;
-  }
-  
-  watch(isSelected, makeSelectedCategorySticky);
-  onMounted(makeSelectedCategorySticky);
-  onBeforeUnmount(() => {
-    selectedTab.categoryName = null;
-    stickify.deregister(id);
-  });
-  
-  </script>
-  
-  <style>
-  .categoryTitle {
-    line-height: 2;
-    cursor: pointer;
-  }
-  
-  .expandedCat {
-    position: absolute;
-  }
-  
-  </style>
+  return innerWidth;
+}
+
+watch(isSelected, makeSelectedCategorySticky);
+onMounted(makeSelectedCategorySticky);
+onBeforeUnmount(() => {
+  selectedTab.categoryName = null;
+  stickify.deregister(id);
+});
+
+</script>
+
+<style>
+.categoryTitle {
+  line-height: 2;
+  cursor: pointer;
+}
+
+.expandedCat {
+  position: absolute;
+}
+
+</style>
