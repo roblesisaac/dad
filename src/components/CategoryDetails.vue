@@ -116,13 +116,12 @@ function scrollToElement(id) {
   }
   
   const elementRect = element.getBoundingClientRect();
-  const topNavHeight = document.querySelector('.topNav')?.offsetHeight || 0;
   const headerHeight = document.querySelector('.totalsRow')?.offsetHeight || 0;
   const scrollY = window.scrollY || window.pageYOffset;
   const absoluteElementTop = elementRect.top + scrollY;
   
   window.scrollTo({
-    top: absoluteElementTop - headerHeight - topNavHeight
+    top: absoluteElementTop - headerHeight
   });
 }
 
