@@ -57,7 +57,7 @@ const catTotal = computed(() => {
 async function selectCategory() {
   selectedTab.categoryName = isSelected.value ? null : categoryName;
   
-  // window.scrollTo(0, 0);
+  window.scrollTo(0, 0);
   
   await nextTick();
   
@@ -122,8 +122,7 @@ function scrollToElement(id) {
   const absoluteElementTop = elementRect.top + scrollY;
   
   window.scrollTo({
-    top: absoluteElementTop - headerHeight - topNavHeight,
-    behavior: 'smooth'
+    top: absoluteElementTop - headerHeight - topNavHeight
   });
 }
 
