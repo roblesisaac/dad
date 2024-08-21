@@ -1,5 +1,4 @@
-import { events } from '@ampt/sdk';
-import { params } from '@ampt/sdk';
+import { events, params } from '@ampt/sdk';
 import { passport } from '../middlewares/passport';
 import { proper } from '../../src/utils';
 import { sendVerificationCode } from '../../api/events/users.js';
