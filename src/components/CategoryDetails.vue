@@ -121,8 +121,7 @@ function scrollToElement(id) {
   const absoluteElementTop = elementRect.top + scrollY;
   
   window.scrollTo({
-    top: absoluteElementTop - headerHeight,
-    behavior: 'smooth'
+    top: absoluteElementTop - headerHeight
   });
 }
 
