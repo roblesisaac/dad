@@ -58,7 +58,7 @@ const tasks = (function() {
 
   });
 
-  const updateAllDates = task('update.allDates', { timeout: 60*60*1000 }, async () => {
+  const updateAllDates = task('update.allDates', { timeout: 29*60*1000 }, async () => {
 
     const users = await data.get('users:*');
     let updateCount = 0;

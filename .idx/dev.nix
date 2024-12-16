@@ -23,14 +23,14 @@
       # To run something each time the environment is rebuilt, use the `onStart` hook
     };
     # Enable previews and customize configuration
-    previews = {
-      enable = true;
-      previews = {
-        web = {
-          command = ["npm" "run" "dev" "--" "--port" "$PORT"];
-          manager = "web";
-        };
-      };
-    };
+    # previews = {
+    #   enable = true;
+    #   previews = {
+    #     web = {
+    #       command = ["npm" "run" "dev" "--" "--port" "$PORT"];
+    #       manager = "web";
+    #     };
+    #   };
+    # };
   };
 }
