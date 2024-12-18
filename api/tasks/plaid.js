@@ -36,7 +36,7 @@ const tasks = (function() {
     return await plaid.syncTransactionsForItem(itemId, userId);
   });
 
-  const syncTransactionsForItems = task('sync.itemIds', { timeout: 60*60*1000 }, async ({ body }) => {
+  const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
     const { itemIds, userId } = body;
 
     let results = [];
@@ -58,7 +58,7 @@ const tasks = (function() {
 
   });
 
-  const updateAllDates = task('update.allDates', { timeout: 29*60*1000 }, async () => {
+  const updateAllDates = task('update.allDates', { timeout: 60*60*1000 }, async () => {
 
     const users = await data.get('users:*');
     let updateCount = 0;
