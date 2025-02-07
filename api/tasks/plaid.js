@@ -1,10 +1,10 @@
 import { task, events } from '@ampt/sdk';
 import { data } from '@ampt/data';
 
-import plaid from '../controllers/plaid';
 import plaidTransactions from '../models/plaidTransactions';
 import Sites from '../models/sites';
 import notify from '../utils/notify';
+import plaidTransactionService from '../services/plaidTransactionService.js';
 
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
@@ -33,7 +33,7 @@ const tasks = (function() {
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
     let { itemId, userId } = body;
     
-    return await plaid.syncTransactionsForItem(itemId, userId);
+    return await plaidTransactionService.syncTransactionsForItem(itemId, userId);
   });
 
   const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
@@ -43,7 +43,7 @@ const tasks = (function() {
 
     for (const itemId of itemIds) {
       try {
-        const result = await plaid.syncTransactionsForItem(itemId, userId);
+        const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
 
         results.push(result);
       } catch (e) {
@@ -131,3 +131,23 @@ events.on('requeue-task', async (event) => {
 });
 
 export default tasks;
+
+export const handler = async (event) => {
+  try {
+    const { itemId, userId } = event.body;
+    
+    // Call the service directly instead of going through the controller
+    const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+    
+    return {
+      statusCode: 200,
+      body: JSON.stringify(result)
+    };
+  } catch (error) {
+    console.error('Task error:', error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message })
+    };
+  }
+};

@@ -22,6 +22,11 @@
     <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
   </div>
 
+  <!-- Item Repair -->
+  <div class="cell-1 proper">
+    <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
+  </div>
+
 </div>
 </template>
 
@@ -140,7 +145,7 @@ watch(() => props.state.allUserGroups, (groups) => {
   font-weight: normal;
 }
 
-.linkAccount, .new-group {
+.linkAccount, .new-group, .item-repair {
   margin-bottom: 20px;
   box-shadow: 3px 3px #000;
   border: 1px solid #000;
@@ -149,6 +154,11 @@ watch(() => props.state.allUserGroups, (groups) => {
 
 .new-group, .linkAccount {
   background: lightblue;
+  color: #000;
+}
+
+.item-repair {
+  background: lightcoral;
   color: #000;
 }
 </style>

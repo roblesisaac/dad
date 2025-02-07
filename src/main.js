@@ -6,19 +6,23 @@ import '@fontsource/fira-code';
 import '@fontsource/fira-code/700.css';
 import '@vuepic/vue-datepicker/dist/main.css';
 
-const views = import.meta.glob('./views/*.vue');
+const views = import.meta.glob([
+  './views/*.vue',
+  './features/SpendingReport.vue'
+]);
 
 const routerPromise = new Promise((resolve) => {
   const routes = [];
 
   for (const path in views) {
-    let name = path.slice(8, -4);
+    let name = path.match(/\/([^/]+)\.vue$/)[1];
 
     views[path]().then(module => {
         name = name.toLowerCase();
         name = name.replace('vue', '');
 
         if(name === 'index') name = '';
+        if(name === 'spendingreport') name = 'spendingreport';
 
         const path = `/${name}`;
         const component = module.default;

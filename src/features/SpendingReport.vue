@@ -593,7 +593,12 @@
       const items = await api.get('api/plaid/items');
 
       if(!items.length) {
-        state.syncCheckId = false;
+        state.blueBar.message = 'No items found';
+        state.blueBar.loading = false;
+        setTimeout(() => {
+          state.syncCheckId = false;
+          state.blueBar.message = false;
+        }, 3000);
         return;
       }
 
@@ -611,7 +616,6 @@
         setTimeout(() => {
           state.syncCheckId = false;
           state.blueBar.message = false;
-          state.syncCheckId = false;
         }, 3000);
 
         return;

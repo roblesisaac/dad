@@ -12,9 +12,9 @@
       <div v-if="item.error" class="cell shrink">
         <button @click="app.repairItem(item.item_id)" class="repair button">Repair</button>
       </div>
-      <div v-else @click="app.repairItem(item.item_id)" class="cell shrink">
-        Good
-      </div>
+      <button v-else @click="app.repairItem(item.item_id)" class="button reconnect">
+        Reconnect
+      </button>
     </div>
     
   </div>
@@ -67,3 +67,20 @@ const app = function() {
 app.init();
 
 </script>
+
+<style scoped>
+.reconnect {
+  background: lightblue;
+  color: #000;
+}
+.repair {
+  background: lightcoral;
+  color: #000;
+}
+.button {
+  margin-bottom: 20px;
+  box-shadow: 3px 3px #000;
+  border: 1px solid #000;
+  padding: 10px;
+}
+</style>
