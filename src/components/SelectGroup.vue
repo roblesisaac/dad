@@ -22,7 +22,7 @@
     <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
   </div>
 
-  <!-- Item Repair -->
+  <!-- Reconnect Existing Institutions -->
   <div class="cell-1 proper">
     <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
   </div>
@@ -158,7 +158,7 @@ watch(() => props.state.allUserGroups, (groups) => {
 }
 
 .item-repair {
-  background: lightcoral;
+  background: lightgoldenrodyellow;
   color: #000;
 }
 </style>
