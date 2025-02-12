@@ -216,7 +216,14 @@
   const { checkSyncStatus } = useSyncStatus(api, state);
 
   // Initialize utils
-  const { sortBy, extractDateRange, selectFirstGroup } = useUtils();
+  const { 
+    sortBy, 
+    extractDateRange, 
+    selectFirstGroup,
+    selectFirstTab,
+    selectedTabsInGroup,
+    deselectOtherTabs 
+  } = useUtils();
 
   onMounted(() => {
     stickify.register('.totalsRow');
@@ -345,18 +352,23 @@
         }
 
         if(oldSelectedTabId) {
-          const oldSelectedTab = state.allUserTabs.find(({ _id }) =>  _id === oldSelectedTabId);
-
-          oldSelectedTab.categorizedItems = [];
+          const oldSelectedTab = state.allUserTabs?.find(({ _id }) => _id === oldSelectedTabId);
+          if (oldSelectedTab) {
+            oldSelectedTab.categorizedItems = [];
+          }
         }
 
         if(!newSelectedTabId) {
           return;
         }
         
-        const processed = processTabData(state.selected.allGroupTransactions, state.selected.tab);
+        const selectedTab = state.selected.tab;
+        if (!selectedTab) return;
 
-        state.selected.tab.categorizedItems = processed.categorizedItems;
+        const processed = processTabData(state.selected.allGroupTransactions, selectedTab);
+        if (processed) {
+          selectedTab.categorizedItems = processed.categorizedItems;
+        }
       },
       handleViewChange: async (newView, oldView) => {
         if(newView !== 'home') {
@@ -372,20 +384,20 @@
       processAllTabsForSelectedGroup: async () => {
         const tabsForGroup = state.selected.tabsForGroup;
 
-        if(!tabsForGroup.length) {
+        if(!tabsForGroup?.length) {
           return;
         }
 
         state.isLoading = true;
 
-        const selectedTabs = selectedTabsInGroup();
+        const selectedTabs = selectedTabsInGroup(tabsForGroup);
 
         if(selectedTabs.length < 1) {
-          selectFirstTab(tabsForGroup);
+          selectFirstTab(tabsForGroup, api);
         }
 
         if(selectedTabs.length > 1) {
-          await deselectOtherTabs(selectedTabs);
+          await deselectOtherTabs(selectedTabs, api);
         }
 
         for(const tab of tabsForGroup) {
@@ -393,8 +405,10 @@
 
           const processed = processTabData(state.selected.allGroupTransactions, tab);
 
-          tab.total = processed.tabTotal;
-          tab.categorizedItems = processed.categorizedItems;
+          if (processed) {
+            tab.total = processed.tabTotal;
+            tab.categorizedItems = processed.categorizedItems;
+          }
         }
 
         state.isLoading = false;
