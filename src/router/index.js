@@ -1,15 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginView from '../components/LoginView.vue'
-import CallbackView from '../components/CallbackView.vue'
-import IndexVue from '../views/IndexVue.vue'
-import LoginVue from '../views/LoginVue.vue'
-import PrivacyPolicy from '../views/PrivacyPolicy.vue'
-import RecoverVue from '../views/RecoverVue.vue'
-import SettingsVue from '../views/SettingsVue.vue'
-import SwiperVue from '../views/SwiperVue.vue'
-import TermsOfService from '../views/TermsOfService.vue'
-import VerifyVue from '../views/VerifyVue.vue'
-import SpendingReport from '../features/SpendingReport.vue'
+
+const LoginView = () => import('../components/LoginView.vue')
+const CallbackView = () => import('../components/CallbackView.vue')
+const IndexVue = () => import('../views/IndexVue.vue')
+const LoginVue = () => import('../views/LoginVue.vue')
+const PrivacyPolicy = () => import('../views/PrivacyPolicy.vue')
+const RecoverVue = () => import('../views/RecoverVue.vue')
+const SettingsVue = () => import('../views/SettingsVue.vue')
+const SwiperVue = () => import('../views/SwiperVue.vue')
+const TermsOfService = () => import('../views/TermsOfService.vue')
+const VerifyVue = () => import('../views/VerifyVue.vue')
+const SpendingReport = () => import('../features/SpendingReport.vue')
 
 const routes = [
   {

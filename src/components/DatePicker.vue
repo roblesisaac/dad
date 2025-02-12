@@ -39,7 +39,6 @@ const app = function() {
 
   function launchPreset() {
     const { presets } = state;
-
     date[when] = presets[date[when]]();
   }
 
@@ -53,7 +52,6 @@ const app = function() {
 }();
 
 app.init();
-
 </script>
 
 <style>
