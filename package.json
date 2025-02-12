@@ -15,7 +15,7 @@
     "ampt:commit": "npm run commit"
   },
   "dependencies": {
-    "@ampt/cli": "^1.1.17",
+    "@ampt/cli": "^1.1.19",
     "@ampt/data": "^1.0.26",
     "@ampt/sdk": "^1.0.19",
     "@auth0/auth0-vue": "^2.4.0",
