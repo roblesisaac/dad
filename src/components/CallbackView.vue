@@ -6,28 +6,24 @@
 
 <script setup>
 import { onMounted } from 'vue'
+import { useAuth0 } from '@auth0/auth0-vue'
 import { useRouter } from 'vue-router'
-import { isAuthenticated, user } from '../utils/auth.js'
 
+const { handleRedirectCallback, isAuthenticated, user } = useAuth0()
 const router = useRouter()
 
-onMounted(() => {
-  const hash = window.location.hash
-  if (hash) {
-    // Parse the hash fragment
-    const params = new URLSearchParams(hash.substring(1))
-    const accessToken = params.get('access_token')
-    const idToken = params.get('id_token')
-
-    if (accessToken && idToken) {
-      // Store tokens securely (you might want to use a more secure storage method)
-      localStorage.setItem('access_token', accessToken)
-      localStorage.setItem('id_token', idToken)
-      
-      isAuthenticated.value = true
-      // Redirect to home or dashboard
+onMounted(async () => {
+  try {
+    // Handle the authentication callback
+    await handleRedirectCallback()
+    
+    // If authentication is successful, redirect to home
+    if (isAuthenticated.value) {
       router.push('/')
     }
+  } catch (error) {
+    console.error('Error handling callback:', error)
+    router.push('/login')
   }
 })
 </script>

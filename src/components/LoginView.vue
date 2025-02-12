@@ -7,11 +7,13 @@
 </template>
 
 <script setup>
-import { loginWithAuth0 } from '../utils/auth.js'
+import { useAuth0 } from '@auth0/auth0-vue'
+
+const { loginWithRedirect } = useAuth0()
 
 const handleLogin = async () => {
   try {
-    await loginWithAuth0()
+    await loginWithRedirect()
   } catch (error) {
     console.error('Login failed:', error)
   }

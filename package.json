@@ -18,6 +18,7 @@
     "@ampt/cli": "^1.1.17",
     "@ampt/data": "^1.0.26",
     "@ampt/sdk": "^1.0.19",
+    "@auth0/auth0-vue": "^2.4.0",
     "@fontsource/fira-code": "^5.0.8",
     "@vuepic/vue-datepicker": "^6.0.2",
     "bcryptjs": "^2.4.3",
