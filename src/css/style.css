@@ -1,6 +1,6 @@
 :root {
   /* font-family: "Avenir Next W01", "Avenir Next", Helvetica, sans-serif; */
-  font-family: 'Fira Code', monospace;
+  font-family: 'Sometype Mono Variable', monospace;
   line-height: 1.5;
   color-scheme: light dark;
   color: rgba(255, 255, 255, 0.87);
@@ -10,6 +10,10 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: 'Sometype Mono Variable', monospace;
 }
 
 #app {

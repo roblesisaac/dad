@@ -19,7 +19,7 @@
     "@ampt/data": "^1.0.26",
     "@ampt/sdk": "^1.0.19",
     "@auth0/auth0-vue": "^2.4.0",
-    "@fontsource/fira-code": "^5.0.8",
+    "@fontsource-variable/sometype-mono": "^5.1.1",
     "@vuepic/vue-datepicker": "^6.0.2",
     "bcryptjs": "^2.4.3",
     "crypto-browserify": "^3.12.0",

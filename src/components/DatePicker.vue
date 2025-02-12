@@ -61,7 +61,7 @@ app.init();
   background: transparent !important;
   border: 0 !important;
   font-weight: bold !important;
-  font-family: "Fira Code", monospace !important;
+  font-family: 'Sometype Mono Variable', monospace !important;
   padding: 0 !important;
   text-align: center !important;
 }
