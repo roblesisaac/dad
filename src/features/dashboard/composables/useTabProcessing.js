@@ -1,7 +1,9 @@
 import { useRules } from './useRules';
+import { useUtils } from './useUtils';
 
 export function useTabProcessing() {
   const { ruleMethods, filterGlobalRules, filterRulesForTab } = useRules();
+  const { getDayOfWeekPST } = useUtils();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
   function extractAndSortRuleTypes(tabRules) {

@@ -365,7 +365,7 @@
         const selectedTab = state.selected.tab;
         if (!selectedTab) return;
 
-        const processed = processTabData(state.selected.allGroupTransactions, selectedTab);
+        const processed = processTabData(state.selected.allGroupTransactions, selectedTab, state.allUserRules);
         if (processed) {
           selectedTab.categorizedItems = processed.categorizedItems;
         }
@@ -403,7 +403,7 @@
         for(const tab of tabsForGroup) {
           tab.categorizedItems = [];
 
-          const processed = processTabData(state.selected.allGroupTransactions, tab);
+          const processed = processTabData(state.selected.allGroupTransactions, tab, state.allUserRules);
 
           if (processed) {
             tab.total = processed.tabTotal;
