@@ -86,10 +86,10 @@
 <script setup>
 import { reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import { X } from 'lucide-vue-next';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 import ViewDragger from './ViewDragger.vue';
-import ScrollingContent from './ScrollingContent.vue';
-import { arraysMatch } from '../utils';
+import ScrollingContent from '@/shared/components/ScrollingContent.vue';
+import { arraysMatch } from '@/utils';
 
 const { api, sticky } = useAppStore();
 

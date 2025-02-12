@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "commit": "git add -A; git commit -m \"cloud update\"; git push;",
+    "publish": "git checkout main; git merge dev; git push; git checkout dev;",
     "preview": "vite preview",
     "test": "vitest",
     "ampt:test": "vitest --coverage",

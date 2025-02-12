@@ -83,10 +83,10 @@
 import { computed, nextTick, reactive, watch } from 'vue';
 
 import Draggable from 'vuedraggable';
-import ScrollingContent from './ScrollingContent.vue';
+import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import { Plus, Minus } from 'lucide-vue-next';
 import EditTabSection from './EditTabSection.vue';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 const { App, state } = defineProps({ state: Object, App: Object });

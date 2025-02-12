@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 const { Session } = useAppStore();
 </script>
 

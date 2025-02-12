@@ -66,7 +66,7 @@
       </div>
       <div class="cell-1 center">
         <button class="bgF3 bgBlack expanded" @click="app.loginWithGoogle">
-          <img alt="Vue logo" src="../assets/google.svg" height="20" class="p10r" />
+          <img alt="Vue logo" src="/google.svg" height="20" class="p10r" />
           <span class="proper">{{ state.action }}</span>
         </button>
       </div>
@@ -77,10 +77,10 @@
 <script setup>
 import { reactive, nextTick } from 'vue';
 
-import { router } from '../main';
-import LoadingDots from './LoadingDots.vue';
-import { isValidEmail } from '../utils';
-import { useAppStore } from '../stores/state';
+import { router } from '@/main';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
+import { isValidEmail } from '@/utils';
+import { useAppStore } from '@/stores/state';
 const { api, utils } = useAppStore();
 
 const state = reactive({

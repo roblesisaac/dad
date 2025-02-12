@@ -56,12 +56,12 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from 'vue';
-import Switch from './Switch.vue';
-import ScrollingContent from './ScrollingContent.vue';
+import Switch from '@/shared/components/Switch.vue';
+import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import Draggable from 'vuedraggable';
 import EditRule from './EditRule.vue';
 
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 

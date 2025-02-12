@@ -64,8 +64,8 @@
 import { computed, watch } from 'vue';
 import NetWorth from './NetWorth.vue';
 import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
-import { fontColor, formatPrice } from '../utils';
-import { useAppStore } from '../stores/state';
+import { fontColor, formatPrice } from '@/utils';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 

@@ -15,7 +15,7 @@
 
 <script setup>
 import { X } from 'lucide-vue-next';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 const { api, State, utils } = useAppStore();
 
 const app = function() {

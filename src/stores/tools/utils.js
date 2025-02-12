@@ -1,4 +1,4 @@
-import { router } from '../../main';
+import { router } from '@/main';
 import { load } from 'recaptcha-v3';
 
 export default function(State) {

@@ -1,7 +1,7 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import router from './router/index.js';
-import auth0 from './utils/auth.js';
+import auth0 from './shared/utils/auth.js';
 import App from './App.vue';
 import '@fontsource-variable/sometype-mono';
 import '@vuepic/vue-datepicker/dist/main.css';
