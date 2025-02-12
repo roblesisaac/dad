@@ -27,7 +27,7 @@
     </div>
     <div v-if="ruleConfig._id && state.is('EditTab')" class="cell shrink p10y p10r bold">
       <small>
-        <MoreVerticalCircle @click="app.editRule" />
+        <Settings2 @click="app.editRule" />
       </small>
     </div>
   </ScrollingContent>
@@ -40,7 +40,7 @@
     
 <script setup>
   import { computed, reactive, watch } from 'vue';
-  import { MoreVerticalCircle, GripHorizontal } from 'lucide-vue-next';
+  import { Settings2, GripHorizontal } from 'lucide-vue-next';
   import ScrollingContent from './ScrollingContent.vue';
   import DynamicWidthInput from './DynamicWidthInput.vue';
   import DynamicWidthSelect from './DynamicWidthSelect.vue';
