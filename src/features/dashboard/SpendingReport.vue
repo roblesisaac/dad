@@ -133,7 +133,6 @@
   import EditGroup from './components/EditGroup.vue'; 
   import RuleDetails from './components/RuleDetails.vue';
   import SelectedItems from './components/SelectedItems.vue';
-  import SelectGroup from './components/SelectGroup.vue';
   import LoadingDots from '@/shared/components/LoadingDots.vue';
   import ItemRepair from './components/ItemRepair.vue';
   import DatePickers from './components/DatePickers.vue';
@@ -148,6 +147,7 @@
   import { useSyncStatus } from './composables/useSyncStatus';
   import loadScript from '@/shared/utils/loadScript';
   import { useUtils } from './composables/useUtils';
+  import { SelectGroup } from '@/features/select-group';
 
   const { api, State, stickify } = useAppStore();
 

@@ -9,7 +9,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import NetWorth from './NetWorth.vue';
+import NetWorth from '../../select-group/composables/NetWorth.vue';
 
 const props = defineProps({
   state: Object
