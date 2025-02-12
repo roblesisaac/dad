@@ -10,7 +10,7 @@ const SettingsVue = () => import('../views/SettingsVue.vue')
 const SwiperVue = () => import('../views/SwiperVue.vue')
 const TermsOfService = () => import('../views/TermsOfService.vue')
 const VerifyVue = () => import('../views/VerifyVue.vue')
-const SpendingReport = () => import('../features/SpendingReport.vue')
+const SpendingReport = () => import('../features/dashboard/SpendingReport.vue')
 
 const routes = [
   {
