@@ -4,7 +4,7 @@
   <ScrollingContent>
     <Transition>
       <div v-if="ruleConfig._id && state.showReorder" class="cell shrink p10y p5r bold handle">
-        <small><DragHorizontalVariant /></small>
+        <small><GripHorizontal /></small>
       </div>
     </Transition>
     <div v-if="ruleIsGlobal" class="cell shrink p10y bold">*</div>
@@ -27,7 +27,7 @@
     </div>
     <div v-if="ruleConfig._id && state.is('EditTab')" class="cell shrink p10y p10r bold">
       <small>
-        <DotsVerticalCircleOutline @click="app.editRule" />
+        <Settings2 @click="app.editRule" />
       </small>
     </div>
   </ScrollingContent>
@@ -40,8 +40,7 @@
     
 <script setup>
   import { computed, reactive, watch } from 'vue';
-  import DotsVerticalCircleOutline from 'vue-material-design-icons/DotsVerticalCircleOutline.vue';
-  import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
+  import { Settings2, GripHorizontal } from 'lucide-vue-next';
   import ScrollingContent from './ScrollingContent.vue';
   import DynamicWidthInput from './DynamicWidthInput.vue';
   import DynamicWidthSelect from './DynamicWidthSelect.vue';

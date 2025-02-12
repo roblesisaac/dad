@@ -2,7 +2,7 @@
 <div class="grid text-left allTabRow p10y middle b-bottom">
   <!-- Dots -->
   <div class="cell-2-24">
-    <DotsVertical />
+    <MoreVertical />
   </div>
 
   <!-- Title & Total -->
@@ -14,7 +14,7 @@
 
   <!-- Drag Handle -->
   <div class="cell-2-24">
-    <DragHorizontalVariant class="handlerTab pointer" />
+    <GripHorizontal class="handlerTab pointer" />
   </div>
 </div>
 </template>
@@ -22,8 +22,7 @@
 <script setup>
 import { nextTick, watch } from 'vue';
 import { formatPrice } from '../utils';
-import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
-import DotsVertical from 'vue-material-design-icons/DotsVertical.vue';
+import { MoreVertical, GripHorizontal } from 'lucide-vue-next';
 import { useAppStore } from '../stores/state';
 
 const { api } = useAppStore();

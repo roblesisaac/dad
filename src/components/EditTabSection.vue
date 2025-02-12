@@ -19,8 +19,7 @@
 </template>
 
 <script setup>
-import Plus from 'vue-material-design-icons/Plus.vue';
-import Minus from 'vue-material-design-icons/Minus.vue';
+import { Plus, Minus } from 'lucide-vue-next';
 import RulesRenderer from './RulesRenderer.vue';
 
 const props = defineProps({

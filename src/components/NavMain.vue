@@ -19,7 +19,7 @@
   <!-- hamburger -->
   <div v-if="State.currentScreenSize()==='small'" class="cell shrink text-right" @click="State.showingOffCanvasLinks=true">
     <a href="#" class="menu-icon">
-      <MenuIcon />
+      <Menu />
     </a>
   </div>
 
@@ -28,7 +28,7 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import MenuIcon from 'vue-material-design-icons/Menu.vue';
+import { Menu } from 'lucide-vue-next';
 
 import { useAppStore } from '../stores/state';
 const { State, api, utils, stickify } = useAppStore();

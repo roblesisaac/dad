@@ -14,8 +14,7 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
-import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
-import ChevronRight from 'vue-material-design-icons/ChevronRight.vue';
+import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
 import { useAppStore } from '../stores/state';
 

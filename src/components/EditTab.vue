@@ -84,8 +84,7 @@ import { computed, nextTick, reactive, watch } from 'vue';
 
 import Draggable from 'vuedraggable';
 import ScrollingContent from './ScrollingContent.vue';
-import Plus from 'vue-material-design-icons/Plus.vue';
-import Minus from 'vue-material-design-icons/Minus.vue';
+import { Plus, Minus } from 'lucide-vue-next';
 import EditTabSection from './EditTabSection.vue';
 import { useAppStore } from '../stores/state';
 

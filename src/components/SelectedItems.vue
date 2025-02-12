@@ -43,7 +43,7 @@
 import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
 import { fontColor, formatPrice } from '../utils';
-import Minus from 'vue-material-design-icons/Minus.vue';
+import { Minus } from 'lucide-vue-next';
 
 const { categoryName, state } = defineProps({
   categoryName: String,

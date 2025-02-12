@@ -24,8 +24,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
-import Plus from 'vue-material-design-icons/Plus.vue';
-import Minus from 'vue-material-design-icons/Minus.vue';
+import { Plus, Minus } from 'lucide-vue-next';
 import SelectedItems from './SelectedItems.vue';
 
 import { fontColor, formatPrice } from '../utils';

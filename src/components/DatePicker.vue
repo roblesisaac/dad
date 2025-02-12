@@ -39,7 +39,6 @@ const app = function() {
 
   function launchPreset() {
     const { presets } = state;
-
     date[when] = presets[date[when]]();
   }
 
@@ -53,24 +52,23 @@ const app = function() {
 }();
 
 app.init();
-
 </script>
 
 <style>
-.dp__input_reg {
-  background: transparent;
-  border: 0;
-  font-weight: bold;
-  font-family: "Fira Code", monospace;
-  padding: 0;
-  text-align: center;
+.dp__input {
+  background: transparent !important;
+  border: 0 !important;
+  font-weight: bold !important;
+  font-family: 'Sometype Mono Variable', monospace !important;
+  padding: 0 !important;
+  text-align: center !important;
 }
 
 .dp__btn {
-  box-shadow: none;
+  box-shadow: none !important;
 }
 
 .dp__calendar_header_separator {
-  background: transparent;
+  background: transparent !important;
 }
 </style>

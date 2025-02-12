@@ -2,12 +2,12 @@
 <div :class="['grid middle proper text-left group-row', isSelected]">
     <!-- Edit Horizontal Dots -->
     <div class="cell-1 right">
-        <DotsHorizontal @click="app.editGroup(element)" class="handlerGroup pointer" />
+        <MoreHorizontal @click="app.editGroup(element)" class="handlerGroup pointer" />
     </div>
 
     <!-- Drag Handle -->
     <div class="cell-3-24 p20r">
-        <DragHorizontalVariant class="handlerGroup pointer" />
+        <GripHorizontal class="handlerGroup pointer" />
     </div>
 
     <div class="cell-12-24 pointer" @click="app.selectGroup(element)">
@@ -63,8 +63,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import NetWorth from './NetWorth.vue';
-import DragHorizontalVariant from 'vue-material-design-icons/DragHorizontalVariant.vue';
-import DotsHorizontal from 'vue-material-design-icons/DotsHorizontal.vue';
+import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
