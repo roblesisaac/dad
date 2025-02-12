@@ -28,6 +28,7 @@
     "express-rate-limit": "^6.7.0",
     "express-session": "^1.17.3",
     "jsonwebtoken": "^9.0.0",
+    "lucide-vue-next": "^0.475.0",
     "node-fetch": "^3.3.1",
     "nodemailer": "^6.9.1",
     "nodemailer-plugin-inline-base64": "^2.1.1",
@@ -41,7 +42,6 @@
     "tls-check": "^1.0.0",
     "uuid": "^9.0.0",
     "vue": "^3.2.47",
-    "vue-material-design-icons": "^5.2.0",
     "vue-router": "^4.1.6",
     "vuedraggable": "^4.1.0",
     "xss-clean": "^0.1.1"

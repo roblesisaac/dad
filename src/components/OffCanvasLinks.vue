@@ -2,7 +2,7 @@
 <div class="grid off-canvas">
   <div class="cell-1">
     <button class="close-window p20" @click="State.showingOffCanvasLinks=false">      
-      <close-thick-icon />
+      <X />
     </button>
     <button class="link-button" @click="app.changePath(link)"
       v-for="link in State.userViews" 
@@ -14,6 +14,7 @@
 </template>
 
 <script setup>
+import { X } from 'lucide-vue-next';
 import { useAppStore } from '../stores/state';
 const { api, State, utils } = useAppStore();
 

@@ -127,7 +127,7 @@
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
   import AllTabs from '../components/AllTabs.vue';
-  import ChevronLeft from 'vue-material-design-icons/ChevronLeft.vue';
+  import { ChevronLeft } from 'lucide-vue-next';
   import ItemRepair from '../components/ItemRepair.vue';
   import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
   import LoadingDots from '../components/LoadingDots.vue';

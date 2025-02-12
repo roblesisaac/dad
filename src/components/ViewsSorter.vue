@@ -47,7 +47,7 @@
 	<!-- Selected User Button -->
 	<Transition>
 		<div v-if="state.selectedSetting=='select user' && state.selectedUser" class="cell-1 p30b left">
-			<button @click="app.selectUser('')" class="email role active">{{ state.email }} <CloseCircle />
+			<button @click="app.selectUser('')" class="email role active">{{ state.email }} <X />
 			</button>
 		</div>
 	</Transition>
@@ -85,7 +85,7 @@
 
 <script setup>
 import { reactive, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import CloseCircle from 'vue-material-design-icons/CloseCircle.vue';
+import { X } from 'lucide-vue-next';
 import { useAppStore } from '../stores/state';
 import ViewDragger from './ViewDragger.vue';
 import ScrollingContent from './ScrollingContent.vue';

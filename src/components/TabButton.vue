@@ -1,7 +1,7 @@
 <template>
   <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']">
     <!-- Dots -->
-    <DotsVertical v-if="tab.isSelected" @click="editTab()" />
+    <MoreVertical v-if="tab.isSelected" @click="editTab()" />
   
     <!-- Title & Total -->
     <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
@@ -11,15 +11,14 @@
     </div>
 
     <!-- Drag Handle -->
-    <DragVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
+    <GripVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
   </button>
 </template>
 
 <script setup>
 import { computed, nextTick, watch } from 'vue';
 import LoadingDots from './LoadingDots.vue';
-import DragVertical from 'vue-material-design-icons/DragVertical.vue';
-import DotsVertical from 'vue-material-design-icons/DotsVertical.vue';
+import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '../utils';
 import { useAppStore } from '../stores/state';
 
@@ -140,7 +139,7 @@ watch(() => props.tab.sort, (newSort) => {
   margin-right: auto;
 }
 
-.DotsVertical {
+.MoreVertical {
   margin-left: auto;
 }
 </style>
