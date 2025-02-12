@@ -9,6 +9,7 @@ import SettingsVue from '../views/SettingsVue.vue'
 import SwiperVue from '../views/SwiperVue.vue'
 import TermsOfService from '../views/TermsOfService.vue'
 import VerifyVue from '../views/VerifyVue.vue'
+import SpendingReport from '../features/SpendingReport.vue'
 
 const routes = [
   {
@@ -60,6 +61,11 @@ const routes = [
     path: '/verify',
     name: 'verify',
     component: VerifyVue
+  },
+  {
+    path: '/spendingreport',
+    name: 'spending-report',
+    component: SpendingReport
   }
 ]
 
