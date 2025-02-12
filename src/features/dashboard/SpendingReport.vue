@@ -144,6 +144,7 @@
   import { useTabProcessing } from './composables/useTabProcessing';
   import { useSyncStatus } from './composables/useSyncStatus';
   import loadScript from '../../utils/loadScript';
+  import { useUtils } from './composables/useUtils';
 
   const { api, State, stickify } = useAppStore();
 
@@ -213,6 +214,9 @@
   const { fetchTransactions, fetchUserTabs, fetchUserRules } = useTransactions(api);
   const { processTabData } = useTabProcessing();
   const { checkSyncStatus } = useSyncStatus(api, state);
+
+  // Initialize utils
+  const { sortBy, extractDateRange, selectFirstGroup } = useUtils();
 
   onMounted(() => {
     stickify.register('.totalsRow');
@@ -313,7 +317,7 @@
             return;
           }
 
-          selectedGroup = selectFirstGroup();
+          selectedGroup = selectFirstGroup(state, api);
         }
 
         state.isLoading = true;
@@ -322,7 +326,7 @@
         for(const account of selectedGroup.accounts) {
           state.selected.allGroupTransactions = [
             ...state.selected.allGroupTransactions,
-            ...await fetchTransactions(account.account_id, extractDateRange())
+            ...await fetchTransactions(account.account_id, extractDateRange(state))
           ]
         };
 
