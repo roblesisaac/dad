@@ -126,7 +126,7 @@
 
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
-  import AllTabs from '../../components/AllTabs.vue';
+  import AllTabs from '@/components/AllTabs.vue';
   import { ChevronLeft } from 'lucide-vue-next';
 
   // Components
@@ -134,7 +134,7 @@
   import RuleDetails from './components/RuleDetails.vue';
   import SelectedItems from './components/SelectedItems.vue';
   import SelectGroup from './components/SelectGroup.vue';
-  import LoadingDots from '../../shared/components/LoadingDots.vue';
+  import LoadingDots from '@/shared/components/LoadingDots.vue';
   import ItemRepair from './components/ItemRepair.vue';
   import DatePickers from './components/DatePickers.vue';
   import EditTab from './components/EditTab.vue';
@@ -146,7 +146,7 @@
   import { useTransactions } from './composables/useTransactions';
   import { useTabProcessing } from './composables/useTabProcessing';
   import { useSyncStatus } from './composables/useSyncStatus';
-  import loadScript from '../../shared/utils/loadScript';
+  import loadScript from '@/shared/utils/loadScript';
   import { useUtils } from './composables/useUtils';
 
   const { api, State, stickify } = useAppStore();

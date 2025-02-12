@@ -6,7 +6,7 @@
 
 <script setup>
     import { onMounted } from 'vue';
-    import VerifyForm from '../components/VerifyForm.vue';
+    import VerifyForm from '@/components/VerifyForm.vue';
 
     const baseUrl = '/api';
 

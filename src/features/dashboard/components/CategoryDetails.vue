@@ -27,7 +27,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 import { Plus, Minus } from 'lucide-vue-next';
 import SelectedItems from './SelectedItems.vue';
 
-import { fontColor, formatPrice } from '../../../utils';
+import { fontColor, formatPrice } from '@/utils';
 import { useAppStore } from '@/stores/state';
 
 const { stickify } = useAppStore();

@@ -1,4 +1,4 @@
-import { router } from '../../main';
+import { router } from '@/main';
 import { useAppStore } from '../state';
 
 export default function(State) {

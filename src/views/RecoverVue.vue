@@ -24,9 +24,9 @@
 import { ref, onMounted } from 'vue';
 import { load } from 'recaptcha-v3';
 
-import { router } from '../main';
-import LoadingDots from '../shared/components/LoadingDots.vue';
-import { isValidEmail } from '../utils';
+import { router } from '@/main';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
+import { isValidEmail } from '@/utils';
 import { useAppStore } from '@/stores/state';
 const { api } = useAppStore();
 

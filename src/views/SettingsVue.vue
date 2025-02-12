@@ -3,5 +3,5 @@
 </template>
 
 <script setup>
-  import ViewsSorter from '../components/ViewsSorter.vue';
+  import ViewsSorter from '@/components/ViewsSorter.vue';
 </script>

@@ -40,9 +40,9 @@
 
 <script setup>
 import { reactive } from 'vue';
-import { isValidEmail } from '../utils';
+import { isValidEmail } from '@/utils';
 import { useAppStore } from '@/stores/state';
-import LoadingDots from '../shared/components/LoadingDots.vue';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { api, State } = useAppStore();
 
