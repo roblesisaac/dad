@@ -47,12 +47,22 @@ export function useUtils() {
     }
   }
 
+  function getDayOfWeekPST(dateString) {
+    let date = new Date(dateString + 'T00:00:00');
+    let dayOfWeek = date.toLocaleDateString('en-US', { 
+      weekday: 'long', 
+      timeZone: 'America/Los_Angeles' 
+    });
+    return dayOfWeek;
+  }
+
   return {
     sortBy,
     extractDateRange,
     selectFirstGroup,
     selectFirstTab,
     selectedTabsInGroup,
-    deselectOtherTabs
+    deselectOtherTabs,
+    getDayOfWeekPST
   };
 } 
