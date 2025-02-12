@@ -51,7 +51,7 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 const { api } = useAppStore();
 
 const supportEmail = ref('');

@@ -57,7 +57,7 @@
 <script setup>
 import { computed, watch } from 'vue';
 import Draggable from 'vuedraggable';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 

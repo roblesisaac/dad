@@ -16,7 +16,7 @@
 import { ref, onMounted, onBeforeUnmount, computed } from 'vue';
 import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 
 const { State } = useAppStore();
 

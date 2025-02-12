@@ -17,10 +17,10 @@
 
 <script setup>
 import { computed, nextTick, watch } from 'vue';
-import LoadingDots from './LoadingDots.vue';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
-import { fontColor, formatPrice } from '../utils';
-import { useAppStore } from '../stores/state';
+import { fontColor, formatPrice } from '@/utils';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 const props = defineProps({

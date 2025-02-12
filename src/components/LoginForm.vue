@@ -78,9 +78,9 @@
 import { reactive, nextTick } from 'vue';
 
 import { router } from '../main';
-import LoadingDots from './LoadingDots.vue';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { isValidEmail } from '../utils';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 const { api, utils } = useAppStore();
 
 const state = reactive({

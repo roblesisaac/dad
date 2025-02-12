@@ -4,7 +4,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { fontColor, formatPrice } from '../utils';
+import { fontColor, formatPrice } from '@/utils';
 
 const props = defineProps({
     accounts: {

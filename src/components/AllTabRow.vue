@@ -23,7 +23,7 @@
 import { nextTick, watch } from 'vue';
 import { formatPrice } from '../utils';
 import { MoreVertical, GripHorizontal } from 'lucide-vue-next';
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 

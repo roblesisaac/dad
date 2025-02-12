@@ -33,7 +33,7 @@
   
 <script setup>
     import { ref, onMounted } from 'vue';
-    import { useAppStore } from '../stores/state';
+    import { useAppStore } from '@/stores/state';
     const { State, api } = useAppStore();
   
     let user = ref(State.user);

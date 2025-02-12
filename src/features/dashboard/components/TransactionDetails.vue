@@ -90,8 +90,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import EditRule from './EditRule.vue';
-import { useAppStore } from '../stores/state';
-import { formatPrice } from '../utils';
+import { useAppStore } from '@/stores/state';
+import { formatPrice } from '../../../utils';
 
 const { api } = useAppStore();
 

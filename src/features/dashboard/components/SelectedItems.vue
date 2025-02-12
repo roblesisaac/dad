@@ -42,7 +42,7 @@
 <script setup>
 import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
-import { fontColor, formatPrice } from '../utils';
+import { fontColor, formatPrice } from '@/utils';
 import { Minus } from 'lucide-vue-next';
 
 const { categoryName, state } = defineProps({

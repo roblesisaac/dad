@@ -30,7 +30,7 @@
 import { onMounted } from 'vue';
 import { Menu } from 'lucide-vue-next';
 
-import { useAppStore } from '../stores/state';
+import { useAppStore } from '@/stores/state';
 const { State, api, utils, stickify } = useAppStore();
 
 const app = function() {

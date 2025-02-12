@@ -128,22 +128,25 @@
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
   import AllTabs from '../../components/AllTabs.vue';
   import { ChevronLeft } from 'lucide-vue-next';
-  import ItemRepair from '../../components/ItemRepair.vue';
-  import ShowSelectGroupButton from '../../components/ShowSelectGroupButton.vue';
-  import LoadingDots from '../../components/LoadingDots.vue';
-  import SelectGroup from '../../components/SelectGroup.vue';
-  import DatePickers from '../../components/DatePickers.vue';
-  import ScrollingTabButtons from '../../components/ScrollingTabButtons.vue';
-  import EditTab from '../../components/EditTab.vue';
-  import CategoriesWrapper from '../../components/CategoriesWrapper.vue'; 
-  import RuleDetails from '../../components/RuleDetails.vue';
-  import EditGroup from '../../components/EditGroup.vue';
-  import SelectedItems from '../../components/SelectedItems.vue';
-  import { useAppStore } from '../../stores/state';
+
+  // Components
+  import EditGroup from './components/EditGroup.vue'; 
+  import RuleDetails from './components/RuleDetails.vue';
+  import SelectedItems from './components/SelectedItems.vue';
+  import SelectGroup from './components/SelectGroup.vue';
+  import LoadingDots from '../../shared/components/LoadingDots.vue';
+  import ItemRepair from './components/ItemRepair.vue';
+  import DatePickers from './components/DatePickers.vue';
+  import EditTab from './components/EditTab.vue';
+  import CategoriesWrapper from './components/CategoriesWrapper.vue';
+  import ShowSelectGroupButton from './components/ShowSelectGroupButton.vue';
+  import ScrollingTabButtons from './components/ScrollingTabButtons.vue';
+
+  import { useAppStore } from '@/stores/state';
   import { useTransactions } from './composables/useTransactions';
   import { useTabProcessing } from './composables/useTabProcessing';
   import { useSyncStatus } from './composables/useSyncStatus';
-  import loadScript from '../../utils/loadScript';
+  import loadScript from '../../shared/utils/loadScript';
   import { useUtils } from './composables/useUtils';
 
   const { api, State, stickify } = useAppStore();

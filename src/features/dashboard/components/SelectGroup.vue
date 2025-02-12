@@ -36,8 +36,8 @@ import GroupRow from './GroupRow.vue';
 import NetWorth from './NetWorth.vue';
 import Draggable from 'vuedraggable';
 
-import LoadingDots from './LoadingDots.vue';
-import { useAppStore } from '../stores/state';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
+import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 const props = defineProps({
