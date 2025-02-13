@@ -14,11 +14,13 @@ const router = useRouter()
 
 onMounted(async () => {
   try {
+    alert('handling redirect callback');
     // Handle the authentication callback
     await handleRedirectCallback()
     
     // If authentication is successful, redirect to home
     if (isAuthenticated.value) {
+      alert('redirecting to spending report');
       router.push('/spending-report')
     }
   } catch (error) {
