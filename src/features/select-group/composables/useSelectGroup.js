@@ -47,7 +47,6 @@ export function useSelectGroup(state, App, isEditing) {
   }
 
   function editGroup(group) {
-    console.log('editGroup', group);
     state.editingGroup = group;
     isEditing.value = true;
   }
