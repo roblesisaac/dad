@@ -1,7 +1,7 @@
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';   
 
 export function useTabs() {
-  const { api } = useAppStore();
+  const { api } = useApi();
 
   async function selectTab(tabToSelect, currentlySelectedTab, goBack) {
     if(tabToSelect.isSelected) {

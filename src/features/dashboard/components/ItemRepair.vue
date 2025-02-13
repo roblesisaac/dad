@@ -24,9 +24,9 @@
 
 <script setup>
 import { reactive } from 'vue';
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const { api } = useApi();
 
 const itemState = reactive({
   syncedItems: []

@@ -81,7 +81,10 @@ import { router } from '@/main';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { isValidEmail } from '@/utils';
 import { useAppStore } from '@/stores/state';
-const { api, utils } = useAppStore();
+const { utils } = useAppStore();
+import { useApi } from '@/shared/composables/useApi';
+
+const { api } = useApi();
 
 const state = reactive({
   action: 'login',

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { authGuard } from '@auth0/auth0-vue'
 
 const LoginView = () => import('@/shared/components/LoginView.vue')
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
@@ -67,6 +68,12 @@ const routes = [
     path: '/spendingreport',
     name: 'spending-report',
     component: SpendingReport
+  },
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    component: DashboardView,
+    beforeEnter: authGuard
   }
 ]
 

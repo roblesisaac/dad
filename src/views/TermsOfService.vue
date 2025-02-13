@@ -89,8 +89,8 @@
 
 <script setup>
 import { reactive } from 'vue';
-import { useAppStore } from '@/stores/state';
-const { api } = useAppStore();
+import { useApi } from '@/shared/composables/useApi';
+const { api } = useApi();
 
 const state = reactive({
   contact: '',

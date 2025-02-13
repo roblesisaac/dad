@@ -19,9 +19,9 @@ const protect = function() {
     return (url, ...middlewares) => {
       const handler = middlewares[middlewares.length-1];
       const routeMiddlewares = [
+        checkJWT,
         permit(requiredRoles),
         defineParam(collectionName),
-        touchSession,
         ...middlewares
       ];
   
@@ -38,10 +38,10 @@ const protect = function() {
 
   function permit(requiredRoles) {
     return (req, res, next) => {
-      const { role:userRole } = req.user || {};
+      const userRole = req.auth?.payload?.['https://your-namespace/roles']?.[0] || 'guest';
     
       if(protect.userHasAccess(requiredRoles, userRole)) {
-        return next()
+        return next();
       }
     
       res.status(403).json({
@@ -50,22 +50,13 @@ const protect = function() {
         requiredRoles,
         userRole
       });
-    }
-  }
-
-  function touchSession(req, _, next) {
-    // if(req.session) {
-    //   req.session.lastAccess = new Date().getTime();
-    // }
-
-    next();
+    };
   }
 
   return {
     allRoles: state.allRoles,
     route: function(api, collectionName, baseUrl = '/') {
       return (requiredRoles) => {
-
         function handle(httpMethod) {
           return buildHandler(api, collectionName, baseUrl, requiredRoles, httpMethod);
         }
@@ -75,7 +66,7 @@ const protect = function() {
           put: handle('put'),
           post: handle('post'),
           delete: handle('delete')
-        }
+        };
       };
     },
     userHasAccess: function(requiredRoles, userRole) {

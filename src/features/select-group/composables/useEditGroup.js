@@ -1,7 +1,7 @@
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
 export function useEditGroup(state) {
-  const { api } = useAppStore();
+  const { api } = useApi();
   const editGroupState = {
     typingTimer: null
   };

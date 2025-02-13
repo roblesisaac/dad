@@ -1,6 +1,10 @@
 <template>
   <div class="login-container">
-    <button @click="handleLogin" class="login-button">
+    <h1>Welcome</h1>
+    <button 
+      @click="handleLogin" 
+      class="login-button"
+    >
       Login with Auth0
     </button>
   </div>
@@ -12,26 +16,25 @@ import { useAuth0 } from '@auth0/auth0-vue'
 const { loginWithRedirect } = useAuth0()
 
 const handleLogin = async () => {
-  try {
-    await loginWithRedirect()
-  } catch (error) {
-    console.error('Login failed:', error)
-  }
+  await loginWithRedirect({
+    appState: { targetUrl: 'spendingreport' }
+  })
 }
 </script>
 
 <style scoped>
 .login-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-height: 50vh;
 }
 
 .login-button {
   padding: 12px 24px;
   font-size: 1.1em;
-  background-color: #635DFF;
+  background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
@@ -39,6 +42,6 @@ const handleLogin = async () => {
 }
 
 .login-button:hover {
-  background-color: #4B45FF;
+  background-color: #45a049;
 }
 </style> 

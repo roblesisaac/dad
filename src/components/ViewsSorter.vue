@@ -90,8 +90,10 @@ import { useAppStore } from '@/stores/state';
 import ViewDragger from './ViewDragger.vue';
 import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import { arraysMatch } from '@/utils';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api, sticky } = useAppStore();
+const { sticky } = useAppStore();
+const { api } = useApi();
 
 const stickys = [
 {

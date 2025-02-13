@@ -1,7 +1,7 @@
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
 export function useEditTab(state, editState, App) {
-  const { api } = useAppStore();
+  const { api } = useApi();
 
   async function cloneRules(newTabId, currentTabId) {
     for(const rule of state.allUserRules) {

@@ -45,9 +45,9 @@
   import DynamicWidthSelect from './DynamicWidthSelect.vue';
   import DynamicTextArea from './DynamicTextArea.vue';
   import ScrollingContent from '@/shared/components/ScrollingContent.vue';
-  import { useAppStore } from '@/stores/state';
+  import { useApi } from '@/shared/composables/useApi';
   
-  const { api } = useAppStore();
+  const { api } = useApi();
   const { ruleConfig, state } = defineProps({
     ruleConfig: Object,
     state: Object

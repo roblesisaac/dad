@@ -140,8 +140,10 @@
   import { useUtils } from './composables/useUtils';
   import { SelectGroup } from '@/features/select-group';
   import { EditTab } from '@/features/edit-tab';
+  import { useApi } from '@/shared/composables/useApi';
 
-  const { api, State, stickify } = useAppStore();
+  const { State, stickify } = useAppStore();
+  const { api } = useApi();
 
   // First define state
   const state = reactive({

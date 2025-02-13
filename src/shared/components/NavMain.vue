@@ -23,15 +23,31 @@
     </a>
   </div>
 
+  <div class="auth-section">
+    <template v-if="isAuthenticated">
+      <span class="user-name">{{ user?.name }}</span>
+      <button @click="handleLogout" class="logout-btn">Logout</button>
+    </template>
+    <button v-else @click="handleLogin" class="login-btn">Login</button>
+  </div>
+
 </nav>
 </template>
 
 <script setup>
 import { onMounted } from 'vue';
 import { Menu } from 'lucide-vue-next';
+import { useAuth0 } from '@auth0/auth0-vue';
 
 import { useAppStore } from '@/stores/state';
-const { State, api, utils, stickify } = useAppStore();
+const { State, api, utils } = useAppStore();
+
+const { 
+  loginWithRedirect, 
+  logout, 
+  isAuthenticated, 
+  user 
+} = useAuth0();
 
 const app = function() {
   async function getUserViews() {
@@ -49,6 +65,18 @@ const app = function() {
     reload: () => window.location.reload()
   };
 }();
+
+const handleLogin = () => {
+  loginWithRedirect();
+};
+
+const handleLogout = () => {
+  logout({ 
+    logoutParams: {
+      returnTo: window.location.origin
+    }
+  });
+};
 
 app.init();
 
@@ -99,6 +127,33 @@ app.init();
 .logoBtn:hover {
   background-color: #000;
   color: #fff;
+}
+
+.auth-section {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.user-name {
+  color: #666;
+}
+
+.logout-btn, .login-btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.login-btn {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.logout-btn {
+  background-color: #f44336;
+  color: white;
 }
 
 </style>

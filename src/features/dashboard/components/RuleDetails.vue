@@ -61,9 +61,9 @@ import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import Draggable from 'vuedraggable';
 import EditRule from '../../edit-tab/components/EditRule.vue';
 
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const { api } = useApi();
 
 const props = defineProps({
   ruleConfig: Object,

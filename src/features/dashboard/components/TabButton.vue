@@ -21,8 +21,9 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const { api } = useApi();
 const props = defineProps({
   tab: 'object',
   state: 'object'

@@ -90,10 +90,10 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import EditRule from '../../edit-tab/components/EditRule.vue';
-import { useAppStore } from '@/stores/state';
 import { formatPrice } from '@/utils';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const { api } = useApi();
 
 const { item, state } = defineProps({
   item: Object,

@@ -27,8 +27,9 @@ import { load } from 'recaptcha-v3';
 import { router } from '@/main';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { isValidEmail } from '@/utils';
-import { useAppStore } from '@/stores/state';
-const { api } = useAppStore();
+import { useApi } from '@/shared/composables/useApi';
+
+const { api } = useApi();
 
 const { value:state } = ref({
 	basePath: '/api/requestpasswordreset/',

@@ -16,8 +16,9 @@
 <script setup>
 import { X } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
-const { api, State, utils } = useAppStore();
-
+import { useApi } from '@/shared/composables/useApi';
+const { State, utils } = useAppStore();
+const { api } = useApi();
 const app = function() {
   async function getUserViews() {
     State.userViews = State.userViews || (await api.get('/api/userviews')).views;
