@@ -1,4 +1,27 @@
-export function useUtils() {
+import { computed } from 'vue';
+import { dateUtils } from '@/utils';
+
+export function useUtils(state) {
+  const selectedDateRange = computed(() => {
+    const fromDate = dateUtils.formatDisplay(state.selected.fromDate);
+    const toDate = dateUtils.formatDisplay(state.selected.toDate);
+    return `${fromDate} - ${toDate}`;
+  });
+
+  const defaultDates = {
+    fromDate: dateUtils.firstOfMonth(),
+    toDate: dateUtils.today()
+  };
+
+  function initializeDates() {
+    if (!state.selected.fromDate) {
+      state.selected.fromDate = defaultDates.fromDate;
+    }
+    if (!state.selected.toDate) {
+      state.selected.toDate = defaultDates.toDate;
+    }
+  }
+
   function sortBy(prop) {
     return (a, b) => a[prop] - b[prop];
   }
@@ -57,6 +80,9 @@ export function useUtils() {
   }
 
   return {
+    selectedDateRange,
+    defaultDates,
+    initializeDates,
     sortBy,
     extractDateRange,
     selectFirstGroup,
