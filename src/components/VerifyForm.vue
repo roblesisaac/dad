@@ -1,41 +1,32 @@
 <template>
-    <form @submit.prevent="submitCode" class="max-w-md mx-auto p-8 space-y-6">
-        <div class="text-center">
-            <h3 class="text-lg font-medium text-gray-900">
-                Please Enter the verification code sent to
-                <span class="block mt-1">
-                    <b v-if="user" class="text-blue-600">{{ user.email }}</b>
-                    <span v-else>your email</span>
-                </span>
-            </h3>
+    <form @submit.prevent="submitCode" class="p30 grid">
+        <div class="cell-1">
+            <h3>Please Enter the verification code sent to
+            <b v-if="user"><br>{{ user.email }}</b><span v-else>your email</span>:</h3>
         </div>
 
-        <div class="grid grid-cols-6 gap-2">
-            <div v-for="index in code.length" :key="index">
-                <input 
-                    type="number" 
-                    max="9"
-                    :id="'code'+index"
-                    @keydown="handleKeydown($event, index)"
-                    class="w-full h-16 text-center text-2xl font-bold border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
+        <div v-for="index in code.length" :class="'cell-1-'+code.length">
+            <div class="grid p5r">
+                <div class="cell-1">
+                    <input type="number" max="9" 
+                        :id="'code'+index"
+                        @keydown="handleKeydown($event, index)">
+                </div>
             </div>
         </div>
 
-        <Transition>
-            <div v-if="notification" class="p-4 bg-red-100 border border-red-400 text-red-700 rounded-md">
-                <b>{{ notification }}</b>
+        <transition>
+        <div v-if="notification" class="cell-1 p10t">
+            <div class="grid">
+                <div class="cell-1 p30 bgLightRed colorBleach r5 shadow">
+                    <b>{{  notification }}</b>
+                </div>
             </div>
-        </Transition>
+        </div>
+        </transition>
 
-        <div class="text-center text-sm">
-            Didn't get it? 
-            <button 
-                @click.prevent="sendAnotherCode" 
-                class="text-blue-600 hover:text-blue-800 font-medium"
-            >
-                Send Another Code »
-            </button>
+        <div class="cell-1 p20t">
+            Didn't get it? <a href="#" @click.prevent="sendAnotherCode">Send Another Code »</a>
         </div>
     </form>
 </template>

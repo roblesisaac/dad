@@ -1,5 +1,5 @@
 <template>
-  <LoginVue />
+<LoginVue />
 </template>
 
 <script setup>

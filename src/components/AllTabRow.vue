@@ -1,21 +1,22 @@
 <template>
-  <div class="flex items-center justify-between p-2.5 border-b border-gray-200 hover:bg-gray-50">
-    <!-- Menu Icon -->
-    <div class="w-8">
-      <MoreVertical class="text-gray-500 hover:text-gray-700" />
-    </div>
-
-    <!-- Title & Total -->
-    <div class="flex-1 cursor-pointer" @click="selectTab(element)">
-      <div class="font-semibold capitalize">{{ element.tabName }}</div>
-      <div class="text-blue-600 font-semibold">{{ tabTotal(element) }}</div>
-    </div>
-
-    <!-- Drag Handle -->
-    <div class="w-8">
-      <GripHorizontal class="handlerTab cursor-move text-gray-400 hover:text-gray-600" />
-    </div>
+<div class="grid text-left allTabRow p10y middle b-bottom">
+  <!-- Dots -->
+  <div class="cell-2-24">
+    <MoreVertical />
   </div>
+
+  <!-- Title & Total -->
+  <div @click="selectTab(element)" class="cell-20-24 pointer">
+    <b class="proper bold">{{ element.tabName }}</b>
+    <br />
+    <span class="sectionContent bold">{{ tabTotal(element) }}</span>
+  </div>
+
+  <!-- Drag Handle -->
+  <div class="cell-2-24">
+    <GripHorizontal class="handlerTab pointer" />
+  </div>
+</div>
 </template>
 
 <script setup>
@@ -63,4 +64,11 @@ function tabTotal(tab) {
 watch(() => props.element.sort, (newSort) => {
   api.put(`api/tabs/${props.element._id}`, { sort: newSort });
 });
+
 </script>
+
+<style>
+.sectionContent {
+  color: blue
+}
+</style>

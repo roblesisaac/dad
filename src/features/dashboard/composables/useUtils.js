@@ -1,48 +1,15 @@
-import { computed } from 'vue';
-import { dateUtils } from '@/utils';
-
-export function useUtils(state) {
-  const selectedDateRange = computed(() => {
-    if (!state?.selected?.fromDate || !state?.selected?.toDate) {
-      return '';
-    }
-    const fromDate = dateUtils.formatDisplay(state.selected.fromDate);
-    const toDate = dateUtils.formatDisplay(state.selected.toDate);
-    return `${fromDate} - ${toDate}`;
-  });
-
-  const defaultDates = {
-    fromDate: dateUtils.firstOfMonth(),
-    toDate: dateUtils.today()
-  };
-
-  function initializeDates() {
-    if (!state?.selected) {
-      state.selected = {};
-    }
-    if (!state.selected.fromDate) {
-      state.selected.fromDate = defaultDates.fromDate;
-    }
-    if (!state.selected.toDate) {
-      state.selected.toDate = defaultDates.toDate;
-    }
-  }
-
+export function useUtils() {
   function sortBy(prop) {
     return (a, b) => a[prop] - b[prop];
   }
 
   function extractDateRange(state) {
-    if (!state?.date?.start || !state?.date?.end) {
-      return '';
-    }
-    return `${yyyyMmDd(state.date.start)}_${yyyyMmDd(state.date.end)}`;
+    const { date : { start, end } } = state;
+    return `${yyyyMmDd(start)}_${yyyyMmDd(end)}`;
   }
 
   function yyyyMmDd(dateObject) {
-    if (!dateObject || typeof dateObject.getFullYear !== 'function') {
-      return dateUtils.today();
-    }
+    if(!dateObject) return;
     const year = dateObject.getFullYear();
     const month = String(dateObject.getMonth() + 1).padStart(2, '0');
     const day = String(dateObject.getDate()).padStart(2, '0');
@@ -90,9 +57,6 @@ export function useUtils(state) {
   }
 
   return {
-    selectedDateRange,
-    defaultDates,
-    initializeDates,
     sortBy,
     extractDateRange,
     selectFirstGroup,

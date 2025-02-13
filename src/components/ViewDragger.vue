@@ -1,45 +1,52 @@
 <template>
-  <Draggable 
-    class="grid grid-cols-2 gap-2" 
-    v-model="state[listName]" 
-    v-bind="dragOptions"
-  >
+  <Draggable class="grid draggable" v-model="state[listName]" v-bind="dragOptions">
     <template #item="{element}">
-      <div>
-        <button 
-          @dblclick="specialClick($event, element)" 
-          class="w-full p-4 text-center bg-white hover:bg-gray-50 border border-gray-200 rounded-lg shadow-sm transition-colors duration-200"
-        >
-          <div class="capitalize">{{ element }}</div>
-        </button>
+      <div :class="' cell-1-'+columns">
+        <div class="p5r p5b">
+          <button @dblclick="specialClick($event, element)" class="grid viewButton">
+            <div class="cell-1 proper center middle">
+              {{ element }}
+            </div>
+          </button>
+        </div>
       </div>
     </template>
   </Draggable>
-</template>
+  </template>
+  
+  <script setup>
+  import Draggable from 'vuedraggable';
+  
+  const props = defineProps({
+    cols: Number,
+    listName: String,
+    state: Object,
+    onDblClick: Function
+  });
 
-<script setup>
-import Draggable from 'vuedraggable';
-
-const props = defineProps({
-  cols: Number,
-  listName: String,
-  state: Object,
-  onDblClick: Function
-});
-
-const dragOptions = {
-  animation: 200,
-  delay: 100,
-  touchStartThreshold: 100
-}
-
-const columns = props.cols || 2;
-
-function specialClick($event, view) {
-  if(!props.onDblClick) {
-    return;
+  const dragOptions = {
+    animation: 200,
+    delay: 100,
+    touchStartThreshold: 100
   }
+  
+  const columns = props.cols || 2;
 
-  props.onDblClick($event, view);
-}
-</script>
+  function specialClick($event, view) {
+    if(!props.onDblClick) {
+      return;
+    }
+
+    props.onDblClick($event, view);
+  }
+  
+  </script>
+  
+  <style scoped>
+  
+  .sortable-chosen .viewButton {
+    background-color: rgba(0, 0, 255, .4);
+    color: #fff;
+  }
+  
+  </style>

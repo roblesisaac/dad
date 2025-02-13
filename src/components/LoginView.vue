@@ -1,9 +1,6 @@
 <template>
-  <div class="flex justify-center items-center min-h-[50vh]">
-    <button 
-      @click="handleLogin" 
-      class="px-6 py-3 text-lg font-medium text-white bg-[#635DFF] hover:bg-[#4B45FF] rounded-md shadow-sm transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#635DFF]"
-    >
+  <div class="login-container">
+    <button @click="handleLogin" class="login-button">
       Login with Auth0
     </button>
   </div>

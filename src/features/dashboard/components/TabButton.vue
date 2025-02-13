@@ -1,36 +1,17 @@
 <template>
-  <button 
-    @click="selectTab(props.tab)" 
-    :class="[
-      'relative flex items-center h-[50px] px-3 border-b-2 transition-all',
-      isSelected ? 'bg-white border-transparent shadow-md z-10' : 'bg-gray-50 border-gray-300 hover:bg-gray-100',
-      fontColor(props.tab.total),
-      uniqueTabClassName,
-      ...borders
-    ]"
-  >
-    <!-- Dots Menu -->
-    <MoreVertical 
-      v-if="tab.isSelected" 
-      @click="editTab()" 
-      class="w-5 h-5 text-gray-500 hover:text-gray-700 cursor-pointer"
-    />
+  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']">
+    <!-- Dots -->
+    <MoreVertical v-if="tab.isSelected" @click="editTab()" />
   
     <!-- Title & Total -->
-    <div class="flex flex-col mx-4">
-      <small class="font-bold uppercase">
-        <span v-if="tabIsShared(tab)" class="text-blue-600">*</span>
-        {{ props.tab.tabName }}
-      </small>
+    <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
+      <small class="section-title bold"><b v-if="tabIsShared(tab)">*</b>{{ props.tab.tabName }}</small>
       <LoadingDots v-if="props.state.isLoading" />
-      <span v-else>{{ tabTotal }}</span>
+      <span v-else class="section-content">{{ tabTotal }}</span>
     </div>
 
     <!-- Drag Handle -->
-    <GripVertical 
-      v-if="tab.isSelected && shouldShowDragHandle" 
-      class="handleTab w-5 h-5 text-gray-400 hover:text-gray-600 cursor-move" 
-    />    
+    <GripVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
   </button>
 </template>
 
@@ -43,8 +24,8 @@ import { useAppStore } from '@/stores/state';
 
 const { api } = useAppStore();
 const props = defineProps({
-  tab: Object,
-  state: Object
+  tab: 'object',
+  state: 'object'
 });
 
 function validIdString(inputString) {
@@ -55,18 +36,28 @@ const uniqueTabClassName = computed(() => validIdString(props.tab._id));
 const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
 const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === props.tab._id));
 const shouldShowDragHandle = computed(() => tabsForGroup.value.length > 1);
+const tabShouldExpand = !shouldShowDragHandle.value;
 
-const isSelected = computed(() => props.tab.isSelected);
+const isSelected = computed(() => {
+  return props.tab.isSelected;
+});
+
+const isSelectedClass = computed(() => {
+  return isSelected.value ? 'selected' : '';
+});
 
 const borders = computed(() => {
-  const rightBorder = !isLastInArray.value && !isSelected.value ? 'border-r-2 border-gray-300' : '';
-  const leftBorder = isPreviousTabSelected.value ? 'border-l-2 border-gray-300' : '';
-  return [rightBorder, leftBorder];
+  const rightBorder = isLastInArray.value || isSelected.value ? '' : 'b-right';
+  const bottomBorder = isSelected.value ? 'b-bottom-none' : 'b-bottom';
+  const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
+
+  return [bottomBorder, rightBorder, borderLeft];
 });
 
 const tabTotal = computed(() => {
   const total = props.tab.total || 0;
   const toFixed = isSelected.value ? 2 : 0;
+
   return formatPrice(total, { toFixed });
 });
 
@@ -74,6 +65,7 @@ const isLastInArray = computed(() => tabIndex.value === tabsForGroup.value.lengt
 
 const isPreviousTabSelected = computed(() => {
   const previousTab = tabsForGroup.value[tabIndex.value-1];
+
   return previousTab?.isSelected;
 });
 
@@ -81,28 +73,32 @@ function editTab() {
   props.state.views.push('EditTab');
 }
 
-async function selectTab(tabToSelect) {
-  if(tabToSelect.isSelected) return;
+function selectTab(tabToSelect) {
+  if(tabToSelect.isSelected) {
+    return 
+  }
 
   const currentlySelectedTab = props.state.selected.tab;
 
   if(currentlySelectedTab) {
     currentlySelectedTab.isSelected = false;
-    await api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
+    api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
   }
 
-  await nextTick();
-  tabToSelect.isSelected = true;
-  await api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+  nextTick(() => {
+    tabToSelect.isSelected = true;
+    api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+  });
 }
 
 function tabIsShared(tab) {
-  return tab.showForGroup.length > 1 || tab.showForGroup.includes('_GLOBAL');
+  return tab.showForGroup.length > 1 || tab.showForGroup.includes('_GLOBAL')
 }
 
 watch(() => props.tab.sort, (newSort) => {
   api.put(`api/tabs/${props.tab._id}`, { sort: newSort });
 });
+
 </script>
 
 <style>

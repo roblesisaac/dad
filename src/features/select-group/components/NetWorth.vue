@@ -1,7 +1,5 @@
 <template>
-    <span :class="[fontColor(netWorth), 'font-mono']">
-        {{ formatPrice(netWorth, { toFixed: digits }) }}
-    </span>
+    <span :class="fontColor(netWorth)">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
 </template>
 
 <script setup>
@@ -11,7 +9,7 @@ import { fontColor, formatPrice } from '@/utils';
 const props = defineProps({
     accounts: {
         type: Array,
-        default: () => []
+        default: []
     },
     state: Object,
     digits: {

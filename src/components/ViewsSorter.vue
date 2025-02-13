@@ -1,116 +1,80 @@
 <template>
-<div class="p-8">
+<div class="grid p30">
 		
 	<!-- Select Role or User Option -->
-	<div class="mb-4">
-		<div class="flex space-x-8">
-			<button 
-			v-for="setting in state.showAdminTools" 
-			:key="setting"
-			@click="state.selectedSetting=setting"
-			class="capitalize text-gray-700 hover:text-black transition-colors"
-			:class="{ 'border-b-2 border-black font-medium': state.selectedSetting === setting }"
-			>
-			{{ setting }}
-			</button>
+	<div class="cell-1 p10b">
+		<div class="grid">
+			<div v-for="setting in state.showAdminTools" class="cell shrink p30r proper">
+				<a href="#" class="colorBlack selectSetting"
+				:class="{ underline : state.selectedSetting === setting }"   
+				@click="state.selectedSetting=setting">
+				{{ setting }}
+				</a>
+			</div>
 		</div>
 	</div>
 	
-	<!-- Role Selection -->
-	<ScrollingContent 
-	v-if="state.selectedSetting=='select role'" 
-	class="mb-8 overflow-x-auto whitespace-nowrap"
-	>
-		<div class="flex space-x-2 p-2">
-			<button 
-			v-for="role in state.allRoles"
-			:key="role"
-			@click="state.selectedRole=role"
-			class="px-6 py-2 rounded-md font-medium transition-colors capitalize"
-			:class="[
-			state.selectedRole === role 
-			? 'bg-gray-900 text-white' 
-			: 'bg-white text-gray-700 hover:bg-gray-50'
-			]"
-			>
+	<!-- Scrolling Select Role Buttons -->
+	<ScrollingContent v-if="state.selectedSetting=='select role'" class="p30b">
+		<button class="role proper"
+		:class="{ active : state.selectedRole === role }"
+		@click="state.selectedRole=role" v-for="role in state.allRoles">
 			{{ role }}
-			</button>
-		</div>
+		</button>
 	</ScrollingContent>
 
-	<!-- User Selection -->
-	<div v-if="state.selectedSetting=='select user'" class="mb-4">
-		<div class="relative">
-			<input 
-			type="text" 
-			class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-			placeholder="Enter Username"
-			@keydown="app.onKeyDown"
-			v-model="state.email" />
-			<button 
-			v-if="state.email" 
-			@click="app.selectUser('')"
-			class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-			>
-			x
-			</button>
+	<!-- Search Users Input -->
+	<div v-if="state.selectedSetting=='select user'" class="cell-1 p10b">
+		<div class="grid">
+			<div class="cell-1">
+				<div class="relative">
+					<input 
+					type="text" 
+					class="searchUsers" 
+					placeholder="Enter Username"
+					@keydown="app.onKeyDown"
+					v-model="state.email" />
+					<!-- Conditional rendering for the clear button -->
+					<button v-if="state.email" @click="app.selectUser('')" class="clearButton">
+						x
+					</button>
+				</div>
+			</div>
 		</div>
 	</div>
 
-	<!-- Selected User -->
+
+	<!-- Selected User Button -->
 	<Transition>
-		<div 
-		v-if="state.selectedSetting=='select user' && state.selectedUser" 
-		class="mb-8 text-left"
-		>
-			<button 
-			@click="app.selectUser('')" 
-			class="inline-flex items-center px-4 py-2 bg-gray-900 text-white rounded-md hover:bg-gray-800"
-			>
-			{{ state.email }}
-			<X class="ml-2 w-4 h-4" />
+		<div v-if="state.selectedSetting=='select user' && state.selectedUser" class="cell-1 p30b left">
+			<button @click="app.selectUser('')" class="email role active">{{ state.email }} <X />
 			</button>
 		</div>
 	</Transition>
 
-	<!-- Visible Pages Section -->
-	<div class="mb-8">
-		<div class="grid grid-cols-5 gap-4">
-			<div class="sticky top-0 bg-gray-50 p-4 rounded-md">
-				<h3 class="font-medium text-gray-900">Visible Pages</h3>
+	<!-- Draggable Visible -->
+	<div class="cell-1 p30b">
+		<div class="grid">
+			<div class="cell-1-5">
+				<div class="sectionTitle visibleViews">Visible Pages</div>
 			</div>
-			<div class="col-span-4">
+			<div class="cell-4-5">
 				<Transition>
-					<ViewDragger 
-					:class="{ 'border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-[100px]': !state.views.visible.length }" 
-					group="viewsGroup" 
-					v-if="state.showingViewButtons" 
-					app="viewsGroup" 
-					:state="state.views" 
-					:listName="'visible'" 
-					:onDblClick="app.onDblClick"
-					/>
+					<ViewDragger :class="{ 'dashed': !state.views.visible.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'visible'" :onDblClick="app.onDblClick"></ViewDragger>
 				</Transition>
 			</div>
 		</div>
 	</div>
 
-	<!-- Hidden Pages Section -->
-	<div>
-		<div class="grid grid-cols-5 gap-4">
-			<div class="sticky top-0 bg-gray-50 p-4 rounded-md">
-				<h3 class="font-medium text-gray-900">Hidden Pages</h3>
+	<!-- Draggable Hidden Views -->
+	<div class="cell-1">
+		<div class="grid">
+			<div class="cell-1-5">
+				<div class="sectionTitle hiddenViews">Hidden Pages</div>
 			</div>
-			<div class="col-span-4">
+			<div class="cell-4-5">
 				<Transition>
-					<ViewDragger 
-					:class="{ 'border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-[100px]': !state.views.hidden.length }" 
-					group="viewsGroup" 
-					v-if="state.showingViewButtons" 
-					app="viewsGroup" 
-					:state="state.views" 
-					:listName="'hidden'"
-					/>
+					<ViewDragger :class="{ 'dashed': !state.views.hidden.length }" group="viewsGroup" v-if="state.showingViewButtons" app="viewsGroup" :state="state.views" :listName="'hidden'"></ViewDragger>
 				</Transition>
 			</div>
 		</div>

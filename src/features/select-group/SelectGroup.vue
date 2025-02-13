@@ -1,67 +1,39 @@
 <template>
-  <div class="bg-gray-50 p-8">
-    <!-- Net-worth -->
-    <div class="mb-8">
-      <div class="bg-amber-50 border border-amber-200 rounded-lg p-6 font-medium text-gray-900 shadow-sm">
-        Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="props.state" />
-      </div>
+<div class="grid select-group">
+  <!-- {{ props.state.view }} --> <!-- Debug log -->
+  <!-- Net-worth -->
+  <div class="cell-1 net-worth bold p30">
+    Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="props.state" />
+  </div>
+
+  <div v-if="!isEditing">
+    <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
+      <template #item="{element}">
+        <GroupRow :key="element._id" :app="app" :element="element" :state="props.state" />
+      </template>
+    </Draggable>
+
+    <!-- LinkNewAccount -->
+    <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
+      <b v-if="props.state.linkToken">Link New Account +</b>
+      <b v-else>Loading <LoadingDots /></b>
+    </button>
+
+    <!-- Create New Group -->
+    <div class="cell-1 proper">
+      <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
     </div>
 
-    <div v-if="!isEditing">
-      <!-- Groups List -->
-      <div class="space-y-4 mb-8">
-        <Draggable 
-          v-model="props.state.allUserGroups" 
-          v-bind="props.state.dragOptions(100)" 
-          handle=".handlerGroup"
-        >
-          <template #item="{element}">
-            <GroupRow 
-              :key="element._id" 
-              :app="app" 
-              :element="element" 
-              :state="props.state" 
-            />
-          </template>
-        </Draggable>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="space-y-4">
-        <!-- Link Account -->
-        <button 
-          @click="app.linkNewAccount" 
-          class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200 rounded-lg shadow-sm transition-colors font-medium"
-        >
-          <span v-if="props.state.linkToken">Link New Account +</span>
-          <span v-else class="flex items-center justify-center">
-            Loading <LoadingDots />
-          </span>
-        </button>
-
-        <!-- Create Group -->
-        <button 
-          @click="app.createNewGroup" 
-          class="w-full py-3 px-4 bg-blue-50 hover:bg-blue-100 text-blue-700 border-2 border-blue-200 rounded-lg shadow-sm transition-colors font-medium"
-        >
-          Create New Group +
-        </button>
-
-        <!-- Update Institutions -->
-        <button 
-          @click="props.state.views.push('ItemRepair')" 
-          class="w-full py-3 px-4 bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border-2 border-yellow-200 rounded-lg shadow-sm transition-colors font-medium"
-        >
-          Update Existing Institutions
-        </button>
-      </div>
-    </div>
-
-    <!-- Edit Group View -->
-    <div v-else>
-      <EditGroup :state="props.state" @close="isEditing = false" />
+    <!-- Reconnect Existing Institutions -->
+    <div class="cell-1 proper">
+      <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
     </div>
   </div>
+
+  <div v-else class="cell-1">
+    <EditGroup :state="props.state" @close="isEditing = false" />
+  </div>
+</div>
 </template>
 
 <script setup>
@@ -79,6 +51,7 @@ const props = defineProps({
 });
 
 const isEditing = ref(false);
+
 const app = useSelectGroup(props.state, props.App, isEditing);
 
 app.init();

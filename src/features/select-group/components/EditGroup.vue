@@ -1,87 +1,95 @@
 <template>
-  <div class="space-y-6">
-    <!-- Group Name -->
-    <div>
-      <label class="block font-medium mb-2">Group Name:</label>
-      <input 
-        v-model="state.editingGroup.name" 
-        @input="app.updateGroupName" 
-        type="text"
-        class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      />
-    </div>
-
-    <!-- Group Info -->
-    <div>
-      <label class="block font-medium mb-2">Group Info:</label>
-      <textarea 
-        v-model="state.editingGroup.info" 
-        @input="app.updateGroup"
-        rows="3"
-        class="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-      ></textarea>
-    </div>
-
-    <!-- Accounts List -->
-    <div>
-      <label class="block font-medium mb-4">Accounts:</label>
-      <div class="space-y-3">
-        <Draggable 
-          v-model="state.editingGroup.accounts" 
-          v-bind="state.dragOptions(100)" 
-          handle=".handlerAccount"
-          class="space-y-3"
-        >
-          <template #item="{element}">
-            <div class="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-gray-200">
-              <div class="flex items-center space-x-3">
-                <GripVertical class="handlerAccount w-5 h-5 text-gray-400 hover:text-gray-600 cursor-move" />
-                <div>
-                  <div class="font-medium">{{ element.name }}</div>
-                  <div class="text-sm text-gray-600">
-                    #{{ element.mask }} · {{ element.subtype }}
-                  </div>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="font-medium">{{ formatPrice(element.balances?.current) }}</div>
-                <div class="text-sm text-gray-600">Current Balance</div>
-              </div>
-            </div>
-          </template>
-        </Draggable>
+    <div class="grid p20 text-left">
+    
+      <!-- Back button -->
+      <div class="cell-1 p10b">
+        <button @click="$emit('close')" class="button">← Back</button>
       </div>
+    
+      <!-- Group Name -->
+      <div class="cell-1 p20b">
+    
+        <div class="grid middle">
+          <div class="cell-1-5 bold">
+            Name:
+          </div>
+          <div class="cell-4-5">
+            <input type="text" v-model="props.state.editingGroup.name" class="transparent bold colorBlue" />
+          </div>
+        </div>
+    
+        <div class="grid">
+          <div class="cell-1 bold ">Info:</div>
+          <div class="cell-1">
+            <textarea v-model="props.state.editingGroup.info" class="edit-info" ></textarea>
+          </div>
+        </div>
+    
+      </div>
+    
+      <!-- Accounts In Group -->
+      <div class="cell-1">
+        <b>Accounts In Group:</b>
+        <div class="dropHere">
+          <span v-if="!props.state.editingGroup.accounts.length">Drag and drop groups here.</span>
+          <Draggable class="draggable" group="accountDragger" v-model="props.state.editingGroup.accounts" v-bind="props.state.dragOptions()">
+            <template #item="{element}">
+              <button class="sharedWith">{{ element.mask }}</button>
+            </template>
+          </Draggable>
+        </div>
+      </div>
+    
+      <!-- Accounts Not In Group -->
+      <div class="cell-1 p30y">
+        <b>Accounts Not In Group:</b>
+        <div class="dropHere">
+          <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="props.state.dragOptions()">
+            <template #item="{element}">
+              <button class="button sharedWith">{{ element.mask }}</button>
+            </template>
+        </Draggable>
+        </div>
+      </div>
+    
+      <div class="cell-1">
+        <button @click="deleteGroup" class="transparent expanded colorRed">Remove Group</button>
+      </div>
+    
     </div>
-
-    <!-- Action Buttons -->
-    <div class="flex space-x-4">
-      <button 
-        @click="app.deleteGroup" 
-        class="flex-1 py-3 px-4 bg-red-50 hover:bg-red-100 text-red-600 border-2 border-red-200 rounded-lg transition-colors font-medium"
-      >
-        Delete Group
-      </button>
-      <button 
-        @click="$emit('close')" 
-        class="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 border-2 border-gray-300 rounded-lg transition-colors font-medium"
-      >
-        Close
-      </button>
-    </div>
-  </div>
-</template>
-
-<script setup>
-import { GripVertical } from 'lucide-vue-next';
-import Draggable from 'vuedraggable';
-import { formatPrice } from '@/utils';
-import { useEditGroup } from '../composables/useEditGroup';
-
-const props = defineProps({
-  state: Object
-});
-
-const app = useEditGroup(props.state);
-
-defineEmits(['close']);
-</script>
+    </template>
+    
+    <script setup>
+    import { computed, watch } from 'vue';
+    import Draggable from 'vuedraggable';
+    import { useEditGroup } from '../composables/useEditGroup.js';
+    
+    const props = defineProps({
+      state: Object
+    });
+    
+    defineEmits(['close']);
+    
+    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
+    
+    const accountsNotInGroup = computed(() => {
+      const accountsInGroup = props.state.editingGroup.accounts.map(account => account._id);
+    
+      return props.state.allUserAccounts.filter(account => {
+        return !accountsInGroup.includes(account._id);
+      });
+    });
+    
+    watch(() => props.state.editingGroup.name, updateGroupName);
+    watch(() => props.state.editingGroup.info, updateGroup);
+    watch(() => props.state.editingGroup.accounts.length, updateGroup);
+    
+    </script>
+    
+    <style>
+    .edit-info {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    </style>

@@ -1,21 +1,12 @@
 <template>
-  <div class="space-y-4 mt-8">
-    <!-- Duplicate Button -->
-    <button 
-      @click="app.duplicateTab" 
-      class="w-full py-3 px-4 bg-gray-900 hover:bg-gray-800 text-white rounded-lg shadow-sm transition-colors font-medium"
-    >
-      Duplicate Tab
-    </button>
-
-    <!-- Delete Button -->
-    <button 
-      @click="app.deleteTab" 
-      class="w-full py-3 px-4 bg-transparent hover:bg-red-50 text-red-600 rounded-lg transition-colors font-medium border-2 border-red-200"
-    >
-      Delete Tab
-    </button>
+<div class="grid middle">
+  <div class="cell-1 p20">
+    <button @click="app.duplicateTab" class="button bgBlack expanded">Duplicate Tab</button>
   </div>
+  <div class="cell-1 p20b">
+    <button @click="app.deleteTab" class="button transparent colorDarkRed expanded">Delete Tab</button>
+  </div>
+</div>
 </template>
 
 <script setup>

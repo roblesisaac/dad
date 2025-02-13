@@ -1,47 +1,46 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-    <div v-if="state.blueBar.message" class="w-full">
-      <div class="bg-slate-600 border-b-2 border-blue-900 px-4 py-2 font-bold text-white">
-        <small>{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
-      </div>
+  <div v-if="state.blueBar.message" class="grid">
+    <div class="cell-1 p10l blue-bar bold">
+      <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
     </div>
+  </div>
   </Transition>
 
   <!-- BackButton -->
   <Transition>
-    <button 
-      v-if="!state.is(['home'])" 
-      @click="app.goBack" 
-      class="w-full px-4 py-3 bg-blue-100 hover:bg-blue-200 text-gray-800 border-b-2 border-gray-300 flex items-center transition-colors"
-    >
-      <ChevronLeft class="mr-2" /> Back
-    </button>
+  <button v-if="!state.is(['home'])" @click="app.goBack" class="backButton section b-bottom">
+    <ChevronLeft class="icon" /> Back
+  </button>
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen() && state.is('home')" class="flex flex-col">
+  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
+    
     <!-- Selected Group + Date -->
-    <div class="border-b border-gray-300">
-      <div class="flex items-center">
+    <div class="cell-1 dateRow b-bottom">
+      <div class="grid middle">
+
         <!-- Group Selector Button -->
-        <ShowSelectGroupButton class="w-1/3 border-r border-gray-300" :state="state" />
+        <ShowSelectGroupButton class="cell-8-24 b-right" :state="state" />
 
         <!-- Date Pickers -->
-        <div class="w-2/3 leading-[50px]">          
+        <div class="cell-16-24 line50">          
           <DatePickers :state="state" />
         </div>
+
       </div>
     </div>
 
     <!-- Scrolling Tabs Totals Row -->
-    <div v-if="!state.isLoading" class="border-b border-gray-300">
+    <div v-if="!state.isLoading" class="cell-1 totalsRow">
       <ScrollingTabButtons :state="state" :app="app" />
     </div>
 
     <!-- Category Rows -->
     <Transition>
-      <div v-if="!state.isLoading && state.is('home') && state.selected.tab">
+      <div v-if="!state.isLoading && state.is('home') && state.selected.tab" class="cell-1">
         <CategoriesWrapper :state="state" />
       </div>
     </Transition>
@@ -51,26 +50,19 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid grid-cols-5">
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
+
     <!-- Left Side: Account and Date Selector -->
-    <div id="leftPanel" class="col-span-2 border-r border-gray-300 h-screen">
+    <div id="leftPanel" class="cell-2-5 b-right panel">
       <!-- Group Selector Button -->
-      <ShowSelectGroupButton class="border-b border-gray-300" :state="state" />
+      <ShowSelectGroupButton class="cell-1 b-bottom" :state="state" />
 
       <!-- Scrolling Tabs -->
-      <ScrollingTabButtons 
-        v-if="!state.isLoading" 
-        class="border-b border-gray-300" 
-        :state="state" 
-        :app="app" 
-      />
+      <ScrollingTabButtons v-if="!state.isLoading" class="totalsRow" :state="state" :app="app" />
 
       <!-- Category Rows -->
       <Transition>
-        <CategoriesWrapper 
-          v-if="!state.isLoading && state.is('home') && state.selected.tab" 
-          :state="state" 
-        />
+        <CategoriesWrapper v-if="!state.isLoading && state.is('home') && state.selected.tab" :state="state" />
       </Transition>
 
       <Transition>
@@ -79,50 +71,47 @@
     </div>
 
     <!-- Right Side: Date and Selected Category Details List -->
-    <div id="rightPanel" class="col-span-3">
+    <div id="rightPanel" class="cell-3-5">
       <!-- Date Pickers -->
-      <DatePickers :state="state" class="leading-[50px] border-b border-gray-300" />
+      <DatePickers :state="state" class="line50 b-bottom" />
 
       <!-- Selected Category Details List -->
-      <SelectedItems 
-        v-if="!state.isLoading && state.selected.tab?.categoryName" 
-        :state="state" 
-        :categoryName="categoryName" 
-        class="p-8 text-left" 
-      />
+      <SelectedItems v-if="!state.isLoading && state.selected.tab?.categoryName" :state="state" :categoryName="categoryName" class="p30 text-left" />
 
       <Transition>
-        <div 
-          v-if="!state.selected.tab?.categoryName" 
-          class="p-8 text-center bg-gray-50"
-        >        
-          <span class="font-bold">« Choose an account and category to see detailed transactions here</span>
-        </div>
+      <div v-if="!state.selected.tab?.categoryName" class="cell-1 panel p30 text-center">        
+        <b>« Choose an account and category to see detailed transactions here</b>
+      </div>
       </Transition>
     </div>
+
   </div>
 
-  <!-- Other Components -->
+  <!-- SelectGroup -->
   <Transition>
     <SelectGroup v-if="state.is('SelectGroup')" :state="state" :App="app"></SelectGroup>
   </Transition>
 
+  <!-- EditTab -->
   <Transition>
     <EditTab v-if="state.is('EditTab')" :state="state" :App="app"></EditTab>
   </Transition>
 
+  <!-- RuleDetails -->
   <Transition>
     <RuleDetails v-if="state.is('RuleDetails')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
 
+  <!-- AllTabs -->
   <Transition>
-    <div v-if="state.is('AllTabs')">
+    <div v-if="state.is('AllTabs')" class="cell-1">
       <AllTabs :state="state" :app="app" />
     </div>
   </Transition>
 
+  <!-- ItemRepair -->
   <Transition>
-    <div v-if="state.is('ItemRepair')">
+    <div v-if="state.is('ItemRepair')" class="cell-1">
       <ItemRepair :state="state" :app="app" />
     </div>
   </Transition>

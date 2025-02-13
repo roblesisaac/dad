@@ -5,7 +5,6 @@ import auth0 from './shared/utils/auth.js';
 import App from './App.vue';
 import '@fontsource-variable/sometype-mono';
 import '@vuepic/vue-datepicker/dist/main.css';
-import './assets/main.css'
 
 const pinia = createPinia();
 const app = createApp(App);

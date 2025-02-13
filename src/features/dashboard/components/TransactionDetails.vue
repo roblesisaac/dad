@@ -1,111 +1,88 @@
 <template>
-  <div class="p-6 space-y-6 bg-gray-50">
+  <div class="grid p20y">
     <!-- Transaction Details -->
-    <div class="space-y-4">
-      <!-- Account Info -->
-      <div>
-        <div class="font-medium mb-1">
-          {{ item.amount < 0 ? 'Paid With:' : 'Deposited To:' }}
-        </div>
-        <div class="space-y-1">
-          <div>{{ accountData.name }} 
-            <span class="text-blue-600 font-medium">#{{ accountData.mask }}</span>
-          </div>
-          <div v-if="accountName && accountName !== accountData.name">
-            {{ accountName }}
-          </div>
-          <div>
-            Current Balance: 
-            <span class="text-green-600 font-medium">
-              {{ formatPrice(accountData.balances?.current) }}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Transaction Info -->
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <div class="font-medium mb-1">Channel:</div>
-          <div class="capitalize">{{ item.payment_channel }}</div>
-        </div>
-        <div>
-          <div class="font-medium mb-1">Status:</div>
-          <div>{{ item.pending ? 'Pending' : 'Settled' }}</div>
-        </div>
-        <div class="col-span-2">
-          <div class="font-medium mb-1">Category:</div>
-          <div class="capitalize">{{ prettyCategory }}</div>
-        </div>
-      </div>
+    <div class="cell-1 proper">
+      <p>
+        <b v-if="item.amount<0">Paid With:</b>
+        <b v-else>Debosited To:</b>
+        <br />
+        <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
+        <br v-if="accountName && accountName !== accountData.name" />
+        <span v-if="accountName && accountName !== accountData.name">{{ accountName }}</span>
+        <br />
+        Current Balance: <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
+      </p>
+      <p>
+        <b>Channel:</b> {{ item.payment_channel }}
+      </p>
+      <p>
+        <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
+      </p>
+      <p>
+        <b>Category:</b> {{ prettyCategory }}
+      </p>
     </div>
 
     <!-- Transaction Controls -->
-    <div class="space-y-4">
-      <!-- Notes -->
-      <div>
-        <label class="font-medium block mb-1">Add Note:</label>
-        <textarea 
-          v-model="item.notes"
-          rows="3" 
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        ></textarea>
+    <div class="cell-1">
+
+      <!-- Add Note -->
+      <div class="grid p20b">
+        <div class="cell-1">
+          <b>Add Note:</b>
+        </div>
+        <div class="cell-1">
+          <textarea rows="3" class="add-note" v-model="item.notes"></textarea>
+        </div>
       </div>
 
-      <!-- Recategorize -->
-      <div>
-        <label class="font-medium block mb-1">
-          Recategorize{{ item.recategorizeAs ? 'd' : '' }} As:
-        </label>
-        <input 
-          v-model="item.recategorizeAs" 
-          type="text"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent" 
-        />
+      <!-- Recategorize As -->
+      <div class="grid">
+        <div class="cell-1">
+          <b>Recategorize<span v-if="item.recategorizeAs">d</span> As:</b>
+        </div>
+        <div class="cell-1">
+          <input v-model="item.recategorizeAs" type="text" />
+        </div>
         
         <!-- Apply-to options -->
         <Transition>
-          <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="mt-4">
-            <div class="font-medium mb-2">Apply New Category To:</div>
+        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="grid">
+          <div class="cell-1 p10t">
+            <b>Apply New Category To:</b>
+          </div>
 
-            <div class="space-y-2 pl-4">
-              <!-- This item only -->
-              <label class="flex items-center space-x-2">
-                <input 
-                  type="radio" 
-                  id="this-item-only" 
-                  name="apply-to" 
-                  value="this-item-only" 
-                  checked
-                  class="text-blue-600 focus:ring-blue-500"
-                >
-                <span>This item only</span>
-              </label>
+          <div class="cell-1 p10l">
+            <!-- This item only -->
+            <div class="grid">
+              <div class="cell shrink">
+                <input type="radio" id="this-item-only" name="apply-to" value="this-item-only" checked>
+              </div>
+              <div class="cell auto p10l">
+                <label for="this-item-only">This item only</label>
+              </div>
+            </div>
 
-              <!-- Anything that matches -->
-              <label class="flex items-center space-x-2">
-                <input 
-                  type="radio" 
-                  id="anything-that-matches" 
-                  name="apply-to" 
-                  value="anything-that-matches"
-                  class="text-blue-600 focus:ring-blue-500"
-                >
-                <span>Anything that matches</span>
-              </label>
+            <!-- Anything that matches -->
+            <div class="grid">
+              <div class="cell shrink">
+                <input type="radio" id="anything-that-matches" name="apply-to" value="anything-that-matches">
+              </div>
+              <div class="cell auto p10l">
+                <label for="anything-that-matches">Anything that matches</label>
+              </div>
             </div>
           </div>
+        </div>
         </Transition>
+
       </div>
+
     </div>
 
-    <!-- Applied Rules -->
-    <div v-for="rule in rulesAppliedToItem" :key="rule._id">
-      <EditRule 
-        :ruleConfig="rule" 
-        :state="state" 
-        :showReorder="false" 
-      />
+    <!-- Rules Applied -->
+    <div class="cell-1" v-for="rule in rulesAppliedToItem" :key="rule._id">
+      <EditRule :ruleConfig="rule" :state="state" :showReorder="false" />
     </div>
   </div>
 </template>

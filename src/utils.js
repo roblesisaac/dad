@@ -24,15 +24,18 @@ export function fontColor(amt) {
     : 'font-color-negative'
 }
 
-export function formatDate(inputDate) {
-  // Handle empty or invalid input
-  if (!inputDate) return '';
-  
+export function formatDate(inputDate) { // outputs YYYY-MM-DD
   const date = new Date(inputDate);
-  if (isNaN(date)) return '';
   
-  // Format as YYYY-MM-DD for native date input
-  return date.toISOString().split('T')[0];
+  if (isNaN(date)) {
+    throw new Error('Invalid date input');
+  }
+  
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
 }
 
 export function formatPrice(value, { toFixed = 2, thousands = true } = {}) {
@@ -177,49 +180,3 @@ export function sum(num1, num2) {
 
   return isNaN(sum) ? 0 : sum;
 }
-
-// Add new date utility functions
-export const dateUtils = {
-  toISO(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toISOString();
-  },
-
-  fromISO(isoString) {
-    if (!isoString) return '';
-    return isoString.split('T')[0];
-  },
-
-  // Format date for display (MM/DD/YYYY)
-  formatDisplay(dateString) {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    if (isNaN(date)) return '';
-    
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    return `${month}/${day}/${year}`;
-  },
-
-  // Get first day of current month
-  firstOfMonth() {
-    const date = new Date();
-    date.setDate(1);
-    return this.fromISO(date.toISOString());
-  },
-
-  // Get today's date in YYYY-MM-DD format
-  today() {
-    return this.fromISO(new Date().toISOString());
-  },
-
-  // Add days to a date
-  addDays(dateString, days) {
-    const date = new Date(dateString);
-    date.setDate(date.getDate() + days);
-    return this.fromISO(date.toISOString());
-  }
-};

@@ -1,48 +1,74 @@
 <template>
-  <div class="flex items-center space-x-2">
-    <label :for="id" class="text-sm font-medium text-gray-500">{{ label }}:</label>
-    <input 
-      :id="id"
-      type="date"
-      :value="formattedDate"
-      @input="handleInput"
-      class="px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-  </div>
+<VueDatePicker class="section-content bold" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" :enable-time-picker="false" :auto-apply="true" />
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { reactive } from 'vue';
+import VueDatePicker from '@vuepic/vue-datepicker';
 
-const props = defineProps({
-  label: String,
-  modelValue: String
+const { date, when } = defineProps({
+  date: 'object',
+  when: 'string'
 });
 
-const emit = defineEmits(['update:modelValue']);
+const state = reactive({
+  format: (date) => {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
 
-// Generate unique ID for label association
-const id = computed(() => `date-${props.label.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`);
-
-// Format date for input value (YYYY-MM-DD)
-const formattedDate = computed(() => {
-  if (!props.modelValue) return '';
-  const date = new Date(props.modelValue);
-  return date.toISOString().split('T')[0];
+    return `${month}/${day}/${year}`;
+  },
+  presets: {
+    firstOfMonth() {
+      const currentDate = new Date();
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      return new Date(year, month, 1);
+    },
+    today() {
+      return new Date();
+    }
+  }
 });
 
-function handleInput(event) {
-  emit('update:modelValue', event.target.value);
-}
+const app = function() {
+  function dateIsAPreset() {
+    return state.presets.hasOwnProperty(date[when]);
+  }
+
+  function launchPreset() {
+    const { presets } = state;
+    date[when] = presets[date[when]]();
+  }
+
+  return {
+    init: () => {
+      if(dateIsAPreset()) {
+        launchPreset();
+      }
+    }
+  }
+}();
+
+app.init();
 </script>
 
-<style scoped>
-/* Override default date input styles for better cross-browser consistency */
-input[type="date"] {
-  @apply appearance-none;
+<style>
+.dp__input {
+  background: transparent !important;
+  border: 0 !important;
+  font-weight: bold !important;
+  font-family: 'Sometype Mono Variable', monospace !important;
+  padding: 0 !important;
+  text-align: center !important;
 }
 
-input[type="date"]::-webkit-calendar-picker-indicator {
-  @apply opacity-60 hover:opacity-100 cursor-pointer;
+.dp__btn {
+  box-shadow: none !important;
+}
+
+.dp__calendar_header_separator {
+  background: transparent !important;
 }
 </style>

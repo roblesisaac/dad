@@ -1,29 +1,24 @@
 <template>
-  <div :id="id" class="group">
-    <div 
-      @click="selectCategory()" 
-      :id="id+'title'" 
-      class="p-5 cursor-pointer hover:bg-gray-50 transition-colors duration-200"
-    >
-      <div class="flex items-center justify-between">
-        <div class="flex items-center space-x-3">
-          <span class="text-blue-600 font-bold">{{ categoryItems.length }}</span>
-          <span class="capitalize">{{ categoryName }}</span>
-          <span :class="[fontColor(categoryTotal), 'font-bold']">{{ catTotal }}</span>
+  <div :id="id" class="grid dottedRow proper">
+    
+    <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
+      <div class="grid">
+        <div class="cell auto">
+          <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
         </div>
-        <div class="text-gray-700">
-          <Minus v-if="isSelected" class="w-5 h-5" />
-          <Plus v-else class="w-5 h-5" />
+        <div class="cell shrink categoryExpand">
+          <span class="bold colorJet icon">
+            <Minus v-if="isSelected" />
+            <Plus v-else />
+          </span>
         </div>
       </div>
     </div>
     
-    <div 
-      v-if="state.isSmallScreen() && isSelected" 
-      class="border-t border-gray-200"
-    >
+    <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
       <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
+    
   </div>
 </template>
 
@@ -31,6 +26,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
 import { Plus, Minus } from 'lucide-vue-next';
 import SelectedItems from './SelectedItems.vue';
+
 import { fontColor, formatPrice } from '@/utils';
 import { useAppStore } from '@/stores/state';
 
@@ -44,6 +40,7 @@ const { state, categoryName, categoryItems, categoryTotal } = defineProps({
 });
 
 const selectedTab = state.selected.tab;
+
 const id = (categoryName).replace(/\s/g, '');
 
 const isSelected = computed(() => {
@@ -52,13 +49,17 @@ const isSelected = computed(() => {
 
 const catTotal = computed(() => {
   const toFixed = isSelected.value ? 2 : 0;
-  return formatPrice(categoryTotal, { toFixed });
+  
+  return formatPrice(categoryTotal, { toFixed })
 });
 
 async function selectCategory() {
   selectedTab.categoryName = isSelected.value ? null : categoryName;
+  
   window.scrollTo(0, 0);
+  
   await nextTick();
+  
   scrollToElement(id);
 }
 
@@ -67,35 +68,32 @@ function makeSelectedCategorySticky() {
   
   if(isSelected.value) {
     stickify.register(selector);
-    if (!state.isSmallScreen()) {
-      hideRightBorder(document.getElementById(id));
-      setPanelHeight(
-        document.getElementById('leftPanel'),
-        document.getElementById('rightPanel')
-      );
-    }
   } else {
-    stickify.deregister(selector);
-    if (!state.isSmallScreen()) {
-      showRightBorder(document.getElementById(id));
-    }
+    stickify.deregister(selector);  
   }
+  
+  if(state.isSmallScreen()) {
+    return;
+  }
+  
+  const el = document.getElementById(id);
+  const leftPanel = document.getElementById('leftPanel');
+  const rightPanel = document.getElementById('rightPanel');
+  
+  if(isSelected.value) {
+    hideRightBorder(el);
+  } else {
+    showRightBorder(el);  
+  }
+  
+  setPanelHeight(leftPanel, rightPanel);
 }
 
 function hideRightBorder(el) {
-  if (!el) return;
   el.style.width = getInnerWidth(el) + 2 + 'px';
-  el.classList.add('bg-white', 'shadow-md', 'z-10');
-}
-
-function showRightBorder(el) {
-  if (!el) return;
-  el.style.width = '';
-  el.classList.remove('bg-white', 'shadow-md', 'z-10');
 }
 
 function setPanelHeight(leftPanel, rightPanel) {
-  if (!leftPanel || !rightPanel) return;
   const leftHeight = leftPanel.getBoundingClientRect().height;
   const leftHeightScroll = leftPanel.scrollHeight;
   const rightHeight = rightPanel.scrollHeight;
@@ -103,29 +101,44 @@ function setPanelHeight(leftPanel, rightPanel) {
   leftPanel.style.height = Math.max(leftHeight, leftHeightScroll, rightHeight) + 'px';
 }
 
+function showRightBorder(el) {
+  el.style.width = '';
+  el.style.background = '';
+}
+
 function scrollToElement(id) {
   const element = document.getElementById(id);
-  if (!element) return;
+  
+  if (!element) {
+    console.warn(`Element with id "${id}" not found.`);
+    return;
+  }
   
   const elementRect = element.getBoundingClientRect();
-  const headerHeight = document.querySelector('.border-b.border-gray-300')?.offsetHeight || 0;
+  const headerHeight = document.querySelector('.totalsRow')?.offsetHeight || 0;
   const scrollY = window.scrollY || window.pageYOffset;
   const absoluteElementTop = elementRect.top + scrollY;
   
   window.scrollTo({
-    top: absoluteElementTop - headerHeight,
-    behavior: 'smooth'
+    top: absoluteElementTop - headerHeight
   });
 }
 
 function getInnerWidth(el) {
-  if (!(el instanceof HTMLElement)) return null;
+  if (!(el instanceof HTMLElement)) {
+    console.error('Invalid element provided.');
+    return null;
+  }
   
   const computedStyles = window.getComputedStyle(el);
-  return el.clientWidth - parseFloat(computedStyles.paddingLeft) 
-    - parseFloat(computedStyles.paddingRight)
-    - parseFloat(computedStyles.borderLeftWidth)
-    - parseFloat(computedStyles.borderRightWidth);
+  const paddingLeft = parseFloat(computedStyles.paddingLeft);
+  const paddingRight = parseFloat(computedStyles.paddingRight);
+  const borderLeft = parseFloat(computedStyles.borderLeftWidth);
+  const borderRight = parseFloat(computedStyles.borderRightWidth);
+  
+  const innerWidth = el.clientWidth - (paddingLeft + paddingRight + borderLeft + borderRight);
+  
+  return innerWidth;
 }
 
 watch(isSelected, makeSelectedCategorySticky);
@@ -134,6 +147,7 @@ onBeforeUnmount(() => {
   selectedTab.categoryName = null;
   stickify.deregister(id);
 });
+
 </script>
 
 <style>
