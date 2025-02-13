@@ -1,39 +1,39 @@
 <template>
-  <div class="callback-container">
-    <p>Processing login...</p>
+  <div class="callback-view">
+    <div class="loading">
+      Loading...
+    </div>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
-import { useAuth0 } from '@auth0/auth0-vue'
-import { useRouter } from 'vue-router'
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAuth } from '@/shared/composables/useAuth';
 
-const { handleRedirectCallback, isAuthenticated, user } = useAuth0()
-const router = useRouter()
+const router = useRouter();
+const { waitUntilInitialized } = useAuth();
 
 onMounted(async () => {
   try {
-    alert('handling redirect callback');
-    // Handle the authentication callback
-    await handleRedirectCallback()
-    
-    // If authentication is successful, redirect to home
-    if (isAuthenticated.value) {
-      alert('redirecting to spending report');
-      router.push('/spending-report')
-    }
+    await waitUntilInitialized();
+    router.push('/spending-report');
   } catch (error) {
-    console.error('Error handling callback:', error)
+    console.error('Error in callback:', error);
   }
-})
+});
 </script>
 
 <style scoped>
-.callback-container {
+.callback-view {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 50vh;
+  height: 100vh;
+}
+
+.loading {
+  font-size: 1.2rem;
+  color: #666;
 }
 </style> 
