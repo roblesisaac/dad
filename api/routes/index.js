@@ -39,7 +39,7 @@ export default (app) => {
     ].forEach(route => route(api, '/api'));
 
     // Api catch all
-    api.get('*', (req, res) => {
+    api.get('/api/*', (req, res) => {
         res.json(`Collection named '${req.params[0]}' not found`);
     });
 
