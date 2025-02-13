@@ -2,7 +2,7 @@ import { ref } from 'vue'
 
 const notifications = ref([]);
 
-export function useNotification() {
+export function useNotifications() {
   const notify = ({ 
     message, 
     type = 'INFO', 

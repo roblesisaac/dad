@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth';
 const API_URL = `${window.location.origin}/api`;
+import { useNotifications } from '@/shared/composables/useNotifications';
 
 export function useApi() {
   let data = null;
