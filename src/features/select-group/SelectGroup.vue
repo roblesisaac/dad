@@ -7,7 +7,7 @@
   </div>
 
   <!-- Only show main content when not editing -->
-  <div v-if="!props.state.is('EditGroup')">
+  <div v-if="props.state.view !== 'EditGroup'">
     <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
       <template #item="{element}">
         <GroupRow :key="element._id" :app="app" :element="element" :state="props.state" />
@@ -32,7 +32,7 @@
   </div>
 
   <!-- EditGroup -->
-  <div v-else class="cell-1">
+  <div v-if="props.state.view === 'EditGroup'" class="cell-1">
     <EditGroup :state="props.state" />
   </div>
 
