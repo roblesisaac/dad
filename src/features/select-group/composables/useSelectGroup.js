@@ -1,6 +1,6 @@
 import { useAppStore } from '@/stores/state';
 
-export function useSelectGroup(state) {
+export function useSelectGroup(state, App) {
   const { api } = useAppStore();
 
   async function createNewGroup() {
@@ -38,6 +38,7 @@ export function useSelectGroup(state) {
         const { accounts, groups } = await api.post('api/plaid/exchange/token', { publicToken });
         state.allUserGroups = [ ...state.allUserGroups, ...groups ];
         state.allUserAccounts = [ ...state.allUserAccounts, ...accounts ];
+        App.checkSyncStatus();
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
@@ -45,9 +46,39 @@ export function useSelectGroup(state) {
     });
   }
 
+  function editGroup(group) {
+    console.log('editGroup', group);
+    state.editingGroup = group;
+    state.views.push('EditGroup');
+  }
+
+  async function selectGroup(groupToSelect) {
+    const selectedGroup = state.selected.group;
+
+    if(selectedGroup) {
+      await api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
+      selectedGroup.isSelected = false;
+    }
+
+    await api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
+    groupToSelect.isSelected = true;
+    App.goBack();
+  }
+
+  async function linkNewAccount() {
+    const link = createLink();
+    link.open();
+  }
+
+  async function init() {
+    await fetchLinkToken();
+  }
+
   return {
     createNewGroup,
-    fetchLinkToken,
-    createLink
+    editGroup,
+    init,
+    linkNewAccount,
+    selectGroup
   };
 } 

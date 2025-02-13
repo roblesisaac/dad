@@ -5,126 +5,54 @@
     Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="state" />
   </div>
 
-  <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
-    <template #item="{element}">
-      <GroupRow :key="element._id" :app="app" :element="element" :state="state" />
-    </template>
-  </Draggable>
+  <!-- Only show main content when not editing -->
+  <div v-if="!props.state.is('EditGroup')">
+    <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
+      <template #item="{element}">
+        <GroupRow :key="element._id" :app="app" :element="element" :state="state" />
+      </template>
+    </Draggable>
 
-  <!-- LinkNewAccount -->
-  <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
-    <b v-if="props.state.linkToken">Link New Account +</b>
-    <b v-else>Loading <LoadingDots /></b>
-  </button>
+    <!-- LinkNewAccount -->
+    <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
+      <b v-if="props.state.linkToken">Link New Account +</b>
+      <b v-else>Loading <LoadingDots /></b>
+    </button>
 
-  <!-- Create New Group -->
-  <div class="cell-1 proper">
-    <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
-  </div>
-
-  <!-- Reconnect Existing Institutions -->
-  <div class="cell-1 proper">
-    <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
-  </div>
-
-  <Transition>
-    <div v-if="props.state.is('EditGroup')" class="cell-1">
-      <EditGroup :state="props.state" />
+    <!-- Create New Group -->
+    <div class="cell-1 proper">
+      <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
     </div>
-  </Transition>
+
+    <!-- Reconnect Existing Institutions -->
+    <div class="cell-1 proper">
+      <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
+    </div>
+  </div>
+
+  <!-- EditGroup -->
+  <div v-else class="cell-1">
+    <EditGroup :state="props.state" />
+  </div>
 
 </div>
 </template>
 
 <script setup>
-import { nextTick, watch } from 'vue';
+import { watch } from 'vue';
 import GroupRow from './components/GroupRow.vue';
 import NetWorth from './components/NetWorth.vue';
 import Draggable from 'vuedraggable';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
-import { useAppStore } from '@/stores/state';
 import EditGroup from './components/EditGroup.vue';
-import { useEditGroup } from './composables/useEditGroup.js';
+import { useSelectGroup } from './composables/useSelectGroup.js';
 
-const { api } = useAppStore();
 const props = defineProps({
   App: Object,
   state: Object
 });
 
-const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
-
-const app = function() {
-  function createLink() {
-    return Plaid.create({
-      token: props.state.linkToken,
-      onSuccess: async function(publicToken) {
-        const { accounts, groups } = await api.post('api/plaid/exchange/token', { publicToken });
-        props.state.allUserGroups = [ ...props.state.allUserGroups, ...groups ];
-        props.state.allUserAccounts = [ ...props.state.allUserAccounts, ...accounts ];
-        props.App.checkSyncStatus();
-      },
-      onExit: function(err, metadata) {
-        console.log('Link exit:', { err, metadata });
-      },
-    });
-  }
-
-  async function fetchLinkToken() {
-    if(props.state.linkToken) {
-      return;
-    }
-    
-    try {
-      const fetchedLinkToken = await api.post('api/plaid/connect/link');
-      props.state.linkToken = fetchedLinkToken;
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  return {
-    createNewGroup: async () => {
-      if(!confirm('Are you sure you want to create a new group?')) {
-        return;
-      }
-
-      const newGroupData = {
-        accounts: [],
-        isSelected: false,
-        name: `New Group ${props.state.allUserGroups.length}`
-      }
-
-      const savedNewGroup = await api.post('api/groups', newGroupData);
-      props.state.allUserGroups.push(savedNewGroup);
-    },
-    editGroup: (group) => {
-      props.state.editingGroup = group;
-      props.state.views.push('EditGroup');
-    },
-    init: async () => {
-      await fetchLinkToken();
-    },
-    linkNewAccount: async () => {
-      const link = createLink();
-      link.open();
-    },
-    selectGroup: (groupToSelect) => {
-      const selectedGroup = props.state.selected.group;
-
-      if(selectedGroup) {
-        api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
-        selectedGroup.isSelected = false;
-      }
-
-      nextTick(() => {
-        api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
-        groupToSelect.isSelected = true;
-        props.App.goBack();
-      });
-    }
-  }
-}();
+const app = useSelectGroup(props.state, props.App);
 
 app.init();
 
