@@ -67,13 +67,8 @@ const routes = [
   {
     path: '/spendingreport',
     name: 'spending-report',
-    component: SpendingReport
-  },
-  {
-    path: '/dashboard',
-    name: 'Dashboard',
-    component: DashboardView,
-    beforeEnter: authGuard
+    component: SpendingReport,
+    // beforeEnter: authGuard
   }
 ]
 
