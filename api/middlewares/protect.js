@@ -1,3 +1,5 @@
+import { checkJWT } from './auth';
+
 const protect = function() {
   const state = {
     allRoles: [
