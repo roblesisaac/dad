@@ -1,7 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-const LoginView = () => import('@/components/LoginView.vue')
-const CallbackView = () => import('@/components/CallbackView.vue')
+const LoginView = () => import('@/shared/components/LoginView.vue')
+const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const IndexVue = () => import('@/views/IndexVue.vue')
 const LoginVue = () => import('@/views/LoginVue.vue')
 const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')

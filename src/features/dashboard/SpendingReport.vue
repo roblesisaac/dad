@@ -119,7 +119,7 @@
 
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
-  import AllTabs from '@/components/AllTabs.vue';
+  import AllTabs from '@/features/tabs/components/AllTabs.vue';
   import { ChevronLeft } from 'lucide-vue-next';
 
   // Components

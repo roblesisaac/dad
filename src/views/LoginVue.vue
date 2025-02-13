@@ -12,6 +12,6 @@
 </template>
 
 <script setup>
-import LoginForm from '@/components/LoginForm.vue';
-import ConsentBanner from '@/components/ConsentBanner.vue';
+import LoginForm from '@/shared/components/LoginForm.vue';
+import ConsentBanner from '@/shared/components/ConsentBanner.vue';
 </script>

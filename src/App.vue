@@ -15,8 +15,8 @@
 </template>
 
 <script setup>
-import NavMain from './components/NavMain.vue';
-import OffCanvasLinks from './components/OffCanvasLinks.vue';
+import NavMain from './shared/components/NavMain.vue';
+import OffCanvasLinks from './shared/components/OffCanvasLinks.vue';
 import StayLoggedIn from './components/StayLoggedIn.vue';
 import ShowLoginForm from './components/ShowLoginForm.vue';
 
