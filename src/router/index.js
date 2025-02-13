@@ -32,7 +32,7 @@ const routes = [
     path: '/spending-report',
     name: 'spending report',
     component: SpendingReport,
-    // beforeEnter: authGuard
+    beforeEnter: authGuard
   }
 ]
 
