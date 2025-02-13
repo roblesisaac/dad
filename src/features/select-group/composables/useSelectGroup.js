@@ -49,7 +49,9 @@ export function useSelectGroup(state, App) {
   function editGroup(group) {
     console.log('editGroup', group);
     state.editingGroup = group;
+    console.log('Before pushing EditGroup view', state.views);
     state.views.push('EditGroup');
+    console.log('After pushing EditGroup view', state.views);
   }
 
   async function selectGroup(groupToSelect) {
