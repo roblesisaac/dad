@@ -3,7 +3,6 @@ import nodemailer from "nodemailer";
 import { createSSRApp} from "vue";
 import { renderToString } from "@vue/server-renderer";
 import inlineBase64 from "nodemailer-plugin-inline-base64";
-import Sites from '../models/sites';
 
 import { proper } from "../../src/utils";
 
@@ -13,7 +12,6 @@ async function email(to, payload) {
   try {
 
     const { subject, data, template } = payload;
-    const site = await Sites.findOne();
     
     const transporter = nodemailer.createTransport({
       service: "gmail",
@@ -33,7 +31,7 @@ async function email(to, payload) {
     transporter.use('compile', inlineBase64());
     
     const mailOptions = {
-      from: `${ proper(site.name || APP_NAME) }  <${ GMAIL_USERNAME }>`,
+      from: `${ proper(APP_NAME) }  <${ GMAIL_USERNAME }>`,
       to,
       subject,
       html
