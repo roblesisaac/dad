@@ -5,7 +5,6 @@ import address from './address';
 import auth from './auth';
 // import db from './db';
 import groups from './groups';
-import mongo from './mongo';
 import messages from './messages';
 import pages from './pages';
 import plaid from './plaid';
@@ -28,7 +27,6 @@ export default (app) => {
         address,
         auth,
         groups,
-        mongo,
         messages,
         sites,
         pages,
