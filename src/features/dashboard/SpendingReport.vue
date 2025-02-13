@@ -102,13 +102,6 @@
     <RuleDetails v-if="state.is('RuleDetails')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
 
-    <!-- Edit Group -->
-  <Transition>
-    <div v-if="state.is('EditGroup')" class="cell-1">
-      <EditGroup :state="state" />
-    </div>
-  </Transition>
-
   <!-- AllTabs -->
   <Transition>
     <div v-if="state.is('AllTabs')" class="cell-1">
@@ -130,13 +123,11 @@
   import { ChevronLeft } from 'lucide-vue-next';
 
   // Components
-  import EditGroup from './components/EditGroup.vue'; 
   import RuleDetails from './components/RuleDetails.vue';
   import SelectedItems from './components/SelectedItems.vue';
   import LoadingDots from '@/shared/components/LoadingDots.vue';
   import ItemRepair from './components/ItemRepair.vue';
   import DatePickers from './components/DatePickers.vue';
-  import EditTab from './components/EditTab.vue';
   import CategoriesWrapper from './components/CategoriesWrapper.vue';
   import ShowSelectGroupButton from './components/ShowSelectGroupButton.vue';
   import ScrollingTabButtons from './components/ScrollingTabButtons.vue';
@@ -148,6 +139,7 @@
   import loadScript from '@/shared/utils/loadScript';
   import { useUtils } from './composables/useUtils';
   import { SelectGroup } from '@/features/select-group';
+  import { EditTab } from '@/features/edit-tab';
 
   const { api, State, stickify } = useAppStore();
 

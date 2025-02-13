@@ -57,12 +57,12 @@
         </div>
         </div>
     
-        </div>
-    </template>
+    </div>
+</template>
     
     <script setup>
     import { computed, watch } from 'vue';
-    import NetWorth from '../../select-group/composables/NetWorth.vue';
+    import NetWorth from './NetWorth.vue';
     import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
     import { fontColor, formatPrice } from '@/utils';
     import { useAppStore } from '@/stores/state';

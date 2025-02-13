@@ -41,10 +41,10 @@
 <script setup>
   import { computed, reactive, watch } from 'vue';
   import { Settings2, GripHorizontal } from 'lucide-vue-next';
-  import ScrollingContent from '@/shared/components/ScrollingContent.vue';
   import DynamicWidthInput from './DynamicWidthInput.vue';
   import DynamicWidthSelect from './DynamicWidthSelect.vue';
   import DynamicTextArea from './DynamicTextArea.vue';
+  import ScrollingContent from '@/shared/components/ScrollingContent.vue';
   import { useAppStore } from '@/stores/state';
   
   const { api } = useAppStore();

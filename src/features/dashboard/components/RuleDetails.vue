@@ -59,7 +59,7 @@ import { computed, nextTick, ref, watch } from 'vue';
 import Switch from '@/shared/components/Switch.vue';
 import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import Draggable from 'vuedraggable';
-import EditRule from './EditRule.vue';
+import EditRule from '../../edit-tab/components/EditRule.vue';
 
 import { useAppStore } from '@/stores/state';
 

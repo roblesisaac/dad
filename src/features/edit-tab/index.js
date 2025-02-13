@@ -1,0 +1,1 @@
+export { default as EditTab } from './EditTab.vue'; 

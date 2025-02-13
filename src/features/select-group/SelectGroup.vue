@@ -27,6 +27,12 @@
     <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
   </div>
 
+  <Transition>
+    <div v-if="props.state.is('EditGroup')" class="cell-1">
+      <EditGroup :state="props.state" />
+    </div>
+  </Transition>
+
 </div>
 </template>
 
@@ -37,12 +43,16 @@ import NetWorth from './components/NetWorth.vue';
 import Draggable from 'vuedraggable';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { useAppStore } from '@/stores/state';
+import EditGroup from './components/EditGroup.vue';
+import { useEditGroup } from './composables/useEditGroup.js';
 
 const { api } = useAppStore();
 const props = defineProps({
   App: Object,
   state: Object
 });
+
+const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
 
 const app = function() {
   function createLink() {
@@ -89,8 +99,8 @@ const app = function() {
       props.state.allUserGroups.push(savedNewGroup);
     },
     editGroup: (group) => {
-      props.state.editingGroup=group;
-      props.state.views.push('EditGroup')
+      props.state.editingGroup = group;
+      props.state.views.push('EditGroup');
     },
     init: async () => {
       await fetchLinkToken();
