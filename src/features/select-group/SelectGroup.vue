@@ -31,8 +31,12 @@
     </div>
   </div>
 
+  props.state.view: {{ props.state.view }}<br/>
+  state.view: {{ state.view }}
+
   <!-- EditGroup -->
   <div v-if="props.state.view === 'EditGroup'" class="cell-1">
+    Here you go!
     <EditGroup :state="props.state" />
   </div>
 
