@@ -1,6 +1,6 @@
 import { useAppStore } from '@/stores/state';
 
-export function useSelectGroup(state, App) {
+export function useSelectGroup(state, App, isEditing) {
   const { api } = useAppStore();
 
   async function createNewGroup() {
@@ -49,9 +49,7 @@ export function useSelectGroup(state, App) {
   function editGroup(group) {
     console.log('editGroup', group);
     state.editingGroup = group;
-    console.log('Before pushing EditGroup view', state.views);
-    state.views.push('EditGroup');
-    console.log('After pushing EditGroup view', state.views);
+    isEditing.value = true;
   }
 
   async function selectGroup(groupToSelect) {

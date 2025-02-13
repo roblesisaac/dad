@@ -1,6 +1,11 @@
 <template>
     <div class="grid p20 text-left">
     
+      <!-- Back button -->
+      <div class="cell-1 p10b">
+        <button @click="$emit('close')" class="button">← Back</button>
+      </div>
+    
       <!-- Group Name -->
       <div class="cell-1 p20b">
     
@@ -62,6 +67,8 @@
     const props = defineProps({
       state: Object
     });
+    
+    defineEmits(['close']);
     
     const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
     
