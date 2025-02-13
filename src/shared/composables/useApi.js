@@ -15,7 +15,8 @@ export function useApi() {
     const auth0Token = await getToken();
     try {
       const baseUrl = settings.baseUrl || API_URL;
-      url = removeStartingSlash(url);
+      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+      const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
 
       const headers = {
         ...settings.headers
@@ -30,7 +31,7 @@ export function useApi() {
         headers.Authorization = `Bearer ${auth0Token}`;
       }
 
-      const response = await fetch(baseUrl + url, {
+      const response = await fetch(normalizedBaseUrl + normalizedUrl, {
         method,
         body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
         headers
@@ -63,10 +64,6 @@ export function useApi() {
     } finally {
       loading = false;
     }
-  }
-
-  function removeStartingSlash(url) {
-    return url.startsWith('/') ? url.slice(1) : url;
   }
 
   return {

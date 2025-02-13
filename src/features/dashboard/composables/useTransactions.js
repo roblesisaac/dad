@@ -11,11 +11,11 @@ export function useTransactions(api) {
   }
 
   async function fetchUserTabs() {
-    return await api.get('api/tabs');
+    return await api.get('tabs');
   }
 
   async function fetchUserRules() {
-    return await api.get('api/rules');
+    return await api.get('rules');
   }
 
   return {

@@ -278,10 +278,10 @@
 
         await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
-        state.allUserTabs = await fetchUserTabs();          
+        state.allUserTabs = await fetchUserTabs();       
         state.allUserRules = await fetchUserRules();
         
-        const { groups, accounts } = await api.get('api/plaid/sync/accounts/and/groups');
+        const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
 
         if(!groups.length) {
           state.views.push('SelectGroup');
@@ -291,7 +291,7 @@
         state.allUserGroups = groups.sort(sortBy('sort'));
 
         let added = [], removed = [];
-        const { syncResults } = await api.get('api/plaid/sync/all/transactions');
+        const { syncResults } = await api.get('/plaid/sync/all/transactions');
         
 
         for(const syncedItem of syncResults) {

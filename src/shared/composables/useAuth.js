@@ -6,13 +6,14 @@ export function useAuth() {
     loginWithRedirect, 
     logout, 
     user, 
+    handleRedirectCallback,
     isAuthenticated, 
     getAccessTokenSilently,
-    isLoading: auth0IsLoading 
+    isLoading: auth0IsLoading
   } = useAuth0();
 
   const isLoading = ref(false);
-  const error = ref(null)
+  const error = ref(null);
 
   const userProfile = computed(() => {
     if (!user.value) return undefined;
@@ -76,6 +77,7 @@ export function useAuth() {
   return {
     login,
     logoutUser,
+    handleRedirectCallback,
     userProfile,
     isAuthed,
     isLoading: computed(() => isLoading.value || auth0IsLoading.value),

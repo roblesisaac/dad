@@ -11,10 +11,7 @@ const routes = [
   {
     path: '/callback',
     name: 'callback',
-    component: CallbackView,
-    meta: { 
-      skipAuth: true 
-    }
+    component: CallbackView
   },
   {
     path: '/privacy',
@@ -35,7 +32,7 @@ const routes = [
     path: '/spending-report',
     name: 'spending report',
     component: SpendingReport,
-    beforeEnter: authGuard
+    // beforeEnter: authGuard
   }
 ]
 
@@ -43,16 +40,5 @@ const router = createRouter({
   history: createWebHistory(),
   routes
 })
-
-// Add navigation guard to handle auth
-router.beforeEach(async (to) => {
-  // Skip auth check for callback and other public routes
-  if (to.meta.skipAuth) {
-    return true;
-  }
-  
-  // Continue with normal navigation
-  return true;
-});
 
 export default router 
