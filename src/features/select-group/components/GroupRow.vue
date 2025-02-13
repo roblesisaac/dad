@@ -1,63 +1,64 @@
 <template>
-    <div :class="['grid middle proper text-left group-row', isSelected]">
-        <!-- Edit Horizontal Dots -->
-        <div class="cell-1 right">
-            <MoreHorizontal @click="editGroup(element)" class="handlerGroup pointer" />
+  <div 
+    :class="[
+      'bg-white border-2 rounded-lg shadow-sm transition-all duration-200 p-4',
+      isSelected ? 'border-blue-500 text-blue-700' : 'border-gray-200 hover:border-gray-300'
+    ]"
+  >
+    <div class="flex items-start justify-between">
+      <!-- Left Side -->
+      <div class="flex-1">
+        <!-- Header with Edit & Drag -->
+        <div class="flex items-center justify-between mb-4">
+          <MoreHorizontal 
+            @click="editGroup(element)" 
+            class="handlerGroup w-5 h-5 text-gray-400 hover:text-gray-600 cursor-pointer" 
+          />
+          <GripHorizontal 
+            class="handlerGroup w-5 h-5 text-gray-400 hover:text-gray-600 cursor-move" 
+          />
         </div>
-    
-        <!-- Drag Handle -->
-        <div class="cell-3-24 p20r">
-            <GripHorizontal class="handlerGroup pointer" />
+
+        <!-- Group Info -->
+        <div class="space-y-2 cursor-pointer" @click="selectGroup(element)">
+          <div class="font-bold text-lg">{{ element.name }}</div>
+          
+          <div v-if="isDefaultName" class="text-sm text-gray-600 capitalize">
+            {{ accountInfo }}
+          </div>
+
+          <div v-if="element.info" class="text-sm text-gray-600">
+            {{ element.info }}
+          </div>
+
+          <div v-if="element.accounts.length > 1" class="text-sm">
+            <span class="font-medium">Accounts: </span>
+            <span v-for="(account, accountIndex) in element.accounts" :key="account._id">
+              #{{ account.mask }}
+              <span v-if="accountIndex < element.accounts.length - 1" class="font-bold">+</span>
+            </span>
+          </div>
         </div>
-    
-        <div class="cell-12-24 pointer" @click="selectGroup(element)">
-        <div class="grid p10r">
-    
-            <!-- Element Name -->
-            <div class="cell-1">
-                <b>{{ element.name }}</b>
-            </div>
-    
-            <!-- Element Accounts -->
-            <div v-if="isDefaultName" class="cell-1">
-                <small>{{ accountInfo }}</small>
-            </div>
-    
-            <!-- Custom Info -->
-            <div v-if="element.info" class="cell-1">
-                <small v-if="element.info">{{ element.info }}</small>
-            </div>
-    
-            <!-- Element Group -->
-            <div v-if="element.accounts.length > 1" class="cell-1">
-                <b><small>Accts: </small></b><small v-for="(account, accountIndex) in element.accounts" :key="index">
-                    #{{ account.mask }} <b v-if="accountIndex < element.accounts.length - 1">+</b>
-                </small>
-            </div>
-    
+      </div>
+
+      <!-- Right Side - Balances -->
+      <div class="text-right cursor-pointer" @click="selectGroup(element)">
+        <div v-if="element.accounts.length" class="space-y-1">
+          <div class="font-bold">
+            <NetWorth :accounts="element.accounts" :state="state" />
+          </div>
+          <div class="text-sm text-gray-600">Available Balance</div>
         </div>
+
+        <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance">
+          <div :class="[fontColor(element.totalAvailableBalance)]">
+            {{ formatPrice(element.totalAvailableBalance) }}
+          </div>
+          <div class="text-sm text-gray-600">Current</div>
         </div>
-    
-        <!-- Balances + View -->
-        <div class="cell-9-24 right p10r pointer" @click="selectGroup(element)">
-        <div class="grid">
-    
-            <!-- Current Balance -->
-            <div v-if="element.accounts.length" class="cell-1 bold right">
-                <NetWorth :accounts="element.accounts" :state="state" />
-                <br /><small>Available Balance</small>
-            </div>
-    
-            <!-- Available Balance -->
-            <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
-                <span :class="fontColor(element.totalAvailableBalance)">{{ formatPrice(element.totalAvailableBalance) }}</span>
-                <br /><small>Current</small>
-            </div>
-    
-        </div>
-        </div>
-    
+      </div>
     </div>
+  </div>
 </template>
     
 <script setup>

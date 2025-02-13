@@ -1,16 +1,23 @@
 <template>
-<div class="grid off-canvas">
-  <div class="cell-1">
-    <button class="close-window p20" @click="State.showingOffCanvasLinks=false">      
-      <X />
-    </button>
-    <button class="link-button" @click="app.changePath(link)"
-      v-for="link in State.userViews" 
-      :to="link.path || link">
+  <div class="bg-white h-full">
+    <div class="p-5">
+      <button 
+        class="float-right p-2 text-black hover:text-gray-600 transition-colors" 
+        @click="State.showingOffCanvasLinks=false"
+      >      
+        <X />
+      </button>
+      
+      <button 
+        v-for="link in State.userViews"
+        :key="link.path || link"
+        @click="app.changePath(link)"
+        class="w-full py-3 text-left text-2xl font-bold text-black uppercase hover:bg-gray-50 transition-colors"
+      >
         {{ link.name || link }}
-    </button>
+      </button>
+    </div>
   </div>
-</div>
 </template>
 
 <script setup>
@@ -18,24 +25,21 @@ import { X } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
 const { api, State, utils } = useAppStore();
 
-const app = function() {
-  async function getUserViews() {
-    State.userViews = State.userViews || (await api.get('/api/userviews')).views;
+const app = {
+  changePath: (link) => {
+    utils.changePath(link);
+    State.showingOffCanvasLinks = false
+  },
+  init: () => {
+    getUserViews();
   }
+};
 
-  return {
-    changePath: (link) => {
-      utils.changePath(link);
-      State.showingOffCanvasLinks = false
-    },
-    init: () => {
-      getUserViews();
-    }
-  }
-}();
+async function getUserViews() {
+  State.userViews = State.userViews || (await api.get('/api/userviews')).views;
+}
 
 app.init();
-
 </script>
 
 <style scoped>

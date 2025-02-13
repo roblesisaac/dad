@@ -1,25 +1,37 @@
 <template>
-<div class="grid">
-
-  <div v-if="itemState.syncedItems.length" class="cell-1">
-    
-    <div v-for="item in itemState.syncedItems" :key="item.item_id" class="grid p20 dottedRow">
-      <div class="cell auto proper bold left">
-        {{ item.institution_id }}
-        <br />{{ item.item_id }}
+  <div class="space-y-4">
+    <div v-if="itemState.syncedItems.length">
+      <div 
+        v-for="item in itemState.syncedItems" 
+        :key="item.item_id" 
+        class="p-5 border-b border-gray-200 hover:bg-gray-50"
+      >
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="font-mono text-sm text-gray-600">{{ item.institution_id }}</div>
+            <div class="font-mono text-sm">{{ item.item_id }}</div>
+          </div>
+          
+          <div>
+            <button 
+              v-if="item.error"
+              @click="app.repairItem(item.item_id)" 
+              class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-md transition-colors"
+            >
+              Repair
+            </button>
+            <button 
+              v-else 
+              @click="app.repairItem(item.item_id)" 
+              class="px-4 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md transition-colors"
+            >
+              Reconnect
+            </button>
+          </div>
+        </div>
       </div>
-      
-      <div v-if="item.error" class="cell shrink">
-        <button @click="app.repairItem(item.item_id)" class="repair button">Repair</button>
-      </div>
-      <button v-else @click="app.repairItem(item.item_id)" class="button reconnect">
-        Reconnect
-      </button>
     </div>
-    
   </div>
-
-</div>
 </template>
 
 <script setup>
@@ -32,40 +44,33 @@ const itemState = reactive({
   syncedItems: []
 });
 
-const app = function() {
-  function createLink(token) {
-    return Plaid.create({
-      token,
-      onSuccess: async function(publicToken) {
-        console.log(publicToken);
-      },
-      onExit: function(err, metadata) {
-        console.log('Link exit:', { err, metadata });
-      },
-    });
+const app = {
+  init: async () => {
+    itemState.syncedItems = [...itemState.syncedItems, ...await syncItems()];
+  },
+  repairItem: async (itemId) => {
+    const linkToken = await api.post(`api/plaid/connect/link/${itemId}`);
+    createLink(linkToken).open();
   }
+};
 
-  async function syncItems() {
-    const response = await api.get('api/plaid/sync/items');
-
-    return response;
-  }
-
-  return {
-    init: async () => {
-      itemState.syncedItems = [ ...itemState.syncedItems, ... await syncItems() ];
+function createLink(token) {
+  return Plaid.create({
+    token,
+    onSuccess: async (publicToken) => {
+      console.log(publicToken);
     },
-    repairItem: async (itemId) => {
-      const linkToken = await api.post(`api/plaid/connect/link/${itemId}`);
-      const link = createLink(linkToken);
+    onExit: (err, metadata) => {
+      console.log('Link exit:', { err, metadata });
+    },
+  });
+}
 
-      link.open();
-    }
-  }
-}();
+async function syncItems() {
+  return await api.get('api/plaid/sync/items');
+}
 
 app.init();
-
 </script>
 
 <style scoped>

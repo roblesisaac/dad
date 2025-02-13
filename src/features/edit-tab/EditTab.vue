@@ -1,36 +1,44 @@
 <template>
-<div class="grid">
-  <div class="cell-1">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Tab Name -->
-    <div v-if="!state.is('EditRule')" class="grid middle b-bottom">
-      <div class="cell-1-5 section b-right bold line50">
-        <small>Name</small>
-      </div>
-      <div class="cell-4-5 section">
-        <input v-model="editState.changeTabNameTo" class="transparent bold section colorBlue" type="text" />
+    <div v-if="!state.is('EditRule')" class="border-b border-gray-200">
+      <div class="grid grid-cols-5 items-center">
+        <div class="col-span-1 py-4 px-6 font-medium text-gray-700 bg-gray-50 border-r border-gray-200">
+          <span class="text-sm">Name</span>
+        </div>
+        <div class="col-span-4 px-6">
+          <input 
+            v-model="editState.changeTabNameTo" 
+            class="w-full px-0 py-2 bg-transparent border-0 focus:ring-0 text-blue-600 font-medium"
+            type="text" 
+          />
+        </div>
       </div>
     </div>
 
-    <!-- Sort -->
-    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="sort" />
+    <!-- Rule Sections -->
+    <EditTabSection 
+      v-for="section in ['sort', 'categorize', 'filter', 'groupBy']"
+      :key="section"
+      :editState="editState" 
+      :state="state" 
+      :app="app" 
+      :sectionName="section" 
+    />
 
-    <!-- Categorize -->
-    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="categorize" />
+    <!-- Share Section -->
+    <ShareSection 
+      :editState="editState" 
+      :state="state" 
+      :app="app" 
+    />
 
-    <!-- Filter -->
-    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="filter" />
-
-    <!-- GroupBy -->
-    <EditTabSection :editState="editState" :state="state" :app="app" sectionName="groupBy" />
-
-    <!-- Share -->
-    <ShareSection :editState="editState" :state="state" :app="app" />
-
-    <!-- Delete And Duplicate Buttons -->
-    <ActionButtons v-if="!state.is('EditRule')" :app="app" />
-
+    <!-- Action Buttons -->
+    <ActionButtons 
+      v-if="!state.is('EditRule')" 
+      :app="app" 
+    />
   </div>
-</div>
 </template>
 
 <script setup>
@@ -62,47 +70,22 @@ watch(() => selectedTab.value.showForGroup, app.saveGroups, { deep: true });
 
 <style>
 .draggable {
-  min-height: 50px;
-  width: 100%;
+  @apply min-h-[50px] w-full;
 }
 
 .dropHere {
-  padding: 15px;
-  border: 2px dashed #BFBCB3;
-  min-height: 50px;
+  @apply p-4 border-2 border-dashed border-gray-300 min-h-[50px] rounded-lg bg-gray-50;
 }
 
 .sharedWith {
-  background-color: #333;
-  margin-right: 20px;
-  margin-bottom: 20px;
-}
-
-.saveTabName {
-  height: 50px;
-  width: 100%;
-  border-radius: 0;
-}
-
-.saveTabName:hover, .saveTabName:active {
-  background: #333;
+  @apply bg-gray-800 text-white px-4 py-2 rounded-md mr-4 mb-4 hover:bg-gray-700 transition-colors;
 }
 
 .transparent {
-  border: 0 !important;
-  background-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.transparent:focus {
-  outline: none;
-  border: 0 !important;
-  box-shadow: none !important;
+  @apply border-0 bg-transparent shadow-none focus:outline-none focus:ring-0;
 }
 
 .uniqueBtn {
-  background-color: #f9c844;
-  color: #3c3943;
+  @apply bg-yellow-400 text-gray-900 hover:bg-yellow-500 transition-colors;
 }
 </style> 

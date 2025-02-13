@@ -1,5 +1,14 @@
 <template>
-<VueDatePicker class="section-content bold" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" :enable-time-picker="false" :auto-apply="true" />
+  <VueDatePicker 
+    v-model="date[when]" 
+    :format="state.format" 
+    hide-input-icon 
+    :clearable="false" 
+    autocomplete="on" 
+    :enable-time-picker="false" 
+    :auto-apply="true"
+    class="date-picker"
+  />
 </template>
 
 <script setup>
@@ -7,8 +16,8 @@ import { reactive } from 'vue';
 import VueDatePicker from '@vuepic/vue-datepicker';
 
 const { date, when } = defineProps({
-  date: 'object',
-  when: 'string'
+  date: Object,
+  when: String
 });
 
 const state = reactive({
@@ -16,15 +25,12 @@ const state = reactive({
     const day = date.getDate();
     const month = date.getMonth() + 1;
     const year = date.getFullYear();
-
     return `${month}/${day}/${year}`;
   },
   presets: {
     firstOfMonth() {
       const currentDate = new Date();
-      const year = currentDate.getFullYear();
-      const month = currentDate.getMonth();
-      return new Date(year, month, 1);
+      return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     },
     today() {
       return new Date();
@@ -32,43 +38,43 @@ const state = reactive({
   }
 });
 
-const app = function() {
-  function dateIsAPreset() {
-    return state.presets.hasOwnProperty(date[when]);
-  }
-
-  function launchPreset() {
-    const { presets } = state;
-    date[when] = presets[date[when]]();
-  }
-
-  return {
-    init: () => {
-      if(dateIsAPreset()) {
-        launchPreset();
-      }
+const app = {
+  init() {
+    if (state.presets.hasOwnProperty(date[when])) {
+      date[when] = state.presets[date[when]]();
     }
   }
-}();
+};
 
 app.init();
 </script>
 
 <style>
-.dp__input {
-  background: transparent !important;
-  border: 0 !important;
-  font-weight: bold !important;
-  font-family: 'Sometype Mono Variable', monospace !important;
-  padding: 0 !important;
-  text-align: center !important;
+.date-picker .dp__input {
+  @apply bg-transparent border-0 font-bold font-mono p-0 text-center;
 }
 
-.dp__btn {
-  box-shadow: none !important;
+.date-picker .dp__btn {
+  @apply shadow-none;
 }
 
-.dp__calendar_header_separator {
-  background: transparent !important;
+.date-picker .dp__calendar_header_separator {
+  @apply bg-transparent;
+}
+
+.date-picker .dp__action_buttons {
+  @apply hidden;
+}
+
+.date-picker .dp__menu {
+  @apply shadow-lg border border-gray-200;
+}
+
+.date-picker .dp__today {
+  @apply text-blue-600 font-bold;
+}
+
+.date-picker .dp__active_date {
+  @apply bg-blue-600;
 }
 </style>

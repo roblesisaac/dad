@@ -1,22 +1,41 @@
 <template>
-<div class="grid">
-  <div class="cell-20-24">
-    <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="state.selected.tabsForGroup" v-bind="state.dragOptions(100)">
-      <template #item="{element}">
-        <TabButton
-          :state="state" 
-          :tab="element" 
-          :key="element._id"
-          class="reportTab" />
-      </template>
-    </Draggable>
+  <div class="grid grid-cols-24">
+    <div class="col-span-20">
+      <Draggable 
+        class="flex overflow-x-auto scrollbar-hide" 
+        :class="{ 'hover:scrollbar-default': !isSmallScreen }" 
+        handle=".handleTab" 
+        v-model="state.selected.tabsForGroup" 
+        v-bind="state.dragOptions(100)"
+      >
+        <template #item="{element}">
+          <TabButton
+            :state="state" 
+            :tab="element" 
+            :key="element._id"
+            class="flex-shrink-0" 
+          />
+        </template>
+      </Draggable>
+    </div>
+    
+    <div class="col-span-4">
+      <button 
+        v-if="state.selected.tabsForGroup.length > 1" 
+        @click="state.views.push('AllTabs')" 
+        class="w-full h-[50px] bg-gray-100 hover:bg-gray-200 border-l-2 border-b-2 border-gray-300 transition-colors"
+      >
+        All
+      </button>
+      <button 
+        v-else 
+        @click="app.createNewTab" 
+        class="w-full h-[50px] bg-gray-100 hover:bg-gray-200 border-l-2 border-b-2 border-gray-300 transition-colors"
+      >
+        +
+      </button>
+    </div>
   </div>
-  <div class="cell-4-24">
-    <button v-if="state.selected.tabsForGroup.length>1" @click="state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
-    <button v-else @click="app.createNewTab" class="view-all b-bottom b-left expanded">+</button>
-  </div>
-</div>
-
 </template>
 
 <script setup>
@@ -37,62 +56,40 @@ function validIdString(inputString) {
 
 const uniqueTabClassName = computed(() => {
   const selectedTab = props.state.selected.tab;
-
   return validIdString(selectedTab?._id);
 });
 
 function scrollToSelectedTab(toTheLeft) {
-  const scrollableDiv = document.querySelector('.draggable');
+  const scrollableDiv = document.querySelector('.scrollbar-hide');
   const selectedTab = document.querySelector(`.${uniqueTabClassName.value}`);
 
-  if(!selectedTab) {
-    return;
-  }
+  if (!selectedTab) return;
 
   const selectedTabPosition = selectedTab.getBoundingClientRect();
   const newScrollPosition = scrollableDiv.scrollLeft + selectedTabPosition.left - toTheLeft;
   
-  scrollableDiv.scrollLeft = newScrollPosition;
+  scrollableDiv.scrollTo({
+    left: newScrollPosition,
+    behavior: 'smooth'
+  });
 }
 
 onMounted(() => scrollToSelectedTab(20));
 watch(() => props.state.selected.tab?._id, (newId) => {
-  if(newId) scrollToSelectedTab(20);
-})
-
+  if (newId) scrollToSelectedTab(20);
+});
 </script>
 
 <style>
-.button-container {
-  display: flex;
-  overflow-x: auto;
-  white-space: nowrap;
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
 
-.button-container::-webkit-scrollbar {
-  width: 0;
-  background: transparent;
+.scrollbar-default::-webkit-scrollbar {
+  @apply h-2 bg-gray-100;
 }
 
-.toggle-scroll:hover::-webkit-scrollbar {
-  width: 8px;
-  background-color: rgba(0, 0, 0, 0.1);
-}
-
-.toggle-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-}
-
-.view-all {
-  height: 50px;
-  border-radius: 0 0 3px 3px;
-}
-
-.view-all:hover,
-.view-all:active,
-.view-all:focus {
-  color: blue;
-  outline: none;
+.scrollbar-default::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 rounded-full hover:bg-gray-400;
 }
 </style>

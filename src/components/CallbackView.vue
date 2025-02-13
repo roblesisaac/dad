@@ -1,6 +1,9 @@
 <template>
-  <div class="callback-container">
-    <p>Processing login...</p>
+  <div class="flex justify-center items-center min-h-[50vh]">
+    <div class="text-gray-700 flex flex-col items-center space-y-4">
+      <div class="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+      <p>Processing login...</p>
+    </div>
   </div>
 </template>
 
@@ -9,15 +12,13 @@ import { onMounted } from 'vue'
 import { useAuth0 } from '@auth0/auth0-vue'
 import { useRouter } from 'vue-router'
 
-const { handleRedirectCallback, isAuthenticated, user } = useAuth0()
+const { handleRedirectCallback, isAuthenticated } = useAuth0()
 const router = useRouter()
 
 onMounted(async () => {
   try {
-    // Handle the authentication callback
     await handleRedirectCallback()
     
-    // If authentication is successful, redirect to home
     if (isAuthenticated.value) {
       router.push('/')
     }

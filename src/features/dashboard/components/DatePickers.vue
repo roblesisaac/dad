@@ -1,19 +1,19 @@
 <template>
-<div class="grid datePickers line50">
-  <div class="cell-11-24">
-    <DatePicker :date="props.state.date" when="start" />
+  <div class="grid grid-cols-24 items-center bg-gray-50">
+    <div class="col-span-11">
+      <DatePicker :date="props.state.date" when="start" />
+    </div>
+    <div class="col-span-1 text-center font-bold">-</div>
+    <div class="col-span-12">
+      <DatePicker :date="props.state.date" when="end" />
+    </div>
   </div>
-  <div class="cell-1-24 bold">-</div>
-  <div class="cell-12-24">
-    <DatePicker :date="props.state.date" when="end" />
-  </div>
-</div>
 </template>
 
 <script setup>
-  import DatePicker from './DatePicker.vue';
+import DatePicker from './DatePicker.vue';
 
-  const props = defineProps({
-    state: Object
-  });
+const props = defineProps({
+  state: Object
+});
 </script>

@@ -1,41 +1,75 @@
 <template>
-  <div v-if="items.length" class="grid items proper">
+  <div v-if="items.length" class="space-y-4">
+    <div 
+      v-for="(item, i) in items" 
+      :key="item._id"
+      class="bg-white rounded-lg shadow-sm transition-all duration-200"
+      :class="[itemIsSelected(item._id) ? 'ring-2 ring-blue-500' : 'hover:shadow-md']"
+    >
+      <!-- Minimized Transaction -->
+      <div 
+        @click="selectTransaction(item)" 
+        class="p-4 cursor-pointer"
+      >
+        <div class="flex items-start gap-4">
+          <!-- Logo -->
+          <div class="w-12 h-12 flex-shrink-0">
+            <img 
+              v-if="item.logo_url" 
+              :src="item.logo_url" 
+              class="w-full h-full object-contain"
+              alt="Logo" 
+            />
+            <img 
+              v-else 
+              src="/chart.svg" 
+              class="w-full h-full object-contain"
+              alt="Default logo" 
+            />
+          </div>
 
-    <div class="cell-1">
-      <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x item']" v-for="(item, i) in items">
-        <div :class="[ifSelectedClass(item._id), 'cell-1']">
-
-          <!-- Minimized Transaction -->
-          <div @click="selectTransaction(item)" class="grid">
-            <!-- Hide Details (minus) icon -->
-            <div v-if="itemIsSelected(item._id)" class="cell-1 right"><Minus /></div>
-
-            <div class="cell-4-24 p10r">
-              <img v-if="item.logo_url" :src="item.logo_url" style="height: 50px;" alt="Logo" />
-              <img v-else :src="'/chart.svg'" style="height: 50px;" />
+          <!-- Transaction Info -->
+          <div class="flex-1">
+            <div class="text-sm text-green-700 font-medium">
+              #{{ i + 1 }}. {{ item.authorized_date }}
             </div>
-            <div class="cell-15-24">
-              <small class="colorDarkGreen bold">#{{ i + 1 }}. {{ item.authorized_date }}</small>
-              <br>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
-              <br v-if="itemIsSelected(item._id)">
-              <b v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)">
-                {{ formatPrice(item.amount) }}
-              </b>
+            <div class="font-medium">
+              {{ item.name }}
+              <span v-if="item.check_number?.length">#{{ item.check_number }}</span>
             </div>
-            <div v-if="!itemIsSelected(item._id)" :class="['cell-5-24 p10 left bold', fontColor(item.amount)]">
-              {{ formatPrice(item.amount, { toFixed: 0 }) }}
-              <br v-if="item.pending">
-              <small v-if="item.pending" class="colorDarkGray">Pending</small>
+            <div v-if="itemIsSelected(item._id)" :class="[fontColor(item.amount), 'font-bold']">
+              {{ formatPrice(item.amount) }}
             </div>
           </div>
 
-          <!-- Expanded Transaction -->
-          <TransactionDetails v-if="itemIsSelected(item._id)" :state="state" :item="item" />
+          <!-- Amount (when not selected) -->
+          <div 
+            v-if="!itemIsSelected(item._id)" 
+            class="text-right"
+          >
+            <div :class="[fontColor(item.amount), 'font-bold']">
+              {{ formatPrice(item.amount, { toFixed: 0 }) }}
+            </div>
+            <div v-if="item.pending" class="text-sm text-gray-500">
+              Pending
+            </div>
+          </div>
 
+          <!-- Collapse Icon -->
+          <div v-if="itemIsSelected(item._id)" class="text-gray-400">
+            <Minus class="w-5 h-5" />
+          </div>
         </div>
       </div>
-    </div>
 
+      <!-- Expanded Transaction Details -->
+      <TransactionDetails 
+        v-if="itemIsSelected(item._id)" 
+        :state="state" 
+        :item="item" 
+        class="border-t border-gray-100"
+      />
+    </div>
   </div>
 </template>
 
@@ -54,31 +88,17 @@ const items = computed(() => {
   const selectedCategory = state.selected.tab.categorizedItems.find(categorized => {
     return state.selected.tab.categoryName === categorized[0];
   });
-
   return selectedCategory[1];
 });
 
 function itemIsSelected(itemId) {
-  if (!state.selected.transaction) {
-    return;
-  }
-
+  if (!state.selected.transaction) return false;
   return state.selected.transaction._id === itemId;
-};
-
-const ifSelectedClass = (itemId) => {
-  return itemIsSelected(itemId) ? 'transaction-selected' : '';
-};
-
-function selectTransaction(item) {
-  if (itemIsSelected(item._id)) {
-    state.selected.transaction = false;
-    return;
-  }
-
-  state.selected.transaction = item;
 }
 
+function selectTransaction(item) {
+  state.selected.transaction = itemIsSelected(item._id) ? false : item;
+}
 </script>
 
 <style>

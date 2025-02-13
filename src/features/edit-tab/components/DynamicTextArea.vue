@@ -1,5 +1,10 @@
 <template>
-<textarea v-model="data[prop]" @input="adjustTextarea" ref="inputRef"></textarea> 
+  <textarea 
+    v-model="data[prop]" 
+    @input="adjustTextarea" 
+    ref="inputRef"
+    class="w-full resize-none overflow-hidden px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+  ></textarea> 
 </template>
 
 <script setup>

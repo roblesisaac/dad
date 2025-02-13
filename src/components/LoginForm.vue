@@ -1,82 +1,107 @@
 <template>
   <transition>
-    <div v-if="state.action && !state.forgotPassword" class="grid p30">
-      <div class="cell-1">
-        <form @submit.prevent="app.loginNative" class="grid r10">         
-          <fieldset class="cell-1">
-            <div class="grid">
-              <div class="cell-1">                
-                <legend class="proper left">{{ state.action }}</legend>
-              </div>
-              <div class="cell-1 p10b">
-                <div class="grid middle">
-                  <div class="cell-1">
-                    <label for="email">Email</label>
-                    <input id="email" v-model="state.login.email" autocomplete="email" type="text" />
-                  </div>
-                </div>
-              </div>
-              <div class="cell-1 p30b">
-                <div class="grid">
-                  <div class="cell-1">                  
-                    <label for="password">Password</label>
-                    <input id="password" v-model="state.login.password" autocomplete="current-password" type="password" />
-                  </div>
-                </div>
-              </div>
-              <div v-if="state.action=='signup'" class="cell-1 p30b">
-                <div class="grid">
-                  <div class="cell-1">                  
-                    <label for="retype">Re-Type Password</label>
-                    <input id="retype" v-model="state.login.retype" autocomplete="current-password" type="password" />
-                  </div>
-                </div>
-              </div>
+    <div v-if="state.action && !state.forgotPassword" class="max-w-md mx-auto p-8">
+      <form @submit.prevent="app.loginNative" class="space-y-6">
+        <fieldset>
+          <legend class="text-xl font-semibold capitalize mb-6">{{ state.action }}</legend>
+          
+          <div class="space-y-4">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+              <input 
+                id="email" 
+                v-model="state.login.email" 
+                autocomplete="email" 
+                type="text"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
             </div>
-          </fieldset>
-          <div class="cell-1 p10b center">
-            <button type="submit" class="expanded proper">
-              {{ state.action }} <LoadingDots v-if="state.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
-            </button>
-          </div>
-          <div class="cell-1 p10t">
-            <div class="grid">
-              <div class="cell-1-2 text-left">
-                <a href="#" @click="router.push('recover')" class="colorDarkestGray">Forgot Password</a>
-              </div>
-              <div class="cell-1-2 text-right">
-                <a href="#" v-if="state.action=='login'" @click="app.changeAction('signup')">
-                  Signup
-                </a>
-                <a href="#" v-else @click="app.changeAction('login')">
-                  Login
-                </a>
-              </div>
+
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+              <input 
+                id="password" 
+                v-model="state.login.password" 
+                autocomplete="current-password" 
+                type="password"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
+            </div>
+
+            <div v-if="state.action=='signup'">
+              <label for="retype" class="block text-sm font-medium text-gray-700">Re-Type Password</label>
+              <input 
+                id="retype" 
+                v-model="state.login.retype" 
+                autocomplete="current-password" 
+                type="password"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
             </div>
           </div>
-          <br /><br />
-          <Transition>
-            <div v-if="state.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="state.notification"></div>
-          </Transition>
-        </form>
-      </div>
-      <div class="cell-1 center proper divider">
-        <hr>
-        <p class="divider-text">Or {{ state.action }} with Google</p>
-      </div>
-      <div class="cell-1 center">
-        <button class="bgF3 bgBlack expanded" @click="app.loginWithGoogle">
-          <img alt="Vue logo" src="/google.svg" height="20" class="p10r" />
-          <span class="proper">{{ state.action }}</span>
+        </fieldset>
+
+        <button 
+          type="submit" 
+          class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          {{ state.action }}
+          <LoadingDots v-if="state.loginLoading" />
+          <i v-else class="ml-2 fi-arrow-right"></i>
         </button>
-      </div>
+
+        <div class="flex justify-between text-sm">
+          <a href="#" @click="router.push('recover')" class="text-gray-600 hover:text-gray-900">
+            Forgot Password
+          </a>
+          <a 
+            href="#" 
+            class="text-blue-600 hover:text-blue-800"
+            v-if="state.action=='login'" 
+            @click="app.changeAction('signup')"
+          >
+            Signup
+          </a>
+          <a 
+            href="#" 
+            class="text-blue-600 hover:text-blue-800"
+            v-else 
+            @click="app.changeAction('login')"
+          >
+            Login
+          </a>
+        </div>
+
+        <div 
+          v-if="state.notification" 
+          class="mt-4 p-4 bg-red-500 text-white rounded-md shadow text-center"
+          v-html="state.notification"
+        ></div>
+
+        <div class="relative mt-6">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white text-gray-500">Or {{ state.action }} with Google</span>
+          </div>
+        </div>
+
+        <button 
+          type="button"
+          @click="app.loginWithGoogle"
+          class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+        >
+          <img alt="Google logo" src="/google.svg" class="h-5 w-5 mr-2" />
+          <span class="capitalize">{{ state.action }}</span>
+        </button>
+      </form>
     </div>
   </transition>
 </template>
 
 <script setup>
 import { reactive, nextTick } from 'vue';
-
 import { router } from '@/main';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { isValidEmail } from '@/utils';
@@ -98,74 +123,20 @@ const state = reactive({
   siteKey: import.meta.env.VITE_RECAPTCHA_KEY
 });
 
-const app = function() {  
-  function buildUrl() {
-    return state.baseUrl + `/${state.action}/native`
+const app = {
+  changeAction(changeTo) {
+    state.action = null;
+    nextTick(() => {
+      state.action = changeTo;
+    });
+  },
+  init() {
+    utils.initRecaptcha();
+  },
+  loginWithGoogle() {
+    window.location = state.baseUrl+'/login/auth/google';
   }
-  
-  function notify(message) {
-    if(!message) {
-      return;
-    }
-    
-    state.notification = message;
-    state.loginLoading = false;
-    
-    setTimeout(() => {
-      state.notification = null;
-    }, 4000);
-  }
-  
-  return {
-    changeAction(changeTo) {
-      state.action = null;
-      
-      nextTick(() => {
-        state.action = changeTo;
-      });
-    },
-    init() {
-      utils.initRecaptcha();
-    },
-    async loginNative() {
-      state.loginLoading = true;
-  
-    
-      const { email, password, retype } = state.login;
-      
-      if(!email || !password) {
-        return notify('Missing email or password');
-      }
-      
-      if(password.length<8) {
-        return notify('Password must be at least 8 character.');
-      }
-      
-      const method = state.action;
-      
-      if(method == 'signup' && password !== retype) {
-        return notify('Passwords must match.');
-      }
-      
-      if(!isValidEmail(email)) {
-        return notify(`The email <b>${email}</b> is invalid. Please enter a valid email address.`);
-      }
-      
-      if(method == 'login') {
-        delete state.login.retype;
-      }
-      
-      const url = buildUrl();
-      const settings = { reloadPage: true, checkHuman: true };
-      
-      await api.post(url, state.login, settings).then(notify);
-      state.loginLoading = false;
-    },
-    loginWithGoogle() {
-      window.location = state.baseUrl+'/login/auth/google';
-    }
-  }
-}();
+};
 
 app.init();
 </script>

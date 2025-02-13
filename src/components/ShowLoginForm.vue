@@ -1,41 +1,52 @@
 <template>
-<div class="grid p30 log-in-popup">
-  <div class="cell-1">
-    <form @submit.prevent="login" class="grid r10">         
-        <fieldset class="cell-1">
-          <div class="grid">
-            <div class="cell-1">                
-              <legend class="proper left">Log Back In?</legend>
+  <div class="fixed inset-x-0 bottom-0 bg-white shadow-lg">
+    <div class="max-w-lg mx-auto p-6">
+      <form @submit.prevent="login" class="space-y-4">         
+        <fieldset>
+          <legend class="text-xl font-semibold mb-4">Log Back In?</legend>
+          
+          <div class="space-y-4">
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+              <input 
+                id="email" 
+                v-model="state.login.email" 
+                autocomplete="email" 
+                type="text"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" 
+              />
             </div>
-            <div class="cell-1 p10b">
-              <div class="grid middle">
-                <div class="cell-1">
-                  <label for="email">Email</label>
-                  <input id="email" v-model="state.login.email" autocomplete="email" type="text" />
-                </div>
-              </div>
-            </div>
-            <div class="cell-1 p30b">
-              <div class="grid">
-                <div class="cell-1">                  
-                  <label for="password">Password</label>
-                  <input id="password" v-model="state.login.password" autocomplete="current-password" type="password" />
-                </div>
-              </div>
+
+            <div>
+              <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+              <input 
+                id="password" 
+                v-model="state.login.password" 
+                autocomplete="current-password" 
+                type="password"
+                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              />
             </div>
           </div>
         </fieldset>
-        <div class="cell-1 p10b center">
-          <button type="submit" class="expanded proper">
-            Login <LoadingDots v-if="state.loginLoading"></LoadingDots><i v-else class="fi-arrow-right"></i>
-          </button>
-        </div>
+
+        <button 
+          type="submit" 
+          class="w-full flex justify-center items-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+        >
+          Login <LoadingDots v-if="state.loginLoading" /><i v-else class="ml-2 fi-arrow-right"></i>
+        </button>
+
         <Transition>
-          <div v-if="state.notification" class="cell-1 center bgRed colorF1 r3 shadow p15" v-html="state.notification"></div>
+          <div 
+            v-if="state.notification" 
+            class="p-4 bg-red-500 text-white rounded-md shadow text-center"
+            v-html="state.notification"
+          ></div>
         </Transition>
       </form>
+    </div>
   </div>
-</div>
 </template>
 
 <script setup>

@@ -1,20 +1,27 @@
 <template>
-<div class="grid">
+<div class="flex flex-col space-y-4">
 
   <!-- Rows of Tabs -->
-  <div class="cell-1">
-    <Draggable v-model="props.state.selected.tabsForGroup" v-bind="props.state.dragOptions()" handle=".handlerTab">
+  <div>
+    <Draggable 
+      v-model="props.state.selected.tabsForGroup" 
+      v-bind="props.state.dragOptions()" 
+      handle=".handlerTab"
+    >
       <template #item="{element}">
         <AllTabRow :app="app" :state="state" :element="element" :key="element._id" />
       </template>
     </Draggable>
-
   </div>
 
-
   <!-- New Tab -->
-  <div class="cell-1">
-    <button @click="createNew" class="expanded createNewTab">+ New Tab</button>
+  <div>
+    <button 
+      @click="createNew" 
+      class="w-full py-5 bg-blue-100 hover:bg-blue-200 text-gray-800 font-medium transition-colors duration-200 border-b-2 border-blue-300"
+    >
+      + New Tab
+    </button>
   </div>
 
 </div>
@@ -41,12 +48,3 @@ onMounted(() => {
 });
 
 </script>
-
-<style>
-.createNewTab {
-  background: lightblue;
-  color: black;
-  border-bottom: 2px solid;
-  padding: 20px;
-}
-</style>
