@@ -1,10 +1,12 @@
-import { task, events } from '@ampt/sdk';
+import { task, events, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 
 import plaidTransactions from '../models/plaidTransactions';
-import Sites from '../models/sites';
 import notify from '../utils/notify';
 import plaidTransactionService from '../services/plaidTransactionService.js';
+import { proper } from '../../src/utils';
+
+const { APP_NAME } = params().list();
 
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
@@ -20,7 +22,7 @@ const tasks = (function() {
       await data.remove(idBatch);
     }
 
-    const site = await Sites.findOne();
+    const site = { name: proper(APP_NAME) };
 
     await notify.email(user.email, {
       subject: `${site.name} Transactions Have Been Removed`,
