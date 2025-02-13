@@ -201,7 +201,6 @@
       tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) ),
       transaction: false
     },
-    showStayLoggedIn: false,
     syncCheckId: false,
     views: ['home'],
     view: computed(() => state.views[state.views.length -1])

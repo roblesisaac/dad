@@ -5,25 +5,14 @@
   </Transition>
 
   <router-view v-if="!State.showingOffCanvasLinks" />
-
-  <Transition>
-    <StayLoggedIn v-if="State.showStayLoggedInForm" />
-  </Transition>
-  <Transition>
-    <ShowLoginForm v-if="State.showLoginForm" />
-  </Transition>
 </template>
 
 <script setup>
 import NavMain from './shared/components/NavMain.vue';
 import OffCanvasLinks from './shared/components/OffCanvasLinks.vue';
-import StayLoggedIn from './components/StayLoggedIn.vue';
-import ShowLoginForm from './components/ShowLoginForm.vue';
 
 import { useAppStore } from './stores/state';
-const { State, Session } = useAppStore();
-
-Session.watchSession();
+const { State } = useAppStore();
 
 </script>
 

@@ -19,11 +19,10 @@ onMounted(async () => {
     
     // If authentication is successful, redirect to home
     if (isAuthenticated.value) {
-      router.push('/')
+      router.push('/spending-report')
     }
   } catch (error) {
     console.error('Error handling callback:', error)
-    router.push('/login')
   }
 })
 </script>

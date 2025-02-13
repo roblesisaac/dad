@@ -8,78 +8,52 @@
 
     <!-- links -->
     <div v-if="State.currentScreenSize() !== 'small'" class="cell auto text-right">
-      <router-link @click="utils.changePath(link)"
-      v-for="link in State.userViews" 
-      :to="link.path || link"
-      class="proper colorBlack">
-        {{ link.name || link }}
+      <router-link
+        v-for="link in regularLinks"
+        :key="link.path"
+        :to="link.path"
+        class="proper colorBlack"
+      >
+        {{ link.name }}
       </router-link>
-  </div>
+      <a 
+        href="#"
+        class="proper colorBlack"
+        @click.prevent="authLink.action"
+      >
+        {{ authLink.name }}
+      </a>
+    </div>
 
-  <!-- hamburger -->
-  <div v-if="State.currentScreenSize()==='small'" class="cell shrink text-right" @click="State.showingOffCanvasLinks=true">
-    <a href="#" class="menu-icon">
-      <Menu />
-    </a>
-  </div>
+    <!-- hamburger -->
+    <div v-if="State.currentScreenSize()==='small'" class="cell shrink text-right" @click="State.showingOffCanvasLinks=true">
+      <a href="#" class="menu-icon">
+        <Menu />
+      </a>
+    </div>
 
-  <div class="auth-section">
-    <template v-if="isAuthenticated">
-      <span class="user-name">{{ user?.name }}</span>
-      <button @click="handleLogout" class="logout-btn">Logout</button>
-    </template>
-    <button v-else @click="handleLogin" class="login-btn">Login</button>
-  </div>
-
-</nav>
+  </nav>
 </template>
 
 <script setup>
 import { onMounted } from 'vue';
 import { Menu } from 'lucide-vue-next';
-import { useAuth0 } from '@auth0/auth0-vue';
-
+import { useNavigation } from '@/shared/composables/useNavigation';
 import { useAppStore } from '@/stores/state';
-const { State, api, utils } = useAppStore();
 
-const { 
-  loginWithRedirect, 
-  logout, 
-  isAuthenticated, 
-  user 
-} = useAuth0();
+const { State, stickify } = useAppStore();
+const { regularLinks, authLink } = useNavigation();
 
-const app = function() {
-  async function getUserViews() {
-    State.userViews = State.userViews || (await api.get('userviews')).views;
-  }
-
-  return {
-    init: function () {
-      onMounted(() => {
-        // stickify.register('.topNav');
-      });
-
-      getUserViews();
-    },
-    reload: () => window.location.reload()
-  };
-}();
-
-const handleLogin = () => {
-  loginWithRedirect();
-};
-
-const handleLogout = () => {
-  logout({ 
-    logoutParams: {
-      returnTo: window.location.origin
-    }
-  });
+const app = {
+  init() {
+    onMounted(() => {
+      stickify.register('.topNav');
+    });
+  },
+  reload: () => window.location.reload()
 };
 
 app.init();
-
 </script>
 
 <style>
@@ -90,6 +64,7 @@ app.init();
 .topNav {
   transition: all .3s;
   border-bottom: 2px solid #000;
+  background-color: #fff;
 }
 
 .topNav a {
@@ -129,31 +104,10 @@ app.init();
   color: #fff;
 }
 
-.auth-section {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-name {
-  color: #666;
-}
-
-.logout-btn, .login-btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  border: none;
-  cursor: pointer;
-}
-
-.login-btn {
-  background-color: #4CAF50;
-  color: white;
-}
-
+.auth-section,
+.login-btn,
 .logout-btn {
-  background-color: #f44336;
-  color: white;
+  display: none;
 }
 
 </style>
