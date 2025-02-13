@@ -51,7 +51,7 @@ const {
 
 const app = function() {
   async function getUserViews() {
-    State.userViews = State.userViews || (await api.get('/api/userviews')).views;
+    State.userViews = State.userViews || (await api.get('userviews')).views;
   }
 
   return {

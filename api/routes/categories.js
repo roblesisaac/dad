@@ -1,3 +1,3 @@
 import { api } from '@ampt/sdk';
 
-// api.get('/api/categories/');
+// api.get('categories/');

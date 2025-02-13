@@ -47,7 +47,7 @@
   import ScrollingContent from '@/shared/components/ScrollingContent.vue';
   import { useApi } from '@/shared/composables/useApi';
   
-  const { api } = useApi();
+  const api = useApi();
   const { ruleConfig, state } = defineProps({
     ruleConfig: Object,
     state: Object

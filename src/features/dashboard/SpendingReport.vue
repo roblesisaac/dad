@@ -143,9 +143,7 @@
   import { useApi } from '@/shared/composables/useApi';
 
   const { State, stickify } = useAppStore();
-  const { api } = useApi();
-
-  console.log({ api })
+  const api = useApi();
 
   // First define state
   const state = reactive({

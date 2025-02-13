@@ -46,7 +46,7 @@ import { useAppStore } from '@/stores/state';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { State } = useAppStore();
-const { api } = useApi();
+const api = useApi();
 const state = reactive({
   notification: false,
   loginLoading: false,

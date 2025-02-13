@@ -93,7 +93,7 @@ import EditRule from '../../edit-tab/components/EditRule.vue';
 import { formatPrice } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 
 const { item, state } = defineProps({
   item: Object,

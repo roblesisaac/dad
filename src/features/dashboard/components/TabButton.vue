@@ -23,7 +23,7 @@ import { fontColor, formatPrice } from '@/utils';
 import { useAppStore } from '@/stores/state';
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 const props = defineProps({
   tab: 'object',
   state: 'object'

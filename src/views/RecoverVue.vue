@@ -29,7 +29,7 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { isValidEmail } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 
 const { value:state } = ref({
 	basePath: '/api/requestpasswordreset/',

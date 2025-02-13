@@ -1,7 +1,7 @@
 import { useApi } from '@/shared/composables/useApi';
 
 export function useSelectGroup(state, App, isEditing) {
-  const { api } = useApi();
+  const api = useApi();
 
   async function createNewGroup() {
     if(!confirm('Are you sure you want to create a new group?')) {

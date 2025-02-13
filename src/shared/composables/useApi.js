@@ -69,7 +69,7 @@ export function useApi() {
     return url.startsWith('/') ? url.slice(1) : url;
   }
 
-  const api = {
+  return {
     data,
     loading,
     get: (url, settings) => request('GET', url, null, settings),
@@ -78,6 +78,4 @@ export function useApi() {
     patch: (url, body, settings) => request('PATCH', url, body, settings),
     remove: (url, body, settings) => request('DELETE', url, body, settings)
   };
-
-  return { api };
 }

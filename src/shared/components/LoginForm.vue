@@ -84,7 +84,7 @@ import { useAppStore } from '@/stores/state';
 const { utils } = useAppStore();
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 
 const state = reactive({
   action: 'login',

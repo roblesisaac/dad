@@ -63,7 +63,7 @@ import EditRule from '../../edit-tab/components/EditRule.vue';
 
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 
 const props = defineProps({
   ruleConfig: Object,

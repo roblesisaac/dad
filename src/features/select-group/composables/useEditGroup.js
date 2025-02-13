@@ -1,7 +1,7 @@
 import { useApi } from '@/shared/composables/useApi';
 
 export function useEditGroup(state) {
-  const { api } = useApi();
+  const api = useApi();
   const editGroupState = {
     typingTimer: null
   };

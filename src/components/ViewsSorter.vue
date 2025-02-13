@@ -93,7 +93,7 @@ import { arraysMatch } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
 
 const { sticky } = useAppStore();
-const { api } = useApi();
+const api = useApi();
 
 const stickys = [
 {
@@ -149,7 +149,7 @@ const app = function() {
 	}
 	
 	async function fetchAllRoles() {
-		state.allRoles = await api.get('/api/allroles');
+		state.allRoles = await api.get('allroles');
 	}
 	
 	async function fetchSite() {
@@ -225,7 +225,7 @@ const app = function() {
 	}
 	
 	async function loadAllViewsNames() {
-		state.allViews = await api.get('/api/pages');
+		state.allViews = await api.get('pages');
 	}
 	
 	async function saveSettingsToSite() {

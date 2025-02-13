@@ -26,7 +26,7 @@
 import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useApi();
+const api = useApi();
 
 const itemState = reactive({
   syncedItems: []
