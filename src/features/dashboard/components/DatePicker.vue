@@ -1,80 +1,48 @@
 <template>
-  <VueDatePicker 
-    v-model="date[when]" 
-    :format="state.format" 
-    hide-input-icon 
-    :clearable="false" 
-    autocomplete="on" 
-    :enable-time-picker="false" 
-    :auto-apply="true"
-    class="date-picker"
-  />
+  <div class="flex items-center space-x-2">
+    <label :for="id" class="text-sm font-medium text-gray-500">{{ label }}:</label>
+    <input 
+      :id="id"
+      type="date"
+      :value="formattedDate"
+      @input="handleInput"
+      class="px-2 py-1 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+  </div>
 </template>
 
 <script setup>
-import { reactive } from 'vue';
-import VueDatePicker from '@vuepic/vue-datepicker';
+import { computed } from 'vue';
 
-const { date, when } = defineProps({
-  date: Object,
-  when: String
+const props = defineProps({
+  label: String,
+  modelValue: String
 });
 
-const state = reactive({
-  format: (date) => {
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  },
-  presets: {
-    firstOfMonth() {
-      const currentDate = new Date();
-      return new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    },
-    today() {
-      return new Date();
-    }
-  }
+const emit = defineEmits(['update:modelValue']);
+
+// Generate unique ID for label association
+const id = computed(() => `date-${props.label.toLowerCase()}-${Math.random().toString(36).substr(2, 9)}`);
+
+// Format date for input value (YYYY-MM-DD)
+const formattedDate = computed(() => {
+  if (!props.modelValue) return '';
+  const date = new Date(props.modelValue);
+  return date.toISOString().split('T')[0];
 });
 
-const app = {
-  init() {
-    if (state.presets.hasOwnProperty(date[when])) {
-      date[when] = state.presets[date[when]]();
-    }
-  }
-};
-
-app.init();
+function handleInput(event) {
+  emit('update:modelValue', event.target.value);
+}
 </script>
 
-<style>
-.date-picker .dp__input {
-  @apply bg-transparent border-0 font-bold font-mono p-0 text-center;
+<style scoped>
+/* Override default date input styles for better cross-browser consistency */
+input[type="date"] {
+  @apply appearance-none;
 }
 
-.date-picker .dp__btn {
-  @apply shadow-none;
-}
-
-.date-picker .dp__calendar_header_separator {
-  @apply bg-transparent;
-}
-
-.date-picker .dp__action_buttons {
-  @apply hidden;
-}
-
-.date-picker .dp__menu {
-  @apply shadow-lg border border-gray-200;
-}
-
-.date-picker .dp__today {
-  @apply text-blue-600 font-bold;
-}
-
-.date-picker .dp__active_date {
-  @apply bg-blue-600;
+input[type="date"]::-webkit-calendar-picker-indicator {
+  @apply opacity-60 hover:opacity-100 cursor-pointer;
 }
 </style>
