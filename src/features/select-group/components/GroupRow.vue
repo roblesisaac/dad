@@ -2,7 +2,7 @@
     <div :class="['grid middle proper text-left group-row', isSelected]">
         <!-- Edit Horizontal Dots -->
         <div class="cell-1 right">
-            <MoreHorizontal @click="app.editGroup(element)" class="handlerGroup pointer" />
+            <MoreHorizontal @click="editGroup(element)" class="handlerGroup pointer" />
         </div>
     
         <!-- Drag Handle -->
@@ -10,7 +10,7 @@
             <GripHorizontal class="handlerGroup pointer" />
         </div>
     
-        <div class="cell-12-24 pointer" @click="app.selectGroup(element)">
+        <div class="cell-12-24 pointer" @click="selectGroup(element)">
         <div class="grid p10r">
     
             <!-- Element Name -->
@@ -23,7 +23,7 @@
                 <small>{{ accountInfo }}</small>
             </div>
     
-            <!-- Cutom Info -->
+            <!-- Custom Info -->
             <div v-if="element.info" class="cell-1">
                 <small v-if="element.info">{{ element.info }}</small>
             </div>
@@ -39,7 +39,7 @@
         </div>
     
         <!-- Balances + View -->
-        <div class="cell-9-24 right p10r pointer" @click="app.selectGroup(element)">
+        <div class="cell-9-24 right p10r pointer" @click="selectGroup(element)">
         <div class="grid">
     
             <!-- Current Balance -->
@@ -60,47 +60,46 @@
     </div>
 </template>
     
-    <script setup>
-    import { computed, watch } from 'vue';
-    import NetWorth from './NetWorth.vue';
-    import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
-    import { fontColor, formatPrice } from '@/utils';
-    import { useAppStore } from '@/stores/state';
+<script setup>
+import { computed } from 'vue';
+import NetWorth from './NetWorth.vue';
+import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
+import { fontColor, formatPrice } from '@/utils';
+import { useAppStore } from '@/stores/state';
+
+const { api } = useAppStore();
+
+const props = defineProps({
+    element: Object,
+    app: Object,
+    state: Object
+});
+
+const accountInfo = computed(() => props.state.allUserAccounts.find(
+    account => account._id === props.element.accounts[0]?._id)?.subtype
+);
+
+const isSelected = computed(() => props.element.isSelected ? 'isSelected' : '');
+const isDefaultName = computed(() => props.element.name === props.element.accounts[0]?.mask);
+
+// Extract methods from props.app for cleaner template usage
+const { editGroup, selectGroup } = props.app;
+
+</script>
     
-    const { api } = useAppStore();
-    
-    const props = defineProps( {
-        element: Object,
-        app: Object,
-        state: Object
-    } )
-    
-    const accountInfo = computed( () => props.state.allUserAccounts.find( 
-        account => account._id === props.element.accounts[0]?._id )?.subtype 
-    );
-    
-    const isSelected = computed( () => props.element.isSelected ? 'isSelected' : '' );
-    const isDefaultName = computed( () => props.element.name === props.element.accounts[0]?.mask );
-    
-    watch( () => props.element.sort, (currSort) => {
-        api.put( `api/groups/${props.element._id}`, { sort: currSort } );
-    });
-    
-    </script>
-    
-    <style>
-    .group-row {
-        background-color: #fff;
-        margin-bottom: 20px;
-        border: 1px solid #000;
-        box-shadow: 3px 3px #000;
-        padding: 0 5px 15px 15px;
-        border-radius: 3px;
-    }
-    .group-row.isSelected {
-        background-color: whitesmoke;
-        box-shadow: 1px 1px blue;
-        border: 1px solid blue;
-        color: blue
-    }
-    </style>
+<style>
+.group-row {
+    background-color: #fff;
+    margin-bottom: 20px;
+    border: 1px solid #000;
+    box-shadow: 3px 3px #000;
+    padding: 0 5px 15px 15px;
+    border-radius: 3px;
+}
+.group-row.isSelected {
+    background-color: whitesmoke;
+    box-shadow: 1px 1px blue;
+    border: 1px solid blue;
+    color: blue
+}
+</style>
