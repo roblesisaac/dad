@@ -1,5 +1,3 @@
-import { ref } from 'vue';
-
 export function useTransactions(api) {
   async function fetchTransactions(account_id, dateRange) {
     if(!account_id || !dateRange) {

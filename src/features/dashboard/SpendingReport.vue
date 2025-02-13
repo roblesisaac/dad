@@ -145,6 +145,8 @@
   const { State, stickify } = useAppStore();
   const { api } = useApi();
 
+  console.log({ api })
+
   // First define state
   const state = reactive({
     allUserAccounts: [],
