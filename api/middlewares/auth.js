@@ -4,10 +4,6 @@ import rateLimit from 'express-rate-limit';
 
 const { VITE_ZERO_DOMAIN, VITE_ZERO_AUDIENCE } = params().list();
 
-console.log({
-  VITE_ZERO_DOMAIN, VITE_ZERO_AUDIENCE
-});
-
 const audience = VITE_ZERO_AUDIENCE;
 const domain = VITE_ZERO_DOMAIN;
 
