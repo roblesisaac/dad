@@ -39,7 +39,7 @@ const app = function() {
       onSuccess: async function(publicToken) {
         try {
           // Send public token to backend to complete the repair
-          await api.post('plaid/exchange_token', {
+          await api.post('plaid/exchange/token', {
             publicToken
           });
           
