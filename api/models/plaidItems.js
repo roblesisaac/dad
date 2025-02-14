@@ -3,11 +3,12 @@ import { encrypt, encryptWithKey } from '../utils/encryption';
 
 const itemSchema = {
   userId: {
-    set: (_, { req }) => req.user.metadata.legacyId
+    set: (_, { req }) => req.user._id
   },
   accessToken: { 
     set: (accessToken, { req }) => {
-      const { encryptionKey } = req.user.metadata;
+      const { encryptionKey } = req.user;
+      console.log(encryptionKey.length);
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
 
       return encrypt(userEncryptedKey);

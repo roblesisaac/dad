@@ -20,7 +20,6 @@ const plaidController = {
     try {
       const { publicToken } = req.body;
       const accessData = await plaidLinkService.exchangePublicToken(publicToken);
-      console.log(accessData);
       const { _id: itemId } = await plaidLinkService.savePlaidAccessData(accessData, { user: req.user });
       const { accounts, groups } = await plaidAccountService.syncUserAccounts(req.user);
 
