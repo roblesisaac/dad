@@ -37,6 +37,7 @@ const app = function() {
     return Plaid.create({
       token,
       onSuccess: async function(publicToken) {
+        console.log('success');
         // console.log(publicToken);
       },
       onExit: function(err, metadata) {
