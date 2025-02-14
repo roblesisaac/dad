@@ -37,8 +37,17 @@ const app = function() {
     return Plaid.create({
       token,
       onSuccess: async function(publicToken) {
-        console.log('success');
-        // console.log(publicToken);
+        try {
+          // Send public token to backend to complete the repair
+          await api.post('plaid/exchange_token', {
+            publicToken
+          });
+          
+          // Refresh the items list
+          itemState.syncedItems = await syncItems();
+        } catch (error) {
+          console.error('Error completing repair:', error);
+        }
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
