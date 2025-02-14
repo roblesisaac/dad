@@ -254,10 +254,10 @@
 
         if(selectedTab) {
           selectedTab.isSelected = false;
-          api.put(`api/tabs/${selectedTab._id}`, { isSelected: false });
+          api.put(`tabs/${selectedTab._id}`, { isSelected: false });
         }
 
-        const newTab = await api.post('api/tabs', {
+        const newTab = await api.post('tabs', {
           tabName,
           showForGroup: [selectedGroup._id],
           isSelected: true,

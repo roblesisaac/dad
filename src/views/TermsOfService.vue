@@ -99,7 +99,7 @@ const state = reactive({
 
 async function fetchSiteData() {
   try {
-    const { email: contact, name: appName } = await api.get('api/sites');
+    const { email: contact, name: appName } = await api.get('sites');
     state.contact = contact;
     state.appName = appName;
   } catch (error) {

@@ -68,9 +68,12 @@ export async function exchangePublicToken(publicToken) {
 export function decryptAccessToken(accessToken, encryptionKey) {
   try {
     accessToken = decrypt(accessToken);
-    return decryptWithKey(accessToken, encryptionKey);
+    encryptionKey = decrypt(encryptionKey, 'buffer');
+    const decrypted = decryptWithKey(accessToken, encryptionKey);
+    return decrypted;
   } catch (error) {
-    throw new Error(`Error decrypting access token: ${error.message}`);
+    console.error(`Error decrypting access token: ${error.message}`);
+    throw new Error(`Decrypting access token: ${error.message}`);
   }
 }
 

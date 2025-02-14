@@ -4,7 +4,7 @@ export function useTransactions(api) {
       return;
     }
 
-    const baseUrl = 'api/plaid/transactions';
+    const baseUrl = 'plaid/transactions';
     const query = `?account_id=${account_id}&date=${dateRange}`;
 
     return await api.get(baseUrl+query);

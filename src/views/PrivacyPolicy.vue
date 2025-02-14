@@ -58,7 +58,7 @@ const supportEmail = ref('');
 
 async function fetchSupportEmail() {
 	try {
-		const { email } = await api.get('api/sites');
+		const { email } = await api.get('sites');
 		supportEmail.value = email;
 	} catch (error) {
 		console.error('Error fetching support email:', error);

@@ -7,7 +7,7 @@ const itemSchema = {
   },
   accessToken: { 
     set: (accessToken, { req }) => {
-      const { encryptionKey } = req.user;
+      const { encryptionKey } = req.user.metadata;
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
 
       return encrypt(userEncryptedKey);

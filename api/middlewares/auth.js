@@ -32,9 +32,12 @@ export function checkLoggedIn(req, res, next) {
 
   // Extract user information from the JWT token
   const { payload } = req.auth;
+  const metadata = payload[`${audience}/user_metadata`] || {};
   
   // Add user information to req.user
   req.user = {
+    _id: metadata.legacyId,
+    encryptionKey: metadata.encryptionKey,
     sub: payload.sub,
     email: payload.email || 
            payload[`${audience}/email`] || 
@@ -42,7 +45,7 @@ export function checkLoggedIn(req, res, next) {
            payload['https://my-app.com/user_email'] ||
            undefined,
     roles: payload[`${audience}/roles`],
-    metadata: payload[`${audience}/user_metadata`] || {},
+    metadata,
     appMetadata: payload[`${audience}/app_metadata`] || {}
   };
 

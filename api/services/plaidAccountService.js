@@ -46,7 +46,6 @@ async function syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccount
       synced.accounts.push(updatedAccount);
       continue;
     }
-
     const newSavedAccount = await plaidAccounts.save({ ...retrievedAccount, req: { user } });
     synced.accounts.push(newSavedAccount);
     synced.groups.push(await userGroupSave(user, newSavedAccount));

@@ -5,7 +5,7 @@ export function useSyncStatus(api, state) {
     }
 
     let itemsSyncing = [];
-    const items = await api.get('api/plaid/items');
+    const items = await api.get('plaid/items');
 
     if(!items.length) {
       state.blueBar.message = 'No items found';

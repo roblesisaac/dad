@@ -1,6 +1,5 @@
 import plaidTransactions from '../models/plaidTransactions.js';
 import plaidItems from '../models/plaidItems.js';
-import Users from '../models/users.js';
 import notify from '../utils/notify.js';
 import { decryptAccessToken } from './plaidLinkService.js';
 import { plaidClientInstance } from './plaidClient.js';
@@ -9,7 +8,7 @@ import { data } from '@ampt/data';
 import tasks from '../tasks/plaid.js';
 
 // Main export functions
-export async function syncTransactionsForItem(item, userId) {
+export async function syncTransactionsForItem(item, userId, encryptionKey) {
   try {
     if (typeof item === 'string') {
       item = await plaidItems.findOne(item);
@@ -24,8 +23,7 @@ export async function syncTransactionsForItem(item, userId) {
     const nextSyncData = initializeNextSyncData(userId, syncData);
     await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'in_progress' });
 
-    const user = await Users.findOne(userId);
-    const access_token = decryptAccessToken(accessToken, user.metadata.encryptionKey);
+    const access_token = decryptAccessToken(accessToken, encryptionKey);
 
     const response = await fetchTransactionsFromPlaid({ 
       access_token, 
@@ -392,7 +390,7 @@ async function processSyncForItem(item, user, syncResults, queuedItems) {
   }
 
   if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
-    return await syncTransactionsForItem(item._id, user.metadata.legacyId);
+    return await syncTransactionsForItem(item._id, user.metadata.legacyId, user.metadata.encryptionKey);
   }
 
   const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);

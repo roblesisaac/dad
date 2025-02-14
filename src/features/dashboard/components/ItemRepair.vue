@@ -46,7 +46,7 @@ const app = function() {
   }
 
   async function syncItems() {
-    const response = await api.get('api/plaid/sync/items');
+    const response = await api.get('plaid/sync/items');
 
     return response;
   }
