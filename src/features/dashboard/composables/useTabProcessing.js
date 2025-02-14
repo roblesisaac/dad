@@ -85,7 +85,7 @@ export function useTabProcessing() {
 
     for(const item of dataCopy) {
       item.amount *= -1;
-      formatPersonalFinanceCategory(item);
+      categorize(item);
       
       const typeToGroupBy = groupBy(item);
 
@@ -175,38 +175,49 @@ export function useTabProcessing() {
 
   function buildCategorizeMethod(categorizers) {
     return (item) => {
-      if(item.recategorizeAs) {
-        let recategory = String(item.recategorizeAs).trim().toLowerCase();
-        item.personal_finance_category.primary = recategory;
-        return;
-      }
-
-      formatPersonalFinanceCategory(item);
-
-      if(!categorizers.length) {
+      // Handle manual recategorization first
+      if (item.recategorizeAs) {
+        item.personal_finance_category.primary = String(item.recategorizeAs).trim().toLowerCase();
         return item.personal_finance_category.primary;
       }
 
-      let _important;
+      // Format the initial category
+      formatPersonalFinanceCategory(item);
 
-      for(const categorizeConfig of categorizers) {
-        if(!categorizeConfig.method || _important) continue;
+      // If no categorizers, return the default category
+      if (!categorizers.length) {
+        return item.personal_finance_category.primary;
+      }
+
+      // Track the most important category if found
+      let importantCategory = null;
+
+      // Apply all categorizers in order
+      for (const categorizeConfig of categorizers) {
+        if (!categorizeConfig.method) continue;
 
         const conditionMet = categorizeConfig.method(item);
 
-        if(conditionMet) {
-          const categoryName = categorizeConfig.categorizeAs;
-          if(categorizeConfig._isImportant) _important = categorizeConfig.categorizeAs;
+        if (conditionMet) {
+          const categoryName = categorizeConfig.categorizeAs.toLowerCase();
+          
+          // Track important categories
+          if (categorizeConfig._isImportant) {
+            importantCategory = categoryName;
+          }
 
+          // Track which rules were applied
           item.rulesApplied = item.rulesApplied || new Set();
-
-          if(!item.rulesApplied.has(categorizeConfig._id)) {
+          if (!item.rulesApplied.has(categorizeConfig._id)) {
             item.rulesApplied.add(categorizeConfig._id);
           }
 
-          item.personal_finance_category.primary = (_important || categoryName).toLowerCase();
+          // Update the category (important categories take precedence)
+          item.personal_finance_category.primary = importantCategory || categoryName;
         }
       }
+
+      return item.personal_finance_category.primary;
     };
   }
 
