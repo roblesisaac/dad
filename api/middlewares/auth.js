@@ -33,10 +33,6 @@ export function checkLoggedIn(req, res, next) {
   // Extract user information from the JWT token
   const { payload } = req.auth;
   
-  // More detailed debugging
-  console.log('Full Auth Payload:', JSON.stringify(payload, null, 2));
-  console.log('Available Keys:', Object.keys(payload));
-  
   // Add user information to req.user
   req.user = {
     sub: payload.sub,
@@ -49,9 +45,6 @@ export function checkLoggedIn(req, res, next) {
     metadata: payload[`${audience}/user_metadata`] || {},
     appMetadata: payload[`${audience}/app_metadata`] || {}
   };
-
-  // Debug: Log the constructed user object
-  console.log('Constructed User Object:', req.user);
 
   next();
 }
