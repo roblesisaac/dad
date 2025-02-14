@@ -37,7 +37,7 @@ const app = function() {
     return Plaid.create({
       token,
       onSuccess: async function(publicToken) {
-        console.log(publicToken);
+        // console.log(publicToken);
       },
       onExit: function(err, metadata) {
         console.log('Link exit:', { err, metadata });
