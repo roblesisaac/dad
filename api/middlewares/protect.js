@@ -41,7 +41,6 @@ const protect = function() {
 
   function permit(requiredRoles) {
     return (req, res, next) => {
-      console.log(req.user);
       const userRole = req.user.roles?.[0] || 'guest';
     
       if(protect.userHasAccess(requiredRoles, userRole)) {
