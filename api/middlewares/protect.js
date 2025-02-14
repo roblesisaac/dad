@@ -1,4 +1,7 @@
+import { params } from '@ampt/sdk';
 import { checkJWT } from './auth';
+
+const { VITE_ZERO_AUDIENCE } = params().list();
 
 const protect = function() {
   const state = {
@@ -40,7 +43,7 @@ const protect = function() {
 
   function permit(requiredRoles) {
     return (req, res, next) => {
-      const userRole = req.auth?.payload?.['https://your-namespace/roles']?.[0] || 'guest';
+      const userRole = req.auth?.payload?.[`${VITE_ZERO_AUDIENCE}/roles`]?.[0] || 'guest';
     
       if(protect.userHasAccess(requiredRoles, userRole)) {
         return next();
