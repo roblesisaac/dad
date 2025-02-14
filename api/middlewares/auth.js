@@ -33,13 +33,13 @@ export function checkLoggedIn(req, res, next) {
   // Extract user information from the JWT token
   const { payload } = req.auth;
   
-  // Debug: Log the payload to see what fields are available
-  console.log('Auth0 Token Payload:', payload);
+  // More detailed debugging
+  console.log('Full Auth Payload:', JSON.stringify(payload, null, 2));
+  console.log('Available Keys:', Object.keys(payload));
   
   // Add user information to req.user
   req.user = {
     sub: payload.sub,
-    // Try different possible email field locations
     email: payload.email || 
            payload[`${audience}/email`] || 
            payload['https://my-app.com/email'] ||
