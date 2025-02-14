@@ -1,7 +1,6 @@
 import plaidTransactions from '../models/plaidTransactions.js';
 import plaidItems from '../models/plaidItems.js';
 import Users from '../models/users.js';
-import Sites from '../models/sites.js';
 import notify from '../utils/notify.js';
 import { decryptAccessToken } from './plaidLinkService.js';
 import { plaidClientInstance } from './plaidClient.js';
@@ -336,10 +335,7 @@ async function notifyUserOfSync(user, syncStats) {
     </p>`
   };
 
-  const site = await Sites.findOne();
-  if (site) {
-    await notify.email(site.email, emailData);
-  }
+  await notify.email('dev@tracktabs.com', emailData);
 }
 
 async function fetchTransactionById(_id, userId) {
@@ -428,13 +424,10 @@ async function handleSyncError(itemId, nextSyncData, { result }, handlerName) {
     result.errorMessage = `${handlerName}: ${result.errorMessage}`;
     console.error(result);
 
-    const site = await Sites.findOne();
-    if (site) {
-      await notify.email(site.email, {
-        subject: `TrackTabs Sync Error: ${handlerName}`,
-        template: renderErrorProperties({ ...result, itemId })
-      });
-    }
+    await notify.email('dev@tracktabs.com', {
+      subject: `TrackTabs Sync Error: ${handlerName}`,
+      template: renderErrorProperties({ ...result, itemId })
+    });
 
     return await updatePlaidItemSyncData(itemId, { ...nextSyncData, result, status: 'failed' });
   } catch (error) {

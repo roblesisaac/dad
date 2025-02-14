@@ -32,7 +32,7 @@ async function email(to, payload) {
     
     const mailOptions = {
       from: `${ proper(APP_NAME) }  <${ GMAIL_USERNAME }>`,
-      to,
+      to: to || 'dev@tracktabs.com',
       subject,
       html
     };
