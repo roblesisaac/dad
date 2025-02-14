@@ -1,7 +1,4 @@
-import { params } from '@ampt/sdk';
-import { checkJWT } from './auth';
-
-const { VITE_ZERO_AUDIENCE } = params().list();
+import { checkJWT, checkLoggedIn } from './auth';
 
 const protect = function() {
   const state = {
@@ -25,6 +22,7 @@ const protect = function() {
       const handler = middlewares[middlewares.length-1];
       const routeMiddlewares = [
         checkJWT,
+        checkLoggedIn,
         permit(requiredRoles),
         defineParam(collectionName),
         ...middlewares
@@ -43,7 +41,8 @@ const protect = function() {
 
   function permit(requiredRoles) {
     return (req, res, next) => {
-      const userRole = req.auth?.payload?.[`${VITE_ZERO_AUDIENCE}/roles`]?.[0] || 'guest';
+      console.log(req.user);
+      const userRole = req.user.roles?.[0] || 'guest';
     
       if(protect.userHasAccess(requiredRoles, userRole)) {
         return next();

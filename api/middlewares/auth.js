@@ -21,7 +21,7 @@ export const rateLimiter = rateLimit({
   message: 'Too many requests, please try again later.'
 });
 
-// Middleware to check if user is authenticated
+// Enhanced middleware to check if user is authenticated and add user info
 export function checkLoggedIn(req, res, next) {
   if (!req.auth) {
     return res.status(401).json({ 
@@ -29,27 +29,18 @@ export function checkLoggedIn(req, res, next) {
       message: 'No valid authentication token provided' 
     });
   }
-  next();
-}
 
-// Middleware to check user permissions
-export function checkPermissions(requiredPermissions) {
-  return (req, res, next) => {
-    const permissions = req.auth?.payload?.permissions || [];
-    
-    const hasAllPermissions = requiredPermissions.every(
-      permission => permissions.includes(permission)
-    );
-
-    if (!hasAllPermissions) {
-      return res.status(403).json({ 
-        error: 'Insufficient permissions',
-        message: 'You do not have the required permissions to access this resource',
-        required: requiredPermissions,
-        provided: permissions
-      });
-    }
-
-    next();
+  // Extract user information from the JWT token
+  const { payload } = req.auth;
+  
+  // Add user information to req.user
+  req.user = {
+    sub: payload.sub,
+    email: payload[`${audience}/email`] || payload.email,
+    roles: payload[`${audience}/roles`],
+    metadata: payload[`${audience}/user_metadata`] || {},
+    appMetadata: payload[`${audience}/app_metadata`] || {}
   };
+
+  next();
 }
