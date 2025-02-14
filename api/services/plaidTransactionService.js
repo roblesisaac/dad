@@ -39,17 +39,19 @@ export async function syncTransactionsForItem(item, userId, encryptionKey) {
 }
 
 export async function syncAllUserTransactions(user) {
-  const items = await plaidItems.findAll({ itemId: '*', userId: user.metadata.legacyId });
+  const userId = user.metadata.legacyId;
+  const encryptionKey = user.metadata.encryptionKey;
+  const items = await plaidItems.findAll({ itemId: '*', userId });
   const syncResults = [];
   const queuedItems = [];
 
   for (const item of items) {
-    const result = await processSyncForItem(item, user, syncResults, queuedItems);
+    const result = await processSyncForItem(item, userId, encryptionKey, syncResults, queuedItems);
     if (result) syncResults.push(result);
   }
 
   if (queuedItems.length > 0) {
-    await tasks.syncTransactionsForItems(queuedItems, user.metadata.legacyId);
+    await tasks.syncTransactionsForItems(queuedItems, user);
   }
 
   return { syncResults };
@@ -136,13 +138,13 @@ async function processTransactionSync(response, item, userId, nextSyncData) {
   const itemsModifiedCount = await itemsModify(modified, userId);
   const itemsAddedCount = await itemsAdd(added, userId, nextSyncData.lastSyncId);
 
-  await notifyUserOfSync(user, {
-    itemsMergedCount,
-    itemsAddedCount,
-    itemsModifiedCount,
-    itemsRemovedCount,
-    sectionedOff
-  });
+  // await notifyUserOfSync(user, {
+  //   itemsMergedCount,
+  //   itemsAddedCount,
+  //   itemsModifiedCount,
+  //   itemsRemovedCount,
+  //   sectionedOff
+  // });
 
   return {
     added,
@@ -375,7 +377,7 @@ async function removeFromDb(duplicates) {
   };
 }
 
-async function processSyncForItem(item, user, syncResults, queuedItems) {
+async function processSyncForItem(item, userId, encryptionKey, syncResults, queuedItems) {
   const { cursor, lastSyncTime, result, status } = item.syncData;
   const hours = (h) => h * 60 * 60 * 1000;
   const days = (n) => n * 24 * 60 * 60 * 1000;
@@ -390,7 +392,7 @@ async function processSyncForItem(item, user, syncResults, queuedItems) {
   }
 
   if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
-    return await syncTransactionsForItem(item._id, user.metadata.legacyId, user.metadata.encryptionKey);
+    return await syncTransactionsForItem(item._id, userId, encryptionKey);
   }
 
   const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);
