@@ -14,7 +14,7 @@ export function useSelectGroup(state, App, isEditing) {
       name: `New Group ${state.allUserGroups.length}`
     }
 
-    const savedNewGroup = await api.post('api/groups', newGroupData);
+    const savedNewGroup = await api.post('groups', newGroupData);
     state.allUserGroups.push(savedNewGroup);
   }
 
@@ -24,7 +24,7 @@ export function useSelectGroup(state, App, isEditing) {
     }
     
     try {
-      const fetchedLinkToken = await api.post('api/plaid/connect/link');
+      const fetchedLinkToken = await api.post('plaid/connect/link');
       state.linkToken = fetchedLinkToken;
     } catch (err) {
       console.log(err);
@@ -35,7 +35,7 @@ export function useSelectGroup(state, App, isEditing) {
     return Plaid.create({
       token: state.linkToken,
       onSuccess: async function(publicToken) {
-        const { accounts, groups } = await api.post('api/plaid/exchange/token', { publicToken });
+        const { accounts, groups } = await api.post('plaid/exchange/token', { publicToken });
         state.allUserGroups = [ ...state.allUserGroups, ...groups ];
         state.allUserAccounts = [ ...state.allUserAccounts, ...accounts ];
         App.checkSyncStatus();
@@ -55,11 +55,11 @@ export function useSelectGroup(state, App, isEditing) {
     const selectedGroup = state.selected.group;
 
     if(selectedGroup) {
-      await api.put(`api/groups/${selectedGroup._id}`, { isSelected: false });          
+      await api.put(`groups/${selectedGroup._id}`, { isSelected: false });          
       selectedGroup.isSelected = false;
     }
 
-    await api.put(`api/groups/${groupToSelect._id}`, { isSelected: true });
+    await api.put(`groups/${groupToSelect._id}`, { isSelected: true });
     groupToSelect.isSelected = true;
     App.goBack();
   }

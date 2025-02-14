@@ -47,12 +47,12 @@ export function useEditGroup(state) {
     state.views.pop();
     state.editingGroup = null;
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
-    await api.delete(`api/groups/${idToRemove}`);
+    await api.delete(`groups/${idToRemove}`);
   }
 
   async function updateGroupName() {
     await waitUntilTypingStops();
-    await api.put(`api/groups/${state.editingGroup._id}`, {
+    await api.put(`groups/${state.editingGroup._id}`, {
       name: state.editingGroup.name
     });
   }
@@ -69,7 +69,7 @@ export function useEditGroup(state) {
     };
 
     updateMemory(newGroupData);
-    await api.put(`api/groups/${state.editingGroup._id}`, newGroupData);
+    await api.put(`groups/${state.editingGroup._id}`, newGroupData);
   }
 
   return {

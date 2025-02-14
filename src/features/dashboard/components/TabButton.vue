@@ -83,12 +83,12 @@ function selectTab(tabToSelect) {
 
   if(currentlySelectedTab) {
     currentlySelectedTab.isSelected = false;
-    api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
+    api.put(`tabs/${currentlySelectedTab._id}`, { isSelected: false });
   }
 
   nextTick(() => {
     tabToSelect.isSelected = true;
-    api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+    api.put(`tabs/${tabToSelect._id}`, { isSelected: true });
   });
 }
 
@@ -97,7 +97,7 @@ function tabIsShared(tab) {
 }
 
 watch(() => props.tab.sort, (newSort) => {
-  api.put(`api/tabs/${props.tab._id}`, { sort: newSort });
+  api.put(`tabs/${props.tab._id}`, { sort: newSort });
 });
 
 </script>

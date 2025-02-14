@@ -86,7 +86,7 @@ function removeRule() {
   const { _id } = props.ruleConfig;
   const ruleIndex = props.state.allUserRules.findIndex(rule => rule._id === _id);
 
-  api.delete(`api/rules/${_id}`);
+  api.delete(`rules/${_id}`);
 
   nextTick(() => {
     props.state.views.pop();
@@ -98,7 +98,7 @@ function removeRule() {
 function updateRule() {
   const { _id } = props.ruleConfig;
 
-  api.put(`api/rules/${_id}`, {
+  api.put(`rules/${_id}`, {
     applyForTabs: props.ruleConfig.applyForTabs
   });
 }

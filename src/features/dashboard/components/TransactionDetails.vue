@@ -137,7 +137,7 @@ function waitUntilTypingStops(ms=500) {
 
 async function updateTransaction() {
   await waitUntilTypingStops();
-  api.put(`api/transactions/${item._id}`, item);
+  api.put(`transactions/${item._id}`, item);
 }
 
 watch(() => item.recategorizeAs, updateTransaction);

@@ -128,7 +128,7 @@
         }
 
         if(ruleConfig._id) {
-          await api.put(`api/rules/${ruleConfig._id}`, ruleConfig);
+          await api.put(`rules/${ruleConfig._id}`, ruleConfig);
           return;
         }
         
@@ -138,7 +138,7 @@
           orderOfExecution: state.allUserRules.length
         };
 
-        const newRuleSaved = await api.post('api/rules', newRule);
+        const newRuleSaved = await api.post('rules', newRule);
 
         state.allUserRules.push(newRuleSaved);
 

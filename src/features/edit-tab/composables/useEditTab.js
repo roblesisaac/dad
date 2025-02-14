@@ -16,7 +16,7 @@ export function useEditTab(state, editState, App) {
         applyForTabs: [newTabId]
       };
 
-      const savedRule = await api.post('api/rules', newRule);
+      const savedRule = await api.post('rules', newRule);
       state.allUserRules.push(savedRule);
     }
   }
@@ -25,7 +25,7 @@ export function useEditTab(state, editState, App) {
     const selectedGroup = state.selected.group;
     const tabsForGroup = state.selected.tabsForGroup;
 
-    const newTab = await api.post('api/tabs', {
+    const newTab = await api.post('tabs', {
       tabName: `${tabName} Copy`,
       showForGroup: [selectedGroup._id],
       isSelected: true,
@@ -44,7 +44,7 @@ export function useEditTab(state, editState, App) {
     const showForGroup = selectedTab.value.showForGroup
       .filter(groupId => groupId !== currentGroupId);
 
-    await api.put(`api/tabs/${selectedTab.value._id}`, {
+    await api.put(`tabs/${selectedTab.value._id}`, {
       isSelected: false,
       showForGroup
     });
@@ -57,7 +57,7 @@ export function useEditTab(state, editState, App) {
     const tabId = selectedTab.value._id;
     const newName = editState.changeTabNameTo;
 
-    await api.put(`api/tabs/${tabId}`, {
+    await api.put(`tabs/${tabId}`, {
       tabName: newName
     });
 
@@ -91,7 +91,7 @@ export function useEditTab(state, editState, App) {
 
       state.views.pop();
       state.allUserTabs.splice(tabIndex, 1);
-      await api.delete(`api/tabs/${selectedTabId}`);
+      await api.delete(`tabs/${selectedTabId}`);
     },
     duplicateTab: async () => {
       const tabName = selectedTab.value.tabName;
@@ -111,7 +111,7 @@ export function useEditTab(state, editState, App) {
         const newTab = await createNewTab(tabName);
         await cloneRules(newTab._id, selectedTab.value._id);
 
-        await api.put(`api/tabs/${selectedTab.value._id}`, {
+        await api.put(`tabs/${selectedTab.value._id}`, {
           isSelected: false
         });
 
@@ -156,7 +156,7 @@ export function useEditTab(state, editState, App) {
     },
     saveGroups: async () => {
       const { _id, showForGroup } = selectedTab.value;
-      await api.put(`api/tabs/${_id}`, { showForGroup });
+      await api.put(`tabs/${_id}`, { showForGroup });
     },
     select: (ruleType) => {
       editState.selectedRuleType = editState.selectedRuleType === ruleType 

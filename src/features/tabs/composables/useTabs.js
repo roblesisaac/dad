@@ -11,16 +11,16 @@ export function useTabs() {
 
     if(currentlySelectedTab) {
       currentlySelectedTab.isSelected = false;
-      await api.put(`api/tabs/${currentlySelectedTab._id}`, { isSelected: false });
+      await api.put(`tabs/${currentlySelectedTab._id}`, { isSelected: false });
     }
 
     tabToSelect.isSelected = true;
-    await api.put(`api/tabs/${tabToSelect._id}`, { isSelected: true });
+    await api.put(`tabs/${tabToSelect._id}`, { isSelected: true });
     goBack();
   }
 
   async function updateTabSort(tabId, newSort) {
-    await api.put(`api/tabs/${tabId}`, { sort: newSort });
+    await api.put(`tabs/${tabId}`, { sort: newSort });
   }
 
   async function createNewTab(createTabFn, goBack) {

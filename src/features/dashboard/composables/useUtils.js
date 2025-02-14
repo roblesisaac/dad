@@ -22,7 +22,7 @@ export function useUtils() {
     if (!firstGroup) return null;
     
     firstGroup.isSelected = true;
-    api.put(`api/groups/${firstGroup._id}`, { isSelected: true });
+    api.put(`groups/${firstGroup._id}`, { isSelected: true });
     return firstGroup;
   }
 
@@ -31,7 +31,7 @@ export function useUtils() {
     if (!firstTab) return;
 
     firstTab.isSelected = true;
-    api.put(`api/tabs/${firstTab._id}`, { isSelected: true });
+    api.put(`tabs/${firstTab._id}`, { isSelected: true });
   }
 
   function selectedTabsInGroup(tabsForGroup) {
@@ -43,7 +43,7 @@ export function useUtils() {
     
     for(const tab of selectedTabs.splice(1)) {
       tab.isSelected = false;
-      await api.put(`api/tabs/${tab._id}`, { isSelected: false });
+      await api.put(`tabs/${tab._id}`, { isSelected: false });
     }
   }
 
