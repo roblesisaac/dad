@@ -39,8 +39,7 @@ export async function syncTransactionsForItem(item, userId, encryptionKey) {
 }
 
 export async function syncAllUserTransactions(user) {
-  const userId = user.metadata.legacyId;
-  const encryptionKey = user.metadata.encryptionKey;
+  const { userId, encryptionKey } = user.metadata;
   const items = await plaidItems.findAll({ itemId: '*', userId });
   const syncResults = [];
   const queuedItems = [];
@@ -491,4 +490,4 @@ export default {
   fetchTransactions,
   getAllTransactionCount,
   findDuplicates
-}; 
+};
