@@ -31,7 +31,7 @@ export async function syncTransactionsForItem(item, userId, encryptionKey) {
       startTime: nextSyncData.lastSyncTime 
     });
 
-    return await processTransactionSync(response, item, user, nextSyncData);
+    return await processTransactionSync(response, item, userId, nextSyncData);
   } catch (error) {
     console.error('Error in syncTransactionsForItem:', error);
     throw new Error(`Failed to sync transactions: ${error.message}`);
@@ -124,17 +124,17 @@ async function fetchTransactionsFromPlaid({ access_token, cursor, startTime }) {
   }
 }
 
-async function processTransactionSync(response, item, user, nextSyncData) {
+async function processTransactionSync(response, item, userId, nextSyncData) {
   if (hasSyncError(response)) {
     return await handleSyncError(item._id, nextSyncData, response, 'fetchTransactionsFromPlaid');
   }
 
   const { added, modified, removed, next_cursor, sectionedOff } = response;
 
-  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, user.metadata.legacyId);
-  const itemsRemovedCount = await itemsRemove(removed, user.metadata.legacyId);
-  const itemsModifiedCount = await itemsModify(modified, user.metadata.legacyId);
-  const itemsAddedCount = await itemsAdd(added, user.metadata.legacyId, nextSyncData.lastSyncId);
+  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, userId);
+  const itemsRemovedCount = await itemsRemove(removed, userId);
+  const itemsModifiedCount = await itemsModify(modified, userId);
+  const itemsAddedCount = await itemsAdd(added, userId, nextSyncData.lastSyncId);
 
   await notifyUserOfSync(user, {
     itemsMergedCount,
