@@ -16,7 +16,7 @@ const app = function() {
       res.json(deletedRule);
     },
     getRules: async (req, res) => {
-      const userId = req.user._id;
+      const userId = req.user.metadata.legacyId;
       const rules = await Rules.findAll({ userId });
 
       res.json(rules);

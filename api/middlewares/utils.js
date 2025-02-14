@@ -5,14 +5,15 @@ export function concatUseridToReq(req, _, next) {
     if(key === 'select') {
       continue;
     }
-    req.query[key] = req.user._id + req.query[key];
+    req.query[key] = req.user.metadata.legacyId + req.query[key];
   }
   next();
 }
 
 export async function ensureUserCreatedItem(req, res, next) {
-  const { _id, role } = req.user;
+  const { role } = req.user;
   const { key } = req.params;
+  const _id = req.user.metadata.legacyId;
   
   if(role === 'admin') {
     return next();

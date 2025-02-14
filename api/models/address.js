@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const addressSchema = AmptModel('addresses', {
-  userid: (_, { req }) => req.user._id,
+  userid: (_, { req }) => req.user.metadata.legacyId,
   fullName: { type: String, required: true },
   city: { type: String, required: true },
   postalCode: { type: String, required: true },

@@ -6,7 +6,7 @@ import { plaidClientInstance } from './plaidClient.js';
 
 export async function syncUserAccounts(user) {
   let retrievedAccountsFromPlaid = [];
-  const userItems = await fetchUserItems(user._id);
+  const userItems = await fetchUserItems(user.metadata.legacyId);
 
   for (const item of userItems) {
     retrievedAccountsFromPlaid = [
@@ -15,15 +15,15 @@ export async function syncUserAccounts(user) {
     ];
   }
 
-  const existingUserAccounts = await fetchUserAccounts(user._id);
-  const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
+  const existingUserAccounts = await fetchUserAccounts(user.metadata.legacyId);
+  const existingGroups = await plaidGroups.findAll({ userId: user.metadata.legacyId, name: '*' });
 
   return await syncAccountsAndGroups(retrievedAccountsFromPlaid, existingUserAccounts, existingGroups, user);
 }
 
 async function retrieveAccountsFromPlaidForItem(item, user) {
   try {
-    const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+    const access_token = decryptAccessToken(item.accessToken, user.metadata.encryptionKey);
     const { data } = await plaidClientInstance.accountsGet({ access_token });
 
     if (!data.accounts) return [];
@@ -42,7 +42,7 @@ async function syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccount
 
   for (const retrievedAccount of retrievedAccountsFromPlaid) {
     if (isAccountAlreadySaved(existingAccounts, retrievedAccount)) {
-      const updatedAccount = await updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
+      const updatedAccount = await updateAccount(retrievedAccount.account_id, user.metadata.legacyId, retrievedAccount);
       synced.accounts.push(updatedAccount);
       continue;
     }
@@ -152,7 +152,7 @@ async function syncItems(userItems, user) {
   let syncedItems = [];
   
   for (const item of userItems) {
-    const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+    const access_token = decryptAccessToken(item.accessToken, user.metadata.encryptionKey);
     try {
       const response = await plaidClientInstance.itemGet({ access_token });
       syncedItems.push(response.data.item);

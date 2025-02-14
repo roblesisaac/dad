@@ -25,7 +25,7 @@ export async function syncTransactionsForItem(item, userId) {
     await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'in_progress' });
 
     const user = await Users.findOne(userId);
-    const access_token = decryptAccessToken(accessToken, user.encryptionKey);
+    const access_token = decryptAccessToken(accessToken, user.metadata.encryptionKey);
 
     const response = await fetchTransactionsFromPlaid({ 
       access_token, 
@@ -41,7 +41,7 @@ export async function syncTransactionsForItem(item, userId) {
 }
 
 export async function syncAllUserTransactions(user) {
-  const items = await plaidItems.findAll({ itemId: '*', userId: user._id });
+  const items = await plaidItems.findAll({ itemId: '*', userId: user.metadata.legacyId });
   const syncResults = [];
   const queuedItems = [];
 
@@ -51,7 +51,7 @@ export async function syncAllUserTransactions(user) {
   }
 
   if (queuedItems.length > 0) {
-    await tasks.syncTransactionsForItems(queuedItems, user._id);
+    await tasks.syncTransactionsForItems(queuedItems, user.metadata.legacyId);
   }
 
   return { syncResults };
@@ -133,10 +133,10 @@ async function processTransactionSync(response, item, user, nextSyncData) {
 
   const { added, modified, removed, next_cursor, sectionedOff } = response;
 
-  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, user._id);
-  const itemsRemovedCount = await itemsRemove(removed, user._id);
-  const itemsModifiedCount = await itemsModify(modified, user._id);
-  const itemsAddedCount = await itemsAdd(added, user._id, nextSyncData.lastSyncId);
+  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, user.metadata.legacyId);
+  const itemsRemovedCount = await itemsRemove(removed, user.metadata.legacyId);
+  const itemsModifiedCount = await itemsModify(modified, user.metadata.legacyId);
+  const itemsAddedCount = await itemsAdd(added, user.metadata.legacyId, nextSyncData.lastSyncId);
 
   await notifyUserOfSync(user, {
     itemsMergedCount,
@@ -392,7 +392,7 @@ async function processSyncForItem(item, user, syncResults, queuedItems) {
   }
 
   if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
-    return await syncTransactionsForItem(item._id, user._id);
+    return await syncTransactionsForItem(item._id, user.metadata.legacyId);
   }
 
   const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);

@@ -22,7 +22,7 @@ const plaidController = {
       const { _id: itemId } = await plaidLinkService.savePlaidAccessData(accessData, { user: req.user });
       const { accounts, groups } = await plaidAccountService.syncUserAccounts(req.user);
 
-      tasks.syncTransactionsForItem(itemId, req.user._id);
+      tasks.syncTransactionsForItem(itemId, req.user.metadata.legacyId);
 
       res.json({ accounts, groups });
     } catch (error) {
@@ -33,8 +33,8 @@ const plaidController = {
   getPlaidItems: async (req, res) => {
     try {
       const response = req.params._id 
-        ? await plaidAccountService.fetchItemById(req.params._id, req.user._id)
-        : await plaidAccountService.fetchUserItems(req.user._id);
+        ? await plaidAccountService.fetchItemById(req.params._id, req.user.metadata.legacyId)
+        : await plaidAccountService.fetchUserItems(req.user.metadata.legacyId);
 
       if (!response) return res.json(null);
 
@@ -51,11 +51,11 @@ const plaidController = {
       const { user, query } = req;
 
       if (_id) {
-        const transaction = await plaidTransactionService.fetchTransactionById(_id, user._id);
+        const transaction = await plaidTransactionService.fetchTransactionById(_id, user.metadata.legacyId);
         return res.json(transaction);
       }
 
-      const userQueryForDate = plaidTransactionService.buildUserQueryForTransactions(user._id, query);
+      const userQueryForDate = plaidTransactionService.buildUserQueryForTransactions(user.metadata.legacyId, query);
       const transactions = await plaidTransactionService.fetchTransactions(userQueryForDate);
 
       res.json(transactions);
@@ -66,7 +66,7 @@ const plaidController = {
 
   getAllTransactionCount: async (req, res) => {
     try {
-      const count = await plaidTransactionService.getAllTransactionCount(req.user._id);
+      const count = await plaidTransactionService.getAllTransactionCount(req.user.metadata.legacyId);
       res.json(count);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -75,7 +75,7 @@ const plaidController = {
 
   getDuplicates: async function ({ user }, res) {
     try {
-      const duplicates = await plaidTransactionService.findDuplicates(user._id);
+      const duplicates = await plaidTransactionService.findDuplicates(user.metadata.legacyId);
       res.json(duplicates);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -106,7 +106,7 @@ const plaidController = {
 
   retreivePlaidItems: async function ({ user }, res) {
     try {
-      const userItems = await plaidAccountService.fetchUserItems(user._id);
+      const userItems = await plaidAccountService.fetchUserItems(user.metadata.legacyId);
       const syncedItems = await plaidAccountService.syncItems(userItems, user);
 
       res.json(scrub(syncedItems, 'accessToken'));
@@ -141,7 +141,7 @@ const plaidController = {
 
       const response = await plaidTransactionService.syncTransactionsForItem(
         req.params.itemId, 
-        req.user._id
+        req.user.metadata.legacyId
       );
       
       if (res) {

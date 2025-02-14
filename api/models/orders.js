@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 import { data } from '@ampt/data';
 
 const orderSchema = AmptModel('orders', {
-    userid: (_, { req }) => req.user._id,
+    userid: (_, { req }) => req.user.metadata.legacyId,
     orderItems: [
         {
             qty: { type: Number, required: true },

@@ -19,8 +19,6 @@ const app = function() {
       const userId = req.user.metadata.legacyId;
       const s = await Tabs.findAll({ userId });
 
-      console.log(s);
-
       res.json(s);
     },
     saveTab: async ({ body, user }, res) => {
