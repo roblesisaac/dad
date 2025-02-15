@@ -1,33 +1,6 @@
-import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-import { params } from '@ampt/sdk';
 import { decryptWithKey, decrypt } from '../utils/encryption.js';
 import plaidItems from '../models/plaidItems.js';
-
-const {
-  PLAID_CLIENT_ID,
-  PLAID_SECRET_PROD,
-  PLAID_SECRET_SANDBOX,
-  ENV_NAME
-} = params().list();
-
-function initPlaidClient() {
-  const environment = ENV_NAME === 'prod' ? 'production' : 'sandbox';
-
-  const config = new Configuration({
-    basePath: PlaidEnvironments[environment],
-    baseOptions: {
-      headers: {
-        'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-        'PLAID-SECRET': environment === 'production' ? PLAID_SECRET_PROD : PLAID_SECRET_SANDBOX,
-        'Plaid-Version': '2020-09-14',
-      },
-    },
-  });
-
-  return new PlaidApi(config);
-}
-
-const plaidClientInstance = initPlaidClient();
+import { plaidClientInstance } from './plaidClient.js';
 
 export async function createLinkToken(user, itemId = null) {
   const request = {
@@ -65,12 +38,12 @@ export async function exchangePublicToken(publicToken) {
   }
 }
 
-export function decryptAccessToken(accessToken, encryptionKey) {
+export function decryptAccessToken(dblEncryptedAccessToken, encryptedKey) {
   try {
-    accessToken = decrypt(accessToken);
-    encryptionKey = decrypt(encryptionKey, 'buffer');
-    const decrypted = decryptWithKey(accessToken, encryptionKey);
-    return decrypted;
+    const encryptedAccessToken = decrypt(dblEncryptedAccessToken);
+    const key = decrypt(encryptedKey, 'buffer');
+
+    return decryptWithKey(encryptedAccessToken, key);
   } catch (error) {
     console.error(`Error decrypting access token: ${error.message}`);
     throw new Error(`Decrypting access token: ${error.message}`);
