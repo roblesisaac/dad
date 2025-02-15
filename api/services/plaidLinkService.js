@@ -81,7 +81,7 @@ export async function savePlaidAccessData(accessData, req) {
   try {
     const { access_token, item_id } = accessData;
 
-    const item = await plaidItems.save({
+    const item = await plaidItems.update({ item_id }, {
       accessToken: access_token,
       itemId: item_id,
       syncData: {
@@ -103,4 +103,4 @@ export default {
   decryptAccessToken,
   initPlaidClient,
   savePlaidAccessData
-}; 
+};
