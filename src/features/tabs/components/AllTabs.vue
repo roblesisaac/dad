@@ -1,5 +1,5 @@
 <template>
-<div class="grid">
+<div class="x-grid">
   <div class="cell-1">
     <Draggable 
       v-model="props.state.selected.tabsForGroup" 

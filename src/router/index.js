@@ -6,6 +6,7 @@ const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
 const SwiperVue = () => import('@/views/SwiperVue.vue')
 const TermsOfService = () => import('@/views/TermsOfService.vue')
 const SpendingReport = () => import('@/features/dashboard/SpendingReport.vue')
+const Landing = () => import('@/views/Landing.vue')
 
 const routes = [
   {
@@ -33,6 +34,11 @@ const routes = [
     name: 'spending report',
     component: SpendingReport,
     beforeEnter: authGuard
+  },
+  {
+    path: '/',
+    name: 'landing',
+    component: Landing
   }
 ]
 

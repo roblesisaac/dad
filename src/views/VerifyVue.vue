@@ -1,5 +1,5 @@
 <template>
-    <div class="grid p30">
+    <div class="x-grid p30">
         <VerifyForm />
     </div>
 </template>

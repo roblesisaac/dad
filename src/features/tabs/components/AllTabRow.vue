@@ -1,5 +1,5 @@
 <template>
-<div class="grid text-left allTabRow p10y middle b-bottom">
+<div class="x-grid text-left allTabRow p10y middle b-bottom">
   <div class="cell-2-24">
     <MoreVertical />
   </div>

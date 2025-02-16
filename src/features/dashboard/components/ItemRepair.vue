@@ -1,9 +1,9 @@
 <template>
-<div class="grid">
+<div class="x-grid">
 
   <div v-if="itemState.syncedItems.length" class="cell-1">
     
-    <div v-for="item in itemState.syncedItems" :key="item.item_id" class="grid p20 dottedRow">
+    <div v-for="item in itemState.syncedItems" :key="item.item_id" class="x-grid p20 dottedRow">
       <div class="cell auto proper bold left">
         {{ item.institution_id }}
         <br />{{ item.item_id }}

@@ -1,5 +1,5 @@
 <template>
-	<div class="grid">
+	<div class="x-grid">
 		<div class="cell-1 p30">
 			<section>
 				<h2>Encryption in Transit</h2>

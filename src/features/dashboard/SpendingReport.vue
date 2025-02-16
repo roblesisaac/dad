@@ -1,7 +1,7 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-  <div v-if="state.blueBar.message" class="grid">
+  <div v-if="state.blueBar.message" class="x-grid">
     <div class="cell-1 p10l blue-bar bold">
       <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
     </div>
@@ -16,11 +16,11 @@
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
+  <div v-if="state.isSmallScreen() && state.is('home')" class="x-grid middle">
     
     <!-- Selected Group + Date -->
     <div class="cell-1 dateRow b-bottom">
-      <div class="grid middle">
+      <div class="x-grid middle">
 
         <!-- Group Selector Button -->
         <ShowSelectGroupButton class="cell-8-24 b-right" :state="state" />
@@ -50,7 +50,7 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="x-grid">
 
     <!-- Left Side: Account and Date Selector -->
     <div id="leftPanel" class="cell-2-5 b-right panel">

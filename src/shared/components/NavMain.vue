@@ -1,5 +1,5 @@
 <template>
-  <nav class="grid topNav shadow middle">
+  <nav class="x-grid topNav shadow middle">
     
     <!-- logo -->
     <div class="cell auto text-left bold p20l">

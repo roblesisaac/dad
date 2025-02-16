@@ -1,8 +1,8 @@
 <template>
-  <div class="grid middle left p30">
+  <div class="x-grid middle left p30">
     <!-- Rule Rendered -->
     <div class="cell-1 p30b">      
-      <div class="grid">
+      <div class="x-grid">
         <h4 class="proper">{{ ruleType }}</h4>
         <div class="cell-1">
           <EditRule :ruleConfig="props.ruleConfig" :state="props.state" />
@@ -12,7 +12,7 @@
 
     <!-- Tabs -->
     <div class="cell-1">
-      <div class="grid">
+      <div class="x-grid">
 
         <div class="cell-1">
           <b>Tabs Shared With:</b>
@@ -41,7 +41,7 @@
 
     <!-- Make Global-->
     <div class="cell-1 p30b">
-      <div class="grid">
+      <div class="x-grid">
         <div class="cell shrink bold p20r">Global?</div>
         <div class="cell auto"><Switch v-model="isGlobal" /></div>
       </div>

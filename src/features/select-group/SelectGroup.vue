@@ -1,5 +1,5 @@
 <template>
-<div class="grid select-group">
+<div class="x-grid select-group">
   <!-- {{ props.state.view }} --> <!-- Debug log -->
   <!-- Net-worth -->
   <div class="cell-1 net-worth bold p30">

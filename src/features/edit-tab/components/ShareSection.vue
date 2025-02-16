@@ -1,7 +1,7 @@
 <template>
-<div v-if="!state.is('EditRule')" class="grid middle dottedRow">
+<div v-if="!state.is('EditRule')" class="x-grid middle dottedRow">
   <div @click="app.select('sharing')" class="cell-1 p20">
-    <div class="grid">
+    <div class="x-grid">
       <div class="cell auto">
         Share
       </div>

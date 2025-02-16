@@ -1,12 +1,12 @@
 <template>
-    <form @submit.prevent="submitCode" class="p30 grid">
+    <form @submit.prevent="submitCode" class="p30 x-grid">
         <div class="cell-1">
             <h3>Please Enter the verification code sent to
             <b v-if="user"><br>{{ user.email }}</b><span v-else>your email</span>:</h3>
         </div>
 
         <div v-for="index in code.length" :class="'cell-1-'+code.length">
-            <div class="grid p5r">
+            <div class="x-grid p5r">
                 <div class="cell-1">
                     <input type="number" max="9" 
                         :id="'code'+index"
@@ -17,7 +17,7 @@
 
         <transition>
         <div v-if="notification" class="cell-1 p10t">
-            <div class="grid">
+            <div class="x-grid">
                 <div class="cell-1 p30 bgLightRed colorBleach r5 shadow">
                     <b>{{  notification }}</b>
                 </div>

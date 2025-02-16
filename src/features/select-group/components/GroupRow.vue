@@ -1,5 +1,5 @@
 <template>
-    <div :class="['grid middle proper text-left group-row', isSelected]">
+    <div :class="['x-grid middle proper text-left group-row', isSelected]">
         <!-- Edit Horizontal Dots -->
         <div class="cell-1 right">
             <MoreHorizontal @click="editGroup(element)" class="handlerGroup pointer" />
@@ -11,7 +11,7 @@
         </div>
     
         <div class="cell-12-24 pointer" @click="selectGroup(element)">
-        <div class="grid p10r">
+        <div class="x-grid p10r">
     
             <!-- Element Name -->
             <div class="cell-1">
@@ -40,7 +40,7 @@
     
         <!-- Balances + View -->
         <div class="cell-9-24 right p10r pointer" @click="selectGroup(element)">
-        <div class="grid">
+        <div class="x-grid">
     
             <!-- Current Balance -->
             <div v-if="element.accounts.length" class="cell-1 bold right">

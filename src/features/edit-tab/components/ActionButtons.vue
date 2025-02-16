@@ -1,5 +1,5 @@
 <template>
-<div class="grid middle">
+<div class="x-grid middle">
   <div class="cell-1 p20">
     <button @click="app.duplicateTab" class="button bgBlack expanded">Duplicate Tab</button>
   </div>

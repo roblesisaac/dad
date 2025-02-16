@@ -1,5 +1,5 @@
 <template>
-<div class="grid datePickers line50">
+<div class="x-grid datePickers line50">
   <div class="cell-11-24">
     <DatePicker :date="props.state.date" when="start" />
   </div>

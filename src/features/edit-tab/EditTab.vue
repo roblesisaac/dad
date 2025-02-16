@@ -1,8 +1,8 @@
 <template>
-<div class="grid">
+<div class="x-grid">
   <div class="cell-1">
     <!-- Tab Name -->
-    <div v-if="!state.is('EditRule')" class="grid middle b-bottom">
+    <div v-if="!state.is('EditRule')" class="x-grid middle b-bottom">
       <div class="cell-1-5 section b-right bold line50">
         <small>Name</small>
       </div>

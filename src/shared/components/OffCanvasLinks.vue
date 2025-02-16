@@ -1,5 +1,5 @@
 <template>
-<div class="grid off-canvas">
+<div class="x-grid off-canvas">
   <div class="cell-1">
     <button class="close-window p20" @click="closeMenu">      
       <X />

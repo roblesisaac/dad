@@ -1,7 +1,7 @@
 <template>
-    <div v-if="!props.state.is('EditRule')" class="grid middle dottedRow">
+    <div v-if="!props.state.is('EditRule')" class="x-grid middle dottedRow">
       <div @click="props.app.select(props.sectionName)" class="cell-1 p20">
-        <div class="grid">
+        <div class="x-grid">
           <div class="cell shrink proper">
             {{ props.sectionName }}
           </div>

@@ -1,8 +1,8 @@
 <template>
-  <div :id="id" class="grid dottedRow proper">
+  <div :id="id" class="x-grid dottedRow proper">
     
     <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
-      <div class="grid">
+      <div class="x-grid">
         <div class="cell auto">
           <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
         </div>

@@ -1,5 +1,5 @@
 <template>
-<div class="grid p30 left">
+<div class="x-grid p30 left">
   <div class="cell-1">
     <section>
       <h2>1. Acceptance of Terms</h2>

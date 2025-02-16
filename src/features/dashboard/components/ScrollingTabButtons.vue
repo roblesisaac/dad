@@ -1,5 +1,5 @@
 <template>
-<div class="grid">
+<div class="x-grid">
   <div class="cell-20-24">
     <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="state.selected.tabsForGroup" v-bind="state.dragOptions(100)">
       <template #item="{element}">

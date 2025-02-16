@@ -1,5 +1,5 @@
 <template>
-    <div class="grid p20 text-left">
+    <div class="x-grid p20 text-left">
     
       <!-- Back button -->
       <div class="cell-1 p10b">
@@ -9,7 +9,7 @@
       <!-- Group Name -->
       <div class="cell-1 p20b">
     
-        <div class="grid middle">
+        <div class="x-grid middle">
           <div class="cell-1-5 bold">
             Name:
           </div>
@@ -18,7 +18,7 @@
           </div>
         </div>
     
-        <div class="grid">
+        <div class="x-grid">
           <div class="cell-1 bold ">Info:</div>
           <div class="cell-1">
             <textarea v-model="props.state.editingGroup.info" class="edit-info" ></textarea>
