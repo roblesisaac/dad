@@ -16,7 +16,7 @@ const app = function() {
       res.json(deletedGroup);
     },
     getGroups: async (req, res) => {
-      const userId = req.user.metadata.legacyId;
+      const userId = req.user._id;
       const { _groupId } = req.params;
 
       if(_groupId) {

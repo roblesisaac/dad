@@ -1,7 +1,7 @@
 import AmptModel from '../utils/amptModel';
 
 const reviewSchema = AmptModel('reviews', {
-    userid: (_, { req }) => req.user.metadata.legacyId,
+    userid: (_, { req }) => req.user._id,
     productId: { type: String, ref: 'products', required: true },
     rating: { type: Number, required: true },
     comment: { 

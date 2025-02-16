@@ -26,8 +26,8 @@ const plaidController = {
       } = plaidLinkService;
 
       const accessData = await exchangePublicToken(publicToken);
-      const encryptedKey = req.user.metadata.encryptionKey;
-      const userId = req.user.metadata.legacyId;
+      const encryptedKey = req.user.encryptionKey;
+      const userId = req.user._id;
 
       const { _id: itemId } = await savePlaidAccessData(accessData, encryptedKey);
 
@@ -44,7 +44,7 @@ const plaidController = {
 
   getPlaidItems: async (req, res) => {
     try {
-        const legacyId = req.user.metadata.legacyId;
+        const legacyId = req.user._id;
         const itemId = req.params._id;
         let response;
 
@@ -84,7 +84,7 @@ const plaidController = {
 
   getAllTransactionCount: async (req, res) => {
     try {
-      const count = await plaidTransactionService.getAllTransactionCount(req.user.metadata.legacyId);
+      const count = await plaidTransactionService.getAllTransactionCount(req.user._id);
       res.json(count);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -157,7 +157,7 @@ const plaidController = {
         throw new Error('Missing required parameters: itemId or userId');
       }
 
-      const userId = req.user.metadata.legacyId;
+      const userId = req.user._id;
       const encryptedKey = req.user.metadata.encryptionKey; 
 
       const response = await plaidTransactionService.syncTransactionsForItem(

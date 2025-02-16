@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 
 const accountGroupSchema = {
   userId: {
-    set: (_, { req }) => req.user.metadata.legacyId
+    set: (_, { req }) => req.user._id
   },
   accounts: [
     {

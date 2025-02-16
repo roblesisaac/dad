@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 import { encrypt, decrypt } from '../utils/encryption';
 
 const messageSchema = AmptModel('messages', {
-    userid: (_, { req }) => req.user.metadata.legacyId,
+    userid: (_, { req }) => req.user._id,
     subject: {
         set: encrypt,
         get: decrypt
