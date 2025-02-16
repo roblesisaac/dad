@@ -20,6 +20,8 @@ export function useAuth() {
     
     const roles = user.value[`${import.meta.env.VITE_ZERO_AUDIENCE}/roles`] || [];
     const metadata = user.value[`${import.meta.env.VITE_ZERO_AUDIENCE}/user_metadata`] || {};
+
+    console.log(metadata);
     
     return {
       ...user.value,

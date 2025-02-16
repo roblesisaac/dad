@@ -11,7 +11,7 @@ const { APP_NAME } = params().list();
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
     const { user } = body;
-    const transactions = await plaidTransactions.findAll({ date: '*', userId: user.metadata.legacyId });
+    const transactions = await plaidTransactions.findAll({ date: '*', userId: user._id });
     const idsToRemove = transactions.map(t => t._id);
     let removeCount = 0;
 

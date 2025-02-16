@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 
 const tabSchema = {
   userId: {
-    set: (_, { user }) => user.metadata.legacyId
+    set: (_, { user }) => user._Id
   },
   tabName: String,
   showForGroup: [String],

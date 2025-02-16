@@ -2,7 +2,7 @@ import AmptModel from '../utils/amptModel';
 
 const ruleSchema = {
   userId: {
-    set: (_, { user }) => user.metadata.legacyId
+    set: (_, { user }) => user._Id
   },
   applyForTabs: [String],
   rule: [String],

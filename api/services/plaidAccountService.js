@@ -6,8 +6,8 @@ import { plaidClientInstance } from './plaidClient.js';
 
 export async function syncUserAccounts(user) {
   let retrievedAccountsFromPlaid = [];
-  const userItems = await fetchUserItemsFromDb(user.metadata.legacyId);
-  const encryptedKey = user.metadata.encryptionKey;
+  const userItems = await fetchUserItemsFromDb(user._id);
+  const encryptedKey = user.encryptionKey;
 
   for (const item of userItems) {
     retrievedAccountsFromPlaid = [
@@ -16,8 +16,8 @@ export async function syncUserAccounts(user) {
     ];
   }
 
-  const existingUserAccounts = await fetchUserAccounts(user.metadata.legacyId);
-  const existingGroups = await plaidGroups.findAll({ userId: user.metadata.legacyId, name: '*' });
+  const existingUserAccounts = await fetchUserAccounts(user._id);
+  const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
   return await syncAccountsAndGroups(retrievedAccountsFromPlaid, existingUserAccounts, existingGroups, user);
 }
@@ -43,7 +43,7 @@ async function syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccount
 
   for (const retrievedAccount of retrievedAccountsFromPlaid) {
     if (isAccountAlreadySaved(existingAccounts, retrievedAccount)) {
-      const updatedAccount = await updateAccount(retrievedAccount.account_id, user.metadata.legacyId, retrievedAccount);
+      const updatedAccount = await updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
       synced.accounts.push(updatedAccount);
       continue;
     }
@@ -150,7 +150,7 @@ function isAccountAlreadySaved(existingUserAccounts, retrievedAccount) {
 
 async function syncItems(userItems, user) {
   let syncedItems = [];
-  const encryptedKey = user.metadata.encryptionKey;
+  const encryptedKey = user.encryptionKey;
 
   for (const item of userItems) {
     const access_token = decryptAccessToken(item.accessToken, encryptedKey);

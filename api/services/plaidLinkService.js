@@ -4,7 +4,7 @@ import { plaidClientInstance } from './plaidClient.js';
 
 export async function createLinkToken(user, itemId = null) {
   const request = {
-    user: { client_user_id: user.metadata.legacyId },
+    user: { client_user_id: user._id },
     client_name: 'TrackTabs',
     products: ['transactions'],
     country_codes: ['US'],
@@ -12,8 +12,8 @@ export async function createLinkToken(user, itemId = null) {
   };
 
   if (itemId) {
-    const item = await plaidItems.findOne({ userId: user.metadata.legacyId, itemId });
-    const access_token = decryptAccessToken(item.accessToken, user.metadata.encryptionKey);
+    const item = await plaidItems.findOne({ userId: user._id, itemId });
+    const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
 
     delete request.products;
     request.access_token = access_token;

@@ -67,13 +67,14 @@ const plaidController = {
     try {
       const { _id } = req.params;
       const { user, query } = req;
+      const userId = user._id;
 
       if (_id) {
-        const transaction = await plaidTransactionService.fetchTransactionById(_id, user.metadata.legacyId);
+        const transaction = await plaidTransactionService.fetchTransactionById(_id, userId);
         return res.json(transaction);
       }
 
-      const userQueryForDate = plaidTransactionService.buildUserQueryForTransactions(user.metadata.legacyId, query);
+      const userQueryForDate = plaidTransactionService.buildUserQueryForTransactions(userId, query);
       const transactions = await plaidTransactionService.fetchTransactions(userQueryForDate);
 
       res.json(transactions);
@@ -84,7 +85,8 @@ const plaidController = {
 
   getAllTransactionCount: async (req, res) => {
     try {
-      const count = await plaidTransactionService.getAllTransactionCount(req.user._id);
+      const userId = req.user._id;
+      const count = await plaidTransactionService.getAllTransactionCount(userId);
       res.json(count);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -93,7 +95,8 @@ const plaidController = {
 
   getDuplicates: async function ({ user }, res) {
     try {
-      const duplicates = await plaidTransactionService.findDuplicates(user.metadata.legacyId);
+      const userId = req.user._id;
+      const duplicates = await plaidTransactionService.findDuplicates(userId);
       res.json(duplicates);
     } catch (error) {
       res.status(500).json({ error: error.message });
@@ -124,7 +127,8 @@ const plaidController = {
 
   retreivePlaidItems: async function ({ user }, res) {
     try {
-      const userItems = await plaidAccountService.fetchUserItemsFromDb(user.metadata.legacyId);
+      const userId = req.user._id;
+      const userItems = await plaidAccountService.fetchUserItemsFromDb(userId);
       const syncedItems = await plaidAccountService.syncItems(userItems, user);
 
       res.json(scrub(syncedItems, 'accessToken'));
@@ -158,7 +162,7 @@ const plaidController = {
       }
 
       const userId = req.user._id;
-      const encryptedKey = req.user.metadata.encryptionKey; 
+      const encryptedKey = req.user.encryptionKey; 
 
       const response = await plaidTransactionService.syncTransactionsForItem(
         req.params.itemId, 
