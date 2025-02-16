@@ -33,19 +33,19 @@ const tasks = (function() {
   });
 
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
-    let { itemId, userId } = body;
+    let { itemId, userId, encryptedKey } = body;
     
-    return await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+    return await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
   });
 
   const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
-    const { itemIds, userId } = body;
+    const { itemIds, userId, encryptedKey } = body;
 
     let results = [];
 
     for (const itemId of itemIds) {
       try {
-        const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+        const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
 
         results.push(result);
       } catch (e) {
@@ -107,11 +107,11 @@ const tasks = (function() {
     removeAllUserTransactions: async ({ _id, email }) => {
       removeAllTransactionsFromDatabase.run({ user: { _id, email } });
     },
-    syncTransactionsForItem: async function(itemId, userId) {
-      syncTransactions.run({ itemId, userId });
+    syncTransactionsForItem: async function(itemId, userId, encryptedKey) {
+      syncTransactions.run({ itemId, userId, encryptedKey });
     },
-    syncTransactionsForItems: async function (itemIds, userId) {
-      syncTransactionsForItems.run({ itemIds, userId });
+    syncTransactionsForItems: async function (itemIds, userId, encryptedKey) {
+      syncTransactionsForItems.run({ itemIds, userId, encryptedKey });
     },
     updateAllDates: async function () {
       return 'Not implemented yet';
@@ -136,10 +136,10 @@ export default tasks;
 
 export const handler = async (event) => {
   try {
-    const { itemId, userId } = event.body;
+    const { itemId, userId, encryptedKey } = event.body;
     
     // Call the service directly instead of going through the controller
-    const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+    const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
     
     return {
       statusCode: 200,

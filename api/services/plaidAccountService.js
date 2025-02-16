@@ -6,12 +6,13 @@ import { plaidClientInstance } from './plaidClient.js';
 
 export async function syncUserAccounts(user) {
   let retrievedAccountsFromPlaid = [];
-  const userItems = await fetchUserItems(user.metadata.legacyId);
+  const userItems = await fetchUserItemsFromDb(user.metadata.legacyId);
+  const encryptedKey = user.metadata.encryptionKey;
 
   for (const item of userItems) {
     retrievedAccountsFromPlaid = [
       ...retrievedAccountsFromPlaid,
-      ...await retrieveAccountsFromPlaidForItem(item, user)
+      ...await retrieveAccountsFromPlaidForItem(item, encryptedKey)
     ];
   }
 
@@ -21,9 +22,9 @@ export async function syncUserAccounts(user) {
   return await syncAccountsAndGroups(retrievedAccountsFromPlaid, existingUserAccounts, existingGroups, user);
 }
 
-async function retrieveAccountsFromPlaidForItem(item, user) {
+async function retrieveAccountsFromPlaidForItem(item, encryptedKey) {
   try {
-    const access_token = decryptAccessToken(item.accessToken, user.metadata.encryptionKey);
+    const access_token = decryptAccessToken(item.accessToken, encryptedKey);
     const { data } = await plaidClientInstance.accountsGet({ access_token });
 
     if (!data.accounts) return [];
@@ -58,7 +59,7 @@ async function syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccount
 }
 
 // Helper functions from original plaid.js
-async function fetchUserItems(userId) {
+async function fetchUserItemsFromDb(userId) {
   try {
     const { items } = await plaidItems.find({ itemId: '*', userId });
     return items;
@@ -149,9 +150,10 @@ function isAccountAlreadySaved(existingUserAccounts, retrievedAccount) {
 
 async function syncItems(userItems, user) {
   let syncedItems = [];
-  
+  const encryptedKey = user.metadata.encryptionKey;
+
   for (const item of userItems) {
-    const access_token = decryptAccessToken(item.accessToken, user.metadata.encryptionKey);
+    const access_token = decryptAccessToken(item.accessToken, encryptedKey);
     try {
       const response = await plaidClientInstance.itemGet({ access_token });
       syncedItems.push(response.data.item);
@@ -165,7 +167,7 @@ async function syncItems(userItems, user) {
 
 export default {
   syncUserAccounts,
-  fetchUserItems,
+  fetchUserItemsFromDb,
   fetchItemById,
   syncItems,
   fetchUserAccounts,

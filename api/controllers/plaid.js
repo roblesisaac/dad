@@ -19,11 +19,22 @@ const plaidController = {
   exchangeTokenAndSavePlaidItem: async (req, res) => {
     try {
       const { publicToken } = req.body;
-      const accessData = await plaidLinkService.exchangePublicToken(publicToken);
-      const { _id: itemId } = await plaidLinkService.savePlaidAccessData(accessData, { user: req.user });
-      const { accounts, groups } = await plaidAccountService.syncUserAccounts(req.user);
 
-      tasks.syncTransactionsForItem(itemId, req.user.metadata.legacyId);
+      const { 
+        exchangePublicToken, 
+        savePlaidAccessData 
+      } = plaidLinkService;
+
+      const accessData = await exchangePublicToken(publicToken);
+      const encryptedKey = req.user.metadata.encryptionKey;
+      const userId = req.user.metadata.legacyId;
+
+      const { _id: itemId } = await savePlaidAccessData(accessData, encryptedKey);
+
+      const { accounts, groups } = await plaidAccountService.syncUserAccounts(req.user);
+      
+
+      tasks.syncTransactionsForItem(itemId, userId, encryptedKey);
 
       res.json({ accounts, groups });
     } catch (error) {
@@ -33,9 +44,15 @@ const plaidController = {
 
   getPlaidItems: async (req, res) => {
     try {
-      const response = req.params._id 
-        ? await plaidAccountService.fetchItemById(req.params._id, req.user.metadata.legacyId)
-        : await plaidAccountService.fetchUserItems(req.user.metadata.legacyId);
+        const legacyId = req.user.metadata.legacyId;
+        const itemId = req.params._id;
+        let response;
+
+      if (itemId) {
+        response = await plaidAccountService.fetchItemById(itemId, legacyId);
+      } else {
+        response = await plaidAccountService.fetchUserItemsFromDb(legacyId);
+      }
 
       if (!response) return res.json(null);
 
@@ -107,7 +124,7 @@ const plaidController = {
 
   retreivePlaidItems: async function ({ user }, res) {
     try {
-      const userItems = await plaidAccountService.fetchUserItems(user.metadata.legacyId);
+      const userItems = await plaidAccountService.fetchUserItemsFromDb(user.metadata.legacyId);
       const syncedItems = await plaidAccountService.syncItems(userItems, user);
 
       res.json(scrub(syncedItems, 'accessToken'));
@@ -140,9 +157,13 @@ const plaidController = {
         throw new Error('Missing required parameters: itemId or userId');
       }
 
+      const userId = req.user.metadata.legacyId;
+      const encryptedKey = req.user.metadata.encryptionKey; 
+
       const response = await plaidTransactionService.syncTransactionsForItem(
         req.params.itemId, 
-        req.user.metadata.legacyId
+        userId,
+        encryptedKey
       );
       
       if (res) {

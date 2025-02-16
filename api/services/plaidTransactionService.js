@@ -8,7 +8,7 @@ import { data } from '@ampt/data';
 import tasks from '../tasks/plaid.js';
 
 // Main export functions
-export async function syncTransactionsForItem(item, userId, encryptionKey) {
+export async function syncTransactionsForItem(item, userId, encryptedKey) {
   try {
     if (typeof item === 'string') {
       item = await plaidItems.findOne(item);
@@ -23,7 +23,7 @@ export async function syncTransactionsForItem(item, userId, encryptionKey) {
     const nextSyncData = initializeNextSyncData(userId, syncData);
     await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'in_progress' });
 
-    const access_token = decryptAccessToken(accessToken, encryptionKey);
+    const access_token = decryptAccessToken(accessToken, encryptedKey);
 
     const response = await fetchTransactionsFromPlaid({ 
       access_token, 
@@ -39,18 +39,19 @@ export async function syncTransactionsForItem(item, userId, encryptionKey) {
 }
 
 export async function syncAllUserTransactions(user) {
-  const { userId, encryptionKey } = user.metadata;
+  const userId = user.metadata.legacyId;
+  const encryptedKey = user.metadata.encryptionKey;
   const items = await plaidItems.findAll({ itemId: '*', userId });
   const syncResults = [];
   const queuedItems = [];
 
   for (const item of items) {
-    const result = await processSyncForItem(item, userId, encryptionKey, syncResults, queuedItems);
+    const result = await processSyncForItem(item, userId, encryptedKey, syncResults, queuedItems);
     if (result) syncResults.push(result);
   }
 
   if (queuedItems.length > 0) {
-    await tasks.syncTransactionsForItems(queuedItems, user);
+    await tasks.syncTransactionsForItems(queuedItems, userId, encryptedKey);
   }
 
   return { syncResults };
@@ -376,7 +377,14 @@ async function removeFromDb(duplicates) {
   };
 }
 
-async function processSyncForItem(item, userId, encryptionKey, syncResults, queuedItems) {
+async function processSyncForItem(
+  item,
+  userId,
+  encryptedKey,
+  syncResults,
+  queuedItems
+) 
+{
   const { cursor, lastSyncTime, result, status } = item.syncData;
   const hours = (h) => h * 60 * 60 * 1000;
   const days = (n) => n * 24 * 60 * 60 * 1000;
@@ -391,7 +399,7 @@ async function processSyncForItem(item, userId, encryptionKey, syncResults, queu
   }
 
   if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
-    return await syncTransactionsForItem(item._id, userId, encryptionKey);
+    return await syncTransactionsForItem(item._id, userId, encryptedKey);
   }
 
   const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);

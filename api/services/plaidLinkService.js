@@ -50,9 +50,10 @@ export function decryptAccessToken(dblEncryptedAccessToken, encryptedKey) {
   }
 }
 
-export async function savePlaidAccessData(accessData, req) {
+export async function savePlaidAccessData(accessData, encryptedKey) {
   try {
     const { access_token, item_id } = accessData;
+    const encryptionKey = decrypt(encryptedKey, 'buffer');
 
     const item = await plaidItems.update({ item_id }, {
       accessToken: access_token,
@@ -61,7 +62,7 @@ export async function savePlaidAccessData(accessData, req) {
         result: {},
         status: 'queued'
       },
-      req
+      encryptionKey
     });
 
     return { access_token, ...item };
@@ -74,6 +75,5 @@ export default {
   createLinkToken,
   exchangePublicToken,
   decryptAccessToken,
-  initPlaidClient,
   savePlaidAccessData
 };
