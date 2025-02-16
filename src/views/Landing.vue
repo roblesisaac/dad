@@ -34,10 +34,9 @@ const handleNavigation = () => {
 
 <style scoped>
 .landing-container {
-  min-height: 70vh;
-  border-bottom: 3px solid #000;
+  min-height: 100vh;
   display: flex;
-  align-items: center;
+  align-items: start;
   justify-content: center;
   padding: 1rem;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
@@ -46,6 +45,7 @@ const handleNavigation = () => {
 .content {
   text-align: center;
   max-width: 600px;
+  margin-top: 100px;
   padding: 2rem;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 1rem;
