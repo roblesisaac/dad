@@ -49,7 +49,5 @@ export function checkLoggedIn(req, res, next) {
     appMetadata: payload[`${audience}/app_metadata`] || {}
   };
 
-  console.log(req.user);
-
   next();
 }
