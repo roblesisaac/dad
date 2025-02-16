@@ -10,10 +10,10 @@
         @click="handleNavigation"
       >
         <component 
-          :is="isLoggedIn ? LayoutDashboard : LogIn"
+          :is="isAuthed ? LayoutDashboard : LogIn"
           class="icon"
         />
-        {{ isLoggedIn ? 'Go to Dashboard' : 'Login' }}
+        {{ isAuthed ? 'Go to Dashboard' : 'Login' }}
       </button>
     </div>
   </main>
@@ -25,10 +25,10 @@ import { useAuth } from '@/shared/composables/useAuth.js';
 import { LogIn, LayoutDashboard, ChartNoAxesCombined as LogoIcon } from 'lucide-vue-next';
 
 const router = useRouter();
-const { isLoggedIn } = useAuth();
+const { isAuthed } = useAuth();
 
 const handleNavigation = () => {
-  router.push(isLoggedIn.value ? '/dashboard' : '/login');
+  router.push(isAuthed.value ? '/dashboard' : '/login');
 };
 </script>
 
