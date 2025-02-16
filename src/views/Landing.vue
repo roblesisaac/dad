@@ -34,7 +34,8 @@ const handleNavigation = () => {
 
 <style scoped>
 .landing-container {
-  min-height: 100vh;
+  min-height: 70vh;
+  border-bottom: 3px solid #000;
   display: flex;
   align-items: center;
   justify-content: center;
