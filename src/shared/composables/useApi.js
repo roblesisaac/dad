@@ -41,12 +41,12 @@ export function useApi() {
 
   async function request(url, options = {}) {
     try {
-      const token = getToken();
+      // Wait for token
+      const token = await getToken();
       
-      // Ensure token is being added correctly
       const headers = {
         'Content-Type': 'application/json',
-        ...(token && { 'Authorization': token }) // Changed format here
+        ...(token && { 'Authorization': `Bearer ${token}` }) // Added Bearer prefix back
       };
 
       if (options.headers) {
