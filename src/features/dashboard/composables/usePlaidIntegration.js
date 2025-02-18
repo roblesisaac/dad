@@ -119,7 +119,7 @@ export function usePlaidIntegration() {
       state.loading = true;
       state.error = null;
       
-      const { data: linkToken } = await api.post('plaid/connect/link');
+      const linkToken = await api.post('plaid/connect/link');
       
       if (!linkToken) {
         throw new Error('No link token received from server');
