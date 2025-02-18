@@ -115,6 +115,13 @@
       <ItemRepair :state="state" :app="app" />
     </div>
   </Transition>
+
+  <!-- Show home view when no other view is active -->
+  <Transition>
+    <div v-if="state.is('home')" class="cell-1">
+      <!-- Your home view content -->
+    </div>
+  </Transition>
 </template>
 
 <script setup>
@@ -168,7 +175,10 @@
     },
     isLoading: true,
     is(view) {
-      return view === 'home' ? !state.views.length : state.views[state.views.length - 1] === view;
+      if (view === 'home') {
+        return this.views.length === 0;
+      }
+      return this.views[this.views.length - 1] === view;
     },
     isSmallScreen: () => State.currentScreenSize() === 'small',
     linkToken: null,
@@ -278,7 +288,6 @@
 
           await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
-          // Load tabs and rules first
           try {
             state.allUserTabs = await fetchUserTabs();       
             state.allUserRules = await fetchUserRules();
@@ -295,28 +304,25 @@
           } catch (error) {
             console.error('Account sync error:', error);
             
-            // Check both error.message and error.response.data
-            const errorMessage = error.response?.data?.message || error.message;
-            const errorCode = error.response?.data?.error;
+            // Get error details from response
+            const errorData = error.response?.data;
+            console.log('Error response data:', errorData); // Debug log
             
-            if (errorCode === 'NO_ITEMS' || errorMessage?.includes('No Plaid items found')) {
+            if (errorData?.error === 'NO_ITEMS') {
+              console.log('NO_ITEMS error detected, switching to ItemRepair view');
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
-              // Clear views and add ItemRepair
-              state.views.splice(0, state.views.length);
-              state.views.push('ItemRepair');
-              console.log('Views after update:', state.views);
-              return;
-            }
-
-            if (errorCode === 'ITEM_LOGIN_REQUIRED' || errorMessage?.includes('login required')) {
-              state.blueBar.message = 'Your bank connection needs to be updated.';
-              if (!state.views.includes('ItemRepair')) {
+              
+              // Force view update
+              state.views = [];
+              nextTick(() => {
                 state.views.push('ItemRepair');
-              }
+                console.log('Views after push:', state.views);
+              });
               return;
             }
 
+            // Handle other errors...
             state.blueBar.message = 'There was an error connecting to your accounts. Please try again.';
           }
         } catch (error) {
@@ -451,9 +457,13 @@
     app.handleGroupChange();
   });
   
-  watch(() => state.views, (newViews) => {
-    console.log('Views updated:', newViews);
-  }, { immediate: true });
+  watch(() => state.views, (newViews, oldViews) => {
+    console.log('Views changed:', { 
+      old: oldViews, 
+      new: newViews, 
+      currentView: state.is('ItemRepair') ? 'ItemRepair' : 'home' 
+    });
+  }, { deep: true, immediate: true });
 
   watch(() => state.views[state.views.length - 1], (newView, oldView) => {
     console.log('Current view changed:', { newView, oldView });

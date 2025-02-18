@@ -32,9 +32,11 @@ export default {
       const syncedData = await accountService.syncUserAccounts(req.user);
       res.json(syncedData);
     } catch (error) {
+      const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
+      
       res.status(400).json({ 
-        error: error.message.split(': ')[0] || 'SYNC_ERROR',
-        message: error.message.split(': ')[1] || error.message
+        error: errorCode,
+        message: errorMessage
       });
     }
   }
