@@ -306,21 +306,13 @@
             
             // Get error details from response
             const errorData = error.response?.data;
-            const errorStatus = error.response?.status;
-            
-            console.log('Error details:', { errorData, errorStatus });
 
             // Handle both 400 and 500 errors
             if (errorData?.error === 'NO_ITEMS' || errorData?.message?.includes('No Plaid items found')) {
-              console.log('NO_ITEMS error detected, switching to ItemRepair view');
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
               
-              // Force view update
-              state.views = [];
-              await nextTick();  // Wait for views array to update
               state.views.push('ItemRepair');
-              console.log('Views after update:', state.views);
               
               // Double check view update
               if (!state.is('ItemRepair')) {
@@ -465,17 +457,8 @@
 
     app.handleGroupChange();
   });
-  
-  watch(() => state.views, (newViews, oldViews) => {
-    console.log('Views changed:', { 
-      old: oldViews, 
-      new: newViews, 
-      currentView: state.is('ItemRepair') ? 'ItemRepair' : 'home' 
-    });
-  }, { deep: true, immediate: true });
 
   watch(() => state.views[state.views.length - 1], (newView, oldView) => {
-    console.log('Current view changed:', { newView, oldView });
     app.handleViewChange(newView, oldView);
   });
 
