@@ -302,8 +302,6 @@
             state.allUserGroups = groups?.sort(sortBy('sort')) || [];
 
           } catch (error) {
-            console.error('Account sync error:', error);
-            
             // Get error details from response
             const errorData = error.response?.data;
 
