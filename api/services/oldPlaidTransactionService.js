@@ -1,9 +1,9 @@
 import plaidTransactions from '../models/plaidTransactions.js';
 import plaidItems from '../models/plaidItems.js';
 import notify from '../utils/notify.js';
-import { decryptAccessToken } from './plaidLinkService.js';
-import { plaidClientInstance } from './plaidClient.js';
-import { isEmptyObject } from '../../src/utils';
+import { decryptAccessToken } from './oldPlaidLinkService.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
+import { isEmptyObject } from '../../src/utils.js';
 import { data } from '@ampt/data';
 import tasks from '../tasks/plaid.js';
 

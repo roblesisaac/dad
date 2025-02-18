@@ -3,7 +3,7 @@ import { data } from '@ampt/data';
 
 import plaidTransactions from '../models/plaidTransactions';
 import notify from '../utils/notify';
-import plaidTransactionService from '../services/plaidTransactionService.js';
+import plaidTransactionService from '../services/oldPlaidTransactionService.js';
 import { proper } from '../../src/utils';
 
 const { APP_NAME } = params().list();

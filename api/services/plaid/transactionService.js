@@ -2,7 +2,7 @@ import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
 import plaidItems from '../../models/plaidItems.js';
 import { linkService } from './index.js';
-import { plaidClientInstance } from '../plaidClient.js';
+import { plaidClientInstance } from '../oldPlaidClient.js';
 import { itemService } from './index.js';
 import notify from '../../utils/notify.js';
 

@@ -1,6 +1,6 @@
 import { decryptWithKey, decrypt } from '../utils/encryption.js';
 import plaidItems from '../models/plaidItems.js';
-import { plaidClientInstance } from './plaidClient.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
 
 export async function createLinkToken(user, itemId = null) {
   if (!user?._id) {

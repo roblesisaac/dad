@@ -4,7 +4,7 @@ import {
   plaidLinkService, 
   plaidAccountService, 
   plaidTransactionService 
-} from '../services/index.js';
+} from '../services/oldIndex.js';
 
 const plaidController = {
   connectLink: async (req, res) => {

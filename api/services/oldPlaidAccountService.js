@@ -1,8 +1,8 @@
 import plaidAccounts from '../models/plaidAccounts.js';
 import plaidGroups from '../models/plaidGroups.js';
 import plaidItems from '../models/plaidItems.js';
-import { decryptAccessToken } from './plaidLinkService.js';
-import { plaidClientInstance } from './plaidClient.js';
+import { decryptAccessToken } from './oldPlaidLinkService.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
 
 export async function syncUserAccounts(user) {
   if (!user?._id || !user?.encryptionKey) {

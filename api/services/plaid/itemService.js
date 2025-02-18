@@ -1,7 +1,7 @@
 import PlaidBaseService from './baseService';
 import plaidItems from '../../models/plaidItems';
 import { decryptAccessToken } from './linkService';
-import { plaidClientInstance } from '../plaidClient';
+import { plaidClientInstance } from '../oldPlaidClient';
 
 class PlaidItemService extends PlaidBaseService {
   async getItems(userId, itemId = null) {
