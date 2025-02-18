@@ -1,7 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
 import { linkService } from './index.js';
-import { plaidClientInstance } from '../oldPlaidClient.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
 
 class PlaidItemService extends PlaidBaseService {
   async getItems(userId, itemId = null) {

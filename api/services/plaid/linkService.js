@@ -1,7 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import { decrypt, decryptWithKey } from '../../utils/encryption.js';
 import plaidItems from '../../models/plaidItems.js';
-import { plaidClientInstance } from '../oldPlaidClient.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
 
 class PlaidLinkService extends PlaidBaseService {
   async createLinkToken(user, itemId = null) {

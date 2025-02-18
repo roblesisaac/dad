@@ -2,7 +2,7 @@ import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
 import { itemService, linkService } from './index.js';
-import { plaidClientInstance } from '../oldPlaidClient.js';
+import { plaidClientInstance } from './oldPlaidClient.js';
 
 class PlaidAccountService extends PlaidBaseService {
   async syncUserAccounts(user) {
@@ -74,7 +74,113 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  // ... other helper methods from your original plaidAccountService
+  async syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccounts, existingGroups, user) {
+    const synced = { accounts: [], groups: [] };
+
+    for (const retrievedAccount of retrievedAccountsFromPlaid) {
+      if (this.isAccountAlreadySaved(existingAccounts, retrievedAccount)) {
+        const updatedAccount = await this.updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
+        synced.accounts.push(updatedAccount);
+        continue;
+      }
+      const newSavedAccount = await plaidAccounts.save({ ...retrievedAccount, req: { user } });
+      synced.accounts.push(newSavedAccount);
+      synced.groups.push(await this.userGroupSave(user, newSavedAccount));
+    }
+
+    const updatedGroups = await this.updateExistingGroups(existingGroups, synced.accounts);
+    synced.groups = [...synced.groups, ...updatedGroups];
+
+    return synced;
+  }
+
+  async fetchUserAccounts(userId) {
+    const { items } = await plaidAccounts.find({
+      account_id: `*`,
+      userId
+    });
+    return items;
+  }
+
+  async updateAccount(account_id, userId, retrievedAccount) {
+    try {
+      return await plaidAccounts.update({ account_id, userId }, retrievedAccount);
+    } catch (error) {
+      throw new Error(`Error updating account: ${error.message}`);
+    }
+  }
+
+  async userGroupSave(user, retrievedAccount) {
+    try {
+      const { _id, account_id, mask, name, balances } = retrievedAccount;
+
+      const current = balances?.current || 0;
+      const available = balances?.available || 0;
+
+      return plaidGroups.save({
+        accounts: [
+          {
+            _id,
+            account_id,
+            mask,
+            name,
+            current: Number.isNaN(current) ? 0 : current,
+            available: Number.isNaN(available) ? 0 : available
+          }
+        ],
+        name: mask,
+        req: { user }
+      });
+    } catch (error) {
+      throw new Error(`Error saving user group: ${error.message}`);
+    }
+  }
+
+  async updateExistingGroups(existingGroups, updatedAccounts) {
+    const updatedGroups = [];
+    for (const group of existingGroups) {
+      const accounts = group.accounts.map(account => {
+        const updatedAccount = updatedAccounts.find(itm => itm.account_id === account.account_id);
+        if (!updatedAccount) return account;
+
+        const current = updatedAccount.balances?.current || 0;
+        const available = updatedAccount.balances?.available || 0;
+
+        return {
+          ...updatedAccount,
+          current: Number.isNaN(current) ? 0 : current,
+          available: Number.isNaN(available) ? 0 : available
+        };
+      });
+
+      const updatedGroup = await plaidGroups.update(group._id, { accounts });
+      updatedGroups.push(updatedGroup);
+    }
+    return updatedGroups;
+  }
+
+  isAccountAlreadySaved(existingUserAccounts, retrievedAccount) {
+    return existingUserAccounts.find(itm => itm.account_id === retrievedAccount.account_id);
+  }
+
+  async syncItems(userItems, user) {
+    let syncedItems = [];
+    const encryptedKey = user.encryptionKey;
+
+    for (const item of userItems) {
+      const access_token = linkService.decryptAccessToken(item.accessToken, encryptedKey);
+      try {
+        const response = await this.handleResponse(
+          this.client.itemGet({ access_token })
+        );
+        syncedItems.push(response.item);
+      } catch (error) {
+        console.error(`Error syncing item: ${error.message}`);
+      }
+    }
+    
+    return syncedItems;
+  }
 }
 
 export default new PlaidAccountService(plaidClientInstance); 
