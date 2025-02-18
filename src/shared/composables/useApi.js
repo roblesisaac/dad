@@ -1,102 +1,78 @@
 import { useAuth } from './useAuth';
+const API_URL = `${window.location.origin}/api`;
 import { useNotifications } from '@/shared/composables/useNotifications';
 
-const API_URL = `${window.location.origin}/api`;
-
 export function useApi() {
-  const { getToken, logout } = useAuth();
+  let data = null;
+  let loading = false;
+
+  const { getToken } = useAuth();
   const { notify } = useNotifications();
 
-  async function handleResponse(response) {
-    const data = await response.json();
+  async function request(method, url, body = null, settings = {}) {
+    loading = true;
 
-    if (!response.ok) {
-      let errorMessage = 'An unexpected error occurred';
-      
-      if (data?.error && data?.message) {
-        errorMessage = data.message;
-      } else if (response.status === 401) {
-        errorMessage = 'Please log in again';
-        logout();
-      } else if (response.status === 403) {
-        errorMessage = 'You don\'t have permission to perform this action';
-      } else if (response.status === 404) {
-        errorMessage = 'Resource not found';
-      } else if (response.status >= 500) {
-        errorMessage = 'Server error. Please try again later';
-      }
-
-      notify({
-        type: 'error',
-        message: errorMessage
-      });
-
-      const error = new Error(errorMessage);
-      error.response = { data, status: response.status };
-      throw error;
-    }
-
-    return data;
-  }
-
-  async function request(url, options = {}) {
+    const auth0Token = await getToken();
     try {
-      const token = getToken();
-      
-      // Ensure token is being added correctly
+      const baseUrl = settings.baseUrl || API_URL;
+      const normalizedBaseUrl = baseUrl.endsWith('/') ? baseUrl : baseUrl + '/';
+      const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
+
       const headers = {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': token }) // Changed format here
+        ...settings.headers
       };
 
-      if (options.headers) {
-        Object.assign(headers, options.headers);
+      // Only set Content-Type to application/json if body is not FormData
+      if (!(body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
       }
 
-      const response = await fetch(`${API_URL}/${url}`, {
-        ...options,
+      if (auth0Token) {
+        headers.Authorization = `Bearer ${auth0Token}`;
+      }
+
+      const response = await fetch(normalizedBaseUrl + normalizedUrl, {
+        method,
+        body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
         headers
       });
 
-      return await handleResponse(response);
-    } catch (error) {
-      if (!error.response) {
-        // Network error
-        notify({
-          type: 'error',
-          message: 'Unable to connect to server. Please check your internet connection.'
-        });
-        error.message = 'Unable to connect to server. Please check your internet connection.';
+      let responseData;
+      const contentType = response.headers.get('content-type');
+      
+      if (contentType && contentType.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        responseData = await response.text();
       }
+
+      if (!response.ok) {
+        const errorMessage = responseData?.message || responseData?.error || responseData || 'API Request Failed';
+        throw new Error(errorMessage);
+      }
+
+      data = responseData;
+      return responseData;
+    } catch (err) {
+      console.error('Request error:', err);
+      const error = err;
+      notify({
+        message: error.message,
+        type: 'ERROR'
+      });
       throw error;
+    } finally {
+      loading = false;
     }
   }
 
   return {
-    get: (url, config = {}) => 
-      request(url, { 
-        method: 'GET',
-        ...config 
-      }),
-
-    post: (url, data, config = {}) => 
-      request(url, {
-        method: 'POST',
-        body: JSON.stringify(data),
-        ...config
-      }),
-
-    put: (url, data, config = {}) => 
-      request(url, {
-        method: 'PUT',
-        body: JSON.stringify(data),
-        ...config
-      }),
-
-    delete: (url, config = {}) => 
-      request(url, {
-        method: 'DELETE',
-        ...config
-      })
+    data,
+    loading,
+    get: (url, settings) => request('GET', url, null, settings),
+    post: (url, body, settings) => request('POST', url, body, settings),
+    put: (url, body, settings) => request('PUT', url, body, settings),
+    patch: (url, body, settings) => request('PATCH', url, body, settings),
+    remove: (url, body, settings) => request('DELETE', url, body, settings)
   };
 }
