@@ -10,25 +10,45 @@ class UserService {
     this.audience = VITE_ZERO_AUDIENCE;
   }
 
+  validateManagementToken() {
+    const token = process.env.AUTH0_MGMT_TOKEN;
+    if (!token) {
+      throw new Error('AUTH0_MGMT_TOKEN is not set in environment variables');
+    }
+    return token;
+  }
+
   async updateUserMetadata(userId, metadata) {
     try {
+      const token = this.validateManagementToken();
+      console.log('Using domain:', this.domain);
+      
       const response = await fetch(`https://${this.domain}/api/v2/users/${userId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.AUTH0_MGMT_TOKEN}`
+          'Authorization': `Bearer ${token}`,
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify({
           user_metadata: metadata
         })
       });
 
+      const responseText = await response.text();
+      console.log('Auth0 Response:', response.status, responseText);
+
       if (!response.ok) {
-        const error = await response.json();
+        let error;
+        try {
+          error = JSON.parse(responseText);
+        } catch {
+          error = { message: responseText };
+        }
         throw new Error(`Auth0 API Error: ${error.message || error.error_description || 'Unknown error'} (${response.status})`);
       }
 
-      return await response.json();
+      return JSON.parse(responseText);
     } catch (error) {
       console.error('Full Auth0 error:', error);
       throw new Error(`Failed to update user metadata: ${error.message}`);
