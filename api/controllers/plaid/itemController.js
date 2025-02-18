@@ -34,7 +34,16 @@ export default {
       const syncedData = await accountService.syncUserAccounts(req.user);
       res.json(syncedData);
     } catch (error) {
+      // Always return 400 for expected errors
       const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
+      
+      // Log the error for debugging
+      console.error('Sync accounts error:', {
+        code: errorCode,
+        message: errorMessage,
+        originalError: error
+      });
+
       res.status(400).json({ 
         error: errorCode,
         message: errorMessage

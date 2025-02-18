@@ -40,10 +40,11 @@ class PlaidAccountService extends PlaidBaseService {
         user
       );
     } catch (error) {
-      if (error.error_code) {
-        throw error;
-      }
-      throw new Error(`SYNC_ERROR: ${error.message}`);
+      // Ensure error is properly formatted
+      const formattedError = new Error(
+        error.message.includes(':') ? error.message : `SYNC_ERROR: ${error.message}`
+      );
+      throw formattedError;
     }
   }
 

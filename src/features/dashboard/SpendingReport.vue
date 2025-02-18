@@ -303,27 +303,36 @@
 
           } catch (error) {
             console.error('Account sync error:', error);
-            console.log('Error details:', {
-              response: error.response,
-              message: error.message
-            });
             
+            // Get error details from response
             const errorData = error.response?.data;
+            const errorStatus = error.response?.status;
             
-            if (errorData?.error === 'NO_ITEMS') {
+            console.log('Error details:', { errorData, errorStatus });
+
+            // Handle both 400 and 500 errors
+            if (errorData?.error === 'NO_ITEMS' || errorData?.message?.includes('No Plaid items found')) {
               console.log('NO_ITEMS error detected, switching to ItemRepair view');
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
               
               // Force view update
               state.views = [];
+              await nextTick();  // Wait for views array to update
               state.views.push('ItemRepair');
               console.log('Views after update:', state.views);
+              
+              // Double check view update
+              if (!state.is('ItemRepair')) {
+                console.warn('View not updated correctly, forcing update');
+                state.views = ['ItemRepair'];
+              }
               return;
             }
 
-            // Handle other errors...
+            // Handle other errors
             state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';
+            state.blueBar.loading = false;
           }
         } catch (error) {
           console.error('Init error:', error);
