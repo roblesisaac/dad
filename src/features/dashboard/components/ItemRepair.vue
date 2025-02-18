@@ -243,7 +243,7 @@ onMounted(async () => {
 .primary-button {
   padding: 1rem 2rem;
   font-size: 1.2rem;
-  background: var(--primary);
+  background: black;
   color: white;
   border: none;
   border-radius: 8px;
