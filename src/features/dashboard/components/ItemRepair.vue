@@ -157,6 +157,7 @@ const app = function() {
     },
     connectBank: async () => {
       try {
+        console.log('Connecting bank');
         itemState.isRepairing = true;
         itemState.error = null;
         
