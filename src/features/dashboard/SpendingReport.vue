@@ -177,8 +177,8 @@
     },
     isLoading: true,
     is(view) {
-      const views = Array.isArray(view) ? view : [view];
-      return views.includes(state.view);
+      if (!state.views.length && view === 'home') return true;
+      return state.views.includes(view);
     },
     isSmallScreen: () => State.currentScreenSize() === 'small',
     linkToken: null,
@@ -294,53 +294,31 @@
             state.allUserRules = await fetchUserRules();
           } catch (error) {
             console.error('Error fetching tabs/rules:', error);
-            // Non-critical error, continue loading
           }
           
-          // Main accounts sync
           try {
             const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
             
-            // Process successful response
             state.allUserAccounts = accounts;
             state.allUserGroups = groups?.sort(sortBy('sort')) || [];
-
-            // Sync transactions if everything else is good
-            try {
-              const { syncResults } = await api.get('/plaid/sync/all/transactions');
-              state.blueBar.message = 'Sync complete!';
-              state.blueBar.loading = false;
-              
-              setTimeout(() => {
-                state.blueBar.message = false;
-              }, 3000);
-
-              app.checkSyncStatus();
-            } catch (syncError) {
-              console.error('Transaction sync error:', syncError);
-              state.blueBar.message = 'Connected successfully, but there was an error syncing transactions. Please try refreshing.';
-            }
 
           } catch (error) {
             console.error('Account sync error:', error);
             
-            // Handle specific error cases
-            if (error.message?.includes('NO_ITEMS')) {
+            // Check both error.message and error.response.data
+            const errorMessage = error.response?.data?.message || error.message;
+            const errorCode = error.response?.data?.error;
+            
+            if (errorCode === 'NO_ITEMS' || errorMessage?.includes('No Plaid items found')) {
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
-              // Clear views array and add ItemRepair
-              state.views.length = 0;
-              state.views.push('ItemRepair');
-              // Force view update
-              nextTick(() => {
-                if (!state.views.includes('ItemRepair')) {
-                  state.views.push('ItemRepair');
-                }
-              });
+              // Replace all views with ItemRepair
+              state.views = ['ItemRepair'];
+              console.log('Setting view to ItemRepair:', state.views);
               return;
             }
 
-            if (error.message?.includes('ITEM_LOGIN_REQUIRED')) {
+            if (errorCode === 'ITEM_LOGIN_REQUIRED' || errorMessage?.includes('login required')) {
               state.blueBar.message = 'Your bank connection needs to be updated.';
               if (!state.views.includes('ItemRepair')) {
                 state.views.push('ItemRepair');
@@ -348,7 +326,6 @@
               return;
             }
 
-            // Handle other specific errors...
             state.blueBar.message = 'There was an error connecting to your accounts. Please try again.';
           }
         } catch (error) {

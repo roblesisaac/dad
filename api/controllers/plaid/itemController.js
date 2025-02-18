@@ -33,8 +33,8 @@ export default {
       res.json(syncedData);
     } catch (error) {
       res.status(400).json({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] 
+        error: error.message.split(': ')[0] || 'SYNC_ERROR',
+        message: error.message.split(': ')[1] || error.message
       });
     }
   }
