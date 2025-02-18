@@ -56,7 +56,7 @@
 </template>
 
 <script setup>
-import { reactive, onMounted, toRefs } from 'vue';
+import { reactive, onMounted } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
 
 const api = useApi();
