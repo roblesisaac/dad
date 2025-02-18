@@ -24,6 +24,12 @@ export function usePlaidIntegration() {
   }
 
   function createPlaidLink(token, onSuccess) {
+    if (!token) {
+      console.error('No token provided to createPlaidLink');
+      state.error = 'Configuration error. Please contact support.';
+      return null;
+    }
+
     return Plaid.create({
       token,
       onSuccess: async function(publicToken) {
@@ -31,27 +37,40 @@ export function usePlaidIntegration() {
           state.isRepairing = true;
           state.error = null;
           
-          await api.post('plaid/exchange/token', { publicToken });
+          const response = await api.post('plaid/exchange/token', { 
+            publicToken,
+            // Add any additional required data here
+          });
+          
+          if (response.error) {
+            throw new Error(response.error);
+          }
           
           if (onSuccess) {
             await onSuccess();
           }
           
-          // Refresh the items list
           await syncItems();
         } catch (error) {
-          state.error = 'Failed to complete reconnection. Please try again.';
-          console.error('Error completing repair:', error);
+          console.error('Error completing connection:', error);
+          state.error = 'Failed to complete connection. Please try again.';
         } finally {
           state.isRepairing = false;
         }
       },
       onExit: function(err, metadata) {
         state.isRepairing = false;
-        if (err) {
+        if (err != null) {
+          // Handle exit errors
           state.error = 'Connection process was interrupted. Please try again.';
+          console.error('Link exit error:', err, metadata);
+        } else if (metadata.status === 'requires_credentials') {
+          state.error = null; // User closed modal, no error needed
         }
-        console.log('Link exit:', { err, metadata });
+      },
+      onEvent: function(eventName, metadata) {
+        // Log events for debugging
+        console.log('Link event:', eventName, metadata);
       },
     });
   }
@@ -100,12 +119,31 @@ export function usePlaidIntegration() {
       state.loading = true;
       state.error = null;
       
-      const linkToken = await api.post('plaid/connect/link');
-      const link = createPlaidLink(linkToken);
+      const { data: linkToken } = await api.post('plaid/connect/link');
+      
+      if (!linkToken) {
+        throw new Error('No link token received from server');
+      }
+
+      const link = createPlaidLink(linkToken, async () => {
+        // Optional callback after successful connection
+        await syncItems();
+      });
+
       link.open();
     } catch (error) {
-      state.error = 'Failed to start connection process. Please try again.';
       console.error('Connection initiation error:', error);
+      
+      // Handle different types of errors
+      if (error.response?.data?.error === 'PLAID_ERROR') {
+        state.error = 'Unable to connect to banking services. Please try again later.';
+      } else if (error.response?.status === 400) {
+        state.error = error.response.data.message || 'Invalid request. Please try again.';
+      } else if (error.message === 'No link token received from server') {
+        state.error = 'Server configuration error. Please contact support.';
+      } else {
+        state.error = 'Failed to start connection process. Please try again.';
+      }
     } finally {
       state.loading = false;
     }
