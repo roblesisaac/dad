@@ -6,8 +6,7 @@ const itemSchema = {
     set: (_, { req }) => req.user._id
   },
   accessToken: { 
-    set: (accessToken, { req }) => {
-      const { encryptionKey } = req.user;
+    set: (accessToken, { encryptionKey }) => {
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
 
       return encrypt(userEncryptedKey);

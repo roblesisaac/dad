@@ -1,7 +1,7 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-  <div v-if="state.blueBar.message" class="grid">
+  <div v-if="state.blueBar.message" class="x-grid">
     <div class="cell-1 p10l blue-bar bold">
       <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
     </div>
@@ -16,11 +16,11 @@
   </Transition>
 
   <!-- Small Screens -->
-  <div v-if="state.isSmallScreen() && state.is('home')" class="grid middle">
+  <div v-if="state.isSmallScreen() && state.is('home')" class="x-grid middle">
     
     <!-- Selected Group + Date -->
     <div class="cell-1 dateRow b-bottom">
-      <div class="grid middle">
+      <div class="x-grid middle">
 
         <!-- Group Selector Button -->
         <ShowSelectGroupButton class="cell-8-24 b-right" :state="state" />
@@ -50,7 +50,7 @@
   </div>
 
   <!-- Not Small Screens -->
-  <div v-if="!state.isSmallScreen() && state.is('home')" class="grid">
+  <div v-if="!state.isSmallScreen() && state.is('home')" class="x-grid">
 
     <!-- Left Side: Account and Date Selector -->
     <div id="leftPanel" class="cell-2-5 b-right panel">
@@ -102,13 +102,6 @@
     <RuleDetails v-if="state.is('RuleDetails')" :ruleConfig="state.editingRule" :state="state" />
   </Transition>
 
-    <!-- Edit Group -->
-  <Transition>
-    <div v-if="state.is('EditGroup')" class="cell-1">
-      <EditGroup :state="state" />
-    </div>
-  </Transition>
-
   <!-- AllTabs -->
   <Transition>
     <div v-if="state.is('AllTabs')" class="cell-1">
@@ -126,18 +119,15 @@
 
 <script setup>
   import { computed, nextTick, onMounted, reactive, watch } from 'vue';
-  import AllTabs from '@/components/AllTabs.vue';
+  import AllTabs from '@/features/tabs/components/AllTabs.vue';
   import { ChevronLeft } from 'lucide-vue-next';
 
   // Components
-  import EditGroup from './components/EditGroup.vue'; 
   import RuleDetails from './components/RuleDetails.vue';
   import SelectedItems from './components/SelectedItems.vue';
-  import SelectGroup from './components/SelectGroup.vue';
   import LoadingDots from '@/shared/components/LoadingDots.vue';
   import ItemRepair from './components/ItemRepair.vue';
   import DatePickers from './components/DatePickers.vue';
-  import EditTab from './components/EditTab.vue';
   import CategoriesWrapper from './components/CategoriesWrapper.vue';
   import ShowSelectGroupButton from './components/ShowSelectGroupButton.vue';
   import ScrollingTabButtons from './components/ScrollingTabButtons.vue';
@@ -148,8 +138,12 @@
   import { useSyncStatus } from './composables/useSyncStatus';
   import loadScript from '@/shared/utils/loadScript';
   import { useUtils } from './composables/useUtils';
+  import { SelectGroup } from '@/features/select-group';
+  import { EditTab } from '@/features/edit-tab';
+  import { useApi } from '@/shared/composables/useApi';
 
-  const { api, State, stickify } = useAppStore();
+  const { State, stickify } = useAppStore();
+  const api = useApi();
 
   // First define state
   const state = reactive({
@@ -207,7 +201,6 @@
       tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected) ),
       transaction: false
     },
-    showStayLoggedIn: false,
     syncCheckId: false,
     views: ['home'],
     view: computed(() => state.views[state.views.length -1])
@@ -261,10 +254,10 @@
 
         if(selectedTab) {
           selectedTab.isSelected = false;
-          api.put(`api/tabs/${selectedTab._id}`, { isSelected: false });
+          api.put(`tabs/${selectedTab._id}`, { isSelected: false });
         }
 
-        const newTab = await api.post('api/tabs', {
+        const newTab = await api.post('tabs', {
           tabName,
           showForGroup: [selectedGroup._id],
           isSelected: true,
@@ -279,39 +272,108 @@
         if(state.views.length > 1) state.views.pop();
       },
       init: async () => {
-        // Use composable methods
-        state.blueBar.message = 'Beginning sync';
-        state.blueBar.loading = true;
+        try {
+          state.blueBar.message = 'Beginning sync';
+          state.blueBar.loading = true;
 
-        await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
+          await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
-        state.allUserTabs = await fetchUserTabs();          
-        state.allUserRules = await fetchUserRules();
-        
-        const { groups, accounts } = await api.get('api/plaid/sync/accounts/and/groups');
-
-        if(!groups.length) {
-          state.views.push('SelectGroup');
-        }
-
-        state.allUserAccounts = accounts;
-        state.allUserGroups = groups.sort(sortBy('sort'));
-
-        let added = [], removed = [];
-        const { syncResults } = await api.get('api/plaid/sync/all/transactions');
-        
-
-        for(const syncedItem of syncResults) {
-          if(!Array.isArray(syncedItem.added)) {
-            continue;
+          // Load tabs and rules first
+          try {
+            state.allUserTabs = await fetchUserTabs();       
+            state.allUserRules = await fetchUserRules();
+          } catch (error) {
+            console.error('Error fetching tabs/rules:', error);
+            // Non-critical error, continue loading
           }
+          
+          // Main accounts sync
+          try {
+            const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
+            
+            // Handle the response based on error types
+            if (!groups || !accounts) {
+              throw new Error('Invalid response from server');
+            }
 
-          added = [...added, ...syncedItem.added];
-          removed = [...removed, ...syncedItem.removed];
+            // Process successful response
+            state.allUserAccounts = accounts;
+            state.allUserGroups = groups.sort(sortBy('sort'));
+
+            if (!groups.length) {
+              state.views.push('SelectGroup');
+              return;
+            }
+
+            // Sync transactions
+            try {
+              const { syncResults } = await api.get('/plaid/sync/all/transactions');
+              
+              let added = [], removed = [];
+              for(const syncedItem of syncResults) {
+                if(!Array.isArray(syncedItem.added)) {
+                  continue;
+                }
+                added = [...added, ...syncedItem.added];
+                removed = [...removed, ...syncedItem.removed];
+              }
+              
+              await app.handleGroupChange();
+              app.checkSyncStatus();
+            } catch (syncError) {
+              console.error('Transaction sync error:', syncError);
+              state.blueBar.message = 'Connected successfully, but there was an error syncing transactions. Please try refreshing.';
+            }
+
+          } catch (error) {
+            console.error('Account sync error:', error);
+            
+            // Handle API error responses
+            if (error.response?.data) {
+              const { error: errorCode, message } = error.response.data;
+              
+              switch (errorCode) {
+                case 'AUTH_ERROR':
+                  state.blueBar.message = 'Authentication error. Please try logging in again.';
+                  // Could redirect to login here if needed
+                  return;
+
+                case 'ITEM_ERROR':
+                case 'ITEM_LOGIN_REQUIRED':
+                  state.blueBar.message = message || 'Your accounts need to be reconnected';
+                  state.views.push('ItemRepair');
+                  return;
+                  
+                case 'NO_GROUPS':
+                  state.blueBar.message = message || 'Please set up your account groups';
+                  state.views.push('SelectGroup');
+                  return;
+
+                case 'SYNC_ERROR':
+                  state.blueBar.message = message || 'Error syncing accounts. Please try again.';
+                  return;
+                  
+                case 'SERVER_ERROR':
+                  state.blueBar.message = 'Server error. Please try again later.';
+                  return;
+
+                default:
+                  state.blueBar.message = message || 'There was an error connecting to your accounts';
+              }
+            } else if (error.response?.status === 500) {
+              state.blueBar.message = 'Server error. Please try again later.';
+            } else if (error.message?.includes('Network Error')) {
+              state.blueBar.message = 'Unable to connect to server. Please check your internet connection.';
+            } else {
+              state.blueBar.message = 'Error connecting to accounts. Please try again.';
+            }
+          }
+        } catch (error) {
+          console.error('Init error:', error);
+          state.blueBar.message = 'Unable to initialize application. Please refresh the page.';
+        } finally {
+          state.blueBar.loading = false;
         }
-        
-        await app.handleGroupChange();
-        app.checkSyncStatus();
       },
       handleGroupChange: async () => {
         let selectedGroup = state.selected.group;

@@ -1,8 +1,8 @@
 <template>
-  <div class="grid middle left p30">
+  <div class="x-grid middle left p30">
     <!-- Rule Rendered -->
     <div class="cell-1 p30b">      
-      <div class="grid">
+      <div class="x-grid">
         <h4 class="proper">{{ ruleType }}</h4>
         <div class="cell-1">
           <EditRule :ruleConfig="props.ruleConfig" :state="props.state" />
@@ -12,7 +12,7 @@
 
     <!-- Tabs -->
     <div class="cell-1">
-      <div class="grid">
+      <div class="x-grid">
 
         <div class="cell-1">
           <b>Tabs Shared With:</b>
@@ -41,7 +41,7 @@
 
     <!-- Make Global-->
     <div class="cell-1 p30b">
-      <div class="grid">
+      <div class="x-grid">
         <div class="cell shrink bold p20r">Global?</div>
         <div class="cell auto"><Switch v-model="isGlobal" /></div>
       </div>
@@ -59,11 +59,11 @@ import { computed, nextTick, ref, watch } from 'vue';
 import Switch from '@/shared/components/Switch.vue';
 import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 import Draggable from 'vuedraggable';
-import EditRule from './EditRule.vue';
+import EditRule from '@/features/edit-tab/components/EditRule.vue';
 
-import { useAppStore } from '@/stores/state';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const api = useApi();
 
 const props = defineProps({
   ruleConfig: Object,
@@ -86,7 +86,7 @@ function removeRule() {
   const { _id } = props.ruleConfig;
   const ruleIndex = props.state.allUserRules.findIndex(rule => rule._id === _id);
 
-  api.delete(`api/rules/${_id}`);
+  api.delete(`rules/${_id}`);
 
   nextTick(() => {
     props.state.views.pop();
@@ -98,7 +98,7 @@ function removeRule() {
 function updateRule() {
   const { _id } = props.ruleConfig;
 
-  api.put(`api/rules/${_id}`, {
+  api.put(`rules/${_id}`, {
     applyForTabs: props.ruleConfig.applyForTabs
   });
 }

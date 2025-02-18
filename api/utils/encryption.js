@@ -44,13 +44,7 @@ export function decryptWithKey(encryptedData, key) {
 
     return decryptedData;
   } catch (error) {
-    console.error({
-      decryptError: true,
-      errorMessage: error.message,
-      encryptedData,
-      error,
-      key
-    });
+    throw error;
   }
 }
 

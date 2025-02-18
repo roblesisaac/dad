@@ -121,10 +121,6 @@ legend {
   display: inline-block;
 }
 
-nav a:before {
-  content: '​';
-}
-
 @media (prefers-color-scheme: light) {
   :root {
     color: #213547;

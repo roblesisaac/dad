@@ -14,7 +14,7 @@ describe('users model', () => {
       views: []
     });
 
-    expect(newUser._id).toBeDefined();
+    expect(newuser._id).toBeDefined();
   }, 1000*40);
 
   test('Save new user works without password', async () => {
@@ -24,7 +24,7 @@ describe('users model', () => {
       views: []
     });
 
-    expect(newUser._id).toBeDefined();
+    expect(newuser._id).toBeDefined();
 
     const { removed } = await Users.eraseUser('testemails@gmail.com');
 

@@ -43,14 +43,14 @@
     width: 100%;
 }
 
-.grid.top {
+.x-grid.top {
     align-items: start;
 }
 
-.grid.middle {
+.x-grid.middle {
     align-items: center;
 }
-.grid.bottom {
+.x-grid.bottom {
     align-items: end;
 }
 

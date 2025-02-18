@@ -1,5 +1,5 @@
 <template>
-	<div class="grid">
+	<div class="x-grid">
 		<div class="cell-1 p30">
 			<section>
 				<h2>Encryption in Transit</h2>
@@ -51,14 +51,14 @@
 
 <script setup>
 import { ref } from 'vue';
-import { useAppStore } from '@/stores/state';
-const { api } = useAppStore();
+import { useApi } from '@/shared/composables/useApi';
+const api = useApi();
 
 const supportEmail = ref('');
 
 async function fetchSupportEmail() {
 	try {
-		const { email } = await api.get('api/sites');
+		const { email } = await api.get('sites');
 		supportEmail.value = email;
 	} catch (error) {
 		console.error('Error fetching support email:', error);

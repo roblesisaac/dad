@@ -1,35 +1,12 @@
-import { Configuration, PlaidApi, PlaidEnvironments } from 'plaid';
-import { params } from '@ampt/sdk';
 import { decryptWithKey, decrypt } from '../utils/encryption.js';
 import plaidItems from '../models/plaidItems.js';
-
-const {
-  PLAID_CLIENT_ID,
-  PLAID_SECRET_PROD,
-  PLAID_SECRET_SANDBOX,
-  ENV_NAME
-} = params().list();
-
-function initPlaidClient() {
-  const environment = ENV_NAME === 'prod' ? 'production' : 'sandbox';
-
-  const config = new Configuration({
-    basePath: PlaidEnvironments[environment],
-    baseOptions: {
-      headers: {
-        'PLAID-CLIENT-ID': PLAID_CLIENT_ID,
-        'PLAID-SECRET': environment === 'production' ? PLAID_SECRET_PROD : PLAID_SECRET_SANDBOX,
-        'Plaid-Version': '2020-09-14',
-      },
-    },
-  });
-
-  return new PlaidApi(config);
-}
-
-const plaidClientInstance = initPlaidClient();
+import { plaidClientInstance } from './plaidClient.js';
 
 export async function createLinkToken(user, itemId = null) {
+  if (!user?._id) {
+    throw new Error('INVALID_USER: User ID is required');
+  }
+
   const request = {
     user: { client_user_id: user._id },
     client_name: 'TrackTabs',
@@ -39,18 +16,24 @@ export async function createLinkToken(user, itemId = null) {
   };
 
   if (itemId) {
-    const item = await plaidItems.findOne({ userId: user._id, itemId });
-    const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
-
-    delete request.products;
-    request.access_token = access_token;
+    try {
+      const item = await plaidItems.findOne({ userId: user._id, itemId });
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Invalid item ID');
+      }
+      const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+      delete request.products;
+      request.access_token = access_token;
+    } catch (error) {
+      throw new Error(`ITEM_ACCESS_ERROR: ${error.message}`);
+    }
   }
 
   try {
     const plaidLinkData = await plaidClientInstance.linkTokenCreate(request);
     return plaidLinkData.data;
   } catch (error) {
-    throw new Error(`Error creating link token: ${error.message}`);
+    throw new Error(`LINK_TOKEN_ERROR: ${error.message}`);
   }
 }
 
@@ -65,27 +48,33 @@ export async function exchangePublicToken(publicToken) {
   }
 }
 
-export function decryptAccessToken(accessToken, encryptionKey) {
+export function decryptAccessToken(dblEncryptedAccessToken, encryptedKey) {
+  if (!dblEncryptedAccessToken || !encryptedKey) {
+    throw new Error('DECRYPT_ERROR: Missing required encryption data');
+  }
+
   try {
-    accessToken = decrypt(accessToken);
-    return decryptWithKey(accessToken, encryptionKey);
+    const encryptedAccessToken = decrypt(dblEncryptedAccessToken);
+    const key = decrypt(encryptedKey, 'buffer');
+    return decryptWithKey(encryptedAccessToken, key);
   } catch (error) {
-    throw new Error(`Error decrypting access token: ${error.message}`);
+    throw new Error(`DECRYPT_ERROR: Failed to decrypt access token - ${error.message}`);
   }
 }
 
-export async function savePlaidAccessData(accessData, req) {
+export async function savePlaidAccessData(accessData, encryptedKey) {
   try {
     const { access_token, item_id } = accessData;
+    const encryptionKey = decrypt(encryptedKey, 'buffer');
 
-    const item = await plaidItems.save({
+    const item = await plaidItems.update({ item_id }, {
       accessToken: access_token,
       itemId: item_id,
       syncData: {
         result: {},
         status: 'queued'
       },
-      req
+      encryptionKey
     });
 
     return { access_token, ...item };
@@ -98,6 +87,5 @@ export default {
   createLinkToken,
   exchangePublicToken,
   decryptAccessToken,
-  initPlaidClient,
   savePlaidAccessData
-}; 
+};

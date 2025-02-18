@@ -1,17 +1,15 @@
 <template>
-    <div class="grid p30">
+    <div class="x-grid p30">
         <VerifyForm />
     </div>
 </template>
 
 <script setup>
     import { onMounted } from 'vue';
-    import VerifyForm from '@/components/VerifyForm.vue';
-
-    const baseUrl = '/api';
+    import VerifyForm from '@/shared/components/VerifyForm.vue';
 
     onMounted(async () => {
-        const checkAuth = await fetch(baseUrl+'/login/check/auth');
+        const checkAuth = await fetch('/login/check/auth');
         const user = await checkAuth.json();
 
         if(!user.isLoggedIn) {

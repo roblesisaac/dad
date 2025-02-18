@@ -1,19 +1,12 @@
 import { http } from '@ampt/sdk';
 import { Router } from 'express';
 
-import address from './address';
-import auth from './auth';
 // import db from './db';
 import groups from './groups';
-import mongo from './mongo';
-import messages from './messages';
-import pages from './pages';
 import plaid from './plaid';
 import rules from './rules';
-import sites from './sites';
 import tabs from './tabs';
 import transactions from './transactions';
-import users from './users';
 
 export default (app) => {
     const api = Router();
@@ -25,18 +18,11 @@ export default (app) => {
 
     // Api routes
     [
-        address,
-        auth,
         groups,
-        mongo,
-        messages,
-        sites,
-        pages,
         plaid,
         rules,
         tabs,
         transactions,
-        users,
         // db
     ].forEach(route => route(api, '/api'));
 

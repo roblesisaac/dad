@@ -1,33 +1,14 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { authGuard } from '@auth0/auth0-vue'
 
-const LoginView = () => import('@/components/LoginView.vue')
-const CallbackView = () => import('@/components/CallbackView.vue')
-const IndexVue = () => import('@/views/IndexVue.vue')
-const LoginVue = () => import('@/views/LoginVue.vue')
+const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
-const RecoverVue = () => import('@/views/RecoverVue.vue')
-const SettingsVue = () => import('@/views/SettingsVue.vue')
 const SwiperVue = () => import('@/views/SwiperVue.vue')
 const TermsOfService = () => import('@/views/TermsOfService.vue')
-const VerifyVue = () => import('@/views/VerifyVue.vue')
 const SpendingReport = () => import('@/features/dashboard/SpendingReport.vue')
+const Landing = () => import('@/views/Landing.vue')
 
 const routes = [
-  {
-    path: '/',
-    name: 'index',
-    component: IndexVue
-  },
-  {
-    path: '/login',
-    name: 'login',
-    component: LoginVue
-  },
-  {
-    path: '/auth/login',
-    name: 'auth-login',
-    component: LoginView
-  },
   {
     path: '/callback',
     name: 'callback',
@@ -37,16 +18,6 @@ const routes = [
     path: '/privacy',
     name: 'privacy',
     component: PrivacyPolicy
-  },
-  {
-    path: '/recover',
-    name: 'recover',
-    component: RecoverVue
-  },
-  {
-    path: '/settings',
-    name: 'settings',
-    component: SettingsVue
   },
   {
     path: '/swiper',
@@ -59,14 +30,15 @@ const routes = [
     component: TermsOfService
   },
   {
-    path: '/verify',
-    name: 'verify',
-    component: VerifyVue
+    path: '/spending-report',
+    name: 'spending report',
+    component: SpendingReport,
+    beforeEnter: authGuard
   },
   {
-    path: '/spendingreport',
-    name: 'spending-report',
-    component: SpendingReport
+    path: '/',
+    name: 'landing',
+    component: Landing
   }
 ]
 

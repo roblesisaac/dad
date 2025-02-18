@@ -1,7 +1,5 @@
 import plaidTransactions from '../models/plaidTransactions.js';
 import plaidItems from '../models/plaidItems.js';
-import Users from '../models/users.js';
-import Sites from '../models/sites.js';
 import notify from '../utils/notify.js';
 import { decryptAccessToken } from './plaidLinkService.js';
 import { plaidClientInstance } from './plaidClient.js';
@@ -10,49 +8,80 @@ import { data } from '@ampt/data';
 import tasks from '../tasks/plaid.js';
 
 // Main export functions
-export async function syncTransactionsForItem(item, userId) {
+export async function syncTransactionsForItem(item, userId, encryptedKey) {
+  if (!userId || !encryptedKey) {
+    throw new Error('INVALID_USER: Missing required user data');
+  }
+
   try {
     if (typeof item === 'string') {
       item = await plaidItems.findOne(item);
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Invalid item ID');
+      }
     }
 
     const { accessToken, syncData } = item;
     
     if (['in_progress'].includes(syncData.status)) {
-      return { itemsAlreadySyncing: item._id };
+      return { 
+        error: 'SYNC_IN_PROGRESS',
+        message: 'Sync already in progress for this item',
+        itemId: item._id 
+      };
     }
 
     const nextSyncData = initializeNextSyncData(userId, syncData);
     await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'in_progress' });
 
-    const user = await Users.findOne(userId);
-    const access_token = decryptAccessToken(accessToken, user.encryptionKey);
+    try {
+      const access_token = decryptAccessToken(accessToken, encryptedKey);
+      const response = await fetchTransactionsFromPlaid({ 
+        access_token, 
+        cursor: syncData.cursor, 
+        startTime: nextSyncData.lastSyncTime 
+      });
 
-    const response = await fetchTransactionsFromPlaid({ 
-      access_token, 
-      cursor: syncData.cursor, 
-      startTime: nextSyncData.lastSyncTime 
-    });
+      if (response.error_code) {
+        throw {
+          error_code: response.error_code,
+          error_message: response.error_message
+        };
+      }
 
-    return await processTransactionSync(response, item, user, nextSyncData);
+      return await processTransactionSync(response, item, userId, nextSyncData);
+    } catch (error) {
+      // Update sync status to failed and include error details
+      await updatePlaidItemSyncData(item._id, {
+        ...nextSyncData,
+        status: 'failed',
+        result: {
+          error: error.error_code || 'SYNC_ERROR',
+          errorMessage: error.error_message || error.message
+        }
+      });
+      throw error;
+    }
   } catch (error) {
     console.error('Error in syncTransactionsForItem:', error);
-    throw new Error(`Failed to sync transactions: ${error.message}`);
+    throw error.error_code ? error : new Error(`SYNC_ERROR: ${error.message}`);
   }
 }
 
 export async function syncAllUserTransactions(user) {
-  const items = await plaidItems.findAll({ itemId: '*', userId: user._id });
+  const userId = user._id;
+  const encryptedKey = user.encryptionKey;
+  const items = await plaidItems.findAll({ itemId: '*', userId });
   const syncResults = [];
   const queuedItems = [];
 
   for (const item of items) {
-    const result = await processSyncForItem(item, user, syncResults, queuedItems);
+    const result = await processSyncForItem(item, userId, encryptedKey, syncResults, queuedItems);
     if (result) syncResults.push(result);
   }
 
   if (queuedItems.length > 0) {
-    await tasks.syncTransactionsForItems(queuedItems, user._id);
+    await tasks.syncTransactionsForItems(queuedItems, userId, encryptedKey);
   }
 
   return { syncResults };
@@ -127,25 +156,25 @@ async function fetchTransactionsFromPlaid({ access_token, cursor, startTime }) {
   }
 }
 
-async function processTransactionSync(response, item, user, nextSyncData) {
+async function processTransactionSync(response, item, userId, nextSyncData) {
   if (hasSyncError(response)) {
     return await handleSyncError(item._id, nextSyncData, response, 'fetchTransactionsFromPlaid');
   }
 
   const { added, modified, removed, next_cursor, sectionedOff } = response;
 
-  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, user._id);
-  const itemsRemovedCount = await itemsRemove(removed, user._id);
-  const itemsModifiedCount = await itemsModify(modified, user._id);
-  const itemsAddedCount = await itemsAdd(added, user._id, nextSyncData.lastSyncId);
+  const itemsMergedCount = await mergePendingCustomNotesToSettled(added, userId);
+  const itemsRemovedCount = await itemsRemove(removed, userId);
+  const itemsModifiedCount = await itemsModify(modified, userId);
+  const itemsAddedCount = await itemsAdd(added, userId, nextSyncData.lastSyncId);
 
-  await notifyUserOfSync(user, {
-    itemsMergedCount,
-    itemsAddedCount,
-    itemsModifiedCount,
-    itemsRemovedCount,
-    sectionedOff
-  });
+  // await notifyUserOfSync(user, {
+  //   itemsMergedCount,
+  //   itemsAddedCount,
+  //   itemsModifiedCount,
+  //   itemsRemovedCount,
+  //   sectionedOff
+  // });
 
   return {
     added,
@@ -336,10 +365,7 @@ async function notifyUserOfSync(user, syncStats) {
     </p>`
   };
 
-  const site = await Sites.findOne();
-  if (site) {
-    await notify.email(site.email, emailData);
-  }
+  await notify.email('dev@tracktabs.com', emailData);
 }
 
 async function fetchTransactionById(_id, userId) {
@@ -381,7 +407,14 @@ async function removeFromDb(duplicates) {
   };
 }
 
-async function processSyncForItem(item, user, syncResults, queuedItems) {
+async function processSyncForItem(
+  item,
+  userId,
+  encryptedKey,
+  syncResults,
+  queuedItems
+) 
+{
   const { cursor, lastSyncTime, result, status } = item.syncData;
   const hours = (h) => h * 60 * 60 * 1000;
   const days = (n) => n * 24 * 60 * 60 * 1000;
@@ -396,7 +429,7 @@ async function processSyncForItem(item, user, syncResults, queuedItems) {
   }
 
   if(cursor !== '' && lastSyncTime > fiveDaysAgo && !result.sectionedOff) {
-    return await syncTransactionsForItem(item._id, user._id);
+    return await syncTransactionsForItem(item._id, userId, encryptedKey);
   }
 
   const syncAlreadyInProgress = ['queued', 'in_progress'].includes(status);
@@ -428,13 +461,10 @@ async function handleSyncError(itemId, nextSyncData, { result }, handlerName) {
     result.errorMessage = `${handlerName}: ${result.errorMessage}`;
     console.error(result);
 
-    const site = await Sites.findOne();
-    if (site) {
-      await notify.email(site.email, {
-        subject: `TrackTabs Sync Error: ${handlerName}`,
-        template: renderErrorProperties({ ...result, itemId })
-      });
-    }
+    await notify.email('dev@tracktabs.com', {
+      subject: `TrackTabs Sync Error: ${handlerName}`,
+      template: renderErrorProperties({ ...result, itemId })
+    });
 
     return await updatePlaidItemSyncData(itemId, { ...nextSyncData, result, status: 'failed' });
   } catch (error) {
@@ -498,4 +528,4 @@ export default {
   fetchTransactions,
   getAllTransactionCount,
   findDuplicates
-}; 
+};

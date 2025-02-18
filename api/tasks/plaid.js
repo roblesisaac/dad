@@ -1,10 +1,12 @@
-import { task, events } from '@ampt/sdk';
+import { task, events, params } from '@ampt/sdk';
 import { data } from '@ampt/data';
 
 import plaidTransactions from '../models/plaidTransactions';
-import Sites from '../models/sites';
 import notify from '../utils/notify';
 import plaidTransactionService from '../services/plaidTransactionService.js';
+import { proper } from '../../src/utils';
+
+const { APP_NAME } = params().list();
 
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
@@ -20,7 +22,7 @@ const tasks = (function() {
       await data.remove(idBatch);
     }
 
-    const site = await Sites.findOne();
+    const site = { name: proper(APP_NAME) };
 
     await notify.email(user.email, {
       subject: `${site.name} Transactions Have Been Removed`,
@@ -31,19 +33,19 @@ const tasks = (function() {
   });
 
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
-    let { itemId, userId } = body;
+    let { itemId, userId, encryptedKey } = body;
     
-    return await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+    return await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
   });
 
   const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
-    const { itemIds, userId } = body;
+    const { itemIds, userId, encryptedKey } = body;
 
     let results = [];
 
     for (const itemId of itemIds) {
       try {
-        const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+        const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
 
         results.push(result);
       } catch (e) {
@@ -105,11 +107,11 @@ const tasks = (function() {
     removeAllUserTransactions: async ({ _id, email }) => {
       removeAllTransactionsFromDatabase.run({ user: { _id, email } });
     },
-    syncTransactionsForItem: async function(itemId, userId) {
-      syncTransactions.run({ itemId, userId });
+    syncTransactionsForItem: async function(itemId, userId, encryptedKey) {
+      syncTransactions.run({ itemId, userId, encryptedKey });
     },
-    syncTransactionsForItems: async function (itemIds, userId) {
-      syncTransactionsForItems.run({ itemIds, userId });
+    syncTransactionsForItems: async function (itemIds, userId, encryptedKey) {
+      syncTransactionsForItems.run({ itemIds, userId, encryptedKey });
     },
     updateAllDates: async function () {
       return 'Not implemented yet';
@@ -134,10 +136,10 @@ export default tasks;
 
 export const handler = async (event) => {
   try {
-    const { itemId, userId } = event.body;
+    const { itemId, userId, encryptedKey } = event.body;
     
     // Call the service directly instead of going through the controller
-    const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId);
+    const result = await plaidTransactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
     
     return {
       statusCode: 200,

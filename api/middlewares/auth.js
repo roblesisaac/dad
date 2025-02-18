@@ -1,61 +1,53 @@
 import { params } from '@ampt/sdk';
-import fetch from 'node-fetch';
+import { auth } from 'express-oauth2-jwt-bearer';
 import rateLimit from 'express-rate-limit';
 
-const { RECAPTCHA_KEY } = params().list();
+const { VITE_ZERO_DOMAIN, VITE_ZERO_AUDIENCE } = params().list();
 
-export function checkLoggedIn(req, res, next) {
-  if(req.isAuthenticated()) {
-    return next();
-  }
-  
-  res.writeHead(302, { Location: '/login' });
-  res.end();
-}
+const audience = VITE_ZERO_AUDIENCE;
+const domain = VITE_ZERO_DOMAIN;
 
-export function checkVerified(req, res, next) {
-  const { user } = req;
-  
-  const redirect = Location => {
-    res.writeHead(302, { Location });
-    res.end();
-  }
-  
-  if(!req.isAuthenticated()) {
-    return redirect('/login');
-  }
-  
-  if(user.email_verified === true) {
-    return next()
-  }
-  
-  redirect('/verify');
-}
+// Auth0 JWT validation middleware
+export const checkJWT = auth({
+  audience,
+  issuerBaseURL: `https://${domain}`,
+  tokenSigningAlg: 'RS256'
+});
 
+// Rate limiting middleware
 export const rateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 15 mins
+  windowMs: 60 * 60 * 1000, // 1 hour
   max: 100, // limit each IP to 100 requests per windowMs
   message: 'Too many requests, please try again later.'
 });
 
-export async function recaptcha(req, res, next) {
-  const { recaptchaToken } = req.body;
-  const params = `secret=${RECAPTCHA_KEY}&response=${recaptchaToken}`;
-  const url = 'https://www.google.com/recaptcha/api/siteverify?'+params;
-  
-  const response = await fetch(url, { method: 'POST' });
-  const json = await response.json();
-  const { score, success } = json;
-  
-  if(score >= 0.5 || success === true) {
-    return next()
+// Enhanced middleware to check if user is authenticated and add user info
+export function checkLoggedIn(req, res, next) {
+  if (!req.auth) {
+    return res.status(401).json({ 
+      error: 'Authentication required',
+      message: 'No valid authentication token provided' 
+    });
   }
+
+  // Extract user information from the JWT token
+  const { payload } = req.auth;
+  const metadata = payload[`${audience}/user_metadata`] || {};
   
-  const errorMessage = `Unexpected error: reCaptcha failure: score is '${score}' and success is '${success}'`;
-  
-  console.error({
-    errorMessage,
-    response
-  });
-  res.status(404).json(errorMessage);
+  // Add user information to req.user
+  req.user = {
+    _id: metadata.legacyId,
+    encryptionKey: metadata.encryptionKey,
+    sub: payload.sub,
+    email: payload.email || 
+           payload[`${audience}/email`] || 
+           payload['https://my-app.com/email'] ||
+           payload['https://my-app.com/user_email'] ||
+           undefined,
+    roles: payload[`${audience}/roles`],
+    metadata,
+    appMetadata: payload[`${audience}/app_metadata`] || {}
+  };
+
+  next();
 }

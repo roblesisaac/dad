@@ -1,5 +1,5 @@
 <template>
-  <div class="grid p20y">
+  <div class="x-grid p20y">
     <!-- Transaction Details -->
     <div class="cell-1 proper">
       <p>
@@ -27,7 +27,7 @@
     <div class="cell-1">
 
       <!-- Add Note -->
-      <div class="grid p20b">
+      <div class="x-grid p20b">
         <div class="cell-1">
           <b>Add Note:</b>
         </div>
@@ -37,7 +37,7 @@
       </div>
 
       <!-- Recategorize As -->
-      <div class="grid">
+      <div class="x-grid">
         <div class="cell-1">
           <b>Recategorize<span v-if="item.recategorizeAs">d</span> As:</b>
         </div>
@@ -47,14 +47,14 @@
         
         <!-- Apply-to options -->
         <Transition>
-        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="grid">
+        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="x-grid">
           <div class="cell-1 p10t">
             <b>Apply New Category To:</b>
           </div>
 
           <div class="cell-1 p10l">
             <!-- This item only -->
-            <div class="grid">
+            <div class="x-grid">
               <div class="cell shrink">
                 <input type="radio" id="this-item-only" name="apply-to" value="this-item-only" checked>
               </div>
@@ -64,7 +64,7 @@
             </div>
 
             <!-- Anything that matches -->
-            <div class="grid">
+            <div class="x-grid">
               <div class="cell shrink">
                 <input type="radio" id="anything-that-matches" name="apply-to" value="anything-that-matches">
               </div>
@@ -89,11 +89,11 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import EditRule from './EditRule.vue';
-import { useAppStore } from '@/stores/state';
+import EditRule from '../../edit-tab/components/EditRule.vue';
 import { formatPrice } from '@/utils';
+import { useApi } from '@/shared/composables/useApi';
 
-const { api } = useAppStore();
+const api = useApi();
 
 const { item, state } = defineProps({
   item: Object,
@@ -137,7 +137,7 @@ function waitUntilTypingStops(ms=500) {
 
 async function updateTransaction() {
   await waitUntilTypingStops();
-  api.put(`api/transactions/${item._id}`, item);
+  api.put(`transactions/${item._id}`, item);
 }
 
 watch(() => item.recategorizeAs, updateTransaction);

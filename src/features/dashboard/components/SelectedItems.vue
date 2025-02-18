@@ -1,12 +1,12 @@
 <template>
-  <div v-if="items.length" class="grid items proper">
+  <div v-if="items.length" class="x-grid items proper">
 
     <div class="cell-1">
-      <div :class="[ifSelectedClass(item._id), 'grid bottom p5y p10x item']" v-for="(item, i) in items">
+      <div :class="[ifSelectedClass(item._id), 'x-grid bottom p5y p10x item']" v-for="(item, i) in items">
         <div :class="[ifSelectedClass(item._id), 'cell-1']">
 
           <!-- Minimized Transaction -->
-          <div @click="selectTransaction(item)" class="grid">
+          <div @click="selectTransaction(item)" class="x-grid">
             <!-- Hide Details (minus) icon -->
             <div v-if="itemIsSelected(item._id)" class="cell-1 right"><Minus /></div>
 
@@ -87,7 +87,7 @@ function selectTransaction(item) {
   border-bottom: 1px dotted lightblue;
 }
 
-.transaction-selected.grid {
+.transaction-selected.x-grid {
   padding: 30px 20px;
   border: 1px solid blue;
   box-shadow: 1px 1px blue;

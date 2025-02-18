@@ -11,8 +11,9 @@ export function concatUseridToReq(req, _, next) {
 }
 
 export async function ensureUserCreatedItem(req, res, next) {
-  const { _id, role } = req.user;
+  const { role } = req.user;
   const { key } = req.params;
+  const _id = req.user._id;
   
   if(role === 'admin') {
     return next();

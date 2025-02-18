@@ -1,5 +1,5 @@
 <template>
-<div class="grid p30 left">
+<div class="x-grid p30 left">
   <div class="cell-1">
     <section>
       <h2>1. Acceptance of Terms</h2>
@@ -89,8 +89,8 @@
 
 <script setup>
 import { reactive } from 'vue';
-import { useAppStore } from '@/stores/state';
-const { api } = useAppStore();
+import { useApi } from '@/shared/composables/useApi';
+const api = useApi();
 
 const state = reactive({
   contact: '',
@@ -99,7 +99,7 @@ const state = reactive({
 
 async function fetchSiteData() {
   try {
-    const { email: contact, name: appName } = await api.get('api/sites');
+    const { email: contact, name: appName } = await api.get('sites');
     state.contact = contact;
     state.appName = appName;
   } catch (error) {
