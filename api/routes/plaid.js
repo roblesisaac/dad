@@ -1,21 +1,26 @@
-import app from '../controllers/plaid';
+import plaidController from '../controllers/plaid';
 import Protect from '../middlewares/protect';
 
 export default function(api, baseUrl) {
   const protect = Protect.route(api, 'plaiditems', baseUrl);
   const member = protect('member');
 
-  member.post('/plaid/connect/link/:itemId?', app.connectLink);
-  member.post('/plaid/exchange/token', app.exchangeTokenAndSavePlaidItem);
-  member.get('/plaid/get/duplicates', app.getDuplicates);
-  member.get('/plaid/get/transaction/count', app.getAllTransactionCount);
-  member.get('/plaid/items/:_id?', app.getPlaidItems);
-  member.get('/plaid/sync/items', app.retreivePlaidItems);
-  member.get('/plaid/remove/all/transactions', app.removeAllTransactionsFromDatabase);
-  member.post('/plaid/remove/duplicates', app.removeFromDb);
-  member.get('/plaid/sync/accounts/and/groups', app.syncAccountsAndGroups);
-  member.get('/plaid/sync/all/transactions', app.syncAllUserTransactions);
-  member.get('/plaid/transactions/:_id?', app.getTransactions);
-  member.get('/plaid/update/dates', app.updateDates);
-  member.get('/plaid/test/task', app.test);
+  // Link and Authentication
+  member.post('/plaid/connect/link/:itemId?', plaidController.connectLink);
+  member.post('/plaid/exchange/token', plaidController.exchangeTokenAndSavePlaidItem);
+
+  // Items and Accounts
+  member.get('/plaid/items/:_id?', plaidController.getPlaidItems);
+  member.get('/plaid/sync/items', plaidController.retreivePlaidItems);
+  member.get('/plaid/sync/accounts/and/groups', plaidController.syncAccountsAndGroups);
+
+  // Transactions
+  member.get('/plaid/transactions/:_id?', plaidController.getTransactions);
+  member.get('/plaid/get/transaction/count', plaidController.getAllTransactionCount);
+  member.get('/plaid/sync/all/transactions', plaidController.syncAllUserTransactions);
+  
+  // Maintenance
+  member.get('/plaid/get/duplicates', plaidController.getDuplicates);
+  member.post('/plaid/remove/duplicates', plaidController.removeFromDb);
+  member.get('/plaid/remove/all/transactions', plaidController.removeAllTransactionsFromDatabase);
 }
