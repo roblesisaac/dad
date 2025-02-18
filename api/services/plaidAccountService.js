@@ -5,36 +5,78 @@ import { decryptAccessToken } from './plaidLinkService.js';
 import { plaidClientInstance } from './plaidClient.js';
 
 export async function syncUserAccounts(user) {
-  let retrievedAccountsFromPlaid = [];
-  const userItems = await fetchUserItemsFromDb(user._id);
-  const encryptedKey = user.encryptionKey;
-
-  for (const item of userItems) {
-    retrievedAccountsFromPlaid = [
-      ...retrievedAccountsFromPlaid,
-      ...await retrieveAccountsFromPlaidForItem(item, encryptedKey)
-    ];
+  if (!user?._id || !user?.encryptionKey) {
+    throw new Error('INVALID_USER: Missing required user data');
   }
 
-  const existingUserAccounts = await fetchUserAccounts(user._id);
-  const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
+  let retrievedAccountsFromPlaid = [];
+  try {
+    const userItems = await fetchUserItemsFromDb(user._id);
+    if (!userItems?.length) {
+      throw new Error('NO_ITEMS: No Plaid items found for user');
+    }
 
-  return await syncAccountsAndGroups(retrievedAccountsFromPlaid, existingUserAccounts, existingGroups, user);
+    const encryptedKey = user.encryptionKey;
+
+    for (const item of userItems) {
+      try {
+        const accounts = await retrieveAccountsFromPlaidForItem(item, encryptedKey);
+        retrievedAccountsFromPlaid = [...retrievedAccountsFromPlaid, ...accounts];
+      } catch (error) {
+        console.error(`Error retrieving accounts for item ${item._id}:`, error);
+        // Continue with other items even if one fails
+      }
+    }
+
+    if (!retrievedAccountsFromPlaid.length) {
+      throw new Error('NO_ACCOUNTS: Failed to retrieve any accounts from Plaid');
+    }
+
+    const existingUserAccounts = await fetchUserAccounts(user._id);
+    const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
+
+    return await syncAccountsAndGroups(
+      retrievedAccountsFromPlaid, 
+      existingUserAccounts, 
+      existingGroups, 
+      user
+    );
+  } catch (error) {
+    // Preserve Plaid error codes if they exist
+    if (error.error_code) {
+      throw error;
+    }
+    throw new Error(`SYNC_ERROR: ${error.message}`);
+  }
 }
 
 async function retrieveAccountsFromPlaidForItem(item, encryptedKey) {
+  if (!item?.accessToken) {
+    throw new Error('INVALID_ITEM: Missing access token');
+  }
+
   try {
     const access_token = decryptAccessToken(item.accessToken, encryptedKey);
     const { data } = await plaidClientInstance.accountsGet({ access_token });
 
-    if (!data.accounts) return [];
+    if (!data?.accounts) {
+      throw new Error('Invalid response from Plaid');
+    }
 
     return data.accounts.map(account => ({
       ...account,
       itemId: data.item.item_id
     }));
   } catch (error) {
-    throw new Error(`Error retrieving accounts: ${error.message}`);
+    // Check for specific Plaid errors
+    if (error.error_code === 'ITEM_LOGIN_REQUIRED') {
+      throw {
+        error_code: 'ITEM_LOGIN_REQUIRED',
+        error_message: 'This connection requires reauthentication',
+        item_id: item.itemId
+      };
+    }
+    throw new Error(`Failed to retrieve accounts: ${error.message}`);
   }
 }
 

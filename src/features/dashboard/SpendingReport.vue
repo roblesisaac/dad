@@ -278,25 +278,34 @@
 
           await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
+          // Load tabs and rules first
           try {
             state.allUserTabs = await fetchUserTabs();       
             state.allUserRules = await fetchUserRules();
           } catch (error) {
             console.error('Error fetching tabs/rules:', error);
-            // Continue execution as these aren't critical for initial load
+            // Non-critical error, continue loading
           }
           
+          // Main accounts sync
           try {
             const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
             
-            // Check if we got a valid response
+            // Handle the response based on error types
             if (!groups || !accounts) {
               throw new Error('Invalid response from server');
             }
 
+            // Process successful response
             state.allUserAccounts = accounts;
             state.allUserGroups = groups.sort(sortBy('sort'));
 
+            if (!groups.length) {
+              state.views.push('SelectGroup');
+              return;
+            }
+
+            // Sync transactions
             try {
               const { syncResults } = await api.get('/plaid/sync/all/transactions');
               
@@ -312,37 +321,51 @@
               await app.handleGroupChange();
               app.checkSyncStatus();
             } catch (syncError) {
-              console.error('Error syncing transactions:', syncError);
+              console.error('Transaction sync error:', syncError);
               state.blueBar.message = 'Connected successfully, but there was an error syncing transactions. Please try refreshing.';
-              return;
             }
 
           } catch (error) {
             console.error('Account sync error:', error);
             
-            // Handle specific API error responses
+            // Handle API error responses
             if (error.response?.data) {
               const { error: errorCode, message } = error.response.data;
               
               switch (errorCode) {
+                case 'AUTH_ERROR':
+                  state.blueBar.message = 'Authentication error. Please try logging in again.';
+                  // Could redirect to login here if needed
+                  return;
+
                 case 'ITEM_ERROR':
                 case 'ITEM_LOGIN_REQUIRED':
                   state.blueBar.message = message || 'Your accounts need to be reconnected';
                   state.views.push('ItemRepair');
                   return;
                   
+                case 'NO_GROUPS':
+                  state.blueBar.message = message || 'Please set up your account groups';
+                  state.views.push('SelectGroup');
+                  return;
+
                 case 'SYNC_ERROR':
                   state.blueBar.message = message || 'Error syncing accounts. Please try again.';
                   return;
                   
+                case 'SERVER_ERROR':
+                  state.blueBar.message = 'Server error. Please try again later.';
+                  return;
+
                 default:
                   state.blueBar.message = message || 'There was an error connecting to your accounts';
               }
+            } else if (error.response?.status === 500) {
+              state.blueBar.message = 'Server error. Please try again later.';
+            } else if (error.message?.includes('Network Error')) {
+              state.blueBar.message = 'Unable to connect to server. Please check your internet connection.';
             } else {
-              // Handle network or other errors
-              state.blueBar.message = error.response?.status === 500 
-                ? 'Server error. Please try again later.'
-                : 'Error connecting to accounts. Please try again.';
+              state.blueBar.message = 'Error connecting to accounts. Please try again.';
             }
           }
         } catch (error) {

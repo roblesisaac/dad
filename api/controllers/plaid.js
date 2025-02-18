@@ -139,41 +139,61 @@ const plaidController = {
 
   syncAccountsAndGroups: async function ({ user }, res) {
     try {
-      const syncedData = await plaidAccountService.syncUserAccounts(user);
-      
-      // Validate the response
-      if (!syncedData || !syncedData.accounts || !syncedData.groups) {
+      // Validate user has required data
+      if (!user?._id || !user?.encryptionKey) {
         return res.status(400).json({
-          error: 'SYNC_ERROR',
-          message: 'Failed to sync accounts and groups'
+          error: 'AUTH_ERROR',
+          message: 'Missing required user authentication data'
         });
       }
 
-      // Check for account errors
-      const accountsWithErrors = syncedData.accounts.filter(account => account.error);
-      if (accountsWithErrors.length > 0) {
-        return res.status(400).json({
-          error: 'ITEM_ERROR',
-          message: 'One or more accounts need to be reconnected',
-          accounts: accountsWithErrors
-        });
-      }
+      try {
+        const syncedData = await plaidAccountService.syncUserAccounts(user);
+        
+        // Validate the response
+        if (!syncedData || !syncedData.accounts || !syncedData.groups) {
+          return res.status(400).json({
+            error: 'SYNC_ERROR',
+            message: 'Failed to sync accounts and groups'
+          });
+        }
 
-      res.json(syncedData);
+        // Check for account errors
+        const accountsWithErrors = syncedData.accounts.filter(account => account.error);
+        if (accountsWithErrors.length > 0) {
+          return res.status(400).json({
+            error: 'ITEM_ERROR',
+            message: 'One or more accounts need to be reconnected',
+            accounts: accountsWithErrors
+          });
+        }
+
+        // If no groups exist, return specific error
+        if (!syncedData.groups?.length) {
+          return res.status(400).json({
+            error: 'NO_GROUPS',
+            message: 'No account groups found. Please set up your accounts.'
+          });
+        }
+
+        res.json(syncedData);
+      } catch (plaidError) {
+        // Handle Plaid API specific errors
+        if (plaidError.error_code) {
+          return res.status(400).json({
+            error: plaidError.error_code,
+            message: plaidError.error_message || 'Error connecting to financial institution'
+          });
+        }
+        
+        throw plaidError; // Pass other errors to outer catch
+      }
     } catch (error) {
       console.error('Sync accounts error:', error);
       
-      // Handle specific Plaid errors
-      if (error.error_code === 'ITEM_LOGIN_REQUIRED') {
-        return res.status(400).json({
-          error: 'ITEM_LOGIN_REQUIRED',
-          message: 'Your bank connection needs to be updated'
-        });
-      }
-
       res.status(500).json({ 
-        error: 'SYNC_ERROR',
-        message: error.message || 'Error syncing accounts and groups'
+        error: 'SERVER_ERROR',
+        message: 'An unexpected error occurred while syncing accounts'
       });
     }
   },

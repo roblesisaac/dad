@@ -9,32 +9,62 @@ import tasks from '../tasks/plaid.js';
 
 // Main export functions
 export async function syncTransactionsForItem(item, userId, encryptedKey) {
+  if (!userId || !encryptedKey) {
+    throw new Error('INVALID_USER: Missing required user data');
+  }
+
   try {
     if (typeof item === 'string') {
       item = await plaidItems.findOne(item);
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Invalid item ID');
+      }
     }
 
     const { accessToken, syncData } = item;
     
     if (['in_progress'].includes(syncData.status)) {
-      return { itemsAlreadySyncing: item._id };
+      return { 
+        error: 'SYNC_IN_PROGRESS',
+        message: 'Sync already in progress for this item',
+        itemId: item._id 
+      };
     }
 
     const nextSyncData = initializeNextSyncData(userId, syncData);
     await updatePlaidItemSyncData(item._id, { ...nextSyncData, status: 'in_progress' });
 
-    const access_token = decryptAccessToken(accessToken, encryptedKey);
+    try {
+      const access_token = decryptAccessToken(accessToken, encryptedKey);
+      const response = await fetchTransactionsFromPlaid({ 
+        access_token, 
+        cursor: syncData.cursor, 
+        startTime: nextSyncData.lastSyncTime 
+      });
 
-    const response = await fetchTransactionsFromPlaid({ 
-      access_token, 
-      cursor: syncData.cursor, 
-      startTime: nextSyncData.lastSyncTime 
-    });
+      if (response.error_code) {
+        throw {
+          error_code: response.error_code,
+          error_message: response.error_message
+        };
+      }
 
-    return await processTransactionSync(response, item, userId, nextSyncData);
+      return await processTransactionSync(response, item, userId, nextSyncData);
+    } catch (error) {
+      // Update sync status to failed and include error details
+      await updatePlaidItemSyncData(item._id, {
+        ...nextSyncData,
+        status: 'failed',
+        result: {
+          error: error.error_code || 'SYNC_ERROR',
+          errorMessage: error.error_message || error.message
+        }
+      });
+      throw error;
+    }
   } catch (error) {
     console.error('Error in syncTransactionsForItem:', error);
-    throw new Error(`Failed to sync transactions: ${error.message}`);
+    throw error.error_code ? error : new Error(`SYNC_ERROR: ${error.message}`);
   }
 }
 

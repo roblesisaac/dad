@@ -3,6 +3,10 @@ import plaidItems from '../models/plaidItems.js';
 import { plaidClientInstance } from './plaidClient.js';
 
 export async function createLinkToken(user, itemId = null) {
+  if (!user?._id) {
+    throw new Error('INVALID_USER: User ID is required');
+  }
+
   const request = {
     user: { client_user_id: user._id },
     client_name: 'TrackTabs',
@@ -12,18 +16,24 @@ export async function createLinkToken(user, itemId = null) {
   };
 
   if (itemId) {
-    const item = await plaidItems.findOne({ userId: user._id, itemId });
-    const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
-
-    delete request.products;
-    request.access_token = access_token;
+    try {
+      const item = await plaidItems.findOne({ userId: user._id, itemId });
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Invalid item ID');
+      }
+      const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+      delete request.products;
+      request.access_token = access_token;
+    } catch (error) {
+      throw new Error(`ITEM_ACCESS_ERROR: ${error.message}`);
+    }
   }
 
   try {
     const plaidLinkData = await plaidClientInstance.linkTokenCreate(request);
     return plaidLinkData.data;
   } catch (error) {
-    throw new Error(`Error creating link token: ${error.message}`);
+    throw new Error(`LINK_TOKEN_ERROR: ${error.message}`);
   }
 }
 
@@ -39,14 +49,16 @@ export async function exchangePublicToken(publicToken) {
 }
 
 export function decryptAccessToken(dblEncryptedAccessToken, encryptedKey) {
+  if (!dblEncryptedAccessToken || !encryptedKey) {
+    throw new Error('DECRYPT_ERROR: Missing required encryption data');
+  }
+
   try {
     const encryptedAccessToken = decrypt(dblEncryptedAccessToken);
     const key = decrypt(encryptedKey, 'buffer');
-
     return decryptWithKey(encryptedAccessToken, key);
   } catch (error) {
-    console.error(`Error decrypting access token: ${error.message}`);
-    throw new Error(`Decrypting access token: ${error.message}`);
+    throw new Error(`DECRYPT_ERROR: Failed to decrypt access token - ${error.message}`);
   }
 }
 
