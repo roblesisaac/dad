@@ -15,7 +15,6 @@ export function useApi() {
 
   async function request(method, url, body = null, settings = {}) {
     loading.value = true;
-    error.value = null;
 
     const auth0Token = await getToken();
     try {
@@ -27,7 +26,6 @@ export function useApi() {
         ...settings.headers
       };
 
-      // Only set Content-Type to application/json if body is not FormData
       if (!(body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
       }
@@ -36,18 +34,11 @@ export function useApi() {
         headers.Authorization = `Bearer ${auth0Token}`;
       }
 
-      const controller = new AbortController();
-      const timeout = settings.timeout || 30000;
-      const timeoutId = setTimeout(() => controller.abort(), timeout);
-
       const response = await fetch(normalizedBaseUrl + normalizedUrl, {
         method,
         body: body instanceof FormData ? body : (body ? JSON.stringify(body) : null),
-        headers,
-        signal: controller.signal
+        headers
       });
-
-      clearTimeout(timeoutId);
 
       let responseData;
       const contentType = response.headers.get('content-type');
@@ -59,15 +50,13 @@ export function useApi() {
       }
 
       if (!response.ok) {
-        const errorMessage = responseData?.message || responseData?.error || responseData || 'API Request Failed';
-        if (response.status === 401) {
-          // Handle auth errors specifically
-          notify({
-            message: 'Your session has expired. Please log in again.',
-            type: 'WARNING'
-          });
-        }
-        throw new Error(errorMessage);
+        // Handle both 400 and 500 errors
+        const error = new Error(responseData?.message || 'API Request Failed');
+        error.response = {
+          status: response.status,
+          data: responseData
+        };
+        throw error;
       }
 
       data.value = responseData;
@@ -75,6 +64,7 @@ export function useApi() {
     } catch (err) {
       error.value = err;
       console.error('Request error:', err);
+      console.log('Error response:', err.response); // Debug log
 
       // Handle different error types
       if (err.name === 'AbortError') {
@@ -89,7 +79,7 @@ export function useApi() {
         });
       } else {
         notify({
-          message: err.message,
+          message: err.response?.data?.message || err.message,
           type: 'ERROR'
         });
       }

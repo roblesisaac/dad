@@ -8,9 +8,10 @@ export default {
       const items = await itemService.getItems(req.user._id, itemId);
       res.json(scrub(items, 'accessToken'));
     } catch (error) {
+      const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
       res.status(400).json({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] 
+        error: errorCode,
+        message: errorMessage
       });
     }
   },
@@ -20,9 +21,10 @@ export default {
       const syncedItems = await itemService.syncItems(req.user);
       res.json(scrub(syncedItems, 'accessToken'));
     } catch (error) {
+      const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
       res.status(400).json({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] 
+        error: errorCode,
+        message: errorMessage
       });
     }
   },
@@ -33,7 +35,6 @@ export default {
       res.json(syncedData);
     } catch (error) {
       const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
-      
       res.status(400).json({ 
         error: errorCode,
         message: errorMessage

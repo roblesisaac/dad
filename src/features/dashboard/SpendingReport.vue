@@ -303,10 +303,12 @@
 
           } catch (error) {
             console.error('Account sync error:', error);
+            console.log('Error details:', {
+              response: error.response,
+              message: error.message
+            });
             
-            // Get error details from response
             const errorData = error.response?.data;
-            console.log('Error response data:', errorData); // Debug log
             
             if (errorData?.error === 'NO_ITEMS') {
               console.log('NO_ITEMS error detected, switching to ItemRepair view');
@@ -315,15 +317,13 @@
               
               // Force view update
               state.views = [];
-              nextTick(() => {
-                state.views.push('ItemRepair');
-                console.log('Views after push:', state.views);
-              });
+              state.views.push('ItemRepair');
+              console.log('Views after update:', state.views);
               return;
             }
 
             // Handle other errors...
-            state.blueBar.message = 'There was an error connecting to your accounts. Please try again.';
+            state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';
           }
         } catch (error) {
           console.error('Init error:', error);
