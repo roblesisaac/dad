@@ -2,7 +2,7 @@ import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
 import { itemService, linkService } from './index.js';
-import { plaidClientInstance } from './oldPlaidClient.js';
+import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidAccountService extends PlaidBaseService {
   async syncUserAccounts(user) {
