@@ -272,39 +272,51 @@
         if(state.views.length > 1) state.views.pop();
       },
       init: async () => {
-        // Use composable methods
-        state.blueBar.message = 'Beginning sync';
-        state.blueBar.loading = true;
+        try {
+          // Use composable methods
+          state.blueBar.message = 'Beginning sync';
+          state.blueBar.loading = true;
 
-        await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
+          await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
-        state.allUserTabs = await fetchUserTabs();       
-        state.allUserRules = await fetchUserRules();
-        
-        const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
+          state.allUserTabs = await fetchUserTabs();       
+          state.allUserRules = await fetchUserRules();
+          
+          const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
 
-        if(!groups.length) {
-          state.views.push('SelectGroup');
-        }
-
-        state.allUserAccounts = accounts;
-        state.allUserGroups = groups.sort(sortBy('sort'));
-
-        let added = [], removed = [];
-        const { syncResults } = await api.get('/plaid/sync/all/transactions');
-        
-
-        for(const syncedItem of syncResults) {
-          if(!Array.isArray(syncedItem.added)) {
-            continue;
+          // Handle Plaid connection errors
+          if (accounts.some(account => account.error)) {
+            state.views.push('ItemRepair');
+            return;
           }
 
-          added = [...added, ...syncedItem.added];
-          removed = [...removed, ...syncedItem.removed];
+          if(!groups.length) {
+            state.views.push('SelectGroup');
+            return;
+          }
+
+          state.allUserAccounts = accounts;
+          state.allUserGroups = groups.sort(sortBy('sort'));
+
+          let added = [], removed = [];
+          const { syncResults } = await api.get('/plaid/sync/all/transactions');
+          
+          for(const syncedItem of syncResults) {
+            if(!Array.isArray(syncedItem.added)) {
+              continue;
+            }
+
+            added = [...added, ...syncedItem.added];
+            removed = [...removed, ...syncedItem.removed];
+          }
+          
+          await app.handleGroupChange();
+          app.checkSyncStatus();
+        } catch (error) {
+          state.blueBar.message = 'Error syncing accounts. Please try again.';
+          state.blueBar.loading = false;
+          console.error('Init error:', error);
         }
-        
-        await app.handleGroupChange();
-        app.checkSyncStatus();
       },
       handleGroupChange: async () => {
         let selectedGroup = state.selected.group;
