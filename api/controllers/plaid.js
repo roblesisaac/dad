@@ -127,7 +127,7 @@ const plaidController = {
 
   retreivePlaidItems: async function ({ user }, res) {
     try {
-      const userId = req.user._id;
+      const userId = user._id;
       const userItems = await plaidAccountService.fetchUserItemsFromDb(userId);
       const syncedItems = await plaidAccountService.syncItems(userItems, user);
 
