@@ -115,15 +115,6 @@
       <ItemRepair :state="state" :app="app" />
     </div>
   </Transition>
-
-  <div class="spending-report">
-    <component 
-      :is="state.currentView" 
-      v-if="state.views.length" 
-      @view-changed="handleViewChange"
-    />
-    <home v-else />
-  </div>
 </template>
 
 <script setup>
@@ -177,8 +168,7 @@
     },
     isLoading: true,
     is(view) {
-      if (!state.views.length && view === 'home') return true;
-      return state.views.includes(view);
+      return view === 'home' ? !state.views.length : state.views[state.views.length - 1] === view;
     },
     isSmallScreen: () => State.currentScreenSize() === 'small',
     linkToken: null,
@@ -312,9 +302,10 @@
             if (errorCode === 'NO_ITEMS' || errorMessage?.includes('No Plaid items found')) {
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
-              // Replace all views with ItemRepair
-              state.views = ['ItemRepair'];
-              console.log('Setting view to ItemRepair:', state.views);
+              // Clear views and add ItemRepair
+              state.views.splice(0, state.views.length);
+              state.views.push('ItemRepair');
+              console.log('Views after update:', state.views);
               return;
             }
 
@@ -462,9 +453,13 @@
   
   watch(() => state.views, (newViews) => {
     console.log('Views updated:', newViews);
-  }, { deep: true });
+  }, { immediate: true });
 
-  watch(() => state.view, app.handleViewChange);
+  watch(() => state.views[state.views.length - 1], (newView, oldView) => {
+    console.log('Current view changed:', { newView, oldView });
+    app.handleViewChange(newView, oldView);
+  });
+
   watch(() => state.selected.tab?._id, app.handleTabChange);
 
 </script>
