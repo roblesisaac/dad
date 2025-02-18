@@ -31,7 +31,7 @@ const plaidController = {
 
       const { _id: itemId } = await savePlaidAccessData(accessData, encryptedKey);
 
-      const { accounts, groups } = await plaidAccountService.syncAccountsAndGroups(req.user);
+      const { accounts, groups } = await plaidAccountService.syncUserAccounts(req.user);
       
 
       tasks.syncTransactionsForItem(itemId, userId, encryptedKey);
@@ -139,7 +139,7 @@ const plaidController = {
 
   syncAccountsAndGroups: async function ({ user }, res) {
     try {
-      const syncedData = await plaidAccountService.syncAccountsAndGroups(user);
+      const syncedData = await plaidAccountService.syncUserAccounts(user);
       res.json(syncedData);
     } catch (error) {
       res.status(500).json({ error: error.message });

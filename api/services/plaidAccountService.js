@@ -4,7 +4,7 @@ import plaidItems from '../models/plaidItems.js';
 import { decryptAccessToken } from './plaidLinkService.js';
 import { plaidClientInstance } from './plaidClient.js';
 
-export async function syncAccountsAndGroups(user) {
+export async function syncUserAccounts(user) {
   let retrievedAccountsFromPlaid = [];
   const userItems = await fetchUserItemsFromDb(user._id);
   const encryptedKey = user.encryptionKey;
@@ -166,7 +166,7 @@ async function syncItems(userItems, user) {
 }
 
 export default {
-  syncAccountsAndGroups,
+  syncUserAccounts,
   fetchUserItemsFromDb,
   fetchItemById,
   syncItems,
