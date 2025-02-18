@@ -52,7 +52,6 @@ class UserService {
   async updateUserMetadata(userId, metadata) {
     try {
       const token = await this.getManagementToken();
-      console.log('Using domain:', this.domain);
       
       const response = await fetch(`https://${this.domain}/api/v2/users/${userId}`, {
         method: 'PATCH',
@@ -67,7 +66,6 @@ class UserService {
       });
 
       const responseText = await response.text();
-      console.log('Auth0 Response:', response.status, responseText);
 
       if (!response.ok) {
         let error;
@@ -98,7 +96,6 @@ class UserService {
 
       return encryptedKey;
     }
-
     return user.metadata.encryptionKey;
   }
 }
