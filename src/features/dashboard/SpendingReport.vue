@@ -273,49 +273,83 @@
       },
       init: async () => {
         try {
-          // Use composable methods
           state.blueBar.message = 'Beginning sync';
           state.blueBar.loading = true;
 
           await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
-          state.allUserTabs = await fetchUserTabs();       
-          state.allUserRules = await fetchUserRules();
-          
-          const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
-
-          // Handle Plaid connection errors
-          if (accounts.some(account => account.error)) {
-            state.views.push('ItemRepair');
-            return;
+          try {
+            state.allUserTabs = await fetchUserTabs();       
+            state.allUserRules = await fetchUserRules();
+          } catch (error) {
+            console.error('Error fetching tabs/rules:', error);
+            // Continue execution as these aren't critical for initial load
           }
-
-          if(!groups.length) {
-            state.views.push('SelectGroup');
-            return;
-          }
-
-          state.allUserAccounts = accounts;
-          state.allUserGroups = groups.sort(sortBy('sort'));
-
-          let added = [], removed = [];
-          const { syncResults } = await api.get('/plaid/sync/all/transactions');
           
-          for(const syncedItem of syncResults) {
-            if(!Array.isArray(syncedItem.added)) {
-              continue;
+          try {
+            const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
+            
+            // Check if we got a valid response
+            if (!groups || !accounts) {
+              throw new Error('Invalid response from server');
             }
 
-            added = [...added, ...syncedItem.added];
-            removed = [...removed, ...syncedItem.removed];
+            state.allUserAccounts = accounts;
+            state.allUserGroups = groups.sort(sortBy('sort'));
+
+            try {
+              const { syncResults } = await api.get('/plaid/sync/all/transactions');
+              
+              let added = [], removed = [];
+              for(const syncedItem of syncResults) {
+                if(!Array.isArray(syncedItem.added)) {
+                  continue;
+                }
+                added = [...added, ...syncedItem.added];
+                removed = [...removed, ...syncedItem.removed];
+              }
+              
+              await app.handleGroupChange();
+              app.checkSyncStatus();
+            } catch (syncError) {
+              console.error('Error syncing transactions:', syncError);
+              state.blueBar.message = 'Connected successfully, but there was an error syncing transactions. Please try refreshing.';
+              return;
+            }
+
+          } catch (error) {
+            console.error('Account sync error:', error);
+            
+            // Handle specific API error responses
+            if (error.response?.data) {
+              const { error: errorCode, message } = error.response.data;
+              
+              switch (errorCode) {
+                case 'ITEM_ERROR':
+                case 'ITEM_LOGIN_REQUIRED':
+                  state.blueBar.message = message || 'Your accounts need to be reconnected';
+                  state.views.push('ItemRepair');
+                  return;
+                  
+                case 'SYNC_ERROR':
+                  state.blueBar.message = message || 'Error syncing accounts. Please try again.';
+                  return;
+                  
+                default:
+                  state.blueBar.message = message || 'There was an error connecting to your accounts';
+              }
+            } else {
+              // Handle network or other errors
+              state.blueBar.message = error.response?.status === 500 
+                ? 'Server error. Please try again later.'
+                : 'Error connecting to accounts. Please try again.';
+            }
           }
-          
-          await app.handleGroupChange();
-          app.checkSyncStatus();
         } catch (error) {
-          state.blueBar.message = 'Error syncing accounts. Please try again.';
-          state.blueBar.loading = false;
           console.error('Init error:', error);
+          state.blueBar.message = 'Unable to initialize application. Please refresh the page.';
+        } finally {
+          state.blueBar.loading = false;
         }
       },
       handleGroupChange: async () => {

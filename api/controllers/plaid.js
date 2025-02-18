@@ -140,9 +140,41 @@ const plaidController = {
   syncAccountsAndGroups: async function ({ user }, res) {
     try {
       const syncedData = await plaidAccountService.syncUserAccounts(user);
+      
+      // Validate the response
+      if (!syncedData || !syncedData.accounts || !syncedData.groups) {
+        return res.status(400).json({
+          error: 'SYNC_ERROR',
+          message: 'Failed to sync accounts and groups'
+        });
+      }
+
+      // Check for account errors
+      const accountsWithErrors = syncedData.accounts.filter(account => account.error);
+      if (accountsWithErrors.length > 0) {
+        return res.status(400).json({
+          error: 'ITEM_ERROR',
+          message: 'One or more accounts need to be reconnected',
+          accounts: accountsWithErrors
+        });
+      }
+
       res.json(syncedData);
     } catch (error) {
-      res.status(500).json({ error: error.message });
+      console.error('Sync accounts error:', error);
+      
+      // Handle specific Plaid errors
+      if (error.error_code === 'ITEM_LOGIN_REQUIRED') {
+        return res.status(400).json({
+          error: 'ITEM_LOGIN_REQUIRED',
+          message: 'Your bank connection needs to be updated'
+        });
+      }
+
+      res.status(500).json({ 
+        error: 'SYNC_ERROR',
+        message: error.message || 'Error syncing accounts and groups'
+      });
     }
   },
 
