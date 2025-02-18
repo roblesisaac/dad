@@ -1,8 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
-import { itemService } from './index.js';
-import { decryptAccessToken } from './linkService.js';
+import { itemService, linkService } from './index.js';
 import { plaidClientInstance } from '../plaidClient.js';
 
 class PlaidAccountService extends PlaidBaseService {
@@ -54,7 +53,7 @@ class PlaidAccountService extends PlaidBaseService {
     }
 
     try {
-      const access_token = decryptAccessToken(item.accessToken, encryptedKey);
+      const access_token = linkService.decryptAccessToken(item.accessToken, encryptedKey);
       const data = await this.handleResponse(
         this.client.accountsGet({ access_token })
       );

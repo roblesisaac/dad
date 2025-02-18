@@ -4,10 +4,6 @@ import { decrypt, decryptWithKey } from '../../utils/encryption.js';
 import plaidItems from '../../models/plaidItems.js';
 import { plaidClientInstance } from '../plaidClient.js';
 
-export function decryptAccessToken(encryptedToken, key) {
-  // ... implementation
-}
-
 class PlaidLinkService extends PlaidBaseService {
   async createLinkToken(user, itemId = null) {
     this.validateUser(user);

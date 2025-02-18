@@ -1,10 +1,10 @@
-import PlaidBaseService from './baseService';
-import plaidTransactions from '../../models/plaidTransactions';
-import plaidItems from '../../models/plaidItems';
-import { decryptAccessToken } from './linkService';
-import { plaidClientInstance } from '../plaidClient';
-import { itemService } from './index';
-import notify from '../../utils/notify';
+import PlaidBaseService from './baseService.js';
+import plaidTransactions from '../../models/plaidTransactions.js';
+import plaidItems from '../../models/plaidItems.js';
+import { linkService } from './index.js';
+import { plaidClientInstance } from '../plaidClient.js';
+import { itemService } from './index.js';
+import notify from '../../utils/notify.js';
 
 class PlaidTransactionService extends PlaidBaseService {
   async syncTransactionsForItem(item, userId, encryptedKey) {
@@ -39,7 +39,7 @@ class PlaidTransactionService extends PlaidBaseService {
       await itemService.updateItemSyncStatus(item._id, nextSyncData);
 
       try {
-        const access_token = decryptAccessToken(accessToken, encryptedKey);
+        const access_token = linkService.decryptAccessToken(accessToken, encryptedKey);
         const transactions = await this.fetchTransactionsFromPlaid(access_token, syncData.cursor);
 
         await this.processAndSaveTransactions(transactions, userId, item._id);
