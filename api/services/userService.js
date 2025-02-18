@@ -8,19 +8,50 @@ class UserService {
   constructor() {
     this.domain = domain;
     this.audience = VITE_ZERO_AUDIENCE;
+    this.managementToken = null;
+    this.tokenExpiresAt = null;
   }
 
-  validateManagementToken() {
-    const token = ZERO_MGMT_CLIENT_SECRET;
-    if (!token) {
-      throw new Error('AUTH0_MGMT_TOKEN is not set in environment variables');
+  async getManagementToken() {
+    // Check if we have a valid cached token
+    if (this.managementToken && this.tokenExpiresAt && Date.now() < this.tokenExpiresAt) {
+      return this.managementToken;
     }
-    return token;
+
+    try {
+      const response = await fetch(`https://${this.domain}/oauth/token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          client_id: ZERO_MGMT_CLIENT_ID,
+          client_secret: ZERO_MGMT_CLIENT_SECRET,
+          audience: `https://${this.domain}/api/v2/`,
+          grant_type: 'client_credentials'
+        })
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(`Failed to get management token: ${data.error_description || data.error}`);
+      }
+
+      this.managementToken = data.access_token;
+      // Set expiration 5 minutes before actual expiration to be safe
+      this.tokenExpiresAt = Date.now() + (data.expires_in * 1000) - (5 * 60 * 1000);
+      
+      return this.managementToken;
+    } catch (error) {
+      console.error('Error getting management token:', error);
+      throw new Error(`Failed to get management token: ${error.message}`);
+    }
   }
 
   async updateUserMetadata(userId, metadata) {
     try {
-      const token = this.validateManagementToken();
+      const token = await this.getManagementToken();
       console.log('Using domain:', this.domain);
       
       const response = await fetch(`https://${this.domain}/api/v2/users/${userId}`, {
