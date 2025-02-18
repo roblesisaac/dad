@@ -45,13 +45,11 @@ class PlaidLinkService extends PlaidBaseService {
       }
     }
 
-    console.log('Creating link token with request:', JSON.stringify(request, null, 2));
-
     try {
-      const response = await this.handleResponse(
+      const { link_token } = await this.handleResponse(
         this.client.linkTokenCreate(request)
       );
-      return response;
+      return link_token;
     } catch (error) {
       console.error('Link token creation failed:', error);
       throw new Error(`LINK_TOKEN_ERROR: ${error.message}`);
