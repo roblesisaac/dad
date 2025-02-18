@@ -291,34 +291,34 @@
           try {
             const { groups, accounts } = await api.get('/plaid/sync/accounts/and/groups');
             
-            // Handle the response based on error types
-            if (!groups || !accounts) {
-              throw new Error('Invalid response from server');
-            }
-
             // Process successful response
             state.allUserAccounts = accounts;
-            state.allUserGroups = groups.sort(sortBy('sort'));
+            state.allUserGroups = groups?.sort(sortBy('sort')) || [];
 
-            if (!groups.length) {
+            // Handle no accounts case
+            if (!accounts?.length) {
+              state.blueBar.message = 'Connect your first account to get started';
+              state.views.push('ItemRepair');
+              return;
+            }
+
+            // Handle no groups case
+            if (!groups?.length) {
+              state.blueBar.message = 'Set up your first group to get started';
               state.views.push('SelectGroup');
               return;
             }
 
-            // Sync transactions
+            // Sync transactions if everything else is good
             try {
               const { syncResults } = await api.get('/plaid/sync/all/transactions');
+              state.blueBar.message = 'Sync complete!';
+              state.blueBar.loading = false;
               
-              let added = [], removed = [];
-              for(const syncedItem of syncResults) {
-                if(!Array.isArray(syncedItem.added)) {
-                  continue;
-                }
-                added = [...added, ...syncedItem.added];
-                removed = [...removed, ...syncedItem.removed];
-              }
-              
-              await app.handleGroupChange();
+              setTimeout(() => {
+                state.blueBar.message = false;
+              }, 3000);
+
               app.checkSyncStatus();
             } catch (syncError) {
               console.error('Transaction sync error:', syncError);
@@ -328,34 +328,35 @@
           } catch (error) {
             console.error('Account sync error:', error);
             
-            // Handle API error responses
+            // Handle specific error cases
             if (error.response?.data) {
               const { error: errorCode, message } = error.response.data;
               
               switch (errorCode) {
-                case 'AUTH_ERROR':
-                  state.blueBar.message = 'Authentication error. Please try logging in again.';
-                  // Could redirect to login here if needed
-                  return;
+                case 'NO_ITEMS':
+                  state.blueBar.message = 'Connect your first account to get started';
+                  state.views.push('ItemRepair');
+                  break;
 
                 case 'ITEM_ERROR':
                 case 'ITEM_LOGIN_REQUIRED':
                   state.blueBar.message = message || 'Your accounts need to be reconnected';
                   state.views.push('ItemRepair');
-                  return;
-                  
+                  break;
+
                 case 'NO_GROUPS':
-                  state.blueBar.message = message || 'Please set up your account groups';
+                  state.blueBar.message = 'Set up your first group to get started';
                   state.views.push('SelectGroup');
-                  return;
+                  break;
+
+                case 'AUTH_ERROR':
+                  state.blueBar.message = 'Please log in again';
+                  // Could redirect to login here
+                  break;
 
                 case 'SYNC_ERROR':
                   state.blueBar.message = message || 'Error syncing accounts. Please try again.';
-                  return;
-                  
-                case 'SERVER_ERROR':
-                  state.blueBar.message = 'Server error. Please try again later.';
-                  return;
+                  break;
 
                 default:
                   state.blueBar.message = message || 'There was an error connecting to your accounts';
