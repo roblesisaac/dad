@@ -295,20 +295,6 @@
             state.allUserAccounts = accounts;
             state.allUserGroups = groups?.sort(sortBy('sort')) || [];
 
-            // Handle no accounts case
-            if (!accounts?.length) {
-              state.blueBar.message = 'Connect your first account to get started';
-              state.views.push('ItemRepair');
-              return;
-            }
-
-            // Handle no groups case
-            if (!groups?.length) {
-              state.blueBar.message = 'Set up your first group to get started';
-              state.views.push('SelectGroup');
-              return;
-            }
-
             // Sync transactions if everything else is good
             try {
               const { syncResults } = await api.get('/plaid/sync/all/transactions');
@@ -329,45 +315,21 @@
             console.error('Account sync error:', error);
             
             // Handle specific error cases
-            if (error.response?.data) {
-              const { error: errorCode, message } = error.response.data;
-              
-              switch (errorCode) {
-                case 'NO_ITEMS':
-                  state.blueBar.message = 'Connect your first account to get started';
-                  state.views.push('ItemRepair');
-                  break;
-
-                case 'ITEM_ERROR':
-                case 'ITEM_LOGIN_REQUIRED':
-                  state.blueBar.message = message || 'Your accounts need to be reconnected';
-                  state.views.push('ItemRepair');
-                  break;
-
-                case 'NO_GROUPS':
-                  state.blueBar.message = 'Set up your first group to get started';
-                  state.views.push('SelectGroup');
-                  break;
-
-                case 'AUTH_ERROR':
-                  state.blueBar.message = 'Please log in again';
-                  // Could redirect to login here
-                  break;
-
-                case 'SYNC_ERROR':
-                  state.blueBar.message = message || 'Error syncing accounts. Please try again.';
-                  break;
-
-                default:
-                  state.blueBar.message = message || 'There was an error connecting to your accounts';
-              }
-            } else if (error.response?.status === 500) {
-              state.blueBar.message = 'Server error. Please try again later.';
-            } else if (error.message?.includes('Network Error')) {
-              state.blueBar.message = 'Unable to connect to server. Please check your internet connection.';
-            } else {
-              state.blueBar.message = 'Error connecting to accounts. Please try again.';
+            if (error.message?.includes('NO_ITEMS')) {
+              state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
+              state.blueBar.loading = false;
+              state.views = ['ItemRepair']; // Replace current view with ItemRepair
+              return;
             }
+
+            if (error.message?.includes('ITEM_LOGIN_REQUIRED')) {
+              state.blueBar.message = 'Your bank connection needs to be updated.';
+              state.views.push('ItemRepair');
+              return;
+            }
+
+            // Handle other specific errors...
+            state.blueBar.message = 'There was an error connecting to your accounts. Please try again.';
           }
         } catch (error) {
           console.error('Init error:', error);
