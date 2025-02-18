@@ -1,8 +1,8 @@
 import { encrypt, generateSymmetricKey } from '../utils/encryption.js';
 import { params } from '@ampt/sdk';
 
-const { VITE_ZERO_DOMAIN, VITE_ZERO_AUDIENCE } = params().list();
-const domain = VITE_ZERO_DOMAIN;
+const { VITE_ZERO_AUDIENCE, ZERO_MGMT_DOMAIN, ZERO_MGMT_CLIENT_ID, ZERO_MGMT_CLIENT_SECRET } = params().list();
+const domain = ZERO_MGMT_DOMAIN;
 
 class UserService {
   constructor() {
@@ -11,7 +11,7 @@ class UserService {
   }
 
   validateManagementToken() {
-    const token = process.env.AUTH0_MGMT_TOKEN;
+    const token = ZERO_MGMT_CLIENT_SECRET;
     if (!token) {
       throw new Error('AUTH0_MGMT_TOKEN is not set in environment variables');
     }
