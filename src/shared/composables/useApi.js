@@ -2,7 +2,6 @@ import { useAuth } from './useAuth';
 import { useNotifications } from '@/shared/composables/useNotifications';
 
 const API_URL = `${window.location.origin}/api`;
-const TIMEOUT = 30000; // 30 seconds
 
 export function useApi() {
   const { getToken, logout } = useAuth();
@@ -43,32 +42,24 @@ export function useApi() {
   async function request(url, options = {}) {
     try {
       const token = getToken();
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), TIMEOUT);
-
+      
+      // Ensure token is being added correctly
       const headers = {
         'Content-Type': 'application/json',
-        ...(token && { Authorization: `Bearer ${token}` }),
-        ...options.headers
+        ...(token && { 'Authorization': token }) // Changed format here
       };
+
+      if (options.headers) {
+        Object.assign(headers, options.headers);
+      }
 
       const response = await fetch(`${API_URL}/${url}`, {
         ...options,
-        headers,
-        signal: controller.signal
+        headers
       });
 
-      clearTimeout(timeoutId);
       return await handleResponse(response);
     } catch (error) {
-      if (error.name === 'AbortError') {
-        notify({
-          type: 'error',
-          message: 'Request timed out. Please try again.'
-        });
-        throw new Error('Request timed out');
-      }
-
       if (!error.response) {
         // Network error
         notify({
