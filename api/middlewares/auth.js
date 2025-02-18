@@ -35,12 +35,13 @@ export async function checkLoggedIn(req, res, next) {
     // Extract user information from the JWT token
     const { payload } = req.auth;
     const metadata = payload[`${audience}/user_metadata`] || {};
+    const email = payload[`${audience}/email`]
     
     // Create user object
     req.user = {
-      _id: metadata.legacyId,
+      _id: metadata.legacyId || email,
       sub: payload.sub,
-      email: payload[`${audience}/email`],
+      email,
       roles: payload[`${audience}/roles`],
       metadata,
       appMetadata: payload[`${audience}/app_metadata`] || {}
