@@ -39,11 +39,7 @@ export function checkLoggedIn(req, res, next) {
     _id: metadata.legacyId,
     encryptionKey: metadata.encryptionKey,
     sub: payload.sub,
-    email: payload.email || 
-           payload[`${audience}/email`] || 
-           payload['https://my-app.com/email'] ||
-           payload['https://my-app.com/user_email'] ||
-           undefined,
+    email: payload.email,
     roles: payload[`${audience}/roles`],
     metadata,
     appMetadata: payload[`${audience}/app_metadata`] || {}
