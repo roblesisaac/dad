@@ -1,7 +1,7 @@
-import PlaidBaseService from './baseService';
-import plaidItems from '../../models/plaidItems';
-import { decryptAccessToken } from './linkService';
-import { plaidClientInstance } from '../oldPlaidClient';
+import PlaidBaseService from './baseService.js';
+import plaidItems from '../../models/plaidItems.js';
+import { linkService } from './index.js';
+import { plaidClientInstance } from '../oldPlaidClient.js';
 
 class PlaidItemService extends PlaidBaseService {
   async getItems(userId, itemId = null) {
@@ -34,7 +34,7 @@ class PlaidItemService extends PlaidBaseService {
 
       for (const item of userItems) {
         try {
-          const access_token = decryptAccessToken(item.accessToken, user.encryptionKey);
+          const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptionKey);
           const response = await this.handleResponse(
             this.client.itemGet({ access_token })
           );
