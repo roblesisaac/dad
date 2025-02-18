@@ -8,7 +8,9 @@ class PlaidLinkService extends PlaidBaseService {
     this.validateUser(user);
 
     const request = {
-      user: { client_user_id: user._id },
+      user: { 
+        client_user_id: user._id.toString() 
+      },
       client_name: 'TrackTabs',
       products: ['transactions'],
       country_codes: ['US'],
@@ -29,9 +31,17 @@ class PlaidLinkService extends PlaidBaseService {
       }
     }
 
-    return this.handleResponse(
-      this.client.linkTokenCreate(request)
-    );
+    console.log('Creating link token with request:', JSON.stringify(request, null, 2));
+
+    try {
+      const response = await this.handleResponse(
+        this.client.linkTokenCreate(request)
+      );
+      return response;
+    } catch (error) {
+      console.error('Link token creation failed:', error);
+      throw new Error(`LINK_TOKEN_ERROR: ${error.message}`);
+    }
   }
 
   async exchangePublicToken(publicToken) {
