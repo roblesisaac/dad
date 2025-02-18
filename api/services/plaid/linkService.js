@@ -2,14 +2,25 @@ import PlaidBaseService from './baseService.js';
 import { decrypt, decryptWithKey } from '../../utils/encryption.js';
 import plaidItems from '../../models/plaidItems.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
+import crypto from 'crypto';
 
 class PlaidLinkService extends PlaidBaseService {
+  generateClientUserId(identifier) {
+    return crypto
+      .createHash('sha256')
+      .update(identifier.toLowerCase().trim())
+      .digest('hex')
+      .slice(0, 32);
+  }
+
   async createLinkToken(user, itemId = null) {
     this.validateUser(user);
 
+    const clientUserId = this.generateClientUserId(user._id);
+
     const request = {
       user: { 
-        client_user_id: user._id.toString() 
+        client_user_id: clientUserId
       },
       client_name: 'TrackTabs',
       products: ['transactions'],
@@ -19,7 +30,10 @@ class PlaidLinkService extends PlaidBaseService {
 
     if (itemId) {
       try {
-        const item = await plaidItems.findOne({ userId: user._id, itemId });
+        const item = await plaidItems.findOne({ 
+          userId: user._id, 
+          itemId 
+        });
         if (!item) {
           throw new Error('ITEM_NOT_FOUND: Invalid item ID');
         }
