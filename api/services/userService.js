@@ -11,26 +11,33 @@ class UserService {
   }
 
   async updateUserMetadata(userId, metadata) {
-    const response = await fetch(`https://${this.domain}/api/v2/users/${userId}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.AUTH0_MGMT_TOKEN}`
-      },
-      body: JSON.stringify({
-        user_metadata: metadata
-      })
-    });
+    try {
+      const response = await fetch(`https://${this.domain}/api/v2/users/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.AUTH0_MGMT_TOKEN}`
+        },
+        body: JSON.stringify({
+          user_metadata: metadata
+        })
+      });
 
-    if (!response.ok) {
-      throw new Error('Failed to update user metadata');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(`Auth0 API Error: ${error.message || error.error_description || 'Unknown error'} (${response.status})`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('Full Auth0 error:', error);
+      throw new Error(`Failed to update user metadata: ${error.message}`);
     }
-
-    return await response.json();
   }
 
   async ensureUserEncryptionKey(user) {
     if (!user.metadata?.encryptionKey) {
+      console.log('Generating new encryption key for user:', user.sub);
       const encryptedKey = encrypt(generateSymmetricKey());
       
       await this.updateUserMetadata(user.sub, {
