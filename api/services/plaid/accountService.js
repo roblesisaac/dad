@@ -1,9 +1,9 @@
-import PlaidBaseService from './baseService';
-import plaidAccounts from '../../models/plaidAccounts';
-import plaidGroups from '../../models/plaidGroups';
-import { itemService } from './index';
-import { decryptAccessToken } from './linkService';
-import { plaidClientInstance } from '../plaidClient';
+import PlaidBaseService from './baseService.js';
+import plaidAccounts from '../../models/plaidAccounts.js';
+import plaidGroups from '../../models/plaidGroups.js';
+import { itemService } from './index.js';
+import { decryptAccessToken } from './linkService.js';
+import { plaidClientInstance } from '../plaidClient.js';
 
 class PlaidAccountService extends PlaidBaseService {
   async syncUserAccounts(user) {
