@@ -33,6 +33,7 @@ export function checkLoggedIn(req, res, next) {
   // Extract user information from the JWT token
   const { payload } = req.auth;
   const metadata = payload[`${audience}/user_metadata`] || {};
+  const email = payload[`${audience}/email`] || undefined;
   
   // Add user information to req.user
   req.user = {
