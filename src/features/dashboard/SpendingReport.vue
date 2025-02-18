@@ -115,6 +115,15 @@
       <ItemRepair :state="state" :app="app" />
     </div>
   </Transition>
+
+  <div class="spending-report">
+    <component 
+      :is="state.currentView" 
+      v-if="state.views.length" 
+      @view-changed="handleViewChange"
+    />
+    <home v-else />
+  </div>
 </template>
 
 <script setup>
@@ -202,7 +211,8 @@
       transaction: false
     },
     syncCheckId: false,
-    views: ['home'],
+    views: [],
+    currentView: computed(() => state.views[state.views.length - 1] || 'home'),
     view: computed(() => state.views[state.views.length -1])
   });
 
@@ -318,13 +328,23 @@
             if (error.message?.includes('NO_ITEMS')) {
               state.blueBar.message = 'Welcome! Let\'s connect your first bank account.';
               state.blueBar.loading = false;
-              state.views = ['ItemRepair']; // Replace current view with ItemRepair
+              // Clear views array and add ItemRepair
+              state.views.length = 0;
+              state.views.push('ItemRepair');
+              // Force view update
+              nextTick(() => {
+                if (!state.views.includes('ItemRepair')) {
+                  state.views.push('ItemRepair');
+                }
+              });
               return;
             }
 
             if (error.message?.includes('ITEM_LOGIN_REQUIRED')) {
               state.blueBar.message = 'Your bank connection needs to be updated.';
-              state.views.push('ItemRepair');
+              if (!state.views.includes('ItemRepair')) {
+                state.views.push('ItemRepair');
+              }
               return;
             }
 
@@ -463,6 +483,10 @@
     app.handleGroupChange();
   });
   
+  watch(() => state.views, (newViews) => {
+    console.log('Views updated:', newViews);
+  }, { deep: true });
+
   watch(() => state.view, app.handleViewChange);
   watch(() => state.selected.tab?._id, app.handleTabChange);
 
