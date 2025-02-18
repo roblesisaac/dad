@@ -1,5 +1,5 @@
-import { scrub } from '../../src/utils';
-import tasks from '../tasks/plaid';
+import { scrub } from '../../src/utils.js';
+import tasks from '../tasks/plaid.js';
 import { 
   plaidLinkService, 
   plaidAccountService, 
