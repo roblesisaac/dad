@@ -96,6 +96,7 @@ class PlaidLinkService extends PlaidBaseService {
       const encryptionKey = decrypt(user.encryptedKey, 'buffer');
 
       // First check if the item exists
+      
       const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
 
       const itemData = {

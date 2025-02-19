@@ -125,10 +125,7 @@ export function usePlaidIntegration() {
         throw new Error('No link token received from server');
       }
 
-      const link = createPlaidLink(link_token, async () => {
-        // Optional callback after successful connection
-        await syncItems();
-      });
+      const link = createPlaidLink(link_token);
 
       link.open();
     } catch (error) {
