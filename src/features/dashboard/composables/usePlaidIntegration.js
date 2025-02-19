@@ -119,13 +119,13 @@ export function usePlaidIntegration() {
       state.loading = true;
       state.error = null;
       
-      const linkToken = await api.post('plaid/connect/link');
+      const { link_token } = await api.post('plaid/connect/link');
       
-      if (!linkToken) {
+      if (!link_token) {
         throw new Error('No link token received from server');
       }
 
-      const link = createPlaidLink(linkToken, async () => {
+      const link = createPlaidLink(link_Token, async () => {
         // Optional callback after successful connection
         await syncItems();
       });
