@@ -18,7 +18,7 @@ export default {
     try {
       const { publicToken } = req.body;
       const accessData = await linkService.exchangePublicToken(publicToken);
-      const plaidItem = await linkService.savePlaidAccessData(accessData, req.user.encryptionKey);
+      const plaidItem = await linkService.savePlaidAccessData(accessData, req.user);
       res.json(plaidItem);
     } catch (error) {
       res.status(400).json({ 

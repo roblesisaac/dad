@@ -89,7 +89,7 @@ class PlaidTransactionService extends PlaidBaseService {
       const syncResults = [];
       for (const item of items) {
         try {
-          const result = await this.syncTransactionsForItem(item, user._id, user.encryptionKey);
+          const result = await this.syncTransactionsForItem(item, user._id, user.encryptedKey);
           syncResults.push({ itemId: item._id, ...result });
         } catch (error) {
           console.error(`Error syncing transactions for item ${item._id}:`, error);

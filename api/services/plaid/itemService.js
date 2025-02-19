@@ -34,7 +34,7 @@ class PlaidItemService extends PlaidBaseService {
 
       for (const item of userItems) {
         try {
-          const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptionKey);
+          const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptedKey);
           const response = await this.handleResponse(
             this.client.itemGet({ access_token })
           );

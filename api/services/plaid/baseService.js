@@ -14,7 +14,7 @@ export default class PlaidBaseService {
   }
 
   validateUser(user) {
-    if (!user?._id || !user?.encryptionKey) {
+    if (!user?._id || !user?.encryptedKey) {
       throw new Error('INVALID_USER: Missing required user data');
     }
     return true;

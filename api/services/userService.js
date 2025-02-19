@@ -85,18 +85,18 @@ class UserService {
   }
 
   async ensureUserEncryptionKey(user) {
-    if (!user.metadata?.encryptionKey) {
-      console.log('Generating new encryption key for user:', user.sub);
+    if (!user.metadata?.encryptedKey) {
       const encryptedKey = encrypt(generateSymmetricKey());
       
       await this.updateUserMetadata(user.sub, {
         ...user.metadata,
-        encryptionKey: encryptedKey
+        encryptedKey: encryptedKey
       });
 
       return encryptedKey;
     }
-    return user.metadata.encryptionKey;
+    
+    return user.metadata.encryptedKey;
   }
 }
 

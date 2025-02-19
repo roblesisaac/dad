@@ -17,7 +17,7 @@ class PlaidAccountService extends PlaidBaseService {
       let retrievedAccountsFromPlaid = [];
       for (const item of userItems) {
         try {
-          const accounts = await this.retrieveAccountsFromPlaidForItem(item, user.encryptionKey);
+          const accounts = await this.retrieveAccountsFromPlaidForItem(item, user.encryptedKey);
           retrievedAccountsFromPlaid = [...retrievedAccountsFromPlaid, ...accounts];
         } catch (error) {
           console.error(`Error retrieving accounts for item ${item._id}:`, error);
@@ -165,7 +165,7 @@ class PlaidAccountService extends PlaidBaseService {
 
   async syncItems(userItems, user) {
     let syncedItems = [];
-    const encryptedKey = user.encryptionKey;
+    const { encryptedKey } = user;
 
     for (const item of userItems) {
       const access_token = linkService.decryptAccessToken(item.accessToken, encryptedKey);

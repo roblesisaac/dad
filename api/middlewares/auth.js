@@ -48,7 +48,7 @@ export async function checkLoggedIn(req, res, next) {
     };
 
     // Ensure user has an encryption key
-    req.user.encryptionKey = await userService.ensureUserEncryptionKey(req.user);
+    req.user.encryptedKey = await userService.ensureUserEncryptionKey(req.user);
     next();
   } catch (error) {
     console.error('Error ensuring user encryption key:', error);

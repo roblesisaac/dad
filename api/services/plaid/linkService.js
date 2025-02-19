@@ -37,7 +37,7 @@ class PlaidLinkService extends PlaidBaseService {
         if (!item) {
           throw new Error('ITEM_NOT_FOUND: Invalid item ID');
         }
-        const access_token = this.decryptAccessToken(item.accessToken, user.encryptionKey);
+        const access_token = this.decryptAccessToken(item.accessToken, user.encryptedKey);
         delete request.products;
         request.access_token = access_token;
       } catch (error) {
@@ -86,14 +86,14 @@ class PlaidLinkService extends PlaidBaseService {
     }
   }
 
-  async savePlaidAccessData(accessData, encryptedKey) {
+  async savePlaidAccessData(accessData, user) {
     if (!accessData?.access_token || !accessData?.item_id) {
       throw new Error('INVALID_ACCESS_DATA: Missing required access data');
     }
 
     try {
       const { access_token, item_id } = accessData;
-      const encryptionKey = decrypt(encryptedKey, 'buffer');
+      const encryptionKey = decrypt(user.encryptedKey, 'buffer');
 
       const item = await plaidItems.update({ item_id }, {
         accessToken: access_token,
@@ -102,7 +102,8 @@ class PlaidLinkService extends PlaidBaseService {
           result: {},
           status: 'queued'
         },
-        encryptionKey
+        encryptionKey,
+        userId: user._id
       });
 
       return { access_token, ...item };

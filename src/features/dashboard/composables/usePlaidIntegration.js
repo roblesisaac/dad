@@ -70,7 +70,7 @@ export function usePlaidIntegration() {
       },
       onEvent: function(eventName, metadata) {
         // Log events for debugging
-        console.log('Link event:', eventName, metadata);
+        // console.log('Link event:', eventName, metadata);
       },
     });
   }

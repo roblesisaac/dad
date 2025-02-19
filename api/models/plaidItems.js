@@ -3,7 +3,7 @@ import { encrypt, encryptWithKey } from '../utils/encryption';
 
 const itemSchema = {
   userId: {
-    set: (_, { req }) => req.user._id
+    set: (_, { userId }) => userId
   },
   accessToken: { 
     set: (accessToken, { encryptionKey }) => {

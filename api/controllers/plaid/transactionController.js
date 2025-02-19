@@ -37,7 +37,7 @@ export default {
   async syncTransactions(req, res) {
     try {
       const { itemId } = req.params;
-      const response = await transactionService.syncTransactionsForItem(itemId, req.user._id, req.user.encryptionKey);
+      const response = await transactionService.syncTransactionsForItem(itemId, req.user._id, req.user.encryptedKey);
       res.json(response);
     } catch (error) {
       res.status(400).json({ 
