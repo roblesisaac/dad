@@ -54,7 +54,7 @@ export function usePlaidIntegration() {
             await onSuccess();
           }
           
-          await syncItems();
+        //   await syncItems();
         } catch (error) {
           console.error('Error completing connection:', error);
           state.error = 'Failed to complete connection. Please try again.';
