@@ -41,6 +41,10 @@ export function usePlaidIntegration() {
             publicToken,
             // Add any additional required data here
           });
+
+          console.log({
+            response
+          })
           
           if (response.error) {
             throw new Error(response.error);
