@@ -4,8 +4,8 @@ export default {
   async createLink(req, res) {
     try {
       const { itemId } = req.params;
-      const linkToken = await linkService.createLinkToken(req.user, itemId);
-      res.json({ link_token: linkToken });
+      const link_token = await linkService.createLinkToken(req.user, itemId);
+      res.json({ link_token });
     } catch (error) {
       res.status(400).json({ 
         error: error.message.split(': ')[0],
