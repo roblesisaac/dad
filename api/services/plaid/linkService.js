@@ -96,7 +96,6 @@ class PlaidLinkService extends PlaidBaseService {
       const encryptionKey = decrypt(user.encryptedKey, 'buffer');
 
       // First check if the item exists
-      
       const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
 
       const itemData = {
@@ -121,6 +120,8 @@ class PlaidLinkService extends PlaidBaseService {
         // Create new item
         item = await plaidItems.save(itemData);
       }
+
+      console.log('item', item);
 
       return { 
         itemId: item.itemId,
