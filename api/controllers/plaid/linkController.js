@@ -23,6 +23,8 @@ export default {
       
       // Save or update the Plaid item
       const plaidItem = await linkService.savePlaidAccessData(accessData, req.user);
+
+      console.log('plaidItem', plaidItem);
       
       res.json({
         status: 'success',
