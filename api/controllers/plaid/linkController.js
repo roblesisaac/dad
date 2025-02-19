@@ -5,7 +5,7 @@ export default {
     try {
       const { itemId } = req.params;
       const linkToken = await linkService.createLinkToken(req.user, itemId);
-      res.json(linkToken);
+      res.json({ link_token: linkToken });
     } catch (error) {
       res.status(400).json({ 
         error: error.message.split(': ')[0],
@@ -17,10 +17,19 @@ export default {
   async exchangeToken(req, res) {
     try {
       const { publicToken } = req.body;
+      
+      // Exchange public token for access token
       const accessData = await linkService.exchangePublicToken(publicToken);
+      
+      // Save or update the Plaid item
       const plaidItem = await linkService.savePlaidAccessData(accessData, req.user);
-      res.json(plaidItem);
+      
+      res.json({
+        status: 'success',
+        data: plaidItem
+      });
     } catch (error) {
+      console.error('Exchange token error:', error);
       res.status(400).json({ 
         error: error.message.split(': ')[0],
         message: error.message.split(': ')[1] 

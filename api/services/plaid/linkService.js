@@ -95,7 +95,10 @@ class PlaidLinkService extends PlaidBaseService {
       const { access_token, item_id } = accessData;
       const encryptionKey = decrypt(user.encryptedKey, 'buffer');
 
-      const item = await plaidItems.update({ item_id }, {
+      // First check if the item exists
+      const existingItem = await plaidItems.findOne({ itemId: item_id });
+
+      const itemData = {
         accessToken: access_token,
         itemId: item_id,
         syncData: {
@@ -104,9 +107,25 @@ class PlaidLinkService extends PlaidBaseService {
         },
         encryptionKey,
         userId: user._id
-      });
+      };
 
-      return { access_token, ...item };
+      let item;
+      if (existingItem) {
+        // Update existing item
+        item = await plaidItems.update(
+          { itemId: item_id },
+          itemData
+        );
+      } else {
+        // Create new item
+        item = await plaidItems.create(itemData);
+      }
+
+      return { 
+        itemId: item.itemId,
+        syncData: item.syncData,
+        userId: item.userId
+      };
     } catch (error) {
       throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
     }
@@ -125,4 +144,4 @@ class PlaidLinkService extends PlaidBaseService {
   }
 }
 
-export default new PlaidLinkService(plaidClientInstance); 
+export default new PlaidLinkService(plaidClientInstance);
