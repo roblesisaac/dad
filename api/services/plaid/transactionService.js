@@ -7,7 +7,9 @@ import { itemService } from './index.js';
 import notify from '../../utils/notify.js';
 
 class PlaidTransactionService extends PlaidBaseService {
-  async syncTransactionsForItem(item, userId, encryptedKey) {
+  async syncTransactionsForItem(item, user={}) {
+    const { _id: userId, encryptedKey } = user;
+
     if (!userId || !encryptedKey) {
       throw new Error('INVALID_USER: Missing required user data');
     }
@@ -89,7 +91,7 @@ class PlaidTransactionService extends PlaidBaseService {
       const syncResults = [];
       for (const item of items) {
         try {
-          const result = await this.syncTransactionsForItem(item, user._id, user.encryptedKey);
+          const result = await this.syncTransactionsForItem(item, user);
           syncResults.push({ itemId: item._id, ...result });
         } catch (error) {
           console.error(`Error syncing transactions for item ${item._id}:`, error);

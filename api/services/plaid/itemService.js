@@ -1,6 +1,6 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
-import { linkService } from './index.js';
+import { linkService, transactionService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidItemService extends PlaidBaseService {
@@ -38,6 +38,8 @@ class PlaidItemService extends PlaidBaseService {
           const response = await this.handleResponse(
             this.client.itemGet({ access_token })
           );
+
+          transactionService.syncTransactionsForItem(item, user);
           syncedItems.push(response.item);
         } catch (error) {
           console.error(`Error syncing item ${item._id}:`, error);

@@ -8,19 +8,19 @@ const tasks = (function() {
   });
 
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
-    const { itemId, userId, encryptedKey } = body;
+    const { itemId, user } = body;
     
-    return await transactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
+    return await transactionService.syncTransactionsForItem(itemId, user);
   });
 
   const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
-    const { itemIds, userId, encryptedKey } = body;
+    const { itemIds, user } = body;
 
     let results = [];
 
     for (const itemId of itemIds) {
       try {
-        const result = await transactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
+        const result = await transactionService.syncTransactionsForItem(itemId, user);
         results.push(result);
       } catch (e) {
         console.error({
@@ -49,11 +49,11 @@ const tasks = (function() {
     removeAllUserTransactions: async ({ _id, email }) => {
       removeAllTransactionsFromDatabase.run({ user: { _id, email } });
     },
-    syncTransactionsForItem: async function(itemId, userId, encryptedKey) {
-      syncTransactions.run({ itemId, userId, encryptedKey });
+    syncTransactionsForItem: async function(itemId, user) {
+      syncTransactions.run({ itemId, user });
     },
-    syncTransactionsForItems: async function (itemIds, userId, encryptedKey) {
-      syncTransactionsForItems.run({ itemIds, userId, encryptedKey });
+    syncTransactionsForItems: async function (itemIds, user) {
+      syncTransactionsForItems.run({ itemIds, user });
     },
     updateAllDates: async function () {
       return 'Not implemented yet';
@@ -73,10 +73,10 @@ export default tasks;
 
 export const handler = async (event) => {
   try {
-    const { itemId, userId, encryptedKey } = event.body;
+    const { itemId, user } = event.body;
     
     // Call the service directly instead of going through the controller
-    const result = await transactionService.syncTransactionsForItem(itemId, userId, encryptedKey);
+    const result = await transactionService.syncTransactionsForItem(itemId, user);
     
     return {
       statusCode: 200,

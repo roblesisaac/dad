@@ -6,7 +6,7 @@ import maintenanceController from './maintenanceController';
 export default {
   // Link and Authentication
   connectLink: linkController.createLink,
-  exchangeTokenAndSavePlaidItem: linkController.exchangeToken,
+  exchangeTokenAndSavePlaidItem: linkController.exchangeTokenAndSavePlaidItem,
 
   // Items and Accounts
   getPlaidItems: itemController.getItems,

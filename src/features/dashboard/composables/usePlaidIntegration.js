@@ -38,23 +38,14 @@ export function usePlaidIntegration() {
           state.error = null;
           
           const response = await api.post('plaid/exchange/token', { 
-            publicToken,
-            // Add any additional required data here
+            publicToken
           });
-
-          console.log({
-            response
-          })
           
           if (response.error) {
-            throw new Error(response.error);
+            throw new Error(response.error);``
           }
-          
-          if (onSuccess) {
-            await onSuccess();
-          }
-          
-        //   await syncItems();
+        
+          await syncItems();          
         } catch (error) {
           console.error('Error completing connection:', error);
           state.error = 'Failed to complete connection. Please try again.';
