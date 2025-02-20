@@ -5,12 +5,6 @@ import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidTransactionService extends PlaidBaseService {
   async syncTransactionsForItem(item, user) {
-    console.log('Starting syncTransactionsForItem with:', {
-      item: typeof item === 'string' ? 'itemId string' : 'item object',
-      itemData: item,
-      user: user?._id
-    });
-
     if (!user) {
       throw new Error('INVALID_USER: Missing required user data');
     }
@@ -18,12 +12,6 @@ class PlaidTransactionService extends PlaidBaseService {
     try {
       // Get or validate item
       const validatedItem = await this._validateAndGetItem(item, user);
-      console.log('Validated item:', {
-        itemId: validatedItem.itemId,
-        userId: validatedItem.userId,
-        hasUser: !!validatedItem.user,
-        syncStatus: validatedItem.syncData?.status
-      });
       
       // Check if sync already in progress
       if (this._isSyncInProgress(validatedItem)) {
@@ -31,7 +19,6 @@ class PlaidTransactionService extends PlaidBaseService {
       }
 
       // Initialize sync
-      console.log('Initializing sync for item:', validatedItem.itemId);
       const syncSession = await this._initializeSync(validatedItem, user);
       
       try {
@@ -43,7 +30,6 @@ class PlaidTransactionService extends PlaidBaseService {
         
         return this._createSyncResponse('COMPLETED', validatedItem, result);
       } catch (error) {
-        console.error('Sync process error:', error);
         // Handle sync error
         await this._handleSyncError(validatedItem, error, user);
         throw error;
@@ -55,22 +41,12 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 
   async _validateAndGetItem(item, user) {
-    console.log('Validating item:', {
-      itemType: typeof item,
-      userId: user?._id
-    });
-
     try {
       if (typeof item === 'string') {
         if (!user?._id) {
           throw new Error('INVALID_USER: User ID is required to fetch item');
         }
         const foundItem = await itemService.getUserItems(user._id, item);
-        console.log('Found item from ID:', {
-          itemId: foundItem?.itemId,
-          hasUser: !!foundItem?.user,
-          userId: foundItem?.userId
-        });
         if (!foundItem) {
           throw new Error('ITEM_NOT_FOUND: Item not found for this user');
         }
@@ -78,11 +54,6 @@ class PlaidTransactionService extends PlaidBaseService {
       }
 
       if (!item?.accessToken || !item?._id || !item?.userId) {
-        console.error('Invalid item data:', {
-          hasAccessToken: !!item?.accessToken,
-          hasId: !!item?._id,
-          hasUserId: !!item?.userId
-        });
         throw new Error('INVALID_ITEM: Missing required item data');
       }
 
@@ -97,14 +68,6 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 
   async _initializeSync(item, user) {
-    console.log('Initializing sync with:', {
-      itemId: item.itemId,
-      userId: user._id,
-      hasUser: !!item.user,
-      itemUserObject: item.user,
-      userObject: user
-    });
-
     const syncData = {
       status: 'in_progress',
       lastSyncTime: Date.now(),
@@ -113,18 +76,11 @@ class PlaidTransactionService extends PlaidBaseService {
       error: null
     };
 
-    console.log('Calling updateItemSyncStatus with:', {
-      itemId: item.itemId,
-      syncDataToSend: {
-        ...syncData,
-        userId: user._id
-      }
-    });
-
-    await itemService.updateItemSyncStatus(item.itemId, { 
-      ...syncData,
-      userId: user._id
-    });
+    await itemService.updateItemSyncStatus(
+      item.itemId,
+      user._id,
+      syncData
+    );
 
     return {
       added: [],
@@ -244,11 +200,11 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, { 
-      ...progressData,
-      userId: user._id,
-      user: user
-    });
+    await itemService.updateItemSyncStatus(
+      item.itemId,
+      user._id,
+      progressData
+    );
   }
 
   async _completeSync(item, result, user) {
@@ -266,11 +222,11 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, { 
-      ...syncData,
-      userId: user._id,
-      user: user
-    });
+    await itemService.updateItemSyncStatus(
+      item.itemId, 
+      user._id,
+      syncData
+    );
   }
 
   async _handleSyncError(item, error, user) {
@@ -283,11 +239,11 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, { 
-      ...errorData,
-      userId: user._id,
-      user: user
-    });
+    await itemService.updateItemSyncStatus(
+      item.itemId,
+      user._id,
+      errorData
+    );
   }
 
   _createSyncResponse(status, item, result = null) {
