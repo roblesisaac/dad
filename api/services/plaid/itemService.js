@@ -37,13 +37,13 @@ class PlaidItemService extends PlaidBaseService {
         try {
           const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptedKey);
 
-          const item = this.client.itemGet({ access_token });
+          const plaidItem = this.client.itemGet({ access_token });
 
           console.log({
-            item
+            plaidItem
           })
 
-          const syncedItem = await plaidTasks.syncTransactionsForItem(item.id, user);
+          const syncedItem = await plaidTasks.syncTransactionsForItem(plaidItem._id, user);
 
           syncedItems.push(syncedItem);
         } catch (error) {
