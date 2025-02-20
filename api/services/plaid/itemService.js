@@ -46,7 +46,7 @@ class ItemService extends PlaidBaseService {
   async updateItemSyncStatus(itemId, syncData) {
     try {
       // Ensure we preserve history and stats
-      const item = await this.getUserItems(syncData.user._id, itemId);
+      const item = await this.getUserItems(syncData.userId, itemId);
       const currentHistory = item.syncData?.history || [];
       const currentStats = item.syncData?.stats || {
         added: 0,

@@ -113,7 +113,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...syncData,
-      user
+      userId: user._id
     });
 
     return {
@@ -236,7 +236,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...progressData,
-      user
+      userId: user._id
     });
   }
 
@@ -257,7 +257,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...syncData,
-      user
+      userId: user._id
     });
   }
 
@@ -273,7 +273,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...errorData,
-      user
+      userId: user._id
     });
   }
 
