@@ -14,9 +14,12 @@ export default {
         message: 'Initial sync started'
       });
     } catch (error) {
+      const errorCode = error.message.split(': ')[0];
+      const errorMessage = error.message.split(': ')[1] || error.message;
+      
       res.status(400).json({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] 
+        error: errorCode,
+        message: errorMessage
       });
     }
   },

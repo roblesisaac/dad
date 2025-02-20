@@ -1,5 +1,5 @@
-import { task, events, params } from '@ampt/sdk';
-import { transactionService } from '../services/plaid/index.js';
+import { task, events } from '@ampt/sdk';
+import { transactionService, itemService } from '../services/plaid/index.js';
 
 const tasks = (function() {
   const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
@@ -10,7 +10,12 @@ const tasks = (function() {
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
     const { itemId, user } = body;
     
-    return await transactionService.syncTransactionsForItem(itemId, user);
+    try {
+      return await transactionService.syncTransactionsForItem(itemId, user);
+    } catch (error) {
+      console.error('Sync task error:', error);
+      throw error;
+    }
   });
 
   const syncTransactionsForItems = task('sync.itemIds', async ({ body }) => {
@@ -50,7 +55,10 @@ const tasks = (function() {
       removeAllTransactionsFromDatabase.run({ user: { _id, email } });
     },
     syncTransactionsForItem: async function(itemId, user) {
-      syncTransactions.run({ itemId, user });
+      if (!itemId || !user?._id) {
+        throw new Error('INVALID_PARAMS: Missing required parameters');
+      }
+      return await syncTransactions.run({ itemId, user });
     },
     syncTransactionsForItems: async function (itemIds, user) {
       syncTransactionsForItems.run({ itemIds, user });
@@ -75,8 +83,17 @@ export const handler = async (event) => {
   try {
     const { itemId, user } = event.body;
     
-    // Call the service directly instead of going through the controller
-    const result = await transactionService.syncTransactionsForItem(itemId, user);
+    if (!itemId || !user?._id) {
+      throw new Error('INVALID_PARAMS: Missing required parameters');
+    }
+
+    // Validate item exists before starting sync
+    const item = await itemService.getItems(user._id, itemId);
+    if (!item) {
+      throw new Error('ITEM_NOT_FOUND: Item not found for this user');
+    }
+    
+    const result = await transactionService.syncTransactionsForItem(item, user);
     
     return {
       statusCode: 200,
@@ -86,7 +103,10 @@ export const handler = async (event) => {
     console.error('Task error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message })
+      body: JSON.stringify({ 
+        error: error.message.split(': ')[0],
+        message: error.message.split(': ')[1] || error.message
+      })
     };
   }
 };

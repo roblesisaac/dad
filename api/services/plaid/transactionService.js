@@ -16,10 +16,15 @@ class PlaidTransactionService extends PlaidBaseService {
 
     try {
       if (typeof item === 'string') {
-        item = await plaidItems.findOne(item);
-        if (!item) {
-          throw new Error('ITEM_NOT_FOUND: Invalid item ID');
+        const foundItem = await itemService.getItems(userId, item);
+        if (!foundItem) {
+          throw new Error('ITEM_NOT_FOUND: Item not found for this user');
         }
+        item = foundItem;
+      }
+
+      if (!item?.accessToken || !item?._id) {
+        throw new Error('INVALID_ITEM: Missing required item data');
       }
 
       const { accessToken, syncData } = item;
