@@ -42,7 +42,7 @@ export function usePlaidIntegration() {
           });
           
           if (response.error) {
-            throw new Error(response.error);``
+            throw new Error(response.error);
           }
         
           await syncItems();          

@@ -1,6 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
 import { linkService, transactionService } from './index.js';
+import plaidTasks from '../../tasks/plaid.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidItemService extends PlaidBaseService {
@@ -35,12 +36,16 @@ class PlaidItemService extends PlaidBaseService {
       for (const item of userItems) {
         try {
           const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptedKey);
-          const response = await this.handleResponse(
-            this.client.itemGet({ access_token })
-          );
 
-          transactionService.syncTransactionsForItem(item, user);
-          syncedItems.push(response.item);
+          const item = this.client.itemGet({ access_token });
+
+          console.log({
+            item
+          })
+
+          const syncedItem = await plaidTasks.syncTransactionsForItem(item.id, user);
+
+          syncedItems.push(syncedItem);
         } catch (error) {
           console.error(`Error syncing item ${item._id}:`, error);
           // Continue with other items even if one fails
