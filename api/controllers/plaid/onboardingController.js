@@ -6,12 +6,13 @@ export default {
     try {
       const { itemId } = req.params;
       
-    //   await tasks.syncTransactionsForItem(itemId, req.user);
-      await transactionService.syncTransactionsForItem(itemId, req.user);
+      // Start sync as a background task
+      await tasks.syncTransactionsForItem(itemId, req.user);
       
       res.json({ 
-        status: 'syncing',
-        message: 'Initial sync started'
+        status: 'queued',
+        message: 'Sync started in background',
+        itemId
       });
     } catch (error) {
       const errorCode = error.message.split(': ')[0];
@@ -36,13 +37,17 @@ export default {
 
       const { syncData } = item;
 
+      // Add more detailed status info
       res.json({
         completed: syncData.status === 'completed',
         error: syncData.error,
         status: syncData.status,
-        progress: syncData.stats,
-        nextSync: syncData.nextSyncTime,
-        lastSync: syncData.lastSyncTime
+        progress: {
+          ...syncData.stats,
+          cursor: syncData.cursor,
+          lastSync: syncData.lastSyncTime,
+          nextSync: syncData.nextSyncTime
+        }
       });
     } catch (error) {
       res.status(400).json({ 

@@ -94,24 +94,46 @@ class PlaidTransactionService extends PlaidBaseService {
     const access_token = itemService.decryptAccessToken(item, user);
     let hasMore = true;
     let cursor = syncSession.cursor;
+    let batchCount = 0;
 
     while (hasMore) {
-      // Get batch of transactions from Plaid
-      const batch = await plaidService.fetchTransactionsFromPlaid(
-        access_token, 
-        cursor
-      );
+      console.log(`Processing batch ${++batchCount} for item:`, item.itemId);
+      
+      try {
+        // Get batch of transactions from Plaid
+        const batch = await plaidService.fetchTransactionsFromPlaid(
+          access_token, 
+          cursor
+        );
 
-      // Process batch
-      await this._processBatch(batch, syncSession, item.itemId, user._id);
+        // Process batch
+        await this._processBatch(batch, syncSession, item.itemId, user._id);
 
-      // Update cursor and check if more data available
-      cursor = batch.next_cursor;
-      hasMore = cursor !== null;
+        // Update cursor and check if more data available
+        cursor = batch.next_cursor;
+        hasMore = cursor !== null;
 
-      // Update sync progress
-      if (hasMore) {
-        await this._updateSyncProgress(item, cursor, syncSession, user);
+        // Update sync progress
+        if (hasMore) {
+          await this._updateSyncProgress(item, cursor, syncSession, user);
+        }
+
+        console.log('Batch processed:', {
+          itemId: item.itemId,
+          batchNumber: batchCount,
+          added: batch.added?.length || 0,
+          modified: batch.modified?.length || 0,
+          removed: batch.removed?.length || 0,
+          hasMore,
+          cursor
+        });
+      } catch (error) {
+        console.error('Error processing batch:', {
+          itemId: item.itemId,
+          batchNumber: batchCount,
+          error: error.message
+        });
+        throw error;
       }
     }
 

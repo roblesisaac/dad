@@ -2,17 +2,32 @@ import { task, events } from '@ampt/sdk';
 import { transactionService, itemService } from '../services/plaid/index.js';
 
 const tasks = (function() {
-  const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
+  const syncTransactions = task('sync.transactions', { 
+    timeout: 60 * 60 * 1000, // 1 hour timeout
+    maxRetries: 3
+  }, async ({ body }) => {
     const { itemId, user } = body;
     
     try {
-      // Validate item exists before starting sync
+      // Get the full item first
       const item = await itemService.getUserItems(user._id, itemId);
       if (!item) {
         throw new Error('ITEM_NOT_FOUND: Item not found for this user');
       }
+
+      console.log('Starting sync task for item:', {
+        itemId: item.itemId,
+        userId: user._id
+      });
       
-      return await transactionService.syncTransactionsForItem(item, user);
+      const result = await transactionService.syncTransactionsForItem(item, user);
+      
+      console.log('Sync completed:', {
+        itemId: item.itemId,
+        stats: result.stats
+      });
+
+      return result;
     } catch (error) {
       console.error('Sync task error:', error);
       throw error;

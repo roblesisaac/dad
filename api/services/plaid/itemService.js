@@ -110,7 +110,6 @@ class ItemService extends PlaidBaseService {
           itemData
         );
       } else {
-        console.log('saving new item');
         savedItem = await plaidItems.save(itemData);
       }
 
