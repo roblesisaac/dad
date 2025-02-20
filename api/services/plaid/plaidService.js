@@ -92,16 +92,6 @@ class PlaidService extends PlaidBaseService {
       throw new Error(`PLAID_API_ERROR: ${error.message}`);
     }
   }
-
-  async updateItemSyncStatus(itemId, syncData) {
-    try {
-      syncData.result = syncData.result || {};
-      const updated = await plaidItems.update(itemId, { syncData });
-      return { itemId, ...updated.syncData };
-    } catch (error) {
-      throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
-    }
-  }
 }
 
 export default new PlaidService(plaidClientInstance); 

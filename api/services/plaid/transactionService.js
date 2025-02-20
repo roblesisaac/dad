@@ -43,6 +43,9 @@ class PlaidTransactionService extends PlaidBaseService {
   async _validateAndGetItem(item, user) {
     try {
       if (typeof item === 'string') {
+        if (!user?._id) {
+          throw new Error('INVALID_USER: User ID is required to fetch item');
+        }
         const foundItem = await itemService.getUserItems(user._id, item);
         if (!foundItem) {
           throw new Error('ITEM_NOT_FOUND: Item not found for this user');
@@ -50,7 +53,7 @@ class PlaidTransactionService extends PlaidBaseService {
         return foundItem;
       }
 
-      if (!item?.accessToken || !item?._id) {
+      if (!item?.accessToken || !item?._id || !item?.userId) {
         throw new Error('INVALID_ITEM: Missing required item data');
       }
 
@@ -193,7 +196,7 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item._id, progressData);
+    await itemService.updateItemSyncStatus(item.itemId, progressData);
   }
 
   async _completeSync(item, result) {
@@ -211,7 +214,7 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item._id, syncData);
+    await itemService.updateItemSyncStatus(item.itemId, syncData);
   }
 
   async _handleSyncError(item, error) {
@@ -224,7 +227,7 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(item._id, errorData);
+    await itemService.updateItemSyncStatus(item.itemId, errorData);
   }
 
   _createSyncResponse(status, item, result = null) {
