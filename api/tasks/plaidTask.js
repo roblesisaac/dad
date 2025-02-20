@@ -26,7 +26,12 @@ const tasks = (function() {
 
     for (const itemId of itemIds) {
       try {
-        const result = await transactionService.syncTransactionsForItem(itemId, user);
+        // Get the item first
+        const item = await itemService.getUserItems(user._id, itemId);
+        if (!item) {
+          throw new Error(`Item not found: ${itemId}`);
+        }
+        const result = await transactionService.syncTransactionsForItem(item, user);
         results.push(result);
       } catch (e) {
         console.error({
