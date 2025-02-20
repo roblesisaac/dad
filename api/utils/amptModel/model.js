@@ -208,6 +208,51 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
     return validatedItems;
   }
 
+  async function insertMany(items) {
+    if (!Array.isArray(items)) {
+      throw new Error('Items must be an array');
+    }
+
+    const savedItems = [];
+    const errors = [];
+
+    for (const item of items) {
+      try {
+        const { validated, uniqueFieldsToCheck } = await validate(item, 'set');
+        
+        // Check for duplicates
+        for (const uniqueField of uniqueFieldsToCheck) {
+          await checkForDuplicate(validated, uniqueField);
+        }
+
+        const _id = item._id || buildSchema_Id(validated, true);
+        const collectionId = extractCollectionFromId(_id);
+        const createdLabels = await labelsMap.createLabelKeys(collectionId, validated);
+
+        const saved = await data.set(_id, validated, { ...createdLabels });
+        const { validated: validatedSaved } = await validate(saved, 'get');
+        
+        savedItems.push({ _id, ...validatedSaved });
+      } catch (error) {
+        errors.push({
+          item,
+          error: error.message
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new Error('BATCH_INSERT_ERROR: Some items failed to insert', { 
+        cause: {
+          errors,
+          inserted: savedItems
+        }
+      });
+    }
+
+    return savedItems;
+  }
+
   return {
     validate,
     labelsMap,
@@ -216,6 +261,7 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
     findAll,
     findOne,
     update,
+    insertMany,
     erase: async function(filter) { 
       if(typeof filter === 'string') {
         return {

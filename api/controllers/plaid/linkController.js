@@ -1,4 +1,5 @@
 import { itemService,linkService } from '../../services/plaid';
+import tasks from '../../tasks/plaidTask.js';
 
 export default {
   async createLink(req, res) {
@@ -18,15 +19,22 @@ export default {
     try {
       const { publicToken } = req.body;
       
-      // Exchange public token for access token
+      // 1. Exchange public token for access token
       const accessData = await linkService.exchangePublicToken(publicToken);
       
-      // Save or update the Plaid item
+      // 2. Save or update the Plaid item
       const plaidItem = await itemService.savePlaidAccessData(accessData, req.user);
+
+      // 3. Start initial transaction sync
+      await tasks.syncTransactionsForItem(plaidItem.itemId, req.user);
       
       res.json({
         status: 'success',
-        data: plaidItem
+        data: {
+          itemId: plaidItem.itemId,
+          status: 'syncing',
+          message: 'Item connected and sync started'
+        }
       });
     } catch (error) {
       console.error('Exchange token error:', error);

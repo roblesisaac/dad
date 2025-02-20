@@ -37,8 +37,11 @@ export default {
 
       res.json({
         completed: syncData.status === 'completed',
-        error: syncData.status === 'failed' ? syncData.result.error : null,
-        status: syncData.status
+        error: syncData.error,
+        status: syncData.status,
+        progress: syncData.stats,
+        nextSync: syncData.nextSyncTime,
+        lastSync: syncData.lastSyncTime
       });
     } catch (error) {
       res.status(400).json({ 

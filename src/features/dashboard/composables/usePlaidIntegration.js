@@ -165,12 +165,77 @@ export function usePlaidIntegration() {
     }
   }
 
+  async function handlePlaidSuccess(publicToken) {
+    try {
+      state.loading = true;
+      state.error = null;
+
+      // Exchange token and start sync
+      const response = await api.post('plaid/exchange/token', {
+        publicToken
+      });
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      const { itemId } = response.data;
+
+      // Start polling for sync status
+      state.onboardingStep = 'syncing';
+      await pollSyncStatus(itemId);
+
+      state.onboardingStep = 'complete';
+      state.hasItems = true;
+
+      // Wait a moment to show completion state
+      setTimeout(() => {
+        router.push('/dashboard');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error completing connection:', error);
+      state.error = getErrorMessage(error);
+      state.onboardingStep = 'connect';
+    } finally {
+      state.loading = false;
+    }
+  }
+
+  async function pollSyncStatus(itemId) {
+    const maxAttempts = 30; // 5 minutes maximum
+    let attempts = 0;
+
+    while (attempts < maxAttempts) {
+      const response = await api.get(`plaid/onboarding/status/${itemId}`);
+      
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      if (response.completed) {
+        return response;
+      }
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      // Wait 10 seconds before next poll
+      await new Promise(resolve => setTimeout(resolve, 10000));
+      attempts++;
+    }
+
+    throw new Error('SYNC_TIMEOUT: Initial sync took too long');
+  }
+
   return {
     state,
     getErrorMessage,
     initializePlaid,
     repairItem,
     connectBank,
-    syncItems
+    syncItems,
+    handlePlaidSuccess
   };
 } 

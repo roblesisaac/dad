@@ -2,7 +2,6 @@ import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
 import { itemService, plaidService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
-import { itemService } from './index.js';
 
 class PlaidTransactionService extends PlaidBaseService {
   async syncTransactionsForItem(item, user) {
@@ -11,73 +10,257 @@ class PlaidTransactionService extends PlaidBaseService {
     }
 
     try {
+      // Get or validate item
+      const validatedItem = await this._validateAndGetItem(item, user);
+      
+      // Check if sync already in progress
+      if (this._isSyncInProgress(validatedItem)) {
+        return this._createSyncResponse('IN_PROGRESS', validatedItem);
+      }
+
+      // Initialize sync
+      const syncSession = await this._initializeSync(validatedItem);
+      
+      try {
+        // Perform sync
+        const result = await this._performSync(syncSession, validatedItem, user);
+        
+        // Complete sync
+        await this._completeSync(validatedItem, result);
+        
+        return this._createSyncResponse('COMPLETED', validatedItem, result);
+      } catch (error) {
+        // Handle sync error
+        await this._handleSyncError(validatedItem, error);
+        throw error;
+      }
+    } catch (error) {
+      console.error('Error in syncTransactionsForItem:', error);
+      throw this._formatError(error);
+    }
+  }
+
+  async _validateAndGetItem(item, user) {
+    try {
       if (typeof item === 'string') {
         const foundItem = await itemService.getUserItems(user._id, item);
         if (!foundItem) {
           throw new Error('ITEM_NOT_FOUND: Item not found for this user');
         }
-        item = foundItem;
+        return foundItem;
       }
 
       if (!item?.accessToken || !item?._id) {
         throw new Error('INVALID_ITEM: Missing required item data');
       }
 
-      const { syncData } = item;
-      
-      if (['in_progress'].includes(syncData.status)) {
-        return { 
-          error: 'SYNC_IN_PROGRESS',
-          message: 'Sync already in progress for this item',
-          itemId: item._id 
-        };
-      }
-
-      const nextSyncData = {
-        status: 'in_progress',
-        lastSyncTime: new Date().toISOString(),
-        result: {}
-      };
-
-      await itemService.updateItemSyncStatus(item._id, nextSyncData);
-
-      try {
-        const access_token = itemService.decryptAccessToken(item, user);
-        const transactions = await plaidService.fetchTransactionsFromPlaid(access_token, syncData.cursor);
-
-        await this.processAndSaveTransactions(transactions, user._id, item._id);
-
-        const completedSyncData = {
-          status: 'completed',
-          lastSyncTime: nextSyncData.lastSyncTime,
-          cursor: transactions.next_cursor,
-          result: {
-            added: transactions.added?.length || 0,
-            modified: transactions.modified?.length || 0,
-            removed: transactions.removed?.length || 0
-          }
-        };
-
-        await itemService.updateItemSyncStatus(item._id, completedSyncData);
-        return completedSyncData;
-
-      } catch (error) {
-        const failedSyncData = {
-          status: 'failed',
-          lastSyncTime: nextSyncData.lastSyncTime,
-          result: {
-            error: error.error_code || 'SYNC_ERROR',
-            message: error.error_message || error.message
-          }
-        };
-
-        await itemService.updateItemSyncStatus(item._id, failedSyncData);
-        throw error;
-      }
+      return item;
     } catch (error) {
-      console.error('Error in syncTransactionsForItem:', error);
-      throw error.error_code ? error : new Error(`SYNC_ERROR: ${error.message}`);
+      throw this._formatError(error);
     }
+  }
+
+  _isSyncInProgress(item) {
+    return ['in_progress', 'queued'].includes(item.syncData?.status);
+  }
+
+  async _initializeSync(item) {
+    const syncData = {
+      status: 'in_progress',
+      lastSyncTime: Date.now(),
+      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000), // Next sync in 24h
+      cursor: item.syncData?.cursor || null,
+      error: null
+    };
+
+    await itemService.updateItemSyncStatus(item._id, syncData);
+
+    return {
+      added: [],
+      modified: [],
+      removed: [],
+      cursor: syncData.cursor
+    };
+  }
+
+  async _performSync(syncSession, item, user) {
+    const access_token = itemService.decryptAccessToken(item, user);
+    let hasMore = true;
+    let cursor = syncSession.cursor;
+
+    while (hasMore) {
+      // Get batch of transactions from Plaid
+      const batch = await plaidService.fetchTransactionsFromPlaid(
+        access_token, 
+        cursor
+      );
+
+      // Process batch
+      await this._processBatch(batch, syncSession, item._id, user._id);
+
+      // Update cursor and check if more data available
+      cursor = batch.next_cursor;
+      hasMore = cursor !== null;
+
+      // Update sync progress
+      if (hasMore) {
+        await this._updateSyncProgress(item, cursor, syncSession);
+      }
+    }
+
+    return syncSession;
+  }
+
+  async _processBatch(batch, syncSession, itemId, userId) {
+    // Add new transactions to running totals
+    if (batch.added?.length) {
+      syncSession.added = [...syncSession.added, ...batch.added];
+      await this._saveNewTransactions(batch.added, itemId, userId);
+    }
+
+    // Add modified transactions to running totals
+    if (batch.modified?.length) {
+      syncSession.modified = [...syncSession.modified, ...batch.modified];
+      await this._updateModifiedTransactions(batch.modified, itemId, userId);
+    }
+
+    // Add removed transactions to running totals
+    if (batch.removed?.length) {
+      syncSession.removed = [...syncSession.removed, ...batch.removed];
+      await this._removeTransactions(batch.removed);
+    }
+  }
+
+  async _saveNewTransactions(transactions, itemId, userId) {
+    try {
+      const formattedTransactions = transactions.map(transaction => ({
+        ...transaction,
+        userId,
+        itemId
+      }));
+
+      return await plaidTransactions.insertMany(formattedTransactions);
+    } catch (error) {
+      if (error.message.startsWith('BATCH_INSERT_ERROR')) {
+        // Log the failed inserts but continue with the successful ones
+        console.error('Some transactions failed to insert:', error.cause);
+        return error.cause.inserted;
+      }
+      throw new Error(`SAVE_ERROR: Failed to save transactions - ${error.message}`);
+    }
+  }
+
+  async _updateModifiedTransactions(transactions, itemId, userId) {
+    const results = [];
+    const errors = [];
+
+    for (const transaction of transactions) {
+      try {
+        const updated = await plaidTransactions.update(
+          { transaction_id: transaction.transaction_id },
+          { ...transaction, userId, itemId }
+        );
+        results.push(updated);
+      } catch (error) {
+        errors.push({
+          transaction,
+          error: error.message
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error('Some transactions failed to update:', errors);
+    }
+
+    return results;
+  }
+
+  async _removeTransactions(transactionIds) {
+    await plaidTransactions.deleteMany({ 
+      transaction_id: { $in: transactionIds }
+    });
+  }
+
+  async _updateSyncProgress(item, cursor, syncSession) {
+    const progressData = {
+      status: 'in_progress',
+      cursor,
+      stats: {
+        added: syncSession.added.length,
+        modified: syncSession.modified.length,
+        removed: syncSession.removed.length
+      }
+    };
+
+    await itemService.updateItemSyncStatus(item._id, progressData);
+  }
+
+  async _completeSync(item, result) {
+    const syncData = {
+      status: 'completed',
+      lastSyncTime: Date.now(),
+      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000), // Next sync in 24h
+      cursor: result.cursor,
+      error: null,
+      stats: {
+        added: result.added.length,
+        modified: result.modified.length,
+        removed: result.removed.length,
+        lastTransactionDate: this._getLatestTransactionDate(result.added)
+      }
+    };
+
+    await itemService.updateItemSyncStatus(item._id, syncData);
+  }
+
+  async _handleSyncError(item, error) {
+    const errorData = {
+      status: 'error',
+      error: {
+        code: error.error_code || 'SYNC_ERROR',
+        message: error.message,
+        timestamp: Date.now()
+      }
+    };
+
+    await itemService.updateItemSyncStatus(item._id, errorData);
+  }
+
+  _createSyncResponse(status, item, result = null) {
+    const response = {
+      status,
+      itemId: item._id,
+      lastSyncTime: item.syncData?.lastSyncTime,
+      nextSyncTime: item.syncData?.nextSyncTime
+    };
+
+    if (result) {
+      response.stats = {
+        added: result.added.length,
+        modified: result.modified.length,
+        removed: result.removed.length
+      };
+    }
+
+    if (status === 'ERROR') {
+      response.error = item.syncData?.error;
+    }
+
+    return response;
+  }
+
+  _getLatestTransactionDate(transactions) {
+    if (!transactions.length) return null;
+    return transactions
+      .map(t => t.date)
+      .sort((a, b) => new Date(b) - new Date(a))[0];
+  }
+
+  _formatError(error) {
+    return error.error_code ? 
+      error : 
+      new Error(`SYNC_ERROR: ${error.message}`);
   }
 
   async syncAllUserTransactions(user) {

@@ -9,7 +9,6 @@ const itemSchema = {
     set: (accessToken, { user }) => {
       const encryptionKey = decrypt(user.encryptedKey, 'buffer');
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
-
       return encrypt(userEncryptedKey);
     },
     required: true
@@ -18,43 +17,61 @@ const itemSchema = {
     set: String,
     required: true,
     unique: true
-   },
+  },
   institutionId: String,
+  institutionName: String,
+  
+  // Enhanced sync tracking
   syncData: {
+    status: {
+      type: String,
+      default: 'pending',
+      enum: ['pending', 'queued', 'in_progress', 'completed', 'failed', 'error']
+    },
     cursor: {
       type: String,
-      default: ''
+      default: null
     },
     lastSyncId: String,
     lastSyncTime: Number,
-    result: {
-      sectionedOff: Boolean,
-      itemsAddedCount: {
-        type: Number,
-        default: 0
-      },
-      itemsMergedCount: {
-        type: Number,
-        default: 0
-      },
-      itemsModifiedCount: {
-        type: Number,
-        default: 0
-      },
-      itemsRemovedCount: {
-        type: Number,
-        default: 0
-      },
-      errorMessage: String
+    nextSyncTime: Number,
+    error: {
+      code: String,
+      message: String,
+      timestamp: Number
     },
-    status: {
-      type: String,
-      default: '',
-      enum: ['', 'queued', 'in_progress', 'completed', 'failed']
+    history: [{
+      status: String,
+      cursor: String,
+      timestamp: Number,
+      error: {
+        code: String,
+        message: String
+      },
+      stats: {
+        added: Number,
+        modified: Number,
+        removed: Number
+      }
+    }],
+    stats: {
+      added: {
+        type: Number,
+        default: 0
+      },
+      modified: {
+        type: Number,
+        default: 0
+      },
+      removed: {
+        type: Number,
+        default: 0
+      },
+      lastTransactionDate: String
     }
   },
+  
   accessTokenExpiration: String,
-  institutionName: String,
   label1: 'itemId',
   label2: 'cursor'
 };

@@ -44,8 +44,40 @@ class ItemService extends PlaidBaseService {
 
   async updateItemSyncStatus(itemId, syncData) {
     try {
-      syncData.result = syncData.result || {};
-      const updated = await plaidItems.update(itemId, { syncData });
+      // Ensure we preserve history and stats
+      const item = await this.getUserItems(null, itemId);
+      const currentHistory = item.syncData?.history || [];
+      const currentStats = item.syncData?.stats || {
+        added: 0,
+        modified: 0,
+        removed: 0
+      };
+
+      const updatedSyncData = {
+        ...syncData,
+        history: [...currentHistory],
+        stats: {
+          ...currentStats,
+          ...(syncData.stats || {})
+        }
+      };
+
+      // Add to history if status changed
+      if (syncData.status && syncData.status !== item.syncData?.status) {
+        updatedSyncData.history.push({
+          status: syncData.status,
+          cursor: syncData.cursor || item.syncData?.cursor,
+          timestamp: Date.now(),
+          error: syncData.error,
+          stats: syncData.stats
+        });
+      }
+
+      const updated = await plaidItems.update(
+        { itemId },
+        { syncData: updatedSyncData }
+      );
+
       return { itemId, ...updated.syncData };
     } catch (error) {
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
@@ -61,8 +93,18 @@ class ItemService extends PlaidBaseService {
       const { access_token, item_id } = accessData;
 
       const syncData = {
-        result: {},
-        status: 'queued'
+        status: 'pending',
+        cursor: null,
+        lastSyncTime: null,
+        nextSyncTime: null,
+        error: null,
+        history: [],
+        stats: {
+          added: 0,
+          modified: 0,
+          removed: 0,
+          lastTransactionDate: null
+        }
       };
 
       const existingItem = await this.getUserItems(user._id, item_id);
@@ -84,8 +126,8 @@ class ItemService extends PlaidBaseService {
 
       return { 
         itemId: item_id,
-        syncData: item.syncData,
-        userId: item.userId
+        syncData,
+        userId: user._id
       };
     } catch (error) {
       throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
