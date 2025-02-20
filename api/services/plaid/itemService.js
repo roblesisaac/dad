@@ -92,45 +92,33 @@ class ItemService extends PlaidBaseService {
     try {
       const { access_token, item_id } = accessData;
 
-      const syncData = {
-        status: 'pending',
-        cursor: null,
-        lastSyncTime: null,
-        nextSyncTime: null,
-        error: null,
-        history: [],
-        stats: {
-          added: 0,
-          modified: 0,
-          removed: 0,
-          lastTransactionDate: null
-        }
+      // Let the model handle default syncData
+      const itemData = {
+        accessToken: access_token,
+        itemId: item_id,
+        user
       };
 
       const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
 
+      let savedItem;
       if (existingItem) {
-        await plaidItems.update(
+        savedItem = await plaidItems.update(
           { itemId: item_id },
-          { syncData }
+          itemData
         );
       } else {
         console.log('saving new item');
-        await plaidItems.save({
-          accessToken: access_token,
-          itemId: item_id,
-          syncData,
-          user,
-          userId: user._id
-        });
+        savedItem = await plaidItems.save(itemData);
       }
 
       return { 
         itemId: item_id,
-        syncData,
+        syncData: savedItem.syncData,
         userId: user._id
       };
     } catch (error) {
+      console.error('Save error:', error);
       throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
     }
   }

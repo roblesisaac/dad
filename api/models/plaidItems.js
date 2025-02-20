@@ -3,7 +3,7 @@ import { encrypt, encryptWithKey, decrypt } from '../utils/encryption';
 
 const itemSchema = {
   userId: {
-    set: (_, { userId }) => userId
+    set: (_, { user }) => user._id
   },
   accessToken: { 
     set: (accessToken, { user }) => {
@@ -14,61 +14,29 @@ const itemSchema = {
     required: true
   },
   itemId: { 
-    set: String,
+    type: String,
     required: true,
     unique: true
   },
   institutionId: String,
   institutionName: String,
   
-  // Enhanced sync tracking
   syncData: {
-    status: {
-      type: String,
-      default: 'pending',
-      enum: ['pending', 'queued', 'in_progress', 'completed', 'failed', 'error']
-    },
-    cursor: {
-      type: String,
-      default: null
-    },
-    lastSyncId: String,
-    lastSyncTime: Number,
-    nextSyncTime: Number,
-    error: {
-      code: String,
-      message: String,
-      timestamp: Number
-    },
-    history: [{
-      status: String,
-      cursor: String,
-      timestamp: Number,
-      error: {
-        code: String,
-        message: String
-      },
+    type: Object,
+    default: () => ({
+      status: 'pending',
+      cursor: null,
+      lastSyncTime: null,
+      nextSyncTime: null,
+      error: null,
+      history: [],
       stats: {
-        added: Number,
-        modified: Number,
-        removed: Number
+        added: 0,
+        modified: 0,
+        removed: 0,
+        lastTransactionDate: null
       }
-    }],
-    stats: {
-      added: {
-        type: Number,
-        default: 0
-      },
-      modified: {
-        type: Number,
-        default: 0
-      },
-      removed: {
-        type: Number,
-        default: 0
-      },
-      lastTransactionDate: String
-    }
+    })
   },
   
   accessTokenExpiration: String,
