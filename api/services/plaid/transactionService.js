@@ -73,11 +73,13 @@ class PlaidTransactionService extends PlaidBaseService {
       lastSyncTime: Date.now(),
       nextSyncTime: Date.now() + (24 * 60 * 60 * 1000),
       cursor: item.syncData?.cursor || null,
-      error: null,
-      user
+      error: null
     };
 
-    await itemService.updateItemSyncStatus(item._id, syncData);
+    await itemService.updateItemSyncStatus(item.itemId, { 
+      ...syncData,
+      user
+    });
 
     return {
       added: [],
@@ -100,7 +102,7 @@ class PlaidTransactionService extends PlaidBaseService {
       );
 
       // Process batch
-      await this._processBatch(batch, syncSession, item._id, user._id);
+      await this._processBatch(batch, syncSession, item.itemId, user._id);
 
       // Update cursor and check if more data available
       cursor = batch.next_cursor;
@@ -194,11 +196,13 @@ class PlaidTransactionService extends PlaidBaseService {
         added: syncSession.added.length,
         modified: syncSession.modified.length,
         removed: syncSession.removed.length
-      },
-      user
+      }
     };
 
-    await itemService.updateItemSyncStatus(item._id, progressData);
+    await itemService.updateItemSyncStatus(item.itemId, { 
+      ...progressData,
+      user
+    });
   }
 
   async _completeSync(item, result, user) {
@@ -213,11 +217,13 @@ class PlaidTransactionService extends PlaidBaseService {
         modified: result.modified.length,
         removed: result.removed.length,
         lastTransactionDate: this._getLatestTransactionDate(result.added)
-      },
-      user
+      }
     };
 
-    await itemService.updateItemSyncStatus(item._id, syncData);
+    await itemService.updateItemSyncStatus(item.itemId, { 
+      ...syncData,
+      user
+    });
   }
 
   async _handleSyncError(item, error, user) {
@@ -227,11 +233,13 @@ class PlaidTransactionService extends PlaidBaseService {
         code: error.error_code || 'SYNC_ERROR',
         message: error.message,
         timestamp: Date.now()
-      },
-      user
+      }
     };
 
-    await itemService.updateItemSyncStatus(item._id, errorData);
+    await itemService.updateItemSyncStatus(item.itemId, { 
+      ...errorData,
+      user
+    });
   }
 
   _createSyncResponse(status, item, result = null) {
