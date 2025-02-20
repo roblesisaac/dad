@@ -95,7 +95,7 @@ class ItemService extends PlaidBaseService {
 
       // Only update the syncData field, preserve the existing user context
       const updated = await plaidItems.update(
-        { itemId },
+        { itemId, userId: syncData.userId },
         { syncData: updatedSyncData }
       );
 
