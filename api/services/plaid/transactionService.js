@@ -113,8 +113,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...syncData,
-      userId: user._id,
-      user: user
+      userId: user._id
     });
 
     return {
