@@ -1,4 +1,4 @@
-import { itemService } from '../../services/plaid';
+import { itemService, transactionService } from '../../services/plaid';
 import tasks from '../../tasks/plaidTask.js';
 
 export default {
@@ -6,7 +6,8 @@ export default {
     try {
       const { itemId } = req.params;
       
-      await tasks.syncTransactionsForItem(itemId, req.user);
+    //   await tasks.syncTransactionsForItem(itemId, req.user);
+      await transactionService.syncTransactionsForItem(itemId, req.user);
       
       res.json({ 
         status: 'syncing',
