@@ -90,14 +90,13 @@ class ItemService extends PlaidBaseService {
       console.log('Attempting plaidItems.update with:', {
         filter: { itemId },
         updateData: { syncData: updatedSyncData },
-        context: { user: item.user }
+        context: { userId: syncData.userId }
       });
 
       // Only update the syncData field, preserve the existing user context
       const updated = await plaidItems.update(
         { itemId },
-        { syncData: updatedSyncData },
-        { user: item.user } // Pass user in the context
+        { syncData: updatedSyncData }
       );
 
       console.log('Update completed:', {
