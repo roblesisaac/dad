@@ -107,7 +107,9 @@ class ItemService extends PlaidBaseService {
         }
       };
 
+      console.log('checking for existing item');
       const existingItem = await this.getUserItems(user._id, item_id);
+      console.log('existingItem', existingItem);
 
       if (existingItem) {
         await plaidItems.update(
@@ -115,6 +117,7 @@ class ItemService extends PlaidBaseService {
           { syncData }
         );
       } else {
+        console.log('saving new item');
         await plaidItems.save({
           accessToken: access_token,
           itemId: item_id,
