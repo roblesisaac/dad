@@ -32,11 +32,12 @@ class ItemService extends PlaidBaseService {
         if (!item) {
           throw new Error('ITEM_NOT_FOUND: Item not found for this user');
         }
+        item.user = { _id: userId };
         return item;
       }
 
       const { items } = await plaidItems.find({ itemId: '*', userId });
-      return items;
+      return items.map(item => ({ ...item, user: { _id: userId } }));
     } catch (error) {
       throw new Error(`ITEM_FETCH_ERROR: ${error.message}`);
     }
@@ -45,7 +46,7 @@ class ItemService extends PlaidBaseService {
   async updateItemSyncStatus(itemId, syncData) {
     try {
       // Ensure we preserve history and stats
-      const item = await this.getUserItems(null, itemId);
+      const item = await this.getUserItems(syncData.user._id, itemId);
       const currentHistory = item.syncData?.history || [];
       const currentStats = item.syncData?.stats || {
         added: 0,
