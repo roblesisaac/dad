@@ -6,13 +6,25 @@ export default {
     try {
       const { itemId } = req.params;
       
-      // Start sync as a background task
-      await tasks.syncTransactionsForItem(itemId, req.user);
+      // Get the full item first
+      const item = await itemService.getUserItems(req.user._id, itemId);
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Item not found');
+      }
+
+      // Start sync directly
+      const syncPromise = transactionService.syncTransactionsForItem(item, req.user);
       
+      // Return immediately while sync runs
       res.json({ 
-        status: 'queued',
-        message: 'Sync started in background',
+        status: 'syncing',
+        message: 'Sync started',
         itemId
+      });
+
+      // Let the sync continue in the background
+      await syncPromise.catch(error => {
+        console.error('Background sync error:', error);
       });
     } catch (error) {
       const errorCode = error.message.split(': ')[0];

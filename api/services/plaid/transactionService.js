@@ -95,6 +95,7 @@ class PlaidTransactionService extends PlaidBaseService {
     let hasMore = true;
     let cursor = syncSession.cursor;
     let batchCount = 0;
+    const RATE_LIMIT_DELAY = 2000; // 2 seconds delay between requests
 
     while (hasMore) {
       console.log(`Processing batch ${++batchCount} for item:`, item.itemId);
@@ -116,6 +117,8 @@ class PlaidTransactionService extends PlaidBaseService {
         // Update sync progress
         if (hasMore) {
           await this._updateSyncProgress(item, cursor, syncSession, user);
+          // Add delay between requests to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
         }
 
         console.log('Batch processed:', {
@@ -128,10 +131,18 @@ class PlaidTransactionService extends PlaidBaseService {
           cursor
         });
       } catch (error) {
+        // Handle rate limit errors
+        if (error.response?.status === 429) {
+          console.log('Rate limit hit, waiting before retry...');
+          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+          continue; // Retry the same batch
+        }
+
         console.error('Error processing batch:', {
           itemId: item.itemId,
           batchNumber: batchCount,
-          error: error.message
+          error: error.message,
+          status: error.response?.status
         });
         throw error;
       }
@@ -141,22 +152,38 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 
   async _processBatch(batch, syncSession, itemId, userId) {
-    // Add new transactions to running totals
-    if (batch.added?.length) {
-      syncSession.added = [...syncSession.added, ...batch.added];
-      await this._saveNewTransactions(batch.added, itemId, userId);
-    }
+    try {
+      // Add new transactions to running totals
+      if (batch.added?.length) {
+        console.log(`Processing ${batch.added.length} new transactions`);
+        syncSession.added = [...syncSession.added, ...batch.added];
+        await this._saveNewTransactions(batch.added, itemId, userId);
+      }
 
-    // Add modified transactions to running totals
-    if (batch.modified?.length) {
-      syncSession.modified = [...syncSession.modified, ...batch.modified];
-      await this._updateModifiedTransactions(batch.modified, itemId, userId);
-    }
+      // Add modified transactions to running totals
+      if (batch.modified?.length) {
+        console.log(`Processing ${batch.modified.length} modified transactions`);
+        syncSession.modified = [...syncSession.modified, ...batch.modified];
+        await this._updateModifiedTransactions(batch.modified, itemId, userId);
+      }
 
-    // Add removed transactions to running totals
-    if (batch.removed?.length) {
-      syncSession.removed = [...syncSession.removed, ...batch.removed];
-      await this._removeTransactions(batch.removed);
+      // Add removed transactions to running totals
+      if (batch.removed?.length) {
+        console.log(`Processing ${batch.removed.length} removed transactions`);
+        syncSession.removed = [...syncSession.removed, ...batch.removed];
+        await this._removeTransactions(batch.removed);
+      }
+    } catch (error) {
+      console.error('Error in _processBatch:', {
+        error: error.message,
+        itemId,
+        batchSize: {
+          added: batch.added?.length || 0,
+          modified: batch.modified?.length || 0,
+          removed: batch.removed?.length || 0
+        }
+      });
+      throw error;
     }
   }
 
@@ -168,7 +195,10 @@ class PlaidTransactionService extends PlaidBaseService {
         itemId
       }));
 
-      return await plaidTransactions.insertMany(formattedTransactions);
+      console.log(`Saving ${formattedTransactions.length} new transactions`);
+      const result = await plaidTransactions.insertMany(formattedTransactions);
+      console.log(`Successfully saved ${result.length} transactions`);
+      return result;
     } catch (error) {
       if (error.message.startsWith('BATCH_INSERT_ERROR')) {
         // Log the failed inserts but continue with the successful ones
