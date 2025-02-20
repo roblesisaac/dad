@@ -23,4 +23,8 @@ export default function(api, baseUrl) {
   member.get('/plaid/get/duplicates', plaidController.getDuplicates);
   member.post('/plaid/remove/duplicates', plaidController.removeFromDb);
   member.get('/plaid/remove/all/transactions', plaidController.removeAllTransactionsFromDatabase);
+
+  // Onboarding
+  member.post('/plaid/onboarding/sync/:itemId', plaidController.startOnboardingSync);
+  member.get('/plaid/onboarding/status/:itemId', plaidController.getOnboardingStatus);
 }

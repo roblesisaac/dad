@@ -2,6 +2,7 @@ import linkController from './linkController';
 import itemController from './itemController';
 import transactionController from './transactionController';
 import maintenanceController from './maintenanceController';
+import onboardingController from './onboardingController';
 
 export default {
   // Link and Authentication
@@ -21,5 +22,9 @@ export default {
   // Maintenance
   getDuplicates: maintenanceController.getDuplicates,
   removeFromDb: maintenanceController.removeDuplicates,
-  removeAllTransactionsFromDatabase: maintenanceController.removeAllTransactions
+  removeAllTransactionsFromDatabase: maintenanceController.removeAllTransactions,
+
+  // Onboarding
+  startOnboardingSync: onboardingController.startSync,
+  getOnboardingStatus: onboardingController.getSyncStatus,
 }; 

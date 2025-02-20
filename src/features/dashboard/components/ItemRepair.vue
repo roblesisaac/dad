@@ -3,20 +3,41 @@
     <div v-if="!state.hasItems" class="welcome-container">
       <h2>Welcome to Your Financial Dashboard!</h2>
       <p>Let's get started by connecting your first bank account.</p>
-      <div class="benefits">
-        <ul>
-          <li>✓ Securely connect your accounts</li>
-          <li>✓ Track your spending</li>
-          <li>✓ Manage your finances</li>
-        </ul>
+      
+      <div v-if="state.onboardingStep === 'syncing'" class="sync-status">
+        <h3>Setting Up Your Account</h3>
+        <p>We're syncing your transactions. This may take a few minutes...</p>
+        <div class="progress-indicator">
+          <div class="spinner"></div>
+        </div>
       </div>
-      <button 
-        class="primary-button"
-        @click="connectBank"
-        :disabled="state.loading"
-      >
-        {{ state.loading ? 'Connecting...' : 'Connect Your Bank' }}
-      </button>
+
+      <div v-else-if="state.onboardingStep === 'complete'" class="sync-complete">
+        <h3>Setup Complete!</h3>
+        <p>Redirecting to your dashboard...</p>
+      </div>
+
+      <div v-else>
+        <div class="benefits">
+          <ul>
+            <li>✓ Securely connect your accounts</li>
+            <li>✓ Track your spending</li>
+            <li>✓ Manage your finances</li>
+          </ul>
+        </div>
+        
+        <button 
+          class="primary-button"
+          @click="connectBank"
+          :disabled="state.loading"
+        >
+          {{ state.loading ? 'Connecting...' : 'Connect Your Bank' }}
+        </button>
+      </div>
+
+      <div v-if="state.error" class="error-message">
+        {{ state.error }}
+      </div>
     </div>
 
     <div v-else class="repair-container">
@@ -154,5 +175,39 @@ onMounted(async () => {
 .primary-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.sync-status {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.progress-indicator {
+  margin: 1rem 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.sync-complete {
+  margin: 2rem 0;
+  padding: 2rem;
+  background: #e8f5e9;
+  border-radius: 8px;
+  color: #2e7d32;
 }
 </style>

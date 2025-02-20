@@ -1,15 +1,19 @@
 import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
+import { useRouter } from 'vue-router';
 
 export function usePlaidIntegration() {
   const api = useApi();
+  const router = useRouter();
   
   const state = reactive({
     syncedItems: [],
     isRepairing: false,
     error: null,
     hasItems: false,
-    loading: false
+    loading: false,
+    isOnboarding: false,
+    onboardingStep: 'connect' // 'connect', 'syncing', 'complete'
   });
 
   function getErrorMessage(error) {
@@ -44,8 +48,14 @@ export function usePlaidIntegration() {
           if (response.error) {
             throw new Error(response.error);
           }
-        
-          await syncItems();          
+
+          if (state.isOnboarding) {
+            state.onboardingStep = 'syncing';
+            await startInitialSync(response.data.itemId);
+          } else {
+            await syncItems();
+          }
+          
         } catch (error) {
           console.error('Error completing connection:', error);
           state.error = 'Failed to complete connection. Please try again.';
@@ -56,11 +66,10 @@ export function usePlaidIntegration() {
       onExit: function(err, metadata) {
         state.isRepairing = false;
         if (err != null) {
-          // Handle exit errors
           state.error = 'Connection process was interrupted. Please try again.';
           console.error('Link exit error:', err, metadata);
         } else if (metadata.status === 'requires_credentials') {
-          state.error = null; // User closed modal, no error needed
+          state.error = null;
         }
       },
       onEvent: function(eventName, metadata) {
@@ -109,10 +118,36 @@ export function usePlaidIntegration() {
     }
   }
 
+  async function startInitialSync(itemId) {
+    try {
+      await api.post(`plaid/onboarding/sync/${itemId}`);
+      
+      const checkSyncStatus = async () => {
+        const status = await api.get(`plaid/onboarding/status/${itemId}`);
+        if (status.completed) {
+          state.onboardingStep = 'complete';
+          router.push('/dashboard');
+        } else if (status.error) {
+          throw new Error(status.error);
+        } else {
+          setTimeout(checkSyncStatus, 2000);
+        }
+      };
+
+      await checkSyncStatus();
+    } catch (error) {
+      console.error('Sync error:', error);
+      state.error = 'Error syncing your account. Please try again.';
+      state.onboardingStep = 'connect';
+    }
+  }
+
   async function connectBank() {
     try {
       state.loading = true;
       state.error = null;
+      state.isOnboarding = true;
+      state.onboardingStep = 'connect';
       
       const { link_token } = await api.post('plaid/connect/link');
       
@@ -121,21 +156,10 @@ export function usePlaidIntegration() {
       }
 
       const link = createPlaidLink(link_token);
-
       link.open();
     } catch (error) {
       console.error('Connection initiation error:', error);
-      
-      // Handle different types of errors
-      if (error.response?.data?.error === 'PLAID_ERROR') {
-        state.error = 'Unable to connect to banking services. Please try again later.';
-      } else if (error.response?.status === 400) {
-        state.error = error.response.data.message || 'Invalid request. Please try again.';
-      } else if (error.message === 'No link token received from server') {
-        state.error = 'Server configuration error. Please contact support.';
-      } else {
-        state.error = 'Failed to start connection process. Please try again.';
-      }
+      handleConnectionError(error);
     } finally {
       state.loading = false;
     }

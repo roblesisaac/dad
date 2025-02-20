@@ -39,10 +39,6 @@ class PlaidItemService extends PlaidBaseService {
 
           const plaidItem = await this.client.itemGet({ access_token });
 
-          console.log({
-            plaidItem
-          })
-
           const syncedItem = await plaidTasks.syncTransactionsForItem(plaidItem._id, user);
 
           syncedItems.push(syncedItem);
