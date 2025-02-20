@@ -10,19 +10,17 @@ export default {
   exchangeTokenAndSavePlaidItem: linkController.exchangeTokenAndSavePlaidItem,
 
   // Items and Accounts
-  getPlaidItems: itemController.getItems,
+  getUserItems: itemController.getUserItems,
   retreivePlaidItems: itemController.syncItems,
   syncAccountsAndGroups: itemController.syncAccountsAndGroups,
 
   // Transactions
   getTransactions: transactionController.getTransactions,
-  getAllTransactionCount: transactionController.getTransactionCount,
   syncAllUserTransactions: transactionController.syncAllUserTransactions,
 
   // Maintenance
   getDuplicates: maintenanceController.getDuplicates,
   removeFromDb: maintenanceController.removeDuplicates,
-  removeAllTransactionsFromDatabase: maintenanceController.removeAllTransactions,
 
   // Onboarding
   startOnboardingSync: onboardingController.startSync,

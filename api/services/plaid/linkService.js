@@ -1,6 +1,5 @@
 import PlaidBaseService from './baseService.js';
-import { decrypt, decryptWithKey } from '../../utils/encryption.js';
-import plaidItems from '../../models/plaidItems.js';
+import { itemService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 import crypto from 'crypto';
 
@@ -30,14 +29,8 @@ class PlaidLinkService extends PlaidBaseService {
 
     if (itemId) {
       try {
-        const item = await plaidItems.findOne({ 
-          userId: user._id, 
-          itemId 
-        });
-        if (!item) {
-          throw new Error('ITEM_NOT_FOUND: Invalid item ID');
-        }
-        const access_token = this.decryptAccessToken(item.accessToken, user.encryptedKey);
+        const item = await itemService.getUserItems(user._id, itemId);
+        const access_token = itemService.decryptAccessToken(item, user);
         delete request.products;
         request.access_token = access_token;
       } catch (error) {
@@ -69,79 +62,6 @@ class PlaidLinkService extends PlaidBaseService {
       );
     } catch (error) {
       throw new Error(`TOKEN_EXCHANGE_ERROR: ${error.message}`);
-    }
-  }
-
-  decryptAccessToken(dblEncryptedAccessToken, encryptedKey) {
-    if (!dblEncryptedAccessToken || !encryptedKey) {
-      throw new Error('DECRYPT_ERROR: Missing required encryption data');
-    }
-
-    try {
-      const encryptedAccessToken = decrypt(dblEncryptedAccessToken);
-      const key = decrypt(encryptedKey, 'buffer');
-      return decryptWithKey(encryptedAccessToken, key);
-    } catch (error) {
-      throw new Error(`DECRYPT_ERROR: Failed to decrypt access token - ${error.message}`);
-    }
-  }
-
-  async savePlaidAccessData(accessData, user) {
-    if (!accessData?.access_token || !accessData?.item_id) {
-      throw new Error('INVALID_ACCESS_DATA: Missing required access data');
-    }
-
-    try {
-      const { access_token, item_id } = accessData;
-      const encryptionKey = decrypt(user.encryptedKey, 'buffer');
-
-      // First check if the item exists
-      const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
-
-      const itemData = {
-        accessToken: access_token,
-        itemId: item_id,
-        syncData: {
-          result: {},
-          status: 'queued'
-        },
-        encryptionKey,
-        userId: user._id
-      };
-
-      let item;
-      if (existingItem) {
-        // Update existing item
-        item = await plaidItems.update(
-          { itemId: item_id },
-          itemData
-        );
-      } else {
-        // Create new item
-        item = await plaidItems.save(itemData);
-      }
-
-      console.log('item', item);
-
-      return { 
-        itemId: item.itemId,
-        syncData: item.syncData,
-        userId: item.userId
-      };
-    } catch (error) {
-      throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
-    }
-  }
-
-  async getItem(userId, itemId) {
-    try {
-      const item = await plaidItems.findOne({ userId, itemId });
-      if (!item) {
-        throw new Error('ITEM_NOT_FOUND: Item not found for this user');
-      }
-      return item;
-    } catch (error) {
-      throw new Error(`ITEM_FETCH_ERROR: ${error.message}`);
     }
   }
 }

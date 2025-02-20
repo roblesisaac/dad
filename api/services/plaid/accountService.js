@@ -1,7 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
-import { itemService, linkService } from './index.js';
+import { itemService, plaidService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidAccountService extends PlaidBaseService {
@@ -9,31 +9,38 @@ class PlaidAccountService extends PlaidBaseService {
     this.validateUser(user);
 
     try {
-      const userItems = await itemService.getItems(user._id);
+      // Get the user's items
+      const userItems = await itemService.getUserItems(user._id);
       if (!userItems?.length) {
         throw new Error('NO_ITEMS: No Plaid items found for user');
       }
 
-      let retrievedAccountsFromPlaid = [];
+      // Fetch the accounts from Plaid
+      let fetchedAccounts = [];
       for (const item of userItems) {
         try {
-          const accounts = await this.retrieveAccountsFromPlaidForItem(item, user.encryptedKey);
-          retrievedAccountsFromPlaid = [...retrievedAccountsFromPlaid, ...accounts];
+          const accounts = await plaidService.fetchAccountsFromPlaid(
+            item, user
+          );
+          fetchedAccounts = [...fetchedAccounts, ...accounts];
         } catch (error) {
           console.error(`Error retrieving accounts for item ${item._id}:`, error);
           // Continue with other items even if one fails
         }
       }
 
-      if (!retrievedAccountsFromPlaid.length) {
+      // If no accounts were retrieved, throw an error
+      if (!fetchedAccounts.length) {
         throw new Error('NO_ACCOUNTS: Failed to retrieve any accounts from Plaid');
       }
 
+      // Fetch the user's existing accounts and groups
       const existingUserAccounts = await this.fetchUserAccounts(user._id);
       const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
+      // Sync the accounts and groups
       return await this.syncAccountsAndGroups(
-        retrievedAccountsFromPlaid,
+        fetchedAccounts,
         existingUserAccounts,
         existingGroups,
         user
@@ -47,45 +54,31 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  async retrieveAccountsFromPlaidForItem(item, encryptedKey) {
-    if (!item?.accessToken) {
-      throw new Error('INVALID_ITEM: Missing access token');
-    }
-
-    try {
-      const access_token = linkService.decryptAccessToken(item.accessToken, encryptedKey);
-      const data = await this.handleResponse(
-        this.client.accountsGet({ access_token })
-      );
-
-      return data.accounts.map(account => ({
-        ...account,
-        itemId: data.item.item_id
-      }));
-    } catch (error) {
-      if (error.error_code === 'ITEM_LOGIN_REQUIRED') {
-        throw {
-          error_code: 'ITEM_LOGIN_REQUIRED',
-          error_message: 'This connection requires reauthentication',
-          item_id: item.itemId
-        };
-      }
-      throw new Error(`ACCOUNT_FETCH_ERROR: ${error.message}`);
-    }
-  }
-
-  async syncAccountsAndGroups(retrievedAccountsFromPlaid, existingAccounts, existingGroups, user) {
+  async syncAccountsAndGroups(fetchedAccounts, existingAccounts, existingGroups, user) {
     const synced = { accounts: [], groups: [] };
 
-    for (const retrievedAccount of retrievedAccountsFromPlaid) {
-      if (this.isAccountAlreadySaved(existingAccounts, retrievedAccount)) {
-        const updatedAccount = await this.updateAccount(retrievedAccount.account_id, user._id, retrievedAccount);
+    for (const retrievedAccount of fetchedAccounts) {
+      const isSaved = this.isAccountSaved(existingAccounts, retrievedAccount);
+
+      // Update the account if it already exists
+      if (isSaved) {
+        const updatedAccount = await this.updateAccount(
+          retrievedAccount,
+          user._id
+        );
+
         synced.accounts.push(updatedAccount);
         continue;
       }
-      const newSavedAccount = await plaidAccounts.save({ ...retrievedAccount, req: { user } });
-      synced.accounts.push(newSavedAccount);
-      synced.groups.push(await this.userGroupSave(user, newSavedAccount));
+
+      // Else, save the account
+      const accountData = { ...retrievedAccount, user };
+      const savedAc = await plaidAccounts.save(accountData);
+      synced.accounts.push(savedAc);
+
+      // Save the group for the account
+      const groupData = await this.saveGroup(user, savedAc);
+      synced.groups.push(groupData);
     }
 
     const updatedGroups = await this.updateExistingGroups(existingGroups, synced.accounts);
@@ -102,15 +95,16 @@ class PlaidAccountService extends PlaidBaseService {
     return items;
   }
 
-  async updateAccount(account_id, userId, retrievedAccount) {
+  async updateAccount(userId, retrievedAccount) {
     try {
+      const { account_id } = retrievedAccount;
       return await plaidAccounts.update({ account_id, userId }, retrievedAccount);
     } catch (error) {
       throw new Error(`Error updating account: ${error.message}`);
     }
   }
 
-  async userGroupSave(user, retrievedAccount) {
+  async saveGroup(user, retrievedAccount) {
     try {
       const { _id, account_id, mask, name, balances } = retrievedAccount;
 
@@ -156,30 +150,12 @@ class PlaidAccountService extends PlaidBaseService {
       const updatedGroup = await plaidGroups.update(group._id, { accounts });
       updatedGroups.push(updatedGroup);
     }
+
     return updatedGroups;
   }
 
-  isAccountAlreadySaved(existingUserAccounts, retrievedAccount) {
+  isAccountSaved(existingUserAccounts, retrievedAccount) {
     return existingUserAccounts.find(itm => itm.account_id === retrievedAccount.account_id);
-  }
-
-  async syncItems(userItems, user) {
-    let syncedItems = [];
-    const { encryptedKey } = user;
-
-    for (const item of userItems) {
-      const access_token = linkService.decryptAccessToken(item.accessToken, encryptedKey);
-      try {
-        const response = await this.handleResponse(
-          this.client.itemGet({ access_token })
-        );
-        syncedItems.push(response.item);
-      } catch (error) {
-        console.error(`Error syncing item: ${error.message}`);
-      }
-    }
-    
-    return syncedItems;
   }
 }
 

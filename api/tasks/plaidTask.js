@@ -2,11 +2,6 @@ import { task, events } from '@ampt/sdk';
 import { transactionService, itemService } from '../services/plaid/index.js';
 
 const tasks = (function() {
-  const removeAllTransactionsFromDatabase = task('plaid.removeAllTransactions', { timeout: 60*60*1000 }, async ({ body }) => {
-    const { user } = body;
-    return await transactionService.removeAllTransactionsFromDatabase(user);
-  });
-
   const syncTransactions = task('sync.transactions', { timeout: 60*60*1000 }, async ({ body }) => {
     const { itemId, user } = body;
     
@@ -51,9 +46,6 @@ const tasks = (function() {
   });
   
   return {
-    removeAllUserTransactions: async ({ _id, email }) => {
-      removeAllTransactionsFromDatabase.run({ user: { _id, email } });
-    },
     syncTransactionsForItem: async function(itemId, user) {
       if (!itemId || !user?._id) {
         throw new Error('INVALID_PARAMS: Missing required parameters');
@@ -88,7 +80,7 @@ export const handler = async (event) => {
     }
 
     // Validate item exists before starting sync
-    const item = await itemService.getItems(user._id, itemId);
+    const item = await itemService.getUserItems(user._id, itemId);
     if (!item) {
       throw new Error('ITEM_NOT_FOUND: Item not found for this user');
     }

@@ -1,4 +1,4 @@
-import { linkService } from '../../services/plaid';
+import { itemService,linkService } from '../../services/plaid';
 
 export default {
   async createLink(req, res) {
@@ -22,7 +22,7 @@ export default {
       const accessData = await linkService.exchangePublicToken(publicToken);
       
       // Save or update the Plaid item
-      const plaidItem = await linkService.savePlaidAccessData(accessData, req.user);
+      const plaidItem = await itemService.savePlaidAccessData(accessData, req.user);
       
       res.json({
         status: 'success',

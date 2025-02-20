@@ -1,22 +1,18 @@
 import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
-import plaidItems from '../../models/plaidItems.js';
-import { linkService } from './index.js';
+import { itemService, plaidService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 import { itemService } from './index.js';
-import notify from '../../utils/notify.js';
 
 class PlaidTransactionService extends PlaidBaseService {
-  async syncTransactionsForItem(item, user={}) {
-    const { _id: userId, encryptedKey } = user;
-
-    if (!userId || !encryptedKey) {
+  async syncTransactionsForItem(item, user) {
+    if (!user) {
       throw new Error('INVALID_USER: Missing required user data');
     }
 
     try {
       if (typeof item === 'string') {
-        const foundItem = await itemService.getItems(userId, item);
+        const foundItem = await itemService.getUserItems(user._id, item);
         if (!foundItem) {
           throw new Error('ITEM_NOT_FOUND: Item not found for this user');
         }
@@ -27,7 +23,7 @@ class PlaidTransactionService extends PlaidBaseService {
         throw new Error('INVALID_ITEM: Missing required item data');
       }
 
-      const { accessToken, syncData } = item;
+      const { syncData } = item;
       
       if (['in_progress'].includes(syncData.status)) {
         return { 
@@ -46,10 +42,10 @@ class PlaidTransactionService extends PlaidBaseService {
       await itemService.updateItemSyncStatus(item._id, nextSyncData);
 
       try {
-        const access_token = linkService.decryptAccessToken(accessToken, encryptedKey);
-        const transactions = await this.fetchTransactionsFromPlaid(access_token, syncData.cursor);
+        const access_token = itemService.decryptAccessToken(item, user);
+        const transactions = await plaidService.fetchTransactionsFromPlaid(access_token, syncData.cursor);
 
-        await this.processAndSaveTransactions(transactions, userId, item._id);
+        await this.processAndSaveTransactions(transactions, user._id, item._id);
 
         const completedSyncData = {
           status: 'completed',
@@ -88,7 +84,7 @@ class PlaidTransactionService extends PlaidBaseService {
     this.validateUser(user);
 
     try {
-      const items = await itemService.getItems(user._id);
+      const items = await itemService.getUserItems(user._id);
       if (!items?.length) {
         throw new Error('NO_ITEMS: No items found for user');
       }
@@ -111,28 +107,6 @@ class PlaidTransactionService extends PlaidBaseService {
       return { syncResults };
     } catch (error) {
       throw new Error(`SYNC_ERROR: ${error.message}`);
-    }
-  }
-
-  async fetchTransactionsFromPlaid(access_token, cursor = null, startDate = null) {
-    try {
-      const request = {
-        access_token,
-        cursor,
-        options: {
-          include_personal_finance_category: true
-        }
-      };
-
-      if (startDate) {
-        request.start_date = startDate;
-      }
-
-      return await this.handleResponse(
-        this.client.transactionsSync(request)
-      );
-    } catch (error) {
-      throw new Error(`PLAID_API_ERROR: ${error.message}`);
     }
   }
 
@@ -199,14 +173,6 @@ class PlaidTransactionService extends PlaidBaseService {
     }
   }
 
-  async getAllTransactionCount(userId) {
-    try {
-      return await plaidTransactions.count({ userId });
-    } catch (error) {
-      throw new Error(`COUNT_ERROR: ${error.message}`);
-    }
-  }
-
   buildUserQueryForTransactions(userId, queryParams) {
     const query = { userId };
 
@@ -253,33 +219,6 @@ class PlaidTransactionService extends PlaidBaseService {
       return { removed: transactionIds.length };
     } catch (error) {
       throw new Error(`DELETE_ERROR: ${error.message}`);
-    }
-  }
-
-  async removeAllTransactionsFromDatabase(user) {
-    this.validateUser(user);
-
-    try {
-      const result = await plaidTransactions.deleteMany({ userId: user._id });
-      
-      // Notify user of completion
-      await notify.send(user.email, {
-        subject: 'Transactions Removed',
-        message: `All your transactions have been removed successfully. ${result.deletedCount} transactions were deleted.`
-      });
-
-      return {
-        success: true,
-        deletedCount: result.deletedCount
-      };
-    } catch (error) {
-      // Notify user of failure
-      await notify.send(user.email, {
-        subject: 'Transaction Removal Failed',
-        message: 'There was an error removing your transactions. Please try again or contact support if the problem persists.'
-      });
-
-      throw new Error(`DELETE_ALL_ERROR: ${error.message}`);
     }
   }
 }

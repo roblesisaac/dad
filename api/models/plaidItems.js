@@ -1,12 +1,13 @@
 import AmptModel from '../utils/amptModel';
-import { encrypt, encryptWithKey } from '../utils/encryption';
+import { encrypt, encryptWithKey, decrypt } from '../utils/encryption';
 
 const itemSchema = {
   userId: {
     set: (_, { userId }) => userId
   },
   accessToken: { 
-    set: (accessToken, { encryptionKey }) => {
+    set: (accessToken, { user }) => {
+      const encryptionKey = decrypt(user.encryptedKey, 'buffer');
       const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
 
       return encrypt(userEncryptedKey);

@@ -1,12 +1,11 @@
-import { itemService, transactionService } from '../../services/plaid';
-import tasks from '../../tasks/plaid.js';
+import { itemService } from '../../services/plaid';
+import tasks from '../../tasks/plaidTask.js';
 
 export default {
   async startSync(req, res) {
     try {
       const { itemId } = req.params;
       
-      // Start background sync task
       await tasks.syncTransactionsForItem(itemId, req.user);
       
       res.json({ 
@@ -28,7 +27,7 @@ export default {
     try {
       const { itemId } = req.params;
       
-      const item = await itemService.getItems(req.user._id, itemId);
+      const item = await itemService.getUserItems(req.user._id, itemId);
       
       if (!item) {
         throw new Error('ITEM_NOT_FOUND: Item not found');

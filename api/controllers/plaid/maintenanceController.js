@@ -1,5 +1,5 @@
 import { transactionService } from '../../services/plaid';
-import tasks from '../../tasks/plaid';
+import tasks from '../../tasks/plaidTask';
 
 export default {
   async getDuplicates(req, res) {

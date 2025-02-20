@@ -22,18 +22,6 @@ export default {
     }
   },
 
-  async getTransactionCount(req, res) {
-    try {
-      const count = await transactionService.getAllTransactionCount(req.user._id);
-      res.json(count);
-    } catch (error) {
-      res.status(400).json({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] 
-      });
-    }
-  },
-
   async syncTransactions(req, res) {
     try {
       const { itemId } = req.params;

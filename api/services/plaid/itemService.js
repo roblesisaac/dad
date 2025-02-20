@@ -1,11 +1,27 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
-import { linkService, transactionService } from './index.js';
-import plaidTasks from '../../tasks/plaid.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
+import { decrypt, decryptWithKey } from '../../utils/encryption.js';
 
-class PlaidItemService extends PlaidBaseService {
-  async getItems(userId, itemId = null) {
+class ItemService extends PlaidBaseService {
+  decryptAccessToken(item, user) {
+    const dblEncryptedAccessToken = item.accessToken;
+    const { encryptedKey } = user;
+
+    if (!dblEncryptedAccessToken || !encryptedKey) {
+      throw new Error('DECRYPT_ERROR: Missing required encryption data');
+    }
+
+    try {
+      const encryptedAccessToken = decrypt(dblEncryptedAccessToken);
+      const key = decrypt(encryptedKey, 'buffer');
+      return decryptWithKey(encryptedAccessToken, key);
+    } catch (error) {
+      throw new Error(`DECRYPT_ERROR: Failed to decrypt access token - ${error.message}`);
+    }
+  }
+
+  async getUserItems(userId, itemId = null) {
     if (!userId) {
       throw new Error('INVALID_USER: User ID is required');
     }
@@ -26,38 +42,6 @@ class PlaidItemService extends PlaidBaseService {
     }
   }
 
-  async syncItems(user) {
-    this.validateUser(user);
-
-    try {
-      const userItems = await this.getItems(user._id);
-      let syncedItems = [];
-
-      for (const item of userItems) {
-        try {
-          const access_token = linkService.decryptAccessToken(item.accessToken, user.encryptedKey);
-
-          const plaidItem = await this.client.itemGet({ access_token });
-
-          const syncedItem = await plaidTasks.syncTransactionsForItem(plaidItem._id, user);
-
-          syncedItems.push(syncedItem);
-        } catch (error) {
-          console.error(`Error syncing item ${item._id}:`, error);
-          // Continue with other items even if one fails
-        }
-      }
-
-      if (!syncedItems.length) {
-        throw new Error('SYNC_ERROR: Failed to sync any items');
-      }
-
-      return syncedItems;
-    } catch (error) {
-      throw new Error(`ITEM_SYNC_ERROR: ${error.message}`);
-    }
-  }
-
   async updateItemSyncStatus(itemId, syncData) {
     try {
       syncData.result = syncData.result || {};
@@ -67,6 +51,46 @@ class PlaidItemService extends PlaidBaseService {
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
     }
   }
+
+  async savePlaidAccessData(accessData, user) {
+    if (!accessData?.access_token || !accessData?.item_id) {
+      throw new Error('INVALID_ACCESS_DATA: Missing required access data');
+    }
+
+    try {
+      const { access_token, item_id } = accessData;
+
+      const syncData = {
+        result: {},
+        status: 'queued'
+      };
+
+      const existingItem = await this.getUserItems(user._id, item_id);
+
+      if (existingItem) {
+        await plaidItems.update(
+          { itemId: item_id },
+          { syncData }
+        );
+      } else {
+        await plaidItems.save({
+          accessToken: access_token,
+          itemId: item_id,
+          syncData,
+          user,
+          userId: user._id
+        });
+      }
+
+      return { 
+        itemId: item_id,
+        syncData: item.syncData,
+        userId: item.userId
+      };
+    } catch (error) {
+      throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
+    }
+  }
 }
 
-export default new PlaidItemService(plaidClientInstance); 
+export default new ItemService(plaidClientInstance); 
