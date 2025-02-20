@@ -45,8 +45,21 @@ class ItemService extends PlaidBaseService {
 
   async updateItemSyncStatus(itemId, syncData) {
     try {
+      console.log('updateItemSyncStatus called with:', {
+        itemId,
+        syncDataKeys: Object.keys(syncData),
+        userId: syncData.userId
+      });
+
       // Ensure we preserve history and stats
       const item = await this.getUserItems(syncData.userId, itemId);
+      console.log('Retrieved item for sync update:', {
+        itemId: item.itemId,
+        hasUser: !!item.user,
+        userObject: item.user,
+        userId: item.userId
+      });
+
       const currentHistory = item.syncData?.history || [];
       const currentStats = item.syncData?.stats || {
         added: 0,
@@ -74,6 +87,12 @@ class ItemService extends PlaidBaseService {
         });
       }
 
+      console.log('Attempting plaidItems.update with:', {
+        filter: { itemId },
+        updateData: { syncData: updatedSyncData },
+        context: { user: item.user }
+      });
+
       // Only update the syncData field, preserve the existing user context
       const updated = await plaidItems.update(
         { itemId },
@@ -81,8 +100,17 @@ class ItemService extends PlaidBaseService {
         { user: item.user } // Pass user in the context
       );
 
+      console.log('Update completed:', {
+        success: !!updated,
+        updatedSyncStatus: updated?.syncData?.status
+      });
+
       return { itemId, ...updated.syncData };
     } catch (error) {
+      console.error('Error in updateItemSyncStatus:', {
+        error: error.message,
+        stack: error.stack
+      });
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
     }
   }

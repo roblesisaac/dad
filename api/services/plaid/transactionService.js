@@ -100,7 +100,9 @@ class PlaidTransactionService extends PlaidBaseService {
     console.log('Initializing sync with:', {
       itemId: item.itemId,
       userId: user._id,
-      hasUser: !!item.user
+      hasUser: !!item.user,
+      itemUserObject: item.user,
+      userObject: user
     });
 
     const syncData = {
@@ -110,6 +112,14 @@ class PlaidTransactionService extends PlaidBaseService {
       cursor: item.syncData?.cursor || null,
       error: null
     };
+
+    console.log('Calling updateItemSyncStatus with:', {
+      itemId: item.itemId,
+      syncDataToSend: {
+        ...syncData,
+        userId: user._id
+      }
+    });
 
     await itemService.updateItemSyncStatus(item.itemId, { 
       ...syncData,
