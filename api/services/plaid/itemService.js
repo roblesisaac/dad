@@ -26,8 +26,6 @@ class ItemService extends PlaidBaseService {
       throw new Error('INVALID_USER: User ID is required');
     }
 
-    console.log('userId', userId);
-    console.log('itemId', itemId);
     try {
       if (itemId) {
         const item = await plaidItems.findOne({ userId, itemId });
@@ -109,9 +107,7 @@ class ItemService extends PlaidBaseService {
         }
       };
 
-      console.log('checking for existing item');
-      const existingItem = await this.getUserItems(user._id, item_id);
-      console.log('existingItem', existingItem);
+      const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
 
       if (existingItem) {
         await plaidItems.update(
