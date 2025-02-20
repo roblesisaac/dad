@@ -19,19 +19,19 @@ class PlaidTransactionService extends PlaidBaseService {
       }
 
       // Initialize sync
-      const syncSession = await this._initializeSync(validatedItem);
+      const syncSession = await this._initializeSync(validatedItem, user);
       
       try {
         // Perform sync
         const result = await this._performSync(syncSession, validatedItem, user);
         
         // Complete sync
-        await this._completeSync(validatedItem, result);
+        await this._completeSync(validatedItem, result, user);
         
         return this._createSyncResponse('COMPLETED', validatedItem, result);
       } catch (error) {
         // Handle sync error
-        await this._handleSyncError(validatedItem, error);
+        await this._handleSyncError(validatedItem, error, user);
         throw error;
       }
     } catch (error) {
@@ -67,13 +67,14 @@ class PlaidTransactionService extends PlaidBaseService {
     return ['in_progress', 'queued'].includes(item.syncData?.status);
   }
 
-  async _initializeSync(item) {
+  async _initializeSync(item, user) {
     const syncData = {
       status: 'in_progress',
       lastSyncTime: Date.now(),
-      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000), // Next sync in 24h
+      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000),
       cursor: item.syncData?.cursor || null,
-      error: null
+      error: null,
+      user
     };
 
     await itemService.updateItemSyncStatus(item._id, syncData);
@@ -107,7 +108,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
       // Update sync progress
       if (hasMore) {
-        await this._updateSyncProgress(item, cursor, syncSession);
+        await this._updateSyncProgress(item, cursor, syncSession, user);
       }
     }
 
@@ -185,7 +186,7 @@ class PlaidTransactionService extends PlaidBaseService {
     });
   }
 
-  async _updateSyncProgress(item, cursor, syncSession) {
+  async _updateSyncProgress(item, cursor, syncSession, user) {
     const progressData = {
       status: 'in_progress',
       cursor,
@@ -193,17 +194,18 @@ class PlaidTransactionService extends PlaidBaseService {
         added: syncSession.added.length,
         modified: syncSession.modified.length,
         removed: syncSession.removed.length
-      }
+      },
+      user
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, progressData);
+    await itemService.updateItemSyncStatus(item._id, progressData);
   }
 
-  async _completeSync(item, result) {
+  async _completeSync(item, result, user) {
     const syncData = {
       status: 'completed',
       lastSyncTime: Date.now(),
-      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000), // Next sync in 24h
+      nextSyncTime: Date.now() + (24 * 60 * 60 * 1000),
       cursor: result.cursor,
       error: null,
       stats: {
@@ -211,23 +213,25 @@ class PlaidTransactionService extends PlaidBaseService {
         modified: result.modified.length,
         removed: result.removed.length,
         lastTransactionDate: this._getLatestTransactionDate(result.added)
-      }
+      },
+      user
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, syncData);
+    await itemService.updateItemSyncStatus(item._id, syncData);
   }
 
-  async _handleSyncError(item, error) {
+  async _handleSyncError(item, error, user) {
     const errorData = {
       status: 'error',
       error: {
         code: error.error_code || 'SYNC_ERROR',
         message: error.message,
         timestamp: Date.now()
-      }
+      },
+      user
     };
 
-    await itemService.updateItemSyncStatus(item.itemId, errorData);
+    await itemService.updateItemSyncStatus(item._id, errorData);
   }
 
   _createSyncResponse(status, item, result = null) {

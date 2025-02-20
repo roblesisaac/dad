@@ -6,7 +6,13 @@ const tasks = (function() {
     const { itemId, user } = body;
     
     try {
-      return await transactionService.syncTransactionsForItem(itemId, user);
+      // Validate item exists before starting sync
+      const item = await itemService.getUserItems(user._id, itemId);
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Item not found for this user');
+      }
+      
+      return await transactionService.syncTransactionsForItem(item, user);
     } catch (error) {
       console.error('Sync task error:', error);
       throw error;
@@ -70,35 +76,3 @@ events.on('requeue-task', async (event) => {
 });
 
 export default tasks;
-
-export const handler = async (event) => {
-  try {
-    const { itemId, user } = event.body;
-    
-    if (!itemId || !user?._id) {
-      throw new Error('INVALID_PARAMS: Missing required parameters');
-    }
-
-    // Validate item exists before starting sync
-    const item = await itemService.getUserItems(user._id, itemId);
-    if (!item) {
-      throw new Error('ITEM_NOT_FOUND: Item not found for this user');
-    }
-    
-    const result = await transactionService.syncTransactionsForItem(item, user);
-    
-    return {
-      statusCode: 200,
-      body: JSON.stringify(result)
-    };
-  } catch (error) {
-    console.error('Task error:', error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ 
-        error: error.message.split(': ')[0],
-        message: error.message.split(': ')[1] || error.message
-      })
-    };
-  }
-};

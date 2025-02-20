@@ -24,16 +24,13 @@ export default {
       
       // 2. Save or update the Plaid item
       const plaidItem = await itemService.savePlaidAccessData(accessData, req.user);
-
-      // 3. Start initial transaction sync
-      await tasks.syncTransactionsForItem(plaidItem.itemId, req.user);
       
       res.json({
         status: 'success',
         data: {
           itemId: plaidItem.itemId,
-          status: 'syncing',
-          message: 'Item connected and sync started'
+          status: 'pending',
+          message: 'Item connected successfully'
         }
       });
     } catch (error) {

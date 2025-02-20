@@ -1,5 +1,4 @@
 import PlaidBaseService from './baseService.js';
-import plaidItems from '../../models/plaidItems.js';
 import { itemService } from './index.js';
 import plaidTasks from '../../tasks/plaidTask.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
