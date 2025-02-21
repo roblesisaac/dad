@@ -10,14 +10,8 @@ class PlaidService extends PlaidBaseService {
 
       for (const item of userItems) {
         try {
-          console.log({
-            userItem: item
-          });
           const plaidItem = await this.fetchItemFromPlaid(item, user);
 
-          console.log({
-            fetchedPlaidItem: plaidItem
-          })
           const syncedItem = await plaidTasks.syncTransactionsForItem(plaidItem._id, user);
 
           syncedItems.push(syncedItem);
