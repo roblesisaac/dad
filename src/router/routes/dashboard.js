@@ -4,7 +4,7 @@ export default [
   {
     path: '/onboarding',
     name: 'onboarding',
-    component: () => import('@/features/dashboard/views/OnboardingView.vue'),
+    component: () => import('@/features/dashboard/components/ItemRepair.vue'),
     beforeEnter: authGuard,
     meta: {
       requiresAuth: true,
