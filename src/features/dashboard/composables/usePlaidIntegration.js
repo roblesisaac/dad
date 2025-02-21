@@ -113,6 +113,7 @@ export function usePlaidIntegration() {
   async function startInitialSync(itemId) {
     try {
       await api.post(`plaid/onboarding/sync/${itemId}`);
+      router.push('/onboarding');
     } catch (error) {
       console.error('Sync error:', error);
       state.error = 'Error syncing your account. Please try again.';
@@ -159,18 +160,20 @@ export function usePlaidIntegration() {
 
       const { itemId } = response.data;
 
-      // Navigate to onboarding view and start sync
-      await router.push('/onboarding');
       state.onboardingStep = 'syncing';
 
       await startInitialSync(itemId);
+
+      // Start polling for sync status
       await pollSyncStatus(itemId);
 
       // Update state after successful sync
       state.onboardingStep = 'complete';
       state.hasItems = true;
       
-      // Wait a moment before redirecting to spending report
+      console.log('Initial sync completed');
+
+      // Wait briefly to show completion state before redirecting
       setTimeout(() => {
         router.push('/spending-report');
       }, 2000);
@@ -192,11 +195,16 @@ export function usePlaidIntegration() {
       try {
         const status = await api.get(`plaid/onboarding/status/${itemId}`);
         
-        // Update progress in state
+        // Update progress in state with more detailed information
         if (status.progress) {
           state.syncProgress = {
-            ...status.progress,
-            status: status.status
+            added: status.progress.added || 0,
+            modified: status.progress.modified || 0,
+            removed: status.progress.removed || 0,
+            status: status.status || 'queued',
+            lastSync: status.progress.lastSync,
+            nextSync: status.progress.nextSync,
+            cursor: status.progress.cursor
           };
         }
 
@@ -208,7 +216,7 @@ export function usePlaidIntegration() {
           return status;
         }
 
-        // Wait 10 seconds before next poll
+        // Wait 2 seconds before next poll
         await new Promise(resolve => setTimeout(resolve, 2000));
         attempts++;
 

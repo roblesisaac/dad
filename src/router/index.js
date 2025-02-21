@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authGuard } from '@auth0/auth0-vue'
-import OnboardingView from '@/features/dashboard/views/OnboardingView.vue'
+import dashboardRoutes from './routes/dashboard.js'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
@@ -31,24 +31,11 @@ const routes = [
     component: TermsOfService
   },
   {
-    path: '/spending-report',
-    name: 'spending report',
-    component: SpendingReport,
-    beforeEnter: authGuard
-  },
-  {
     path: '/',
     name: 'landing',
     component: Landing
   },
-  {
-    path: '/onboarding',
-    name: 'onboarding',
-    component: OnboardingView,
-    meta: {
-      requiresAuth: true
-    }
-  }
+  ...dashboardRoutes
 ]
 
 const router = createRouter({

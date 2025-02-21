@@ -4,18 +4,10 @@
       <h2>Welcome to Your Financial Dashboard!</h2>
       <p>Let's get started by connecting your first bank account.</p>
       
-      <div v-if="state.onboardingStep === 'syncing'" class="sync-status">
-        <h3>Setting Up Your Account</h3>
-        <p>We're syncing your transactions. This may take a few minutes...</p>
-        <div class="progress-indicator">
-          <div class="spinner"></div>
-        </div>
-      </div>
-
-      <div v-else-if="state.onboardingStep === 'complete'" class="sync-complete">
-        <h3>Setup Complete!</h3>
-        <p>Redirecting to your dashboard...</p>
-      </div>
+      <OnboardingStatus 
+        v-if="['syncing', 'complete'].includes(state.onboardingStep)"
+        :state="state"
+      />
 
       <div v-else>
         <div class="benefits">
@@ -79,6 +71,7 @@
 <script setup>
 import { onMounted } from 'vue';
 import { usePlaidIntegration } from '../composables/usePlaidIntegration.js';
+import OnboardingStatus from './OnboardingStatus.vue';
 
 const {
   state,
