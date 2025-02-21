@@ -1,10 +1,9 @@
 import { authGuard } from '@auth0/auth0-vue'
-import DashboardLayout from '@/layouts/DashboardLayout.vue'
 
 export const dashboardRoutes = [
   {
     path: '/dashboard',
-    component: DashboardLayout,
+    component: { template: '<router-view></router-view>' }, // Use simple wrapper for now
     beforeEnter: authGuard,
     children: [
       {
