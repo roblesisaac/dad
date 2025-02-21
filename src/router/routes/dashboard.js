@@ -4,7 +4,7 @@ export default [
   {
     path: '/onboarding',
     name: 'onboarding',
-    component: () => import('@/features/dashboard/components/ItemRepair.vue'),
+    component: () => import('@/features/onboarding/views/ItemRepair.vue'),
     beforeEnter: authGuard,
     meta: {
       requiresAuth: true,
@@ -14,7 +14,7 @@ export default [
   {
     path: '/spending-report',
     name: 'spending-report',
-    component: () => import('@/features/dashboard/SpendingReport.vue'),
+    component: () => import('@/features/dashboard/views/SpendingReport.vue'),
     beforeEnter: authGuard,
     meta: {
       requiresAuth: true,

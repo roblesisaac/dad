@@ -8,7 +8,7 @@
 import { onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import ItemRepair from '../../onboarding/components/ItemRepair.vue';
-import { usePlaidIntegration } from '../../onboarding/composables/usePlaidIntegration';
+import { usePlaidIntegration } from '../composables/usePlaidIntegration';
 
 const router = useRouter();
 const { state, initializePlaid } = usePlaidIntegration();

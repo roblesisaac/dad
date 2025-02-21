@@ -101,7 +101,7 @@
 <script setup>
 import { onMounted } from 'vue';
 import { usePlaidIntegration } from '../composables/usePlaidIntegration.js';
-import OnboardingStatus from './OnboardingStatus.vue';
+import OnboardingStatus from '../components/OnboardingStatus.vue';
 import { 
   LucideShieldCheck, 
   LucideLineChart, 

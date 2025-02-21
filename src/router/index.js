@@ -2,9 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router'
 import dashboardRoutes from './routes/dashboard.js'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
-const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
-const TermsOfService = () => import('@/views/TermsOfService.vue')
-const Landing = () => import('@/views/Landing.vue')
+const PrivacyPolicy = () => import('@/shared/views/PrivacyPolicy.vue')
+const TermsOfService = () => import('@/shared/views/TermsOfService.vue')
+const Landing = () => import('@/shared/views/Landing.vue')
 
 const routes = [
   {

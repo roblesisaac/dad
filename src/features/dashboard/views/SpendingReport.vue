@@ -130,19 +130,19 @@
   import { ChevronLeft } from 'lucide-vue-next';
 
   // Components
-  import RuleDetails from './components/RuleDetails.vue';
-  import SelectedItems from './components/SelectedItems.vue';
+  import RuleDetails from '../components/RuleDetails.vue';
+  import SelectedItems from '../components/SelectedItems.vue';
   import LoadingDots from '@/shared/components/LoadingDots.vue';
-  import ItemRepair from './components/ItemRepair.vue';
-  import DatePickers from './components/DatePickers.vue';
-  import CategoriesWrapper from './components/CategoriesWrapper.vue';
-  import ShowSelectGroupButton from './components/ShowSelectGroupButton.vue';
-  import ScrollingTabButtons from './components/ScrollingTabButtons.vue';
+  import ItemRepair from '@/features/onboarding/views/ItemRepair.vue';
+  import DatePickers from '../components/DatePickers.vue';
+  import CategoriesWrapper from '../components/CategoriesWrapper.vue';
+  import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
+  import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
 
   import { useAppStore } from '@/stores/state';
   import { useTransactions } from '../composables/useTransactions';
   import { useTabProcessing } from '../composables/useTabProcessing';
-  import { useSyncStatus } from './composables/useSyncStatus';
+  import { useSyncStatus } from '@/features/onboarding/composables/useSyncStatus';
   import loadScript from '@/shared/utils/loadScript';
   import { useUtils } from '../composables/useUtils';
   import { SelectGroup } from '@/features/select-group';
