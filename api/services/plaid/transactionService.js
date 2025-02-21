@@ -148,7 +148,7 @@ class PlaidTransactionService extends PlaidBaseService {
 
         // Update cursor and check if more data available
         cursor = batch.next_cursor;
-        hasMore = cursor !== null && cursor !== lastCursor;
+        hasMore = cursor !== null && cursor !== lastCursor && cursor !== undefined;
 
         console.log('Batch processing complete:', {
           itemId,
@@ -175,11 +175,7 @@ class PlaidTransactionService extends PlaidBaseService {
             }
           };
 
-          try {
-            await itemService.updateItemSyncStatus(itemId, userId, progressData);
-          } catch (updateError) {
-            console.error('Failed to update sync status:', updateError);
-          }
+          await itemService.updateItemSyncStatus(itemId, userId, progressData);
 
           // Add delay between requests to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
@@ -207,11 +203,7 @@ class PlaidTransactionService extends PlaidBaseService {
           continue; // Retry the same batch
         }
 
-        try {
-          await this._handleSyncError({ itemId, userId }, error, user);
-        } catch (handleError) {
-          console.error('Failed to handle sync error:', handleError);
-        }
+        await this._handleSyncError({ itemId, userId }, error, user);
         throw error;
       }
     }
