@@ -1,6 +1,8 @@
 import { ref, onUnmounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 export function useSyncStatus(api, state) {
+  const router = useRouter();
   const syncInterval = ref(null);
   const SYNC_CHECK_INTERVAL = 5000; // 5 seconds
   const MAX_RETRIES = 3;
@@ -42,7 +44,7 @@ export function useSyncStatus(api, state) {
 
       // Check for failures
       if (itemsSyncing.some(item => item.syncData.status === 'failed')) {
-        state.views.push('ItemRepair');
+        router.push({ name: 'onboarding' });
         clearSyncCheck();
         return;
       }

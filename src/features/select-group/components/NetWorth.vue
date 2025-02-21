@@ -4,6 +4,7 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { fontColor, formatPrice } from '@/utils';
 
 const props = defineProps({
@@ -11,12 +12,13 @@ const props = defineProps({
         type: Array,
         default: []
     },
-    state: Object,
     digits: {
         type: Number,
         default: 2
     }
 });
+
+const { state } = useDashboardState();
 
 const netWorth = computed(() => {
     return props.accounts.reduce((acc, account) => {
@@ -32,7 +34,7 @@ const netWorth = computed(() => {
 });
 
 function getAccount(accountId) {
-    return props.state.allUserAccounts.find(account => account._id === accountId) || {};
+    return state.allUserAccounts.find(account => account._id === accountId) || {};
 }
 
 </script>

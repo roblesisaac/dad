@@ -14,7 +14,7 @@
       v-model="filteredRulesByType" 
       group="rules" 
       handle=".handle"
-      v-bind="state.dragOptions()" 
+      v-bind="dragOptions(1)" 
       item-key="_id">
       <template #item="{element}">
         <EditRule :ruleConfig="element" :state="state" :showReorder="showReorder" />
@@ -37,20 +37,23 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import EditRule from './EditRule.vue';
-import Draggable from 'vuedraggable';
+import { useDraggable } from '@/shared/composables/useDraggable';
+
+const { Draggable, dragOptions } = useDraggable();
 
 const props = defineProps({
-  ruleType: String,
-  state: Object
+  ruleType: String
 });
 
-const selectedTab = props.state.selected.tab;
+const { state } = useDashboardState();
+const selectedTab = state.selected.tab;
 
 const allRulesForTab = computed(() => {
   const tabId = selectedTab._id;
 
-  return props.state.allUserRules.filter(ruleItem => {
+  return state.allUserRules.filter(ruleItem => {
     const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
     const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
 
@@ -74,7 +77,7 @@ function byOrderOfExecution(a, b) {
   return a.orderOfExecution - b.orderOfExecution;
 }
 
-watch(() => props.state.allUserRules.length, () => {
+watch(() => state.allUserRules.length, () => {
   filteredRulesByType.value = setFilteredRulesByType();
 });
 

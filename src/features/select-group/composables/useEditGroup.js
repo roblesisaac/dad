@@ -1,7 +1,9 @@
 import { useApi } from '@/shared/composables/useApi';
+import { useRouter } from 'vue-router';
 
 export function useEditGroup(state) {
   const api = useApi();
+  const router = useRouter();
   const editGroupState = {
     typingTimer: null
   };
@@ -44,7 +46,7 @@ export function useEditGroup(state) {
     }
 
     const idToRemove = state.editingGroup._id;
-    state.views.pop();
+    router.back();
     state.editingGroup = null;
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
     await api.delete(`groups/${idToRemove}`);

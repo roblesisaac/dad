@@ -1,7 +1,7 @@
 <template>
 <div class="x-grid">
   <div class="cell-20-24">
-    <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="state.selected.tabsForGroup" v-bind="state.dragOptions(100)">
+    <Draggable class="draggable button-container" :class="{ 'toggle-scroll': !isSmallScreen }" handle=".handleTab" v-model="state.selected.tabsForGroup" v-bind="dragOptions(1)">
       <template #item="{element}">
         <TabButton
           :state="state" 
@@ -12,8 +12,11 @@
     </Draggable>
   </div>
   <div class="cell-4-24">
-    <button v-if="state.selected.tabsForGroup.length>1" @click="state.views.push('AllTabs')" class="view-all b-bottom b-left expanded">All</button>
-    <button v-else @click="app.createNewTab" class="view-all b-bottom b-left expanded">+</button>
+    <button v-if="state.selected.tabsForGroup.length>1" 
+            @click="router.push({ name: 'all-tabs' })" 
+            class="view-all b-bottom b-left expanded">All</button>
+    <button v-else @click="app.createNewTab" 
+            class="view-all b-bottom b-left expanded">+</button>
   </div>
 </div>
 
@@ -22,12 +25,17 @@
 <script setup>
 import { computed, onMounted, watch } from 'vue';
 import TabButton from './TabButton.vue';
-import Draggable from 'vuedraggable';
+import { useRouter } from 'vue-router';
+import { useDraggable } from '@/shared/composables/useDraggable';
+
+const { Draggable, dragOptions } = useDraggable();
 
 const props = defineProps({
   app: Object,
   state: Object
 });
+
+const router = useRouter();
 
 const isSmallScreen = computed(() => props.state.isSmallScreen());
 

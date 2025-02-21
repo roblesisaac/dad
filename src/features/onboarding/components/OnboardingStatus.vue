@@ -57,7 +57,7 @@
       </div>
       <button 
         class="primary-button" 
-        @click="goToSpendingReport"
+        @click="goToDashboard"
         :disabled="redirecting"
       >
         {{ redirecting ? 'Redirecting...' : 'Go to Dashboard' }}
@@ -70,16 +70,11 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { formatDistanceToNow, parseISO } from 'date-fns';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
 const router = useRouter();
+const { state } = useDashboardState();
 const redirecting = ref(false);
-
-const props = defineProps({
-  state: {
-    type: Object,
-    required: true
-  }
-});
 
 const emit = defineEmits(['retry']);
 
@@ -95,23 +90,23 @@ const formatStatus = (status) => {
 };
 
 const showNextSync = computed(() => {
-  return props.state.syncProgress.nextSync && 
-         props.state.syncProgress.status !== 'completed';
+  return state.syncProgress.nextSync && 
+         state.syncProgress.status !== 'completed';
 });
 
 const formatNextSync = computed(() => {
-  if (!props.state.syncProgress.nextSync) return '';
-  return formatDistanceToNow(parseISO(props.state.syncProgress.nextSync), { addSuffix: true });
+  if (!state.syncProgress.nextSync) return '';
+  return formatDistanceToNow(parseISO(state.syncProgress.nextSync), { addSuffix: true });
 });
 
 const formatLastSync = computed(() => {
-  if (!props.state.syncProgress.lastSync) return 'Just now';
-  return formatDistanceToNow(parseISO(props.state.syncProgress.lastSync), { addSuffix: true });
+  if (!state.syncProgress.lastSync) return 'Just now';
+  return formatDistanceToNow(parseISO(state.syncProgress.lastSync), { addSuffix: true });
 });
 
-const goToSpendingReport = async () => {
+const goToDashboard = async () => {
   redirecting.value = true;
-  await router.push('/spending-report');
+  await router.push('/dashboard');
 };
 
 const retrySync = () => {

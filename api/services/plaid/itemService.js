@@ -30,7 +30,7 @@ class ItemService extends PlaidBaseService {
       if (itemId) {
         const item = await plaidItems.findOne({ userId, itemId });
         if (!item) {
-          throw new Error('ITEM_NOT_FOUND: Item not found for this user');
+          return null;
         }
         item.user = { _id: userId };
         return item;

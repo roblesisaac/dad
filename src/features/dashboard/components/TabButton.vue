@@ -21,8 +21,10 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
+import { useRouter } from 'vue-router';
 
 const api = useApi();
+const router = useRouter();
 const props = defineProps({
   tab: 'object',
   state: 'object'
@@ -70,7 +72,7 @@ const isPreviousTabSelected = computed(() => {
 });
 
 function editTab() {
-  props.state.views.push('EditTab');
+  router.push({ name: 'edit-tab' });
 }
 
 function selectTab(tabToSelect) {

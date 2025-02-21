@@ -2,7 +2,7 @@ import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
 import { itemService, plaidService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
-import { CustomError } from './customError.js'; // Assuming a custom error class is available
+import { CustomError } from './customError.js';
 
 class PlaidTransactionService extends PlaidBaseService {
   /**
@@ -127,67 +127,45 @@ class PlaidTransactionService extends PlaidBaseService {
       throw new CustomError('INVALID_TOKEN', 'Failed to decrypt access token');
     }
 
-    let hasMore = true;
-    let cursor = syncSession.cursor;
-    let batchCount = 0;
-    let lastCursor = null;
-    const RATE_LIMIT_DELAY = 1000;
-    const MAX_RETRIES = 3;
-    const BACKOFF_DELAY = 2000;
-
-    // Store these values to avoid losing them between batches
     const { itemId, userId } = item;
+    const RATE_LIMIT_DELAY = 500;
 
-    while (hasMore) {
-      console.log(`Processing batch ${++batchCount} for item:`, itemId, {
+    // Recursive helper function
+    const fetchNextBatch = async (cursor, batchCount = 1, lastCursor = null) => {
+      console.log(`Processing batch ${batchCount} for item:`, itemId, {
         currentCursor: cursor,
         lastCursor,
         batchCount
       });
       
-      let error = null;
-      let batch = null;
-      
-      // Simple retry loop
-      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-        try {
-          console.log('Fetching transactions from Plaid:', {
-            itemId,
-            cursor,
-            batchCount,
-            attempt: attempt + 1
-          });
+      let batch;
+      try {
+        console.log('Fetching transactions from Plaid:', {
+          itemId,
+          cursor,
+          batchCount
+        });
 
-          batch = await plaidService.fetchTransactionsFromPlaid(
-            access_token, 
-            cursor
-          );
-
-          // If we get here, the request succeeded
-          error = null;
-          break;
-        } catch (err) {
-          error = err;
-          
-          // Don't retry if it's not a retryable error
-          if (!this._isRetryableError(err)) {
-            break;
+        batch = await plaidService.fetchTransactionsFromPlaid(
+          access_token, 
+          cursor
+        );
+      } catch (error) {
+        // Save current progress before throwing
+        await this._updateSyncProgress(itemId, userId, {
+          status: 'incomplete',
+          cursor: cursor, // Keep the current cursor for resume
+          error: {
+            code: error.error_code || 'SYNC_ERROR',
+            message: error.message,
+            timestamp: Date.now()
+          },
+          stats: {
+            added: syncSession.added.length,
+            modified: syncSession.modified.length,
+            removed: syncSession.removed.length
           }
-
-          // Last attempt failed
-          if (attempt === MAX_RETRIES) {
-            break;
-          }
-
-          // Wait before retrying with exponential backoff
-          const delay = BACKOFF_DELAY * Math.pow(2, attempt);
-          console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-
-      // If we still have an error after all retries
-      if (error) {
+        });
         throw error;
       }
 
@@ -205,42 +183,60 @@ class PlaidTransactionService extends PlaidBaseService {
         nextCursor: batch.next_cursor
       });
 
-      // Store current cursor before processing
-      lastCursor = cursor;
-
-      // Process batch
-      await this._processBatch(batch, syncSession, itemId, userId);
-
-      // Update cursor and check if more data available
-      cursor = batch.next_cursor;
-      hasMore = cursor && cursor !== lastCursor;
-
-      // Update sync progress
-      if (hasMore) {
+      try {
+        // Process batch - now with transaction safety
+        await this._processBatch(batch, syncSession, itemId, userId);
+      } catch (error) {
+        // If batch processing fails, save progress and throw
         await this._updateSyncProgress(itemId, userId, {
-          status: 'in_progress',
-          cursor,
+          status: 'incomplete',
+          cursor: cursor,
+          error: {
+            code: 'BATCH_PROCESSING_ERROR',
+            message: error.message,
+            timestamp: Date.now()
+          },
           stats: {
             added: syncSession.added.length,
             modified: syncSession.modified.length,
             removed: syncSession.removed.length
           }
         });
-
-        // Rate limiting delay between batches
-        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+        throw error;
       }
-    }
 
-    return syncSession;
+      // Check if more data is available
+      const nextCursor = batch.next_cursor;
+      const hasMore = nextCursor && nextCursor !== cursor;
+
+      if (!hasMore) {
+        return syncSession;
+      }
+
+      // Update sync progress
+      await this._updateSyncProgress(itemId, userId, {
+        status: 'in_progress',
+        cursor: nextCursor,
+        stats: {
+          added: syncSession.added.length,
+          modified: syncSession.modified.length,
+          removed: syncSession.removed.length
+        }
+      });
+
+      // Rate limiting delay between batches
+      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+
+      // Recursive call for next batch
+      return fetchNextBatch(nextCursor, batchCount + 1, cursor);
+    };
+
+    // Start the recursive process with initial cursor
+    return fetchNextBatch(syncSession.cursor);
   }
 
   /**
-   * Processes a batch of transactions.
-   * @param {Object} batch - Batch of transactions from Plaid.
-   * @param {Object} syncSession - Sync session data.
-   * @param {string} itemId - Item ID.
-   * @param {string} userId - User ID.
+   * Processes a batch of transactions with improved error handling.
    */
   async _processBatch(batch, syncSession, itemId, userId) {
     if (!batch) {
@@ -253,17 +249,35 @@ class PlaidTransactionService extends PlaidBaseService {
     console.log(`Processing ${added?.length || 0} new transactions`);
 
     try {
-      // Process the transactions
-      const result = await this.processAndSaveTransactions(batch, userId, itemId);
+      // First, handle removals as they're independent
+      if (removed?.length) {
+        await this._removeTransactions(removed);
+        syncSession.removed.push(...removed);
+      }
 
-      // Update sync session totals
-      syncSession.added.push(...(added || []));
-      syncSession.modified.push(...(modified || []));
-      syncSession.removed.push(...(removed || []));
+      // Then handle modifications
+      if (modified?.length) {
+        await this._updateModifiedTransactions(modified, itemId, userId);
+        syncSession.modified.push(...modified);
+      }
 
-      console.log('Successfully processed batch:', result);
+      // Finally handle new additions
+      if (added?.length) {
+        const savedTransactions = await this._saveNewTransactions(added, itemId, userId);
+        syncSession.added.push(...savedTransactions);
+      }
+
+      console.log('Successfully processed batch:', {
+        added: added?.length || 0,
+        modified: modified?.length || 0,
+        removed: removed?.length || 0
+      });
       
-      return result;
+      return {
+        added: added?.length || 0,
+        modified: modified?.length || 0,
+        removed: removed?.length || 0
+      };
     } catch (error) {
       console.error('Error processing batch:', error);
       throw new CustomError('BATCH_PROCESSING_ERROR', 'Failed to process transaction batch', {
@@ -294,17 +308,8 @@ class PlaidTransactionService extends PlaidBaseService {
 
       console.log(`Saving ${formattedTransactions.length} new transactions`);
 
-      // Check for existing transactions to avoid duplicates
-      const existingIds = await plaidTransactions.find({
-        transaction_id: { $in: transactions.map(t => t.transaction_id) }
-      }).select('transaction_id');
-
-      const newTransactions = formattedTransactions.filter(
-        t => !existingIds.includes(t.transaction_id)
-      );
-
-      if (newTransactions.length > 0) {
-        const result = await plaidTransactions.insertMany(newTransactions);
+      if (formattedTransactions.length > 0) {
+        const result = await plaidTransactions.insertMany(formattedTransactions);
         console.log(`Successfully saved ${result.length} transactions`);
         return result;
       } else {
@@ -468,7 +473,7 @@ class PlaidTransactionService extends PlaidBaseService {
    * @param {Object} user - User data.
    * @returns {Object} Sync results for all items.
    */
-  async syncAllUserTransactions(user) {
+  async saveTransactionsForItems(user) {
     this.validateUser(user);
 
     try {
@@ -495,79 +500,6 @@ class PlaidTransactionService extends PlaidBaseService {
       return { syncResults };
     } catch (error) {
       throw new CustomError('SYNC_ERROR', error.message);
-    }
-  }
-
-  /**
-   * Processes and saves transactions in a batch.
-   * @param {Object} transactions - Transactions object with added, modified, and removed arrays.
-   * @param {string} userId - User ID.
-   * @param {string} itemId - Item ID.
-   * @returns {Object} Processing results.
-   */
-  async processAndSaveTransactions(transactions, userId, itemId) {
-    const { added, modified, removed } = transactions;
-
-    try {
-      const results = {
-        added: 0,
-        modified: 0,
-        removed: 0
-      };
-
-      // Handle removed transactions first
-      if (removed?.length) {
-        const removeResult = await plaidTransactions.deleteMany({ 
-          transaction_id: { $in: removed.map(t => t.transaction_id) },
-          userId // Add userId to ensure we only delete user's transactions
-        });
-        results.removed = removeResult.deletedCount;
-      }
-
-      // Handle modified transactions
-      if (modified?.length) {
-        const modifyPromises = modified.map(transaction => 
-          plaidTransactions.update(
-            { 
-              transaction_id: transaction.transaction_id,
-              userId // Add userId to ensure we only update user's transactions
-            },
-            { 
-              ...transaction,
-              userId,
-              itemId,
-              lastModified: new Date().toISOString()
-            }
-          )
-        );
-        
-        const modifyResults = await Promise.all(modifyPromises);
-        results.modified = modifyResults.filter(r => r).length;
-      }
-
-      // Handle new transactions
-      if (added?.length) {
-        const newTransactions = added.map(transaction => ({
-          ...transaction,
-          userId,
-          itemId,
-          createdAt: new Date().toISOString()
-        }));
-        
-        const insertResult = await plaidTransactions.insertMany(newTransactions);
-        results.added = insertResult.length;
-      }
-
-      return results;
-    } catch (error) {
-      throw new CustomError('DB_ERROR', `Error processing transactions: ${error.message}`, {
-        operation: 'batch_save',
-        counts: {
-          added: added?.length || 0,
-          modified: modified?.length || 0,
-          removed: removed?.length || 0
-        }
-      });
     }
   }
 
@@ -670,22 +602,6 @@ class PlaidTransactionService extends PlaidBaseService {
     } catch (error) {
       throw new CustomError('DELETE_ERROR', error.message);
     }
-  }
-
-  // Helper method to determine if an error is retryable
-  _isRetryableError(error) {
-    const retryableCodes = [
-      'RATE_LIMIT_EXCEEDED',
-      'INTERNAL_SERVER_ERROR',
-      'SERVICE_UNAVAILABLE'
-    ];
-    
-    return (
-      error.response?.status === 429 ||
-      error.message.includes('EPIPE') ||
-      retryableCodes.includes(error.code) ||
-      (error.response?.status >= 500 && error.response?.status < 600)
-    );
   }
 
   // Helper method to update sync progress

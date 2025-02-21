@@ -19,21 +19,21 @@
 <script setup>
 import { computed, watch } from 'vue';
 import { MoreVertical, GripHorizontal } from 'lucide-vue-next';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
 import { calculateTabTotal } from '../utils/tabUtils';
 
 const props = defineProps({
-  app: Object,
-  state: Object,
   element: Object
 });
 
+const { state, actions } = useDashboardState();
 const { selectTab, updateTabSort } = useTabs();
 
 const tabTotal = computed(() => calculateTabTotal(props.element));
 
 function handleTabSelect() {
-  selectTab(props.element, props.state.selected.tab, props.app.goBack);
+  selectTab(props.element, state.selected.tab, actions.goBack);
 }
 
 watch(() => props.element.sort, (newSort) => {

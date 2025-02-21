@@ -29,9 +29,9 @@ export default {
     }
   },
 
-  async syncAccountsAndGroups(req, res) {
+  async syncAccountsAndGroups({ user }, res) {
     try {
-      const syncedData = await accountService.syncUserAccounts(req.user);
+      const syncedData = await accountService.syncAccountsAndGroups(user);
       res.json(syncedData);
     } catch (error) {
       // Always return 400 for expected errors

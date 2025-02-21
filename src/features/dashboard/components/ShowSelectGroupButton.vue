@@ -1,5 +1,5 @@
 <template>
-  <div @click="state.views.push('SelectGroup')" 
+  <div @click="router.push({ name: 'select-group' })" 
     class="acctButton proper pointer bold">
     <b v-html="groupName"></b>
     <br />
@@ -9,20 +9,19 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { useDashboardState } from '../composables/useDashboardState';
 import NetWorth from '@/features/select-group/components/NetWorth.vue';
 
-const props = defineProps({
-  state: Object
-});
+const router = useRouter();
+const { state } = useDashboardState();
 
 const groupName = computed(() => {
-  const selectedGroup = props.state.selected.group;
-
+  const selectedGroup = state.selected.group;
   return selectedGroup?.name ? 
     `${selectedGroup.name}` 
     : `<span class="underline">Account</span>`;
 });
-
 </script>
 
 <style>

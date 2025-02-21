@@ -19,7 +19,7 @@ onMounted(async () => {
     
     // If user already has items, redirect to spending report
     if (state.hasItems && !state.isOnboarding) {
-      router.push('/spending-report');
+      router.push('/dashboard');
     }
   } catch (error) {
     console.error('Onboarding initialization error:', error);

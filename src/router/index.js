@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import dashboardRoutes from './routes/dashboard.js'
+import dashboardRoutes from './routes/dashboardRoutes.js'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/shared/views/PrivacyPolicy.vue')

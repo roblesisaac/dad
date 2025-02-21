@@ -186,7 +186,7 @@ export function usePlaidIntegration() {
 
       // Wait briefly to show completion state before redirecting
       setTimeout(() => {
-        router.push('/spending-report');
+        router.push('/dashboard');
       }, 2000);
 
     } catch (error) {

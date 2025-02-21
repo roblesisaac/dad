@@ -2,14 +2,12 @@
 <div class="x-grid">
   <div class="cell-1">
     <Draggable 
-      v-model="props.state.selected.tabsForGroup" 
-      v-bind="props.state.dragOptions()" 
+      v-model="state.selected.tabsForGroup" 
+      v-bind="dragOptions()" 
       handle=".handlerTab"
     >
       <template #item="{element}">
         <AllTabRow 
-          :app="app" 
-          :state="state" 
           :element="element" 
           :key="element._id" 
         />
@@ -27,19 +25,17 @@
 
 <script setup>
 import { onMounted } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import AllTabRow from './AllTabRow.vue';
-import Draggable from 'vuedraggable';
 import { useTabs } from '../composables/useTabs';
+import { useDraggable } from '@/shared/composables/useDraggable';
 
-const props = defineProps({
-  app: Object,
-  state: Object
-});
-
+const { Draggable, dragOptions } = useDraggable();
+const { state, actions } = useDashboardState();
 const { createNewTab } = useTabs();
 
 function handleCreateNew() {
-  createNewTab(props.app.createNewTab, props.app.goBack);
+  createNewTab(actions.createNewTab, actions.goBack);
 }
 
 onMounted(() => {

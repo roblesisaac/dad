@@ -1,7 +1,9 @@
 import { useApi } from '@/shared/composables/useApi';
+import { useRouter } from 'vue-router';
 
 export function useEditTab(state, editState, App) {
   const api = useApi();
+  const router = useRouter();
 
   async function cloneRules(newTabId, currentTabId) {
     for(const rule of state.allUserRules) {
@@ -89,7 +91,7 @@ export function useEditTab(state, editState, App) {
       const selectedTabId = selectedTab.value._id;
       const tabIndex = state.allUserTabs.findIndex(tab => tab._id === selectedTabId);
 
-      state.views.pop();
+      router.back();
       state.allUserTabs.splice(tabIndex, 1);
       await api.delete(`tabs/${selectedTabId}`);
     },
@@ -104,7 +106,7 @@ export function useEditTab(state, editState, App) {
       state.blueBar.message = 'Duplicating Tab';
       state.blueBar.loading = true;
       state.isLoading = true;
-      App.goBack();
+      router.back();
 
       nextTick(async () => {
         state.blueBar.message = 'Cloning Rules';
@@ -121,7 +123,7 @@ export function useEditTab(state, editState, App) {
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
-        state.views.push('EditTab');
+        router.push({ name: 'edit-tab' });
         state.isLoading = false;
       });
     },
@@ -136,7 +138,7 @@ export function useEditTab(state, editState, App) {
       state.blueBar.message = 'Making Tab Unique';
       state.blueBar.loading = true;
       state.isLoading = true;
-      state.views.pop();
+      router.back();
 
       const currentTabId = selectedTab.value._id;
       const newTab = await createNewTab();
@@ -150,7 +152,7 @@ export function useEditTab(state, editState, App) {
         state.allUserTabs.push(newTab);
         state.blueBar.message = false;
         state.blueBar.loading = false;
-        state.views.push('EditTab');
+        router.push({ name: 'edit-tab' });
         state.isLoading = false;
       });
     },

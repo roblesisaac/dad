@@ -5,14 +5,14 @@ import { itemService, plaidService } from './index.js';
 import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidAccountService extends PlaidBaseService {
-  async syncUserAccounts(user) {
+  async syncAccountsAndGroups(user) {
     this.validateUser(user);
 
     try {
       // Get the user's items
       const userItems = await itemService.getUserItems(user._id);
       if (!userItems?.length) {
-        throw new Error('NO_ITEMS: No Plaid items found for user');
+        return null;
       }
 
       // Fetch the accounts from Plaid
@@ -39,7 +39,7 @@ class PlaidAccountService extends PlaidBaseService {
       const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
       // Sync the accounts and groups
-      return await this.syncAccountsAndGroups(
+      return await this.saveAccountsAndGroups(
         fetchedAccounts,
         existingUserAccounts,
         existingGroups,
@@ -54,7 +54,7 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  async syncAccountsAndGroups(fetchedAccounts, existingAccounts, existingGroups, user) {
+  async saveAccountsAndGroups(fetchedAccounts, existingAccounts, existingGroups, user) {
     const synced = { accounts: [], groups: [] };
 
     for (const retrievedAccount of fetchedAccounts) {

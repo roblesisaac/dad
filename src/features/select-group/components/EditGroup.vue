@@ -14,14 +14,14 @@
             Name:
           </div>
           <div class="cell-4-5">
-            <input type="text" v-model="props.state.editingGroup.name" class="transparent bold colorBlue" />
+            <input type="text" v-model="state.editingGroup.name" class="transparent bold colorBlue" />
           </div>
         </div>
     
         <div class="x-grid">
           <div class="cell-1 bold ">Info:</div>
           <div class="cell-1">
-            <textarea v-model="props.state.editingGroup.info" class="edit-info" ></textarea>
+            <textarea v-model="state.editingGroup.info" class="edit-info" ></textarea>
           </div>
         </div>
     
@@ -31,8 +31,8 @@
       <div class="cell-1">
         <b>Accounts In Group:</b>
         <div class="dropHere">
-          <span v-if="!props.state.editingGroup.accounts.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="accountDragger" v-model="props.state.editingGroup.accounts" v-bind="props.state.dragOptions()">
+          <span v-if="!state.editingGroup.accounts.length">Drag and drop groups here.</span>
+          <Draggable class="draggable" group="accountDragger" v-model="state.editingGroup.accounts" v-bind="dragOptions(1)">
             <template #item="{element}">
               <button class="sharedWith">{{ element.mask }}</button>
             </template>
@@ -44,7 +44,7 @@
       <div class="cell-1 p30y">
         <b>Accounts Not In Group:</b>
         <div class="dropHere">
-          <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="props.state.dragOptions()">
+          <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions(1)">
             <template #item="{element}">
               <button class="button sharedWith">{{ element.mask }}</button>
             </template>
@@ -61,28 +61,27 @@
     
     <script setup>
     import { computed, watch } from 'vue';
-    import Draggable from 'vuedraggable';
+    import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
     import { useEditGroup } from '../composables/useEditGroup.js';
+    import { useDraggable } from '@/shared/composables/useDraggable';
     
-    const props = defineProps({
-      state: Object
-    });
-    
+    const { Draggable, dragOptions } = useDraggable();    
+    const { state } = useDashboardState();
     defineEmits(['close']);
     
-    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
+    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(state);
     
     const accountsNotInGroup = computed(() => {
-      const accountsInGroup = props.state.editingGroup.accounts.map(account => account._id);
+      const accountsInGroup = state.editingGroup.accounts.map(account => account._id);
     
-      return props.state.allUserAccounts.filter(account => {
+      return state.allUserAccounts.filter(account => {
         return !accountsInGroup.includes(account._id);
       });
     });
     
-    watch(() => props.state.editingGroup.name, updateGroupName);
-    watch(() => props.state.editingGroup.info, updateGroup);
-    watch(() => props.state.editingGroup.accounts.length, updateGroup);
+    watch(() => state.editingGroup.name, updateGroupName);
+    watch(() => state.editingGroup.info, updateGroup);
+    watch(() => state.editingGroup.accounts.length, updateGroup);
     
     </script>
     

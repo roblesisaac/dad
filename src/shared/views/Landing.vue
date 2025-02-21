@@ -28,7 +28,7 @@ const router = useRouter();
 const { isAuthed } = useAuth();
 
 const handleNavigation = () => {
-  router.push('/spending-report');
+  router.push('/dashboard');
 };
 </script>
 

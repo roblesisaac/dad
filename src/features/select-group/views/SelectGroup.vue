@@ -1,21 +1,20 @@
 <template>
 <div class="x-grid select-group">
-  <!-- {{ props.state.view }} --> <!-- Debug log -->
   <!-- Net-worth -->
   <div class="cell-1 net-worth bold p30">
-    Net-Worth: <NetWorth :accounts="props.state.allUserAccounts" :state="props.state" />
+    Net-Worth: <NetWorth :accounts="state.allUserAccounts" :digits="0" />
   </div>
 
   <div v-if="!isEditing">
-    <Draggable v-model="props.state.allUserGroups" v-bind="props.state.dragOptions(100)" handle=".handlerGroup" class="cell-1">
+    <Draggable v-model="state.allUserGroups" v-bind="dragOptions(100)" handle=".handlerGroup" class="cell-1">
       <template #item="{element}">
-        <GroupRow :key="element._id" :app="app" :element="element" :state="props.state" />
+        <GroupRow :key="element._id" :app="app" :element="element" />
       </template>
     </Draggable>
 
     <!-- LinkNewAccount -->
     <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
-      <b v-if="props.state.linkToken">Link New Account +</b>
+      <b v-if="state.linkToken">Link New Account +</b>
       <b v-else>Loading <LoadingDots /></b>
     </button>
 
@@ -26,37 +25,38 @@
 
     <!-- Reconnect Existing Institutions -->
     <div class="cell-1 proper">
-      <button @click="props.state.views.push('ItemRepair')" class="button expanded item-repair">Update Existing Institutions</button>
+      <button @click="router.push({ name: 'onboarding' })" 
+              class="button expanded item-repair">Update Existing Institutions</button>
     </div>
   </div>
 
   <div v-else class="cell-1">
-    <EditGroup :state="props.state" @close="isEditing = false" />
+    <EditGroup @close="isEditing = false" />
   </div>
 </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import GroupRow from './components/GroupRow.vue';
-import NetWorth from './components/NetWorth.vue';
-import Draggable from 'vuedraggable';
+import { useRouter } from 'vue-router';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import GroupRow from '../components/GroupRow.vue';
+import NetWorth from '../components/NetWorth.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
-import EditGroup from './components/EditGroup.vue';
-import { useSelectGroup } from './composables/useSelectGroup.js';
+import EditGroup from '../components/EditGroup.vue';
+import { useSelectGroup } from '../composables/useSelectGroup.js';
+import { useDraggable } from '@/shared/composables/useDraggable';
 
-const props = defineProps({
-  App: Object,
-  state: Object
-});
-
+const { Draggable, dragOptions } = useDraggable();
+const router = useRouter();
+const { state, actions } = useDashboardState();
 const isEditing = ref(false);
 
-const app = useSelectGroup(props.state, props.App, isEditing);
+const app = useSelectGroup(state, actions, isEditing);
 
 app.init();
 
-watch(() => props.state.allUserGroups, (groups) => {
+watch(() => state.allUserGroups, (groups) => {
   groups.forEach((group, groupIndex) => group.sort = groupIndex);
 });
 </script>

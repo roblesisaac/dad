@@ -1,5 +1,5 @@
 <template>
-<div v-if="!state.is('EditRule')" class="x-grid middle dottedRow">
+<div v-if="route.name === 'edit-tab'" class="x-grid middle dottedRow">
   <div @click="app.select('sharing')" class="cell-1 p20">
     <div class="x-grid">
       <div class="cell auto">
@@ -16,7 +16,7 @@
     <h4 class="bold">Groups Tab Is Shared With:</h4>
     <div class="dropHere">
       <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
-      <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="state.dragOptions(100)">
+      <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="dragOptions(100)">
         <template #item="{element}">
           <button class="sharedWith">{{ getGroupName(element) }}</button>
         </template>
@@ -26,7 +26,7 @@
 
   <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
     <ScrollingContent class="p30y">
-      <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="state.dragOptions(100)">
+      <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="dragOptions(100)">
         <template #item="{element}">
           <button class="button sharedWith">{{ getGroupName(element) }}</button>
         </template>
@@ -42,25 +42,31 @@
 
 <script setup>
 import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { Plus, Minus } from 'lucide-vue-next';
-import Draggable from 'vuedraggable';
 import ScrollingContent from '@/shared/components/ScrollingContent.vue';
 
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useDraggable } from '@/shared/composables/useDraggable';
+
+const route = useRoute();
+
+const { Draggable, dragOptions } = useDraggable();
+const { state, actions } = useDashboardState();
+
 const props = defineProps({
-  editState: Object,
-  state: Object,
-  app: Object
+  editState: Object
 });
 
-const selectedTab = computed(() => props.state.selected.tab);
+const selectedTab = computed(() => state.selected.tab);
 
 const unselectedGroupsInTab = computed(() => {
-  return props.state.allUserGroups
+  return state.allUserGroups
     .filter(group => !selectedTab.value.showForGroup.includes(group._id))
     .map(group => group._id);
 });
 
 function getGroupName(groupId) {
-  return props.state.allUserGroups.find(group => group._id === groupId)?.name;
+  return state.allUserGroups.find(group => group._id === groupId)?.name;
 }
 </script> 

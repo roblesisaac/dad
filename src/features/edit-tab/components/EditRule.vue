@@ -22,17 +22,17 @@
     <div v-if="app.shouldShow('ruleMethodName')" class="cell shrink p10y p10r">
       <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" />
     </div>
-    <div v-if="app.shouldShow('testStandard') && state.is('EditTab') || state.is('home')" class="cell shrink p10y p10r">
+    <div v-if="app.shouldShow('testStandard') && route.name === 'edit-tab' || route.name === 'dashboard'" class="cell shrink p10y p10r">
       <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
     </div>
-    <div v-if="ruleConfig._id && state.is('EditTab')" class="cell shrink p10y p10r bold">
+    <div v-if="ruleConfig._id && route.name === 'edit-tab'" class="cell shrink p10y p10r bold">
       <small>
         <Settings2 @click="app.editRule" />
       </small>
     </div>
   </ScrollingContent>
   </div>
-  <div v-if="app.shouldShow('testStandard') && state.is('RuleDetails')" class="cell-1">
+  <div v-if="app.shouldShow('testStandard') && route.name === 'rule-details'" class="cell-1">
     <DynamicTextArea :data="ruleConfig.rule" prop="3" class="code-editor" />
   </div>
 </div>
@@ -40,6 +40,7 @@
     
 <script setup>
   import { computed, reactive, watch } from 'vue';
+  import { useRoute, useRouter } from 'vue-router';
   import { Settings2, GripHorizontal } from 'lucide-vue-next';
   import DynamicWidthInput from './DynamicWidthInput.vue';
   import DynamicWidthSelect from './DynamicWidthSelect.vue';
@@ -48,6 +49,8 @@
   import { useApi } from '@/shared/composables/useApi';
   
   const api = useApi();
+  const route = useRoute();
+  const router = useRouter();
   const { ruleConfig, state } = defineProps({
     ruleConfig: Object,
     state: Object
@@ -113,8 +116,8 @@
 
     return {
       editRule: () => {
-        state.editingRule=ruleConfig;
-        state.views.push('RuleDetails');
+        state.editingRule = ruleConfig;
+        router.push({ name: 'rule-details' });
       },
       saveRule: async function() {
         const { propNamesToSave } = editRuleState.ruleTypes[ruleType];

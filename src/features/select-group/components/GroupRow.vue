@@ -62,17 +62,19 @@
     
 <script setup>
 import { computed } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import NetWorth from './NetWorth.vue';
 import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 
 const props = defineProps({
     element: Object,
-    app: Object,
-    state: Object
+    app: Object
 });
 
-const accountInfo = computed(() => props.state.allUserAccounts.find(
+const { state } = useDashboardState();
+
+const accountInfo = computed(() => state.allUserAccounts.find(
     account => account._id === props.element.accounts[0]?._id)?.subtype
 );
 
