@@ -1,8 +1,10 @@
 import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
+import { useRouter } from 'vue-router';
 
 export function usePlaidIntegration() {
   const api = useApi();
+  const router = useRouter();
   
   const state = reactive({
     syncedItems: [],
@@ -157,18 +159,21 @@ export function usePlaidIntegration() {
 
       const { itemId } = response.data;
 
+      // Navigate to onboarding view and start sync
+      await router.push('/onboarding');
       state.onboardingStep = 'syncing';
 
       await startInitialSync(itemId);
-
-      // Start polling for sync status
       await pollSyncStatus(itemId);
 
       // Update state after successful sync
       state.onboardingStep = 'complete';
       state.hasItems = true;
       
-      console.log('Initial sync completed');
+      // Wait a moment before redirecting to spending report
+      setTimeout(() => {
+        router.push('/spending-report');
+      }, 2000);
 
     } catch (error) {
       console.error('Error completing connection:', error);
