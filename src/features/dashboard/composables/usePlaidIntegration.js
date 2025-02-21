@@ -1,10 +1,8 @@
 import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
-import { useRouter } from 'vue-router';
 
 export function usePlaidIntegration() {
   const api = useApi();
-  const router = useRouter();
   
   const state = reactive({
     syncedItems: [],
@@ -13,7 +11,13 @@ export function usePlaidIntegration() {
     hasItems: false,
     loading: false,
     isOnboarding: false,
-    onboardingStep: 'connect' // 'connect', 'syncing', 'complete'
+    onboardingStep: 'connect', // 'connect', 'syncing', 'complete'
+    syncProgress: {
+      added: 0,
+      modified: 0,
+      removed: 0,
+      status: null
+    }
   });
 
   function getErrorMessage(error) {
@@ -41,21 +45,7 @@ export function usePlaidIntegration() {
           state.isRepairing = true;
           state.error = null;
           
-          const response = await api.post('plaid/exchange/token', { 
-            publicToken
-          });
-          
-          if (response.error) {
-            throw new Error(response.error);
-          }
-
-          if (state.isOnboarding) {
-            state.onboardingStep = 'syncing';
-            await startInitialSync(response.data.itemId);
-          } else {
-            await syncItems();
-          }
-          
+          await handlePlaidSuccess(publicToken);
         } catch (error) {
           console.error('Error completing connection:', error);
           state.error = 'Failed to complete connection. Please try again.';
@@ -126,7 +116,7 @@ export function usePlaidIntegration() {
         const status = await api.get(`plaid/onboarding/status/${itemId}`);
         if (status.completed) {
           state.onboardingStep = 'complete';
-          router.push('/spending-report');
+          console.log('Initial sync completed');
         } else if (status.error) {
           throw new Error(status.error);
         } else {
@@ -185,13 +175,11 @@ export function usePlaidIntegration() {
       state.onboardingStep = 'syncing';
       await pollSyncStatus(itemId);
 
+      // Update state after successful sync
       state.onboardingStep = 'complete';
       state.hasItems = true;
-
-      // Wait a moment to show completion state
-      setTimeout(() => {
-        router.push('/spending-report');
-      }, 2000);
+      
+      console.log('Initial sync completed');
 
     } catch (error) {
       console.error('Error completing connection:', error);
@@ -203,27 +191,37 @@ export function usePlaidIntegration() {
   }
 
   async function pollSyncStatus(itemId) {
-    const maxAttempts = 30; // 5 minutes maximum
+    const maxAttempts = 50; // 5 minutes maximum
     let attempts = 0;
 
     while (attempts < maxAttempts) {
-      const response = await api.get(`plaid/onboarding/status/${itemId}`);
-      
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      try {
+        const status = await api.get(`plaid/onboarding/status/${itemId}`);
+        
+        // Update progress in state
+        if (status.progress) {
+          state.syncProgress = {
+            ...status.progress,
+            status: status.status
+          };
+        }
 
-      if (response.completed) {
-        return response;
-      }
+        if (status.error) {
+          throw new Error(status.error);
+        }
 
-      if (response.error) {
-        throw new Error(response.error);
-      }
+        if (status.completed) {
+          return status;
+        }
 
-      // Wait 10 seconds before next poll
-      await new Promise(resolve => setTimeout(resolve, 10000));
-      attempts++;
+        // Wait 10 seconds before next poll
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        attempts++;
+
+      } catch (error) {
+        console.error('Polling error:', error);
+        throw new Error(getErrorMessage(error));
+      }
     }
 
     throw new Error('SYNC_TIMEOUT: Initial sync took too long');
@@ -235,7 +233,6 @@ export function usePlaidIntegration() {
     initializePlaid,
     repairItem,
     connectBank,
-    syncItems,
-    handlePlaidSuccess
+    syncItems
   };
 } 
