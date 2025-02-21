@@ -296,11 +296,8 @@ class PlaidTransactionService extends PlaidBaseService {
         itemId
       }));
 
-      console.log(`Saving ${formattedTransactions.length} new transactions`);
-
       if (formattedTransactions.length > 0) {
         const result = await plaidTransactions.insertMany(formattedTransactions);
-        console.log(`Successfully saved ${result.length} transactions`);
         return result;
       } else {
         console.log('No new transactions to save');
