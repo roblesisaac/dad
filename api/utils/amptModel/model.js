@@ -218,21 +218,9 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
 
     for (const item of items) {
       try {
-        const { validated, uniqueFieldsToCheck } = await validate(item, 'set');
+        const saved = await save(item);
         
-        // Check for duplicates
-        for (const uniqueField of uniqueFieldsToCheck) {
-          await checkForDuplicate(validated, uniqueField);
-        }
-
-        const _id = item._id || buildSchema_Id(validated, true);
-        const collectionId = extractCollectionFromId(_id);
-        const createdLabels = await labelsMap.createLabelKeys(collectionId, validated);
-
-        const saved = await data.set(_id, validated, { ...createdLabels });
-        const { validated: validatedSaved } = await validate(saved, 'get');
-        
-        savedItems.push({ _id, ...validatedSaved });
+        savedItems.push(saved);
       } catch (error) {
         errors.push({
           item,
