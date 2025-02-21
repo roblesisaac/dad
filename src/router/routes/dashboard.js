@@ -5,7 +5,7 @@ export default [
     path: '/onboarding',
     name: 'onboarding',
     component: defineAsyncComponent(() => 
-      import('../features/dashboard/views/OnboardingStatus.vue')
+      import('../features/dashboard/components/OnboardingStatus.vue')
     ),
     meta: {
       requiresAuth: true,
@@ -16,7 +16,7 @@ export default [
     path: '/spending-report',
     name: 'spending-report',
     component: defineAsyncComponent(() => 
-      import('../features/dashboard/views/SpendingReportView.vue')
+      import('../features/dashboard/components/SpendingReportView.vue')
     ),
     meta: {
       requiresAuth: true,
