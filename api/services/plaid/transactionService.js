@@ -95,23 +95,30 @@ class PlaidTransactionService extends PlaidBaseService {
     let hasMore = true;
     let cursor = syncSession.cursor;
     let batchCount = 0;
-    let lastCursor = null; // Track last cursor to detect loops
+    let lastCursor = null;
     const RATE_LIMIT_DELAY = 2000;
 
     // Store these values to avoid losing them between batches
     const { itemId, userId } = item;
 
     while (hasMore) {
-      console.log(`Processing batch ${++batchCount} for item:`, itemId);
+      console.log(`Processing batch ${++batchCount} for item:`, itemId, {
+        currentCursor: cursor,
+        lastCursor,
+        batchCount
+      });
       
       try {
-        // Check if we're stuck in a loop
-        if (cursor === lastCursor) {
-          console.log('Detected cursor loop, ending sync');
+        // Only check for cursor loop after first batch
+        if (batchCount > 1 && cursor === lastCursor) {
+          console.log('Detected cursor loop after batch:', {
+            batchCount,
+            cursor,
+            lastCursor
+          });
           hasMore = false;
           break;
         }
-        lastCursor = cursor;
 
         // Get batch of transactions from Plaid
         const batch = await plaidService.fetchTransactionsFromPlaid(
@@ -125,12 +132,25 @@ class PlaidTransactionService extends PlaidBaseService {
           throw new Error('INVALID_RESPONSE: Invalid batch data from Plaid');
         }
 
+        // Store current cursor before processing batch
+        lastCursor = cursor;
+
         // Process batch
         await this._processBatch(batch, syncSession, itemId, userId);
 
         // Update cursor and check if more data available
         cursor = batch.next_cursor;
         hasMore = cursor !== null;
+
+        console.log('Batch result:', {
+          batchCount,
+          previousCursor: lastCursor,
+          newCursor: cursor,
+          hasMore,
+          added: batch.added?.length || 0,
+          modified: batch.modified?.length || 0,
+          removed: batch.removed?.length || 0
+        });
 
         // Update sync progress
         if (hasMore) {
@@ -145,27 +165,14 @@ class PlaidTransactionService extends PlaidBaseService {
           };
 
           try {
-            // Use stored itemId and userId
             await itemService.updateItemSyncStatus(itemId, userId, progressData);
           } catch (updateError) {
             console.error('Failed to update sync status:', updateError);
-            // Continue syncing even if status update fails
           }
 
           // Add delay between requests to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
         }
-
-        console.log('Batch processed:', {
-          itemId,
-          batchNumber: batchCount,
-          added: batch.added?.length || 0,
-          modified: batch.modified?.length || 0,
-          removed: batch.removed?.length || 0,
-          hasMore,
-          cursor,
-          lastCursor
-        });
       } catch (error) {
         // Handle rate limit errors
         if (error.response?.status === 429) {

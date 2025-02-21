@@ -126,7 +126,7 @@ export function usePlaidIntegration() {
         const status = await api.get(`plaid/onboarding/status/${itemId}`);
         if (status.completed) {
           state.onboardingStep = 'complete';
-          router.push('/dashboard');
+          router.push('/spending-report');
         } else if (status.error) {
           throw new Error(status.error);
         } else {
@@ -190,7 +190,7 @@ export function usePlaidIntegration() {
 
       // Wait a moment to show completion state
       setTimeout(() => {
-        router.push('/dashboard');
+        router.push('/spending-report');
       }, 2000);
 
     } catch (error) {
