@@ -31,7 +31,7 @@ export function usePlaidIntegration() {
     return errorMessages[error] || errorMessages.DEFAULT;
   }
 
-  function createPlaidLink(token, onSuccess) {
+  function createPlaidLink(token) {
     if (!token) {
       console.error('No token provided to createPlaidLink');
       state.error = 'Configuration error. Please contact support.';
@@ -111,20 +111,6 @@ export function usePlaidIntegration() {
   async function startInitialSync(itemId) {
     try {
       await api.post(`plaid/onboarding/sync/${itemId}`);
-      
-      const checkSyncStatus = async () => {
-        const status = await api.get(`plaid/onboarding/status/${itemId}`);
-        if (status.completed) {
-          state.onboardingStep = 'complete';
-          console.log('Initial sync completed');
-        } else if (status.error) {
-          throw new Error(status.error);
-        } else {
-          setTimeout(checkSyncStatus, 2000);
-        }
-      };
-
-      await checkSyncStatus();
     } catch (error) {
       console.error('Sync error:', error);
       state.error = 'Error syncing your account. Please try again.';
@@ -171,8 +157,11 @@ export function usePlaidIntegration() {
 
       const { itemId } = response.data;
 
-      // Start polling for sync status
       state.onboardingStep = 'syncing';
+
+      await startInitialSync(itemId);
+
+      // Start polling for sync status
       await pollSyncStatus(itemId);
 
       // Update state after successful sync
