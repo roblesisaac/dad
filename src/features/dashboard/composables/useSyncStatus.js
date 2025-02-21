@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { ref, onUnmounted } from 'vue';
 
 export function useSyncStatus(api, state) {
   const syncInterval = ref(null);
