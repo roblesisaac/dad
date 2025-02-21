@@ -12,8 +12,6 @@ class PlaidTransactionService extends PlaidBaseService {
     try {
       // Get or validate item
       const validatedItem = await this._validateAndGetItem(item, user);
-
-      console.log('Validated item:', validatedItem);
       
       // Check if sync already in progress
       if (this._isSyncInProgress(validatedItem)) {
@@ -98,7 +96,7 @@ class PlaidTransactionService extends PlaidBaseService {
     let cursor = syncSession.cursor;
     let batchCount = 0;
     let lastCursor = null;
-    const RATE_LIMIT_DELAY = 2000;
+    const RATE_LIMIT_DELAY = 1000;
 
     // Store these values to avoid losing them between batches
     const { itemId, userId } = item;

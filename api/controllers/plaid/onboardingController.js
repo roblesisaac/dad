@@ -10,7 +10,7 @@ export default {
       
       // Return immediately while sync runs
       res.json({ 
-        status: 'queued',
+        status: 'syncing',
         message: 'Sync started',
         itemId
       });
