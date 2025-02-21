@@ -1,6 +1,6 @@
 import { authGuard } from '@auth0/auth0-vue'
 
-export const dashboardRoutes = [
+const dashboardRoutes = [
   {
     path: '/dashboard',
     component: { template: '<router-view></router-view>' }, // Use simple wrapper for now
@@ -36,4 +36,6 @@ export const dashboardRoutes = [
       }
     ]
   }
-]; 
+];
+
+export default dashboardRoutes; 
