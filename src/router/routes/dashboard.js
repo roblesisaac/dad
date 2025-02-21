@@ -1,18 +1,25 @@
 import { authGuard } from '@auth0/auth0-vue'
-const SpendingReport = () => import('@/features/dashboard/SpendingReport.vue')
-const OnboardingStatus = () => import('@/features/dashboard/components/OnboardingStatus.vue')
 
 export default [
   {
     path: '/onboarding',
     name: 'onboarding',
-    component: SpendingReport,
-    beforeEnter: authGuard
+    component: () => import('@/features/dashboard/views/OnboardingView.vue'),
+    beforeEnter: authGuard,
+    meta: {
+      requiresAuth: true,
+      title: 'Connect Your Bank'
+    }
   },
   {
     path: '/spending-report',
     name: 'spending-report',
-    component: OnboardingStatus,
-    beforeEnter: authGuard
+    component: () => import('@/features/dashboard/SpendingReport.vue'),
+    beforeEnter: authGuard,
+    meta: {
+      requiresAuth: true,
+      requiresPlaidItems: true,
+      title: 'Spending Report'
+    }
   }
 ]; 

@@ -30,10 +30,14 @@ const routes = [
   },
   {
     path: '/',
-    name: 'landing',
+    name: 'root',
     component: Landing
   },
-  ...dashboardRoutes
+  ...dashboardRoutes,
+  {
+    path: '/:pathMatch(.*)*',
+    redirect: '/'
+  }
 ]
 
 const router = createRouter({
