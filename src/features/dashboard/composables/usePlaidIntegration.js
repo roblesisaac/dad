@@ -1,4 +1,4 @@
-import { reactive, ref } from 'vue';
+import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
 import { useRouter } from 'vue-router';
 import { useSyncStatus } from './useSyncStatus';
@@ -6,15 +6,29 @@ import { useSyncStatus } from './useSyncStatus';
 export function usePlaidIntegration() {
   const api = useApi();
   const router = useRouter();
-  const isConnecting = ref(false);
-  const error = ref(null);
-
+  
   const state = reactive({
     syncedItems: [],
+    isRepairing: false,
+    error: null,
     hasItems: false,
     loading: false,
     isOnboarding: false,
-    onboardingStep: 'connect' // 'connect', 'syncing', 'complete'
+    onboardingStep: 'connect', // 'connect', 'syncing', 'complete'
+    syncProgress: {
+      added: 0,
+      modified: 0,
+      removed: 0,
+      status: null,
+      lastSync: null,
+      nextSync: null,
+      cursor: null
+    },
+    blueBar: {
+      message: null,
+      loading: false
+    },
+    syncCheckId: false
   });
 
   const { checkSyncStatus } = useSyncStatus(api, state);
@@ -33,7 +47,7 @@ export function usePlaidIntegration() {
   function createPlaidLink(token) {
     if (!token) {
       console.error('No token provided to createPlaidLink');
-      error.value = 'Configuration error. Please contact support.';
+      state.error = 'Configuration error. Please contact support.';
       return null;
     }
 
@@ -41,24 +55,24 @@ export function usePlaidIntegration() {
       token,
       onSuccess: async function(publicToken) {
         try {
-          state.loading = true;
-          error.value = null;
+          state.isRepairing = true;
+          state.error = null;
           
           await handlePlaidSuccess(publicToken);
         } catch (error) {
           console.error('Error completing connection:', error);
-          error.value = 'Failed to complete connection. Please try again.';
+          state.error = 'Failed to complete connection. Please try again.';
         } finally {
-          state.loading = false;
+          state.isRepairing = false;
         }
       },
       onExit: function(err, metadata) {
-        state.loading = false;
+        state.isRepairing = false;
         if (err != null) {
-          error.value = 'Connection process was interrupted. Please try again.';
+          state.error = 'Connection process was interrupted. Please try again.';
           console.error('Link exit error:', err, metadata);
         } else if (metadata.status === 'requires_credentials') {
-          error.value = null;
+          state.error = null;
         }
       },
       onEvent: function(eventName, metadata) {
@@ -75,7 +89,7 @@ export function usePlaidIntegration() {
       state.hasItems = response?.length > 0;
       return response;
     } catch (error) {
-      error.value = 'Failed to fetch account status. Please refresh the page.';
+      state.error = 'Failed to fetch account status. Please refresh the page.';
       console.error('Sync error:', error);
       return [];
     }
@@ -83,28 +97,26 @@ export function usePlaidIntegration() {
 
   async function initializePlaid() {
     try {
-      isConnecting.value = true;
-      const { link_token } = await api.post('plaid/connect/link');
-      return link_token;
+      const items = await api.get('plaid/items');
+      state.syncedItems = items;
+      state.hasItems = items?.length > 0;
     } catch (err) {
-      error.value = 'Failed to initialize Plaid connection';
-      throw err;
-    } finally {
-      isConnecting.value = false;
+      console.error('Error fetching items:', err);
+      state.hasItems = false;
     }
   }
 
   async function repairItem(itemId) {
     try {
-      state.loading = true;
-      error.value = null;
+      state.isRepairing = true;
+      state.error = null;
       
       const linkToken = await api.post(`plaid/connect/link/${itemId}`);
       const link = createPlaidLink(linkToken);
       link.open();
     } catch (error) {
-      error.value = 'Failed to start reconnection process. Please try again.';
-      state.loading = false;
+      state.error = 'Failed to start reconnection process. Please try again.';
+      state.isRepairing = false;
       console.error('Repair initiation error:', error);
     }
   }
@@ -123,7 +135,7 @@ export function usePlaidIntegration() {
   async function connectBank() {
     try {
       state.loading = true;
-      error.value = null;
+      state.error = null;
       state.isOnboarding = true;
       state.onboardingStep = 'connect';
       
@@ -146,24 +158,41 @@ export function usePlaidIntegration() {
   async function handlePlaidSuccess(publicToken) {
     try {
       state.loading = true;
-      error.value = null;
+      state.error = null;
 
-      const response = await api.post('plaid/exchange/token', { publicToken });
-      
+      // Exchange token and start sync
+      const response = await api.post('plaid/exchange/token', {
+        publicToken
+      });
+
       if (response.error) {
         throw new Error(response.error);
       }
 
       const { itemId } = response.data;
+
       state.onboardingStep = 'syncing';
 
-      // Start the initial sync
-      await api.post(`plaid/onboarding/sync/${itemId}`);
+      await startInitialSync(itemId);
+
+      // Start polling for sync status
+      await pollSyncStatus(itemId);
+
+      // Update state after successful sync
+      state.onboardingStep = 'complete';
+      state.hasItems = true;
       
-      return { itemId };
-    } catch (err) {
-      error.value = 'Failed to complete bank connection';
-      throw err;
+      console.log('Initial sync completed');
+
+      // Wait briefly to show completion state before redirecting
+      setTimeout(() => {
+        router.push('/spending-report');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error completing connection:', error);
+      state.error = getErrorMessage(error);
+      state.onboardingStep = 'connect';
     } finally {
       state.loading = false;
     }
@@ -218,8 +247,6 @@ export function usePlaidIntegration() {
     repairItem,
     connectBank,
     syncItems,
-    checkSyncStatus,
-    isConnecting,
-    error
+    checkSyncStatus
   };
 } 
