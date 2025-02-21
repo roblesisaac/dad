@@ -95,10 +95,13 @@ class PlaidTransactionService extends PlaidBaseService {
     let hasMore = true;
     let cursor = syncSession.cursor;
     let batchCount = 0;
-    const RATE_LIMIT_DELAY = 2000; // 2 seconds delay between requests
+    const RATE_LIMIT_DELAY = 2000;
+
+    // Store these values to avoid losing them between batches
+    const { itemId, userId } = item;
 
     while (hasMore) {
-      console.log(`Processing batch ${++batchCount} for item:`, item.itemId);
+      console.log(`Processing batch ${++batchCount} for item:`, itemId);
       
       try {
         // Get batch of transactions from Plaid
@@ -108,7 +111,7 @@ class PlaidTransactionService extends PlaidBaseService {
         );
 
         // Process batch
-        await this._processBatch(batch, syncSession, item.itemId, user._id);
+        await this._processBatch(batch, syncSession, itemId, userId);
 
         // Update cursor and check if more data available
         cursor = batch.next_cursor;
@@ -116,13 +119,25 @@ class PlaidTransactionService extends PlaidBaseService {
 
         // Update sync progress
         if (hasMore) {
-          await this._updateSyncProgress(item, cursor, syncSession, user);
+          const progressData = {
+            status: 'in_progress',
+            cursor,
+            stats: {
+              added: syncSession.added.length,
+              modified: syncSession.modified.length,
+              removed: syncSession.removed.length
+            }
+          };
+
+          // Use stored itemId and userId
+          await itemService.updateItemSyncStatus(itemId, userId, progressData);
+
           // Add delay between requests to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
         }
 
         console.log('Batch processed:', {
-          itemId: item.itemId,
+          itemId,
           batchNumber: batchCount,
           added: batch.added?.length || 0,
           modified: batch.modified?.length || 0,
@@ -134,16 +149,19 @@ class PlaidTransactionService extends PlaidBaseService {
         // Handle rate limit errors
         if (error.response?.status === 429) {
           console.log('Rate limit hit, waiting before retry...');
-          await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
+          await new Promise(resolve => setTimeout(resolve, 5000));
           continue; // Retry the same batch
         }
 
         console.error('Error processing batch:', {
-          itemId: item.itemId,
+          itemId,
           batchNumber: batchCount,
           error: error.message,
           status: error.response?.status
         });
+
+        // Use stored itemId and userId for error handling
+        await this._handleSyncError(item, error, user);
         throw error;
       }
     }
@@ -239,24 +257,6 @@ class PlaidTransactionService extends PlaidBaseService {
     await plaidTransactions.deleteMany({ 
       transaction_id: { $in: transactionIds }
     });
-  }
-
-  async _updateSyncProgress(item, cursor, syncSession, user) {
-    const progressData = {
-      status: 'in_progress',
-      cursor,
-      stats: {
-        added: syncSession.added.length,
-        modified: syncSession.modified.length,
-        removed: syncSession.removed.length
-      }
-    };
-
-    await itemService.updateItemSyncStatus(
-      item.itemId,
-      user._id,
-      progressData
-    );
   }
 
   async _completeSync(item, result, user) {
