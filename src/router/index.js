@@ -3,7 +3,6 @@ import dashboardRoutes from './routes/dashboard.js'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
-const SwiperVue = () => import('@/views/SwiperVue.vue')
 const TermsOfService = () => import('@/views/TermsOfService.vue')
 const Landing = () => import('@/views/Landing.vue')
 
@@ -17,11 +16,6 @@ const routes = [
     path: '/privacy',
     name: 'privacy',
     component: PrivacyPolicy
-  },
-  {
-    path: '/swiper',
-    name: 'swiper',
-    component: SwiperVue
   },
   {
     path: '/terms',

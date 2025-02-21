@@ -1,4 +1,4 @@
-import { decrypt, decryptWithKey, encrypt, generateSymmetricKey } from '../utils/encryption.js';
+import { encrypt, generateSymmetricKey } from '../utils/encryption.js';
 import { params } from '@ampt/sdk';
 
 const { VITE_ZERO_AUDIENCE, ZERO_MGMT_DOMAIN, ZERO_MGMT_CLIENT_ID, ZERO_MGMT_CLIENT_SECRET } = params().list();

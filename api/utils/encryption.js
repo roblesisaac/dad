@@ -1,5 +1,4 @@
 import { params } from '@ampt/sdk';
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
 function ENCRYPT_KEY() {
@@ -8,11 +7,6 @@ function ENCRYPT_KEY() {
 
 function ENCRYPT_IV() {
   return JSON.parse(params('CRYPT_IV'));
-}
-
-export function decodeJWT(token) {
-  const rsa_public = params('RSA_PUBLIC').replace(/\\n/g, '\n');
-  return jwt.verify(token, rsa_public, { algorithm: 'RS256' });
 }
 
 export function decrypt(encryptedData, dataType) {
@@ -90,11 +84,4 @@ export function encryptWithKey(data, key) {
 
 export function generateSymmetricKey() {
   return crypto.randomBytes(32);
-}
-
-export function generateToken(payload) {
-  const exp = Math.floor(Date.now() / 1000) + (60 * 60);
-  const rsa_private = params('RSA_PRIVATE').replace(/\\n/g, '\n');
-  
-  return jwt.sign({ payload, exp }, rsa_private, { algorithm: 'RS256' });
 }
