@@ -140,11 +140,11 @@
   import ScrollingTabButtons from './components/ScrollingTabButtons.vue';
 
   import { useAppStore } from '@/stores/state';
-  import { useTransactions } from './composables/useTransactions';
-  import { useTabProcessing } from './composables/useTabProcessing';
+  import { useTransactions } from '../composables/useTransactions';
+  import { useTabProcessing } from '../composables/useTabProcessing';
   import { useSyncStatus } from './composables/useSyncStatus';
   import loadScript from '@/shared/utils/loadScript';
-  import { useUtils } from './composables/useUtils';
+  import { useUtils } from '../composables/useUtils';
   import { SelectGroup } from '@/features/select-group';
   import { EditTab } from '@/features/edit-tab';
   import { useApi } from '@/shared/composables/useApi';

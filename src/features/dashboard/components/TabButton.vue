@@ -20,7 +20,6 @@ import { computed, nextTick, watch } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
-import { useAppStore } from '@/stores/state';
 import { useApi } from '@/shared/composables/useApi';
 
 const api = useApi();
