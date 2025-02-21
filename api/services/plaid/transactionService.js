@@ -131,21 +131,11 @@ class PlaidTransactionService extends PlaidBaseService {
     const RATE_LIMIT_DELAY = 500;
 
     // Recursive helper function
-    const fetchNextBatch = async (cursor, batchCount = 1, lastCursor = null) => {
-      console.log(`Processing batch ${batchCount} for item:`, itemId, {
-        currentCursor: cursor,
-        lastCursor,
-        batchCount
-      });
+    const fetchNextBatch = async (cursor, batchCount = 1) => {
+      console.log(`Processing batch ${batchCount} for cursor: ${cursor}`);
       
       let batch;
       try {
-        console.log('Fetching transactions from Plaid:', {
-          itemId,
-          cursor,
-          batchCount
-        });
-
         batch = await plaidService.fetchTransactionsFromPlaid(
           access_token, 
           cursor
@@ -228,7 +218,7 @@ class PlaidTransactionService extends PlaidBaseService {
       await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
 
       // Recursive call for next batch
-      return fetchNextBatch(nextCursor, batchCount + 1, cursor);
+      return fetchNextBatch(nextCursor, batchCount + 1);
     };
 
     // Start the recursive process with initial cursor
