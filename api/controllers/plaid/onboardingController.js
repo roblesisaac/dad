@@ -6,7 +6,7 @@ export default {
     try {
       const { itemId } = req.params;
       
-      const syncPromise = transactionService.syncTransactionsForItem(item, req.user);
+      const syncPromise = transactionService.syncTransactionsForItem(itemId, req.user);
       
       // Return immediately while sync runs
       res.json({ 
