@@ -266,7 +266,7 @@ class PlaidTransactionService extends PlaidBaseService {
       console.log(`Saving ${formattedTransactions.length} new transactions`);
       const result = await plaidTransactions.insertMany(formattedTransactions);
       console.log(`Successfully saved ${result.length} transactions`);
-      return result;
+      return result || formattedTransactions;
     } catch (error) {
       if (error.message.startsWith('BATCH_INSERT_ERROR')) {
         // Log the failed inserts but continue with the successful ones
