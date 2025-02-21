@@ -1,25 +1,40 @@
 import { authGuard } from '@auth0/auth0-vue'
+import DashboardLayout from '@/layouts/DashboardLayout.vue'
 
-export default [
+export const dashboardRoutes = [
   {
-    path: '/onboarding',
-    name: 'onboarding',
-    component: () => import('@/features/dashboard/components/ItemRepair.vue'),
+    path: '/dashboard',
+    component: DashboardLayout,
     beforeEnter: authGuard,
-    meta: {
-      requiresAuth: true,
-      title: 'Connect Your Bank'
-    }
-  },
-  {
-    path: '/spending-report',
-    name: 'spending-report',
-    component: () => import('@/features/dashboard/SpendingReport.vue'),
-    beforeEnter: authGuard,
-    meta: {
-      requiresAuth: true,
-      requiresPlaidItems: true,
-      title: 'Spending Report'
-    }
+    children: [
+      {
+        path: 'onboarding',
+        name: 'onboarding',
+        component: () => import('@/features/dashboard/views/OnboardingView.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Connect Your Bank'
+        }
+      },
+      {
+        path: 'spending-report',
+        name: 'spending-report',
+        component: () => import('@/features/dashboard/SpendingReport.vue'),
+        meta: {
+          requiresAuth: true,
+          requiresPlaidItems: true,
+          title: 'Spending Report'
+        }
+      },
+      {
+        path: 'repair',
+        name: 'repair',
+        component: () => import('@/features/dashboard/components/ItemRepair.vue'),
+        meta: {
+          requiresAuth: true,
+          title: 'Fix Connection'
+        }
+      }
+    ]
   }
 ]; 
