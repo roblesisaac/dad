@@ -12,6 +12,8 @@ class PlaidTransactionService extends PlaidBaseService {
     try {
       // Get or validate item
       const validatedItem = await this._validateAndGetItem(item, user);
+
+      console.log('Validated item:', validatedItem);
       
       // Check if sync already in progress
       if (this._isSyncInProgress(validatedItem)) {
