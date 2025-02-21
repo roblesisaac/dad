@@ -1,6 +1,7 @@
 import { reactive } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
 import { useRouter } from 'vue-router';
+import { useSyncStatus } from './useSyncStatus';
 
 export function usePlaidIntegration() {
   const api = useApi();
@@ -18,9 +19,19 @@ export function usePlaidIntegration() {
       added: 0,
       modified: 0,
       removed: 0,
-      status: null
-    }
+      status: null,
+      lastSync: null,
+      nextSync: null,
+      cursor: null
+    },
+    blueBar: {
+      message: null,
+      loading: false
+    },
+    syncCheckId: false
   });
+
+  const { checkSyncStatus } = useSyncStatus(api, state);
 
   function getErrorMessage(error) {
     const errorMessages = {
@@ -114,10 +125,10 @@ export function usePlaidIntegration() {
     try {
       await api.post(`plaid/onboarding/sync/${itemId}`);
       router.push('/onboarding');
+      await checkSyncStatus(); // Start monitoring sync status
     } catch (error) {
       console.error('Sync error:', error);
-      state.error = 'Error syncing your account. Please try again.';
-      state.onboardingStep = 'connect';
+      throw error;
     }
   }
 
@@ -235,6 +246,7 @@ export function usePlaidIntegration() {
     initializePlaid,
     repairItem,
     connectBank,
-    syncItems
+    syncItems,
+    checkSyncStatus
   };
 } 

@@ -24,10 +24,16 @@
           <div class="status-badge" :class="state.syncProgress.status">
             {{ formatStatus(state.syncProgress.status) }}
           </div>
+          <div v-if="showNextSync" class="next-sync">
+            Next sync: {{ formatNextSync }}
+          </div>
         </div>
 
         <div v-if="state.error" class="error-message">
           {{ state.error }}
+          <button class="retry-button" @click="retrySync">
+            Retry Sync
+          </button>
         </div>
       </div>
     </div>
@@ -44,6 +50,10 @@
           <span class="stat-label">Accounts Connected</span>
           <span class="stat-value">{{ state.syncedItems.length }}</span>
         </div>
+        <div class="stat-item">
+          <span class="stat-label">Last Synced</span>
+          <span class="stat-value">{{ formatLastSync }}</span>
+        </div>
       </div>
       <button 
         class="primary-button" 
@@ -57,8 +67,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 
 const router = useRouter();
 const redirecting = ref(false);
@@ -69,6 +80,8 @@ const props = defineProps({
     required: true
   }
 });
+
+const emit = defineEmits(['retry']);
 
 const formatStatus = (status) => {
   const statusMap = {
@@ -81,9 +94,28 @@ const formatStatus = (status) => {
   return statusMap[status] || status;
 };
 
+const showNextSync = computed(() => {
+  return props.state.syncProgress.nextSync && 
+         props.state.syncProgress.status !== 'completed';
+});
+
+const formatNextSync = computed(() => {
+  if (!props.state.syncProgress.nextSync) return '';
+  return formatDistanceToNow(parseISO(props.state.syncProgress.nextSync), { addSuffix: true });
+});
+
+const formatLastSync = computed(() => {
+  if (!props.state.syncProgress.lastSync) return 'Just now';
+  return formatDistanceToNow(parseISO(props.state.syncProgress.lastSync), { addSuffix: true });
+});
+
 const goToSpendingReport = async () => {
   redirecting.value = true;
   await router.push('/spending-report');
+};
+
+const retrySync = () => {
+  emit('retry');
 };
 </script>
 
@@ -188,5 +220,26 @@ const goToSpendingReport = async () => {
 .primary-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.next-sync {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  text-align: center;
+}
+
+.retry-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--error);
+  color: var(--error);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.retry-button:hover {
+  background: var(--error-container);
 }
 </style> 

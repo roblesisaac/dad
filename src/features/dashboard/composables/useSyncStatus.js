@@ -1,60 +1,104 @@
+import { ref } from 'vue';
+
 export function useSyncStatus(api, state) {
+  const syncInterval = ref(null);
+  const SYNC_CHECK_INTERVAL = 5000; // 5 seconds
+  const MAX_RETRIES = 3;
+
   async function renderSyncStatus(syncCheckId) {
-    if(state.syncCheckId !== syncCheckId) {
+    if (state.syncCheckId !== syncCheckId) {
       return;
     }
 
-    let itemsSyncing = [];
-    const items = await api.get('plaid/items');
-
-    if(!items.length) {
-      state.blueBar.message = 'No items found';
-      state.blueBar.loading = false;
-      setTimeout(() => {
-        state.syncCheckId = false;
-        state.blueBar.message = false;
-      }, 3000);
-      return;
-    }
-
-    for (const item of items ) {
-      if(item.syncData.status === 'completed') {
-        continue;
+    try {
+      const items = await api.get('plaid/items');
+      
+      if (!items?.length) {
+        updateStatusBar('No items found', false);
+        clearSyncCheck();
+        return;
       }
 
-      itemsSyncing.push(item.syncData.status);
+      const itemsSyncing = items.filter(item => 
+        item.syncData.status !== 'completed'
+      );
+
+      if (!itemsSyncing.length) {
+        updateStatusBar('All transactions synced successfully!', false);
+        clearSyncCheck();
+        return;
+      }
+
+      // Update status bar with sync progress
+      const s = itemsSyncing.length > 1 ? 's' : '';
+      const syncStatus = itemsSyncing.some(item => item.syncData.status === 'queued') 
+        ? 'Queued' 
+        : itemsSyncing[0].syncData.status;
+      
+      updateStatusBar(
+        `Sync status is '${syncStatus}' across ${itemsSyncing.length} bank${s}.`,
+        true
+      );
+
+      // Check for failures
+      if (itemsSyncing.some(item => item.syncData.status === 'failed')) {
+        state.views.push('ItemRepair');
+        clearSyncCheck();
+        return;
+      }
+
+      // Schedule next check
+      scheduleNextCheck(syncCheckId);
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+      handleSyncError();
     }
+  }
 
-    if(!itemsSyncing.length) {
-      state.blueBar.message = `All transactions synced successfully!`;
-      state.blueBar.loading = false;
-      setTimeout(() => {
-        state.syncCheckId = false;
-        state.blueBar.message = false;
-      }, 3000);
+  function updateStatusBar(message, loading = false) {
+    state.blueBar.message = message;
+    state.blueBar.loading = loading;
+  }
 
-      return;
-    }
-
-    const s = itemsSyncing.length > 1 ? 's' : '';
-    const syncStatus = itemsSyncing.includes('queued') ? 'Queued' : itemsSyncing[0];
-    state.blueBar.message = `Sync status is '${syncStatus}' across ${itemsSyncing.length} bank${s}.`;
-    state.blueBar.loading = true;
-
-    if(itemsSyncing.includes('failed')) {
-      state.views.push('ItemRepair');
-      state.blueBar.loading = false;
-      state.syncCheckId = false;
+  function clearSyncCheck() {
+    clearTimeout(syncInterval.value);
+    state.syncCheckId = false;
+    
+    // Clear status bar after delay
+    setTimeout(() => {
       state.blueBar.message = false;
-      state.syncCheckId = false;
-      return;
-    }
+      state.blueBar.loading = false;
+    }, 3000);
+  }
 
-    setTimeout(() => renderSyncStatus(syncCheckId), 5*1000);
+  function scheduleNextCheck(syncCheckId) {
+    clearTimeout(syncInterval.value);
+    syncInterval.value = setTimeout(
+      () => renderSyncStatus(syncCheckId), 
+      SYNC_CHECK_INTERVAL
+    );
+  }
+
+  function handleSyncError() {
+    updateStatusBar('Error checking sync status. Retrying...', true);
+    
+    // Implement retry logic
+    let retryCount = 0;
+    const retryInterval = setInterval(() => {
+      if (retryCount >= MAX_RETRIES) {
+        clearInterval(retryInterval);
+        updateStatusBar('Failed to check sync status', false);
+        clearSyncCheck();
+        return;
+      }
+      
+      renderSyncStatus(state.syncCheckId);
+      retryCount++;
+    }, SYNC_CHECK_INTERVAL);
   }
 
   async function checkSyncStatus() {
-    if(state.syncCheckId !== false) {
+    if (state.syncCheckId !== false) {
       return;
     }
 
@@ -62,6 +106,11 @@ export function useSyncStatus(api, state) {
     state.syncCheckId = syncCheckId;
     await renderSyncStatus(syncCheckId);
   }
+
+  // Clean up on unmount
+  onUnmounted(() => {
+    clearTimeout(syncInterval.value);
+  });
 
   return {
     checkSyncStatus,
