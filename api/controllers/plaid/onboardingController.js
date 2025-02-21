@@ -6,13 +6,6 @@ export default {
     try {
       const { itemId } = req.params;
       
-      // Get the full item first
-      const item = await itemService.getUserItems(req.user._id, itemId);
-      if (!item) {
-        throw new Error('ITEM_NOT_FOUND: Item not found');
-      }
-
-      // Start sync directly
       const syncPromise = transactionService.syncTransactionsForItem(item, req.user);
       
       // Return immediately while sync runs
