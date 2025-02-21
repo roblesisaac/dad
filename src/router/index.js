@@ -1,12 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { authGuard } from '@auth0/auth0-vue'
 import dashboardRoutes from './routes/dashboard.js'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/views/PrivacyPolicy.vue')
 const SwiperVue = () => import('@/views/SwiperVue.vue')
 const TermsOfService = () => import('@/views/TermsOfService.vue')
-const SpendingReport = () => import('@/features/dashboard/SpendingReport.vue')
 const Landing = () => import('@/views/Landing.vue')
 
 const routes = [

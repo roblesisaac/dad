@@ -1,27 +1,18 @@
-import { defineAsyncComponent } from 'vue';
+import { authGuard } from '@auth0/auth0-vue'
+const SpendingReport = () => import('@/features/dashboard/SpendingReport.vue')
+const OnboardingStatus = () => import('@/features/dashboard/components/OnboardingStatus.vue')
 
 export default [
   {
     path: '/onboarding',
     name: 'onboarding',
-    component: defineAsyncComponent(() => 
-      import('../features/dashboard/components/OnboardingStatus.vue')
-    ),
-    meta: {
-      requiresAuth: true,
-      title: 'Connect Your Bank'
-    }
+    component: SpendingReport,
+    beforeEnter: authGuard
   },
   {
     path: '/spending-report',
     name: 'spending-report',
-    component: defineAsyncComponent(() => 
-      import('../features/dashboard/components/SpendingReportView.vue')
-    ),
-    meta: {
-      requiresAuth: true,
-      requiresPlaidItems: true,
-      title: 'Spending Report'
-    }
+    component: OnboardingStatus,
+    beforeEnter: authGuard
   }
 ]; 
