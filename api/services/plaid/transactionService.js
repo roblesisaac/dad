@@ -167,11 +167,8 @@ class PlaidTransactionService extends PlaidBaseService {
         itemId,
         batchCount,
         addedCount: batch.added?.length || 0,
-        hasModified: !!batch.modified?.length,
         modifiedCount: batch.modified?.length || 0,
-        hasRemoved: !!batch.removed?.length,
         removedCount: batch.removed?.length || 0,
-        hasNextCursor: !!batch.next_cursor,
         nextCursor: batch.next_cursor
       });
 
