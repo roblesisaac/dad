@@ -130,9 +130,12 @@ class PlaidTransactionService extends PlaidBaseService {
     const { itemId, userId } = item;
     const RATE_LIMIT_DELAY = 500;
 
-    // Recursive helper function
-    const fetchNextBatch = async (cursor, batchCount = 1) => {
-      console.log(`Processing batch ${batchCount} for cursor: ${cursor}`);
+    let cursor = syncSession.cursor;
+    let batchCount = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      console.log(`Processing batch ${++batchCount} for cursor: ${cursor}`);
       
       let batch;
       try {
@@ -144,7 +147,7 @@ class PlaidTransactionService extends PlaidBaseService {
         // Save current progress before throwing
         await this._updateSyncProgress(itemId, userId, {
           status: 'incomplete',
-          cursor: cursor, // Keep the current cursor for resume
+          cursor: cursor,
           error: {
             code: error.error_code || 'SYNC_ERROR',
             message: error.message,
@@ -163,7 +166,6 @@ class PlaidTransactionService extends PlaidBaseService {
       console.log('Received batch from Plaid:', {
         itemId,
         batchCount,
-        hasAdded: !!batch.added?.length,
         addedCount: batch.added?.length || 0,
         hasModified: !!batch.modified?.length,
         modifiedCount: batch.modified?.length || 0,
@@ -174,7 +176,7 @@ class PlaidTransactionService extends PlaidBaseService {
       });
 
       try {
-        // Process batch - now with transaction safety
+        // Process batch
         await this._processBatch(batch, syncSession, itemId, userId);
       } catch (error) {
         // If batch processing fails, save progress and throw
@@ -195,34 +197,31 @@ class PlaidTransactionService extends PlaidBaseService {
         throw error;
       }
 
-      // Check if more data is available
+      // Update cursor and check if more data available
       const nextCursor = batch.next_cursor;
-      const hasMore = nextCursor && nextCursor !== cursor;
+      hasMore = nextCursor && nextCursor !== cursor;
+      
+      if (hasMore) {
+        // Update sync progress
+        await this._updateSyncProgress(itemId, userId, {
+          status: 'in_progress',
+          cursor: nextCursor,
+          stats: {
+            added: syncSession.added.length,
+            modified: syncSession.modified.length,
+            removed: syncSession.removed.length
+          }
+        });
 
-      if (!hasMore) {
-        return syncSession;
+        // Rate limiting delay between batches
+        await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
+        
+        // Update cursor for next iteration
+        cursor = nextCursor;
       }
+    }
 
-      // Update sync progress
-      await this._updateSyncProgress(itemId, userId, {
-        status: 'in_progress',
-        cursor: nextCursor,
-        stats: {
-          added: syncSession.added.length,
-          modified: syncSession.modified.length,
-          removed: syncSession.removed.length
-        }
-      });
-
-      // Rate limiting delay between batches
-      await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-
-      // Recursive call for next batch
-      return fetchNextBatch(nextCursor, batchCount + 1);
-    };
-
-    // Start the recursive process with initial cursor
-    return fetchNextBatch(syncSession.cursor);
+    return syncSession;
   }
 
   /**
