@@ -16,7 +16,7 @@ export default function(api, baseUrl) {
 
   // Transactions
   member.get('/plaid/transactions/:_id?', plaidController.getTransactions);
-  member.get('/plaid/sync/all/transactions', plaidController.saveTransactionsForItems);
+  member.get('/plaid/sync/all/transactions', plaidController.syncTransactionsForEachItem);
   
   // Maintenance
   member.get('/plaid/get/duplicates', plaidController.getDuplicates);

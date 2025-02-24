@@ -35,9 +35,9 @@ export default {
     }
   },
 
-  async saveTransactionsForItems(req, res) {
+  async syncTransactionsForEachItem(req, res) {
     try {
-      const response = await transactionService.saveTransactionsForItems(req.user);
+      const response = await transactionService.syncTransactionsForEachItem(req.user);
       res.json(response);
     } catch (error) {
       res.status(400).json({ 

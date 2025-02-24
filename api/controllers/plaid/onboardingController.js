@@ -6,8 +6,8 @@ export default {
     try {
       const { itemId } = req.params;
       
-      const syncPromise = transactionService.syncTransactionsForItem(itemId, req.user);
-      
+      const syncPromise = await transactionService.syncTransactionsForItem(itemId, req.user);
+
       // Return immediately while sync runs
       res.json({ 
         status: 'syncing',
@@ -16,9 +16,9 @@ export default {
       });
 
       // Let the sync continue in the background
-      await syncPromise.catch(error => {
-        console.error('Background sync error:', error);
-      });
+      // await syncPromise.catch(error => {
+      //   console.error('Background sync error:', error);
+      // });
     } catch (error) {
       const errorCode = error.message.split(': ')[0];
       const errorMessage = error.message.split(': ')[1] || error.message;

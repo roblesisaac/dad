@@ -1,7 +1,17 @@
-import { reactive } from 'vue';
+import { reactive, onMounted } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
 import { useRouter } from 'vue-router';
 import { useSyncStatus } from './useSyncStatus';
+import loadScript from '@/shared/utils/loadScript';
+
+// Load Plaid script
+const loadPlaidScript = async () => {
+  if (window.Plaid) {
+    return;
+  }
+
+  await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
+};
 
 export function usePlaidIntegration() {
   const api = useApi();
@@ -31,7 +41,24 @@ export function usePlaidIntegration() {
     syncCheckId: false
   });
 
-  const { checkSyncStatus } = useSyncStatus(api, state);
+  const { checkSyncStatus, startSyncPolling } = useSyncStatus(api, state);
+
+  // Initialize Plaid on component mount
+  onMounted(async () => {
+    try {
+      await loadPlaidScript();
+    } catch (error) {
+      console.error('Failed to load Plaid:', error);
+      state.error = 'Failed to initialize banking connection. Please try again.';
+    }
+  });
+
+  function handleConnectionError(error) {
+    state.error = error.message || 'Failed to establish connection. Please try again.';
+    state.loading = false;
+    state.isOnboarding = false;
+    console.error('Connection error:', error);
+  }
 
   function getErrorMessage(error) {
     const errorMessages = {
@@ -56,7 +83,6 @@ export function usePlaidIntegration() {
       onSuccess: async function(publicToken) {
         try {
           state.isRepairing = true;
-          state.error = null;
           
           await handlePlaidSuccess(publicToken);
         } catch (error) {
@@ -121,17 +147,6 @@ export function usePlaidIntegration() {
     }
   }
 
-  async function startInitialSync(itemId) {
-    try {
-      await api.post(`plaid/onboarding/sync/${itemId}`);
-      router.push('/onboarding');
-      await checkSyncStatus(); // Start monitoring sync status
-    } catch (error) {
-      console.error('Sync error:', error);
-      throw error;
-    }
-  }
-
   async function connectBank() {
     try {
       state.loading = true;
@@ -159,8 +174,9 @@ export function usePlaidIntegration() {
     try {
       state.loading = true;
       state.error = null;
+      state.onboardingStep = 'syncing';
 
-      // Exchange token and start sync
+      // Exchange token
       const response = await api.post('plaid/exchange/token', {
         publicToken
       });
@@ -169,26 +185,29 @@ export function usePlaidIntegration() {
         throw new Error(response.error);
       }
 
-      const { itemId } = response.data;
+      // Fix: response.data contains the itemId
+      const { itemId } = response.data || response;
 
-      state.onboardingStep = 'syncing';
-
-      await startInitialSync(itemId);
+      // Start initial sync
+      await api.post(`plaid/onboarding/sync/${itemId}`);
 
       // Start polling for sync status
-      await pollSyncStatus(itemId);
+      const syncResult = await startSyncPolling(itemId);
 
-      // Update state after successful sync
-      state.onboardingStep = 'complete';
-      state.hasItems = true;
-      
-      console.log('Initial sync completed');
+      if (syncResult && syncResult.completed) {
+        // Update state after successful sync
+        state.onboardingStep = 'complete';
+        state.hasItems = true;
 
-      // Wait briefly to show completion state before redirecting
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
-
+        // Wait briefly to show completion state before redirecting
+        setTimeout(() => {
+          router.push('/dashboard');
+        }, 2000);
+      } else {
+        // If sync is still in progress, let the polling continue
+        // The UI will update based on the state changes
+        console.log('Sync in progress, continuing to poll');
+      }
     } catch (error) {
       console.error('Error completing connection:', error);
       state.error = getErrorMessage(error);
@@ -196,48 +215,6 @@ export function usePlaidIntegration() {
     } finally {
       state.loading = false;
     }
-  }
-
-  async function pollSyncStatus(itemId) {
-    const maxAttempts = 50; // 5 minutes maximum
-    let attempts = 0;
-
-    while (attempts < maxAttempts) {
-      try {
-        const status = await api.get(`plaid/onboarding/status/${itemId}`);
-        
-        // Update progress in state with more detailed information
-        if (status.progress) {
-          state.syncProgress = {
-            added: status.progress.added || 0,
-            modified: status.progress.modified || 0,
-            removed: status.progress.removed || 0,
-            status: status.status || 'queued',
-            lastSync: status.progress.lastSync,
-            nextSync: status.progress.nextSync,
-            cursor: status.progress.cursor
-          };
-        }
-
-        if (status.error) {
-          throw new Error(status.error);
-        }
-
-        if (status.completed) {
-          return status;
-        }
-
-        // Wait 2 seconds before next poll
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        attempts++;
-
-      } catch (error) {
-        console.error('Polling error:', error);
-        throw new Error(getErrorMessage(error));
-      }
-    }
-
-    throw new Error('SYNC_TIMEOUT: Initial sync took too long');
   }
 
   return {

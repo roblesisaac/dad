@@ -12,12 +12,6 @@
       </template>
     </Draggable>
 
-    <!-- LinkNewAccount -->
-    <button @click="app.linkNewAccount" href="#" class="linkAccount proper colorBlue">
-      <b v-if="state.linkToken">Link New Account +</b>
-      <b v-else>Loading <LoadingDots /></b>
-    </button>
-
     <!-- Create New Group -->
     <div class="cell-1 proper">
       <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
@@ -42,7 +36,6 @@ import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import GroupRow from '../components/GroupRow.vue';
 import NetWorth from '../components/NetWorth.vue';
-import LoadingDots from '@/shared/components/LoadingDots.vue';
 import EditGroup from '../components/EditGroup.vue';
 import { useSelectGroup } from '../composables/useSelectGroup.js';
 import { useDraggable } from '@/shared/composables/useDraggable';

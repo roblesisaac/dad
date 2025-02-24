@@ -1,60 +1,138 @@
 import { ref, onUnmounted } from 'vue';
-import { useRouter } from 'vue-router';
 
 export function useSyncStatus(api, state) {
-  const router = useRouter();
   const syncInterval = ref(null);
-  const SYNC_CHECK_INTERVAL = 5000; // 5 seconds
-  const MAX_RETRIES = 3;
+  const SYNC_CHECK_INTERVAL = 2000; // 2 seconds
+  const MAX_POLL_TIME = 300000; // 5 minutes
+  const startTime = ref(null);
 
-  async function renderSyncStatus(syncCheckId) {
-    if (state.syncCheckId !== syncCheckId) {
+  /**
+   * Checks sync status for all items or a specific item
+   * @param {string} [itemId] - Optional specific item to check
+   * @returns {Promise<Object>} Sync status result
+   */
+  async function checkSyncStatus(itemId = null) {
+    try {
+      const status = await api.get(`plaid/onboarding/status/${itemId}`);
+      
+      // Update progress in state
+      if (status.progress) {
+        state.syncProgress = {
+          added: status.progress.added || 0,
+          modified: status.progress.modified || 0,
+          removed: status.progress.removed || 0,
+          status: status.status || 'queued',
+          lastSync: status.progress.lastSync,
+          nextSync: status.progress.nextSync,
+          cursor: status.progress.cursor
+        };
+      }
+
+      updateUIWithSyncStatus(status);
+      return status;
+    } catch (error) {
+      console.error('Error checking sync status:', error);
+      updateStatusBar('Error checking sync status', false);
+      return { completed: false, error: error.message };
+    }
+  }
+
+  /**
+   * Updates UI based on sync status
+   * @param {Object} status - Current sync status
+   */
+  function updateUIWithSyncStatus(status) {
+    if (status.error) {
+      updateStatusBar(`Sync error: ${status.error}`, false);
       return;
     }
 
-    try {
-      const items = await api.get('plaid/items');
-      
-      if (!items?.length) {
-        updateStatusBar('No items found', false);
-        clearSyncCheck();
-        return;
-      }
-
-      const itemsSyncing = items.filter(item => 
-        item.syncData.status !== 'completed'
-      );
-
-      if (!itemsSyncing.length) {
-        updateStatusBar('All transactions synced successfully!', false);
-        clearSyncCheck();
-        return;
-      }
-
-      // Update status bar with sync progress
-      const s = itemsSyncing.length > 1 ? 's' : '';
-      const syncStatus = itemsSyncing.some(item => item.syncData.status === 'queued') 
-        ? 'Queued' 
-        : itemsSyncing[0].syncData.status;
-      
-      updateStatusBar(
-        `Sync status is '${syncStatus}' across ${itemsSyncing.length} bank${s}.`,
-        true
-      );
-
-      // Check for failures
-      if (itemsSyncing.some(item => item.syncData.status === 'failed')) {
-        router.push({ name: 'onboarding' });
-        clearSyncCheck();
-        return;
-      }
-
-      // Schedule next check
-      scheduleNextCheck(syncCheckId);
-    } catch (error) {
-      console.error('Error checking sync status:', error);
-      handleSyncError();
+    if (status.completed) {
+      updateStatusBar('Transactions synced successfully!', false);
+      return;
     }
+
+    const progress = status.progress || {};
+    updateStatusBar(
+      `Syncing transactions... (${progress.added || 0} processed)`,
+      true
+    );
+  }
+
+  /**
+   * Starts polling for sync status
+   * @param {string} itemId - Specific item to poll
+   */
+  async function startSyncPolling(itemId) {
+    if (!itemId) {
+      console.error('No itemId provided for sync polling');
+      return { completed: false, error: 'MISSING_ITEM_ID' };
+    }
+
+    clearSyncCheck();
+    startTime.value = Date.now();
+    
+    // Set initial state
+    state.onboardingStep = 'syncing';
+    state.syncProgress = {
+      added: 0,
+      modified: 0,
+      removed: 0,
+      status: 'queued'
+    };
+
+    const pollStatus = async () => {
+      try {
+        if (Date.now() - startTime.value > MAX_POLL_TIME) {
+          clearSyncCheck();
+          updateStatusBar('Sync timed out. Please try again.', false);
+          return { completed: false, error: 'SYNC_TIMEOUT' };
+        }
+
+        const status = await api.get(`plaid/onboarding/status/${itemId}`);
+        console.log('Sync status:', status); // Debug log
+
+        // Update progress in state
+        if (status.progress) {
+          state.syncProgress = {
+            added: status.progress.added || 0,
+            modified: status.progress.modified || 0,
+            removed: status.progress.removed || 0,
+            status: status.status || 'queued',
+            lastSync: status.progress.lastSync,
+            nextSync: status.progress.nextSync,
+            cursor: status.progress.cursor
+          };
+        }
+
+        updateUIWithSyncStatus(status);
+
+        if (status.error) {
+          clearSyncCheck();
+          return status;
+        }
+
+        if (status.completed) {
+          clearSyncCheck();
+          state.onboardingStep = 'complete';
+          return status;
+        }
+
+        // Continue polling
+        return new Promise(resolve => {
+          syncInterval.value = setTimeout(async () => {
+            const result = await pollStatus();
+            resolve(result);
+          }, SYNC_CHECK_INTERVAL);
+        });
+      } catch (error) {
+        console.error('Error in poll status:', error);
+        clearSyncCheck();
+        return { completed: false, error: error.message };
+      }
+    };
+
+    return pollStatus();
   }
 
   function updateStatusBar(message, loading = false) {
@@ -64,58 +142,18 @@ export function useSyncStatus(api, state) {
 
   function clearSyncCheck() {
     clearTimeout(syncInterval.value);
-    state.syncCheckId = false;
-    
-    // Clear status bar after delay
-    setTimeout(() => {
-      state.blueBar.message = false;
-      state.blueBar.loading = false;
-    }, 3000);
-  }
-
-  function scheduleNextCheck(syncCheckId) {
-    clearTimeout(syncInterval.value);
-    syncInterval.value = setTimeout(
-      () => renderSyncStatus(syncCheckId), 
-      SYNC_CHECK_INTERVAL
-    );
-  }
-
-  function handleSyncError() {
-    updateStatusBar('Error checking sync status. Retrying...', true);
-    
-    // Implement retry logic
-    let retryCount = 0;
-    const retryInterval = setInterval(() => {
-      if (retryCount >= MAX_RETRIES) {
-        clearInterval(retryInterval);
-        updateStatusBar('Failed to check sync status', false);
-        clearSyncCheck();
-        return;
-      }
-      
-      renderSyncStatus(state.syncCheckId);
-      retryCount++;
-    }, SYNC_CHECK_INTERVAL);
-  }
-
-  async function checkSyncStatus() {
-    if (state.syncCheckId !== false) {
-      return;
-    }
-
-    const syncCheckId = Date.now();
-    state.syncCheckId = syncCheckId;
-    await renderSyncStatus(syncCheckId);
+    syncInterval.value = null;
+    startTime.value = null;
   }
 
   // Clean up on unmount
   onUnmounted(() => {
-    clearTimeout(syncInterval.value);
+    clearSyncCheck();
   });
 
   return {
     checkSyncStatus,
-    renderSyncStatus
+    startSyncPolling,
+    clearSyncCheck
   };
 } 

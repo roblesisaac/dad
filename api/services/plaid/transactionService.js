@@ -33,19 +33,64 @@ class PlaidTransactionService extends PlaidBaseService {
         const result = await this._performSync(syncSession, validatedItem, user);
         
         // Complete sync
-        await this._completeSync(validatedItem, result, user);
+        const completedItem = await this._completeSync(validatedItem, result, user);
+
+        console.log({
+          completedItem,
+          validatedItem: JSON.stringify(validatedItem, null, 2),
+          result,
+        })
         
         return this._createSyncResponse('COMPLETED', validatedItem, result);
       } catch (error) {
-        // Handle sync error
-        await this._handleSyncError(validatedItem, error, user);
+        await CustomError.handleServiceError(validatedItem, user, error, {
+          cursor: syncSession.cursor,
+          batchCount: 0,
+          syncSession,
+          operation: 'sync_transactions'
+        }, this._updateSyncProgress);
         throw error;
       }
     } catch (error) {
       console.error('Error in syncTransactionsForItem:', error);
-      throw this._formatError(error);
+      throw CustomError.createFormattedError(error, { operation: 'sync_transactions' });
     }
   }
+
+  /**
+   * Synchronizes transactions for all user items.
+   * @param {Object} user - User data.
+   * @returns {Object} Sync results for all items.
+   */
+    async syncTransactionsForEachItem(user) {
+      this.validateUser(user);
+  
+      try {
+        const items = await itemService.getUserItems(user._id);
+        if (!items?.length) {
+          throw new CustomError('NO_ITEMS', 'No items found for user');
+        }
+  
+        const syncResults = [];
+        for (const item of items) {
+          try {
+            const result = await this.syncTransactionsForItem(item, user);
+            syncResults.push({ itemId: item._id, ...result });
+          } catch (error) {
+            console.error(`Error syncing transactions for item ${item._id}:`, error);
+            syncResults.push({
+              itemId: item._id,
+              error: error.error_code || 'SYNC_ERROR',
+              message: error.message
+            });
+          }
+        }
+  
+        return { syncResults };
+      } catch (error) {
+        throw new CustomError('SYNC_ERROR', error.message);
+      }
+    }
 
   /**
    * Validates and retrieves item data.
@@ -72,7 +117,9 @@ class PlaidTransactionService extends PlaidBaseService {
 
       return item;
     } catch (error) {
-      throw this._formatError(error);
+      throw CustomError.createFormattedError(error, { 
+        operation: 'validate_item'
+      });
     }
   }
 
@@ -144,54 +191,24 @@ class PlaidTransactionService extends PlaidBaseService {
           cursor
         );
       } catch (error) {
-        // Save current progress before throwing
-        await this._updateSyncProgress(itemId, userId, {
-          status: 'incomplete',
-          cursor: cursor,
-          error: {
-            code: error.error_code || 'SYNC_ERROR',
-            message: error.message,
-            timestamp: Date.now()
-          },
-          stats: {
-            added: syncSession.added.length,
-            modified: syncSession.modified.length,
-            removed: syncSession.removed.length
-          }
-        });
-        throw error;
+        await CustomError.handleServiceError(item, user, error, {
+          cursor,
+          batchCount,
+          syncSession,
+          operation: 'fetch_transactions'
+        }, this._updateSyncProgress);
       }
-
-      // Log successful batch
-      console.log('Received batch from Plaid:', {
-        itemId,
-        batchCount,
-        addedCount: batch.added?.length || 0,
-        modifiedCount: batch.modified?.length || 0,
-        removedCount: batch.removed?.length || 0,
-        nextCursor: batch.next_cursor
-      });
 
       try {
         // Process batch
         await this._processBatch(batch, syncSession, itemId, userId);
       } catch (error) {
-        // If batch processing fails, save progress and throw
-        await this._updateSyncProgress(itemId, userId, {
-          status: 'incomplete',
-          cursor: cursor,
-          error: {
-            code: 'BATCH_PROCESSING_ERROR',
-            message: error.message,
-            timestamp: Date.now()
-          },
-          stats: {
-            added: syncSession.added.length,
-            modified: syncSession.modified.length,
-            removed: syncSession.removed.length
-          }
-        });
-        throw error;
+        await CustomError.handleServiceError(item, user, error, {
+          cursor,
+          batchCount,
+          syncSession,
+          operation: 'process_batch'
+        }, this._updateSyncProgress);
       }
 
       // Update cursor and check if more data available
@@ -252,12 +269,6 @@ class PlaidTransactionService extends PlaidBaseService {
         const savedTransactions = await this._saveNewTransactions(added, itemId, userId);
         syncSession.added.push(...savedTransactions);
       }
-
-      console.log('Successfully processed batch:', {
-        added: added?.length || 0,
-        modified: modified?.length || 0,
-        removed: removed?.length || 0
-      });
       
       return {
         added: added?.length || 0,
@@ -295,10 +306,10 @@ class PlaidTransactionService extends PlaidBaseService {
       if (formattedTransactions.length > 0) {
         const result = await plaidTransactions.insertMany(formattedTransactions);
         return result;
-      } else {
-        console.log('No new transactions to save');
-        return [];
       }
+      
+      console.log('No new transactions to save');
+      return [];
     } catch (error) {
       throw new CustomError('SAVE_ERROR', `Failed to save transactions: ${error.message}`);
     }
@@ -367,64 +378,9 @@ class PlaidTransactionService extends PlaidBaseService {
       }
     };
 
-    await itemService.updateItemSyncStatus(
-      item.itemId, 
-      user._id,
-      syncData
-    );
-  }
+    const updatedItem = await this._updateSyncProgress(item.itemId, user._id, syncData);
 
-  /**
-   * Handles sync errors and updates sync status.
-   * @param {Object} item - Item data.
-   * @param {Object} error - Error object.
-   * @param {Object} user - User data.
-   */
-  async _handleSyncError(item, error, user) {
-    const errorData = {
-      status: 'error',
-      error: {
-        code: error.error_code || 'SYNC_ERROR',
-        message: error.message,
-        timestamp: Date.now()
-      }
-    };
-
-    await itemService.updateItemSyncStatus(
-      item.itemId,
-      user._id,
-      errorData
-    );
-  }
-
-  /**
-   * Creates a sync response object.
-   * @param {string} status - Sync status.
-   * @param {Object} item - Item data.
-   * @param {Object} result - Sync result data (optional).
-   * @returns {Object} Sync response.
-   */
-  _createSyncResponse(status, item, result = null) {
-    const response = {
-      status,
-      itemId: item._id,
-      lastSyncTime: item.syncData?.lastSyncTime,
-      nextSyncTime: item.syncData?.nextSyncTime
-    };
-
-    if (result) {
-      response.stats = {
-        added: result.added.length,
-        modified: result.modified.length,
-        removed: result.removed.length
-      };
-    }
-
-    if (status === 'ERROR') {
-      response.error = item.syncData?.error;
-    }
-
-    return response;
+    return updatedItem;
   }
 
   /**
@@ -437,53 +393,6 @@ class PlaidTransactionService extends PlaidBaseService {
     return transactions
       .map(t => t.date)
       .sort((a, b) => new Date(b) - new Date(a))[0];
-  }
-
-  /**
-   * Formats errors into a standard CustomError format.
-   * @param {Object} error - Error object.
-   * @returns {Object} Formatted error.
-   */
-  _formatError(error) {
-    if (error instanceof CustomError) {
-      return error;
-    }
-    return new CustomError('SYNC_ERROR', error.message);
-  }
-
-  /**
-   * Synchronizes transactions for all user items.
-   * @param {Object} user - User data.
-   * @returns {Object} Sync results for all items.
-   */
-  async saveTransactionsForItems(user) {
-    this.validateUser(user);
-
-    try {
-      const items = await itemService.getUserItems(user._id);
-      if (!items?.length) {
-        throw new CustomError('NO_ITEMS', 'No items found for user');
-      }
-
-      const syncResults = [];
-      for (const item of items) {
-        try {
-          const result = await this.syncTransactionsForItem(item, user);
-          syncResults.push({ itemId: item._id, ...result });
-        } catch (error) {
-          console.error(`Error syncing transactions for item ${item._id}:`, error);
-          syncResults.push({
-            itemId: item._id,
-            error: error.error_code || 'SYNC_ERROR',
-            message: error.message
-          });
-        }
-      }
-
-      return { syncResults };
-    } catch (error) {
-      throw new CustomError('SYNC_ERROR', error.message);
-    }
   }
 
   /**
@@ -590,11 +499,42 @@ class PlaidTransactionService extends PlaidBaseService {
   // Helper method to update sync progress
   async _updateSyncProgress(itemId, userId, progressData) {
     try {
-      await itemService.updateItemSyncStatus(itemId, userId, progressData);
+      const updatedItem = await itemService.updateItemSyncStatus(itemId, userId, progressData);
+      return updatedItem;
     } catch (error) {
       console.error('Failed to update sync progress:', error);
       // Don't throw here - we don't want to interrupt the sync for a progress update failure
     }
+  }
+
+  /**
+   * Creates a sync response object.
+   * @param {string} status - Sync status.
+   * @param {Object} item - Item data.
+   * @param {Object} [result] - Sync result data (optional).
+   * @returns {Object} Sync response.
+   */
+  _createSyncResponse(status, item, result = null) {
+    const response = {
+      status,
+      itemId: item._id,
+      lastSyncTime: item.syncData?.lastSyncTime,
+      nextSyncTime: item.syncData?.nextSyncTime
+    };
+
+    if (result) {
+      response.stats = {
+        added: result.added?.length || 0,
+        modified: result.modified?.length || 0,
+        removed: result.removed?.length || 0
+      };
+    }
+
+    if (status === 'ERROR') {
+      response.error = item.syncData?.error;
+    }
+
+    return response;
   }
 }
 

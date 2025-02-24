@@ -16,7 +16,7 @@ export default {
 
   // Transactions
   getTransactions: transactionController.getTransactions,
-  saveTransactionsForItems: transactionController.saveTransactionsForItems,
+  syncTransactionsForEachItem: transactionController.syncTransactionsForEachItem,
 
   // Maintenance
   getDuplicates: maintenanceController.getDuplicates,

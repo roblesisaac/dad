@@ -107,4 +107,88 @@ export class CustomError extends Error {
       sync: details
     });
   }
+
+  /**
+   * Handles service errors consistently and updates sync status if needed
+   * @param {Object} item - Item data
+   * @param {Object} user - User data
+   * @param {Error} error - Original error
+   * @param {Object} context - Additional context about where the error occurred
+   * @param {Function} updateProgress - Function to update sync progress
+   * @throws {CustomError} Formatted error with sync status updated
+   */
+  static async handleServiceError(item, user, error, context = {}, updateProgress) {
+    const { cursor, syncSession } = context;
+    
+    // Format the error appropriately
+    const formattedError = CustomError.createFormattedError(error, context);
+
+    // Update sync status if we have sync context and an update function
+    if (item && user && cursor && updateProgress) {
+      await updateProgress(item.itemId, user._id, {
+        status: 'error',
+        cursor: cursor,
+        error: {
+          code: formattedError.code,
+          message: formattedError.message,
+          timestamp: formattedError.timestamp,
+          metadata: formattedError.metadata
+        },
+        stats: syncSession ? {
+          added: syncSession.added?.length || 0,
+          modified: syncSession.modified?.length || 0,
+          removed: syncSession.removed?.length || 0
+        } : undefined
+      });
+    }
+
+    throw formattedError;
+  }
+
+  /**
+   * Creates a properly formatted CustomError based on error type
+   * @param {Error} error - Original error
+   * @param {Object} context - Error context
+   * @returns {CustomError} Formatted error
+   */
+  static createFormattedError(error, context = {}) {
+    if (error instanceof CustomError) {
+      return error;
+    }
+
+    // Handle Plaid API errors
+    if (error.error_code || error.error_type) {
+      return CustomError.fromPlaidError(error);
+    }
+
+    // Handle database errors
+    if (error.name === 'MongoError' || error.name === 'MongoServerError') {
+      return CustomError.database(
+        context.operation || 'unknown',
+        error.message,
+        error
+      );
+    }
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      return CustomError.validation(error.message, error.errors);
+    }
+
+    // Handle sync-specific errors
+    if (context.syncSession || context.cursor) {
+      return CustomError.sync(error.message, {
+        cursor: context.cursor,
+        batchCount: context.batchCount,
+        ...context
+      });
+    }
+
+    // Default error handling
+    return new CustomError(
+      'INTERNAL_ERROR',
+      error.message || 'An unexpected error occurred',
+      context
+    );
+  }
 } 

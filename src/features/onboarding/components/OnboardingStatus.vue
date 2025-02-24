@@ -5,6 +5,10 @@
       <p>We're syncing your transactions. This may take a few minutes...</p>
       
       <div class="progress-container">
+        <div class="progress-bar">
+          <div class="progress-fill" :style="{ width: progressWidth }"></div>
+        </div>
+        
         <div class="progress-stats">
           <div class="stat-item">
             <span class="stat-label">Added</span>
@@ -24,9 +28,6 @@
           <div class="status-badge" :class="state.syncProgress.status">
             {{ formatStatus(state.syncProgress.status) }}
           </div>
-          <div v-if="showNextSync" class="next-sync">
-            Next sync: {{ formatNextSync }}
-          </div>
         </div>
 
         <div v-if="state.error" class="error-message">
@@ -40,41 +41,32 @@
 
     <div v-else-if="state.onboardingStep === 'complete'" class="sync-complete">
       <h3>Setup Complete!</h3>
-      <p>Successfully synced:</p>
+      <p>Successfully synced your accounts:</p>
       <div class="final-stats">
         <div class="stat-item">
           <span class="stat-label">Transactions Added</span>
           <span class="stat-value">{{ state.syncProgress.added }}</span>
         </div>
         <div class="stat-item">
-          <span class="stat-label">Accounts Connected</span>
-          <span class="stat-value">{{ state.syncedItems.length }}</span>
-        </div>
-        <div class="stat-item">
           <span class="stat-label">Last Synced</span>
           <span class="stat-value">{{ formatLastSync }}</span>
         </div>
       </div>
-      <button 
-        class="primary-button" 
-        @click="goToDashboard"
-        :disabled="redirecting"
-      >
-        {{ redirecting ? 'Redirecting...' : 'Go to Dashboard' }}
-      </button>
+      <p class="success-message">You'll be redirected to your dashboard shortly...</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { useRouter } from 'vue-router';
-import { formatDistanceToNow, parseISO } from 'date-fns';
-import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { computed } from 'vue';
+import { formatDistanceToNow } from 'date-fns';
 
-const router = useRouter();
-const { state } = useDashboardState();
-const redirecting = ref(false);
+const props = defineProps({
+  state: {
+    type: Object,
+    required: true
+  }
+});
 
 const emit = defineEmits(['retry']);
 
@@ -89,25 +81,24 @@ const formatStatus = (status) => {
   return statusMap[status] || status;
 };
 
-const showNextSync = computed(() => {
-  return state.syncProgress.nextSync && 
-         state.syncProgress.status !== 'completed';
-});
-
-const formatNextSync = computed(() => {
-  if (!state.syncProgress.nextSync) return '';
-  return formatDistanceToNow(parseISO(state.syncProgress.nextSync), { addSuffix: true });
+const progressWidth = computed(() => {
+  // Simple progress calculation based on status
+  const status = props.state.syncProgress.status;
+  if (status === 'completed') return '100%';
+  if (status === 'in_progress') return '75%';
+  if (status === 'syncing') return '50%';
+  if (status === 'queued') return '25%';
+  return '0%';
 });
 
 const formatLastSync = computed(() => {
-  if (!state.syncProgress.lastSync) return 'Just now';
-  return formatDistanceToNow(parseISO(state.syncProgress.lastSync), { addSuffix: true });
+  if (!props.state.syncProgress.lastSync) return 'Just now';
+  try {
+    return formatDistanceToNow(new Date(props.state.syncProgress.lastSync), { addSuffix: true });
+  } catch (e) {
+    return 'Just now';
+  }
 });
-
-const goToDashboard = async () => {
-  redirecting.value = true;
-  await router.push('/dashboard');
-};
 
 const retrySync = () => {
   emit('retry');
@@ -126,6 +117,20 @@ const retrySync = () => {
   border-radius: 12px;
   padding: 1.5rem;
   margin-top: 1.5rem;
+}
+
+.progress-bar {
+  height: 8px;
+  background-color: var(--surface);
+  border-radius: 4px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--primary);
+  transition: width 0.5s ease;
 }
 
 .progress-stats {
@@ -217,11 +222,11 @@ const retrySync = () => {
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.next-sync {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-top: 0.5rem;
+.success-message {
+  color: var(--success);
+  margin-top: 1rem;
   text-align: center;
+  font-weight: 500;
 }
 
 .retry-button {

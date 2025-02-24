@@ -58,7 +58,6 @@ export function useDashboardState() {
   const router = useRouter();
   const { fetchTransactions, fetchUserTabs, fetchUserRules } = useTransactions(api);
   const { processTabData } = useTabProcessing();
-  const { checkSyncStatus } = useSyncStatus(api, state);
   const { 
     sortBy, 
     extractDateRange, 
@@ -70,7 +69,6 @@ export function useDashboardState() {
 
   // Shared methods
   const actions = {
-    checkSyncStatus,
     createNewTab: async () => {
       if(location.pathname !== '/dashboard') return;
 

@@ -1,4 +1,4 @@
-import { itemService,linkService } from '../../services/plaid';
+import { itemService, linkService } from '../../services/plaid';
 import tasks from '../../tasks/plaidTask.js';
 
 export default {
