@@ -22,7 +22,7 @@ export default {
   getDuplicates: maintenanceController.getDuplicates,
   removeFromDb: maintenanceController.removeDuplicates,
 
-  // Onboarding
+  // Onboarding (batch-based approach)
   startOnboardingSync: onboardingController.startSync,
   getOnboardingStatus: onboardingController.getSyncStatus,
 }; 

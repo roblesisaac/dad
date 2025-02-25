@@ -39,12 +39,14 @@ class PlaidAccountService extends PlaidBaseService {
       const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
 
       // Sync the accounts and groups
-      return await this.saveAccountsAndGroups(
+      const saved = await this.saveAccountsAndGroups(
         fetchedAccounts,
         existingUserAccounts,
         existingGroups,
         user
       );
+
+      return saved;
     } catch (error) {
       // Ensure error is properly formatted
       const formattedError = new Error(
@@ -63,8 +65,8 @@ class PlaidAccountService extends PlaidBaseService {
       // Update the account if it already exists
       if (isSaved) {
         const updatedAccount = await this.updateAccount(
-          retrievedAccount,
-          user._id
+          user._id,
+          retrievedAccount
         );
 
         synced.accounts.push(updatedAccount);

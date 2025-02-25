@@ -15,7 +15,7 @@
       </div>
     </div>
     
-    <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
+    <div v-if="isSelected" class="cell-1">
       <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
     
@@ -64,15 +64,17 @@ async function selectCategory() {
 }
 
 function makeSelectedCategorySticky() {
-  const selector = state.isSmallScreen() ? id+'title' : id;
+  const selector = id+'title';
   
   if(isSelected.value) {
     stickify.register(selector);
   } else {
     stickify.deregister(selector);  
   }
+
+  const isSmallScreen = true;
   
-  if(state.isSmallScreen()) {
+  if(isSmallScreen) {
     return;
   }
   

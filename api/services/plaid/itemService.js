@@ -43,45 +43,75 @@ class ItemService extends PlaidBaseService {
     }
   }
 
-  async updateItemSyncStatus(itemId, userId, syncData) {
+  /**
+   * Updates an item's sync status
+   * @param {string} itemId - Item ID
+   * @param {string} userId - User ID
+   * @param {Object} syncData - Sync status data to update
+   * @returns {Promise<Object>} Updated item
+   */
+  async updateItemSyncStatus(itemId, userId, syncDataUpdate) {
     try {
-      // Ensure we preserve history and stats
-      const item = await this.getUserItems(userId, itemId);
-
-      const currentHistory = item.syncData?.history || [];
-      const currentStats = item.syncData?.stats || {
-        added: 0,
-        modified: 0,
-        removed: 0
-      };
-
-      const updatedSyncData = {
-        ...syncData,
-        history: [...currentHistory],
-        stats: {
-          ...currentStats,
-          ...(syncData.stats || {})
-        }
-      };
-
-      // Add to history if status changed
-      if (syncData.status && syncData.status !== item.syncData?.status) {
-        updatedSyncData.history.push({
-          status: syncData.status,
-          cursor: syncData.cursor || item.syncData?.cursor,
-          timestamp: Date.now(),
-          error: syncData.error,
-          stats: syncData.stats
-        });
+      if (!itemId || !userId) {
+        throw new Error('INVALID_PARAMS: Missing itemId or userId');
       }
 
-      const updated = await plaidItems.update(
+      // Get the current item first
+      const currentItem = await this.getUserItems(userId, itemId);
+      
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item to update');
+      }
+      
+      // Create a proper merger of existing and new sync data
+      // Handle the case where currentItem.syncData might be null/undefined
+      const existingSyncData = currentItem.syncData || {
+        status: 'none',
+        lastSyncTime: null,
+        cursor: null,
+        error: null,
+        batchNumber: 0,
+        stats: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        }
+      };
+      
+      // Merge stats if they exist in both objects
+      let mergedStats;
+      if (syncDataUpdate.stats && existingSyncData.stats) {
+        mergedStats = {
+          ...existingSyncData.stats,
+          ...syncDataUpdate.stats
+        };
+      } else if (syncDataUpdate.stats) {
+        mergedStats = syncDataUpdate.stats;
+      } else {
+        mergedStats = existingSyncData.stats;
+      }
+      
+      // Create the final sync data object for update
+      const updatedSyncData = {
+        ...existingSyncData,
+        ...syncDataUpdate,
+        stats: mergedStats
+      };
+      
+      // Update the item
+      const updatedItem = await plaidItems.update(
         { itemId, userId },
         { syncData: updatedSyncData }
       );
-
-      return { itemId, ...updated.syncData };
+      
+      if (updatedItem.modifiedCount === 0) {
+        throw new Error('ITEM_UPDATE_ERROR: Failed to update item sync status');
+      }
+      
+      // Return the updated item
+      return this.getUserItems(userId, itemId);
     } catch (error) {
+      console.error('Error updating item sync status:', error);
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
     }
   }
@@ -106,7 +136,7 @@ class ItemService extends PlaidBaseService {
       let savedItem;
       if (existingItem) {
         savedItem = await plaidItems.update(
-          { itemId: item_id },
+          { itemId: item_id, userId: user._id },
           itemData
         );
       } else {

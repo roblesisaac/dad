@@ -32,16 +32,16 @@ export function usePlaidIntegration() {
       status: null,
       lastSync: null,
       nextSync: null,
-      cursor: null
+      cursor: null,
+      batchNumber: 0
     },
     blueBar: {
       message: null,
       loading: false
-    },
-    syncCheckId: false
+    }
   });
 
-  const { checkSyncStatus, startSyncPolling } = useSyncStatus(api, state);
+  const { checkSyncStatus, processAllBatches } = useSyncStatus(api, state);
 
   // Initialize Plaid on component mount
   onMounted(async () => {
@@ -83,7 +83,6 @@ export function usePlaidIntegration() {
       onSuccess: async function(publicToken) {
         try {
           state.isRepairing = true;
-          
           await handlePlaidSuccess(publicToken);
         } catch (error) {
           console.error('Error completing connection:', error);
@@ -102,8 +101,6 @@ export function usePlaidIntegration() {
         }
       },
       onEvent: function(eventName, metadata) {
-        // Log events for debugging
-        // console.log('Link event:', eventName, metadata);
       },
     });
   }
@@ -127,7 +124,6 @@ export function usePlaidIntegration() {
       state.syncedItems = items;
       state.hasItems = items?.length > 0;
     } catch (err) {
-      console.error('Error fetching items:', err);
       state.hasItems = false;
     }
   }
@@ -143,7 +139,6 @@ export function usePlaidIntegration() {
     } catch (error) {
       state.error = 'Failed to start reconnection process. Please try again.';
       state.isRepairing = false;
-      console.error('Repair initiation error:', error);
     }
   }
 
@@ -163,7 +158,6 @@ export function usePlaidIntegration() {
       const link = createPlaidLink(link_token);
       link.open();
     } catch (error) {
-      console.error('Connection initiation error:', error);
       handleConnectionError(error);
     } finally {
       state.loading = false;
@@ -188,28 +182,29 @@ export function usePlaidIntegration() {
       // Fix: response.data contains the itemId
       const { itemId } = response.data || response;
 
-      // Start initial sync
-      await api.post(`plaid/onboarding/sync/${itemId}`);
-
-      // Start polling for sync status
-      const syncResult = await startSyncPolling(itemId);
+      // Start batch-by-batch sync process
+      const syncResult = await processAllBatches(itemId);
 
       if (syncResult && syncResult.completed) {
         // Update state after successful sync
         state.onboardingStep = 'complete';
         state.hasItems = true;
+        console.log('Sync completed successfully:', syncResult);
 
         // Wait briefly to show completion state before redirecting
-        setTimeout(() => {
-          router.push('/dashboard');
-        }, 2000);
+        // setTimeout(() => {
+        //   router.push('/dashboard');
+        // }, 2000);
       } else {
-        // If sync is still in progress, let the polling continue
-        // The UI will update based on the state changes
-        console.log('Sync in progress, continuing to poll');
+        // If sync encountered an error or timed out
+        if (syncResult.error) {
+          state.error = `Sync error: ${syncResult.error}`;
+          console.error('Sync failed:', syncResult.error);
+        } else {
+          console.log('Sync in progress or incomplete:', syncResult);
+        }
       }
     } catch (error) {
-      console.error('Error completing connection:', error);
       state.error = getErrorMessage(error);
       state.onboardingStep = 'connect';
     } finally {

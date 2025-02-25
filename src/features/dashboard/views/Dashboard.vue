@@ -56,6 +56,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
 import { useDashboardState } from '../composables/useDashboardState';
+import { useSyncStatus } from '../composables/useSyncStatus';
+import { useApi } from '@/shared/composables/useApi';
 
 // Core Components
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -66,14 +68,19 @@ import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
 
 const router = useRouter();
 const route = useRoute();
+const api = useApi();
 const { stickify } = useAppStore();
 const { state, actions } = useDashboardState();
+const { startBackgroundSync, checkSyncStatus } = useSyncStatus(api, state);
 
 const isHome = computed(() => route.name === 'dashboard');
 
-onMounted(() => {
+onMounted(async () => {
   stickify.register('.totalsRow');
-  actions.init();
+  await actions.init();
+  
+  // Start background sync of transactions when dashboard loads
+  startBackgroundSync();
 });
 
 // Watch route changes
@@ -85,6 +92,9 @@ watch(
         return actions.handleGroupChange();
       }
       setTimeout(actions.processAllTabsForSelectedGroup, 500);
+      
+      // Check sync status when returning to dashboard
+      checkSyncStatus();
     }
   }
 );

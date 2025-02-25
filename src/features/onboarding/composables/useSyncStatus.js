@@ -2,9 +2,9 @@ import { ref, onUnmounted } from 'vue';
 
 export function useSyncStatus(api, state) {
   const syncInterval = ref(null);
-  const SYNC_CHECK_INTERVAL = 2000; // 2 seconds
   const MAX_POLL_TIME = 300000; // 5 minutes
   const startTime = ref(null);
+  const isSyncingBatch = ref(false);
 
   /**
    * Checks sync status for all items or a specific item
@@ -24,14 +24,14 @@ export function useSyncStatus(api, state) {
           status: status.status || 'queued',
           lastSync: status.progress.lastSync,
           nextSync: status.progress.nextSync,
-          cursor: status.progress.cursor
+          cursor: status.progress.cursor,
+          batchNumber: status.progress.batchNumber || 0
         };
       }
 
       updateUIWithSyncStatus(status);
       return status;
     } catch (error) {
-      console.error('Error checking sync status:', error);
       updateStatusBar('Error checking sync status', false);
       return { completed: false, error: error.message };
     }
@@ -53,86 +53,160 @@ export function useSyncStatus(api, state) {
     }
 
     const progress = status.progress || {};
+    const batchInfo = progress.batchNumber ? ` (Batch ${progress.batchNumber})` : '';
     updateStatusBar(
-      `Syncing transactions... (${progress.added || 0} processed)`,
+      `Syncing transactions${batchInfo}... (${progress.added || 0} processed)`,
       true
     );
   }
 
   /**
-   * Starts polling for sync status
-   * @param {string} itemId - Specific item to poll
+   * Process a single batch of transactions
+   * @param {string} itemId - Item ID to process
+   * @returns {Promise<Object>} Batch processing result
    */
-  async function startSyncPolling(itemId) {
-    if (!itemId) {
-      console.error('No itemId provided for sync polling');
-      return { completed: false, error: 'MISSING_ITEM_ID' };
+  async function processBatch(itemId) {
+    try {
+      if (!itemId) {
+        throw new Error('No itemId provided for batch processing');
+      }
+      
+      isSyncingBatch.value = true;
+      const result = await api.post(`plaid/onboarding/sync/${itemId}`);
+      
+      // Update progress in state
+      if (result) {
+        // Make sure we have reasonable values for stats even if API returns unexpected format
+        const totalAdded = result.stats?.totalAdded || 0;
+        const totalModified = result.stats?.totalModified || 0;
+        const totalRemoved = result.stats?.totalRemoved || 0;
+        const batchNumber = result.stats?.batchNumber || 0;
+        
+        state.syncProgress = {
+          ...state.syncProgress,
+          added: totalAdded,
+          modified: totalModified,
+          removed: totalRemoved,
+          status: result.status || 'in_progress',
+          batchNumber: batchNumber
+        };
+        
+        // Update UI
+        const batchInfo = batchNumber ? ` (Batch ${batchNumber})` : '';
+        updateStatusBar(
+          `Syncing transactions${batchInfo}... (${totalAdded} processed)`,
+          result.hasMore
+        );
+      }
+      
+      return result;
+    } catch (error) {
+      updateStatusBar(`Error processing batch: ${error.message || 'Unknown error'}`, false);
+      throw error;
+    } finally {
+      isSyncingBatch.value = false;
     }
-
-    clearSyncCheck();
-    startTime.value = Date.now();
+  }
+  
+  /**
+   * Process all batches until complete
+   * @param {string} itemId - Item ID to process
+   * @returns {Promise<Object>} Final sync result
+   */
+  async function processAllBatches(itemId) {
+    let hasMore = true;
+    let batchCount = 0;
+    const MAX_BATCHES = 1000; // Safety limit
+    let retryCount = 0;
+    const MAX_RETRIES = 3;
     
-    // Set initial state
-    state.onboardingStep = 'syncing';
-    state.syncProgress = {
-      added: 0,
-      modified: 0,
-      removed: 0,
-      status: 'queued'
-    };
-
-    const pollStatus = async () => {
-      try {
+    try {
+      clearSyncCheck();
+      startTime.value = Date.now();
+      
+      // Set initial state
+      state.onboardingStep = 'syncing';
+      state.syncProgress = {
+        added: 0,
+        modified: 0,
+        removed: 0,
+        status: 'in_progress',
+        batchNumber: 0
+      };
+      
+      updateStatusBar('Starting transaction sync...', true);
+      
+      while (hasMore && batchCount < MAX_BATCHES) {
+        // Check for timeout
         if (Date.now() - startTime.value > MAX_POLL_TIME) {
-          clearSyncCheck();
           updateStatusBar('Sync timed out. Please try again.', false);
           return { completed: false, error: 'SYNC_TIMEOUT' };
         }
-
-        const status = await api.get(`plaid/onboarding/status/${itemId}`);
-        console.log('Sync status:', status); // Debug log
-
-        // Update progress in state
-        if (status.progress) {
+        
+        try {
+          batchCount++;
+          const batchResult = await processBatch(itemId);
+          hasMore = batchResult.hasMore;
+          retryCount = 0; // Reset retry count on success
+          
+          // Update state based on batch result
+          const totalAdded = batchResult.stats?.totalAdded || 0;
+          const totalModified = batchResult.stats?.totalModified || 0;
+          const totalRemoved = batchResult.stats?.totalRemoved || 0;
+          const batchNumber = batchResult.stats?.batchNumber || 0;
+          
           state.syncProgress = {
-            added: status.progress.added || 0,
-            modified: status.progress.modified || 0,
-            removed: status.progress.removed || 0,
-            status: status.status || 'queued',
-            lastSync: status.progress.lastSync,
-            nextSync: status.progress.nextSync,
-            cursor: status.progress.cursor
+            ...state.syncProgress,
+            added: totalAdded,
+            modified: totalModified,
+            removed: totalRemoved,
+            status: batchResult.status || 'in_progress',
+            batchNumber: batchNumber
           };
+          
+          // If there are more batches, add a small delay
+          if (hasMore) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            // Sync completed
+            state.onboardingStep = 'complete';
+            updateStatusBar('Transactions synced successfully!', false);
+            return { 
+              completed: true, 
+              stats: {
+                added: totalAdded,
+                modified: totalModified,
+                removed: totalRemoved
+              }
+            };
+          }
+        } catch (error) {
+          console.error(`Error in batch ${batchCount}:`, error);
+          lastError = error;
+          retryCount++;
+          
+          if (retryCount > MAX_RETRIES) {
+            updateStatusBar(`Sync failed after ${MAX_RETRIES} retries: ${error.message || 'Unknown error'}`, false);
+            throw error;
+          }
+          
+          // Wait before retrying
+          updateStatusBar(`Retrying batch... (attempt ${retryCount}/${MAX_RETRIES})`, true);
+          await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
         }
-
-        updateUIWithSyncStatus(status);
-
-        if (status.error) {
-          clearSyncCheck();
-          return status;
-        }
-
-        if (status.completed) {
-          clearSyncCheck();
-          state.onboardingStep = 'complete';
-          return status;
-        }
-
-        // Continue polling
-        return new Promise(resolve => {
-          syncInterval.value = setTimeout(async () => {
-            const result = await pollStatus();
-            resolve(result);
-          }, SYNC_CHECK_INTERVAL);
-        });
-      } catch (error) {
-        console.error('Error in poll status:', error);
-        clearSyncCheck();
-        return { completed: false, error: error.message };
       }
-    };
-
-    return pollStatus();
+      
+      // If we reach the batch limit but aren't done
+      if (hasMore) {
+        updateStatusBar('Sync is taking longer than expected. Please check back later.', false);
+        return { completed: false, hasMore: true, batchCount };
+      }
+      
+      return { completed: true };
+    } catch (error) {
+      updateStatusBar(`Sync error: ${error.message || 'Unknown error'}`, false);
+      return { completed: false, error: error.message || 'Unknown error' };
+    }
   }
 
   function updateStatusBar(message, loading = false) {
@@ -153,7 +227,8 @@ export function useSyncStatus(api, state) {
 
   return {
     checkSyncStatus,
-    startSyncPolling,
-    clearSyncCheck
+    clearSyncCheck,
+    processBatch,
+    processAllBatches
   };
 } 

@@ -37,7 +37,7 @@ const props = defineProps({
 
 const router = useRouter();
 
-const isSmallScreen = computed(() => props.state.isSmallScreen());
+const isSmallScreen = true
 
 function validIdString(inputString) {
   return inputString.replace(/[:\-]/g, '_');
