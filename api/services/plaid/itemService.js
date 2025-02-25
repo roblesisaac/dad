@@ -1,6 +1,5 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
-import { plaidClientInstance } from './plaidClientConfig.js';
 import { decrypt, decryptWithKey } from '../../utils/encryption.js';
 
 class ItemService extends PlaidBaseService {
@@ -155,4 +154,4 @@ class ItemService extends PlaidBaseService {
   }
 }
 
-export default new ItemService(plaidClientInstance); 
+export default new ItemService(); 

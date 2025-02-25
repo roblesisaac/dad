@@ -68,7 +68,7 @@ export function useSyncStatus(api, state) {
    */
   const processBatchForAllItems = async () => {
     try {
-      const response = await api.get('plaid/sync/all/transactions');
+      const response = await api.get('plaid/sync/latest/transactions');
       return response;
     } catch (error) {
       console.error('Error processing batch for all items:', error);

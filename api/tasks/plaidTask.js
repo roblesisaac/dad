@@ -20,7 +20,7 @@ const tasks = (function() {
       }
       
       // Process a single batch
-      const batchResult = await transactionService.processSingleBatch(item, user);
+      const batchResult = await transactionService.syncNextBatch(item, user);
       
       // If there are more batches to process, schedule the next one
       if (batchResult.hasMore) {

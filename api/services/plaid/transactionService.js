@@ -1,7 +1,6 @@
 import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
 import { itemService, plaidService } from './index.js';
-import { plaidClientInstance } from './plaidClientConfig.js';
 import { CustomError } from './customError.js';
 
 class PlaidTransactionService extends PlaidBaseService {
@@ -166,7 +165,7 @@ class PlaidTransactionService extends PlaidBaseService {
       };
       
       // Call Plaid API directly
-      const response = await plaidClientInstance.transactionsSync(request);
+      const response = await this.client.transactionsSync(request);
       return response.data;
     } catch (error) {
       throw CustomError.createFormattedError(error, { operation: 'fetch_transactions' });
@@ -641,4 +640,4 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 }
 
-export default new PlaidTransactionService(plaidClientInstance);
+export default new PlaidTransactionService();

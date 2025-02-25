@@ -1,6 +1,5 @@
 import PlaidBaseService from './baseService.js';
 import { itemService } from './index.js';
-import { plaidClientInstance } from './plaidClientConfig.js';
 import crypto from 'crypto';
 
 class PlaidLinkService extends PlaidBaseService {
@@ -66,4 +65,4 @@ class PlaidLinkService extends PlaidBaseService {
   }
 }
 
-export default new PlaidLinkService(plaidClientInstance);
+export default new PlaidLinkService();

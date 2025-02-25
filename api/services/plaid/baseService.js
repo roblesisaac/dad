@@ -1,6 +1,8 @@
+import { plaidClientInstance } from './plaidClientConfig.js';
+
 export default class PlaidBaseService {
-  constructor(plaidClient) {
-    this.client = plaidClient;
+  constructor() {
+    this.client = plaidClientInstance;
   }
 
   handlePlaidError(error) {

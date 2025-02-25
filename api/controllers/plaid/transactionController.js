@@ -43,23 +43,10 @@ export default {
    * Sync transactions for all user items using batch approach
    * This initiates background syncing and returns status immediately
    */
-  async syncTransactionsForEachItem(req, res) {
+  async syncLatestTransactions(req, res) {
     try {
-      const user = req.user;
-      const itemIds = req.body?.itemIds || [];
-      
-      // If no specific itemIds provided, get all user items
-      let items = [];
-      if (itemIds.length > 0) {
-        // Get the specified items
-        for (const itemId of itemIds) {
-          const item = await itemService.getUserItems(user._id, itemId);
-          if (item) items.push(item);
-        }
-      } else {
-        // Get all user items
-        items = await itemService.getUserItems(user._id);
-      }
+      const user = req.user;      
+      const items = await itemService.getUserItems(user._id);
       
       if (!items || !items.length) {
         return res.status(404).json({
@@ -94,7 +81,7 @@ export default {
           }
           
           // Process just the first batch and wait for it
-          const batchResult = await transactionService.processSingleBatch(item, user);
+          const batchResult = await transactionService.syncNextBatch(item, user);
           
           // Get updated item with latest stats
           const updatedItem = await itemService.getUserItems(user._id, item.itemId);

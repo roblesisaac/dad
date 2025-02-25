@@ -152,27 +152,6 @@ export function dateFromId(id) {
   return timestamp;
 }
 
-export function scrub(response, propsToRemove) {
-  if(!response) return null;
-  propsToRemove = Array.isArray(propsToRemove) ? propsToRemove : [propsToRemove];
-
-  if(Array.isArray(response)) {
-    return response.map(item => {
-      for(const removeProp of propsToRemove) {
-        delete item[removeProp];
-      }
-
-      return item;
-    });
-  }
-
-  for(const removeProp of propsToRemove) {
-    delete response[removeProp];
-  }
-
-  return response;
-}
-
 export function sum(num1, num2) {
   const parsedNum1 = parseFloat(num1.replace(/[^0-9.]/g, ''));
   const parsedNum2 = parseFloat(num2.replace(/[^0-9.]/g, ''));

@@ -2,7 +2,6 @@ import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
 import { itemService, plaidService } from './index.js';
-import { plaidClientInstance } from './plaidClientConfig.js';
 
 class PlaidAccountService extends PlaidBaseService {
   async syncAccountsAndGroups(user) {
@@ -60,10 +59,10 @@ class PlaidAccountService extends PlaidBaseService {
     const synced = { accounts: [], groups: [] };
 
     for (const retrievedAccount of fetchedAccounts) {
-      const isSaved = this.isAccountSaved(existingAccounts, retrievedAccount);
+      const isExisting = this.isExistingAccount(existingAccounts, retrievedAccount);
 
       // Update the account if it already exists
-      if (isSaved) {
+      if (isExisting) {
         const updatedAccount = await this.updateAccount(
           user._id,
           retrievedAccount
@@ -79,7 +78,7 @@ class PlaidAccountService extends PlaidBaseService {
       synced.accounts.push(savedAc);
 
       // Save the group for the account
-      const groupData = await this.saveGroup(user, savedAc);
+      const groupData = await this.saveNewGroup(user, savedAc);
       synced.groups.push(groupData);
     }
 
@@ -106,7 +105,7 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  async saveGroup(user, retrievedAccount) {
+  async saveNewGroup(user, retrievedAccount) {
     try {
       const { _id, account_id, mask, name, balances } = retrievedAccount;
 
@@ -156,9 +155,9 @@ class PlaidAccountService extends PlaidBaseService {
     return updatedGroups;
   }
 
-  isAccountSaved(existingUserAccounts, retrievedAccount) {
+  isExistingAccount(existingUserAccounts, retrievedAccount) {
     return existingUserAccounts.find(itm => itm.account_id === retrievedAccount.account_id);
   }
 }
 
-export default new PlaidAccountService(plaidClientInstance); 
+export default new PlaidAccountService(); 

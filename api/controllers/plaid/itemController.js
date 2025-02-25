@@ -1,5 +1,5 @@
 import { plaidService, itemService, accountService } from '../../services/plaid';
-import { scrub } from '../../../src/utils';
+import scrub from '../../utils/scrub';
 
 export default {
   async getUserItems(req, res) {
@@ -18,7 +18,14 @@ export default {
 
   async syncItems(req, res) {
     try {
-      const syncedItems = await plaidService.syncItems(req.user);
+      const userItems = await itemService.getUserItems(req.user._id);
+      const syncedItems = [];
+
+      for (const item of userItems) {
+        const plaidItem = await plaidService.syncItemFromPlaid(item, req.user);
+        syncedItems.push(plaidItem);
+      }
+
       res.json(scrub(syncedItems, 'accessToken'));
     } catch (error) {
       const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
@@ -50,4 +57,5 @@ export default {
       });
     }
   }
-}; 
+};
+
