@@ -54,7 +54,7 @@ class PlaidService extends PlaidBaseService {
    * @param {string} startDate - Optional start date
    * @returns {Promise<Object>} Transactions data
    */
-  async fetchTransactionsFromPlaid(access_token, cursor = null, startDate = null) {
+  async syncLatestTransactionsFromPlaid(access_token, cursor = null, startDate = null) {
     try {
       const request = {
         access_token,

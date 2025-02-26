@@ -67,7 +67,7 @@ const {
   state, 
   initializePlaid, 
   connectBank, 
-  checkSyncStatus 
+  resyncTransactions
 } = usePlaidIntegration();
 
 onMounted(async () => {
@@ -85,7 +85,7 @@ onMounted(async () => {
 
 const handleRetry = async () => {
   state.error = null;
-  await checkSyncStatus();
+  await resyncTransactions();
 };
 </script>
 

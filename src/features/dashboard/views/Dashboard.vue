@@ -56,7 +56,7 @@ import { useRouter, useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
 import { useDashboardState } from '../composables/useDashboardState';
-import { useSyncStatus } from '../composables/useSyncStatus';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import { useApi } from '@/shared/composables/useApi';
 
 // Core Components
@@ -71,7 +71,7 @@ const route = useRoute();
 const api = useApi();
 const { stickify } = useAppStore();
 const { state, actions } = useDashboardState();
-const { startBackgroundSync, checkSyncStatus } = useSyncStatus(api, state);
+const { syncLatestTransactionsForBanks } = usePlaidSync(api, state);
 
 const isHome = computed(() => route.name === 'dashboard');
 
@@ -79,8 +79,8 @@ onMounted(async () => {
   stickify.register('.totalsRow');
   await actions.init();
   
-  // Start background sync of transactions when dashboard loads
-  startBackgroundSync();
+  // Start syncing transactions for all connected banks
+  syncLatestTransactionsForBanks();
 });
 
 // Watch route changes
@@ -93,8 +93,7 @@ watch(
       }
       setTimeout(actions.processAllTabsForSelectedGroup, 500);
       
-      // Check sync status when returning to dashboard
-      checkSyncStatus();
+      // No longer need to check sync status, the sync progress is tracked by syncLatestTransactionsForBanks
     }
   }
 );

@@ -3,7 +3,6 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi';
 import { useTransactions } from './useTransactions';
 import { useTabProcessing } from './useTabProcessing';
-import { useSyncStatus } from '@/features/onboarding/composables/useSyncStatus';
 import { useUtils } from './useUtils';
 import loadScript from '@/shared/utils/loadScript';
 

@@ -1,7 +1,6 @@
 import { reactive, onMounted } from 'vue';
 import { useApi } from '@/shared/composables/useApi';
-import { useRouter } from 'vue-router';
-import { useSyncStatus } from './useSyncStatus';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import loadScript from '@/shared/utils/loadScript';
 
 // Load Plaid script
@@ -15,7 +14,6 @@ const loadPlaidScript = async () => {
 
 export function usePlaidIntegration() {
   const api = useApi();
-  const router = useRouter();
   
   const state = reactive({
     syncedItems: [],
@@ -41,7 +39,8 @@ export function usePlaidIntegration() {
     }
   });
 
-  const { checkSyncStatus, processAllBatches } = useSyncStatus(api, state);
+  // Use our unified composable directly
+  const { syncLatestTransactionsForBank, syncLatestTransactionsForBanks } = usePlaidSync(api, state);
 
   // Initialize Plaid on component mount
   onMounted(async () => {
@@ -52,6 +51,31 @@ export function usePlaidIntegration() {
       state.error = 'Failed to initialize banking connection. Please try again.';
     }
   });
+
+  // Replacement for checkSyncStatus that uses our direct sync methods
+  async function resyncTransactions(itemId = null) {
+    try {
+      state.error = null;
+      state.blueBar.message = itemId 
+        ? 'Resyncing transaction data for account...'
+        : 'Resyncing transaction data for all accounts...';
+      state.blueBar.loading = true;
+      
+      // If an itemId is provided, sync that specific bank
+      // Otherwise, sync all banks
+      const result = itemId 
+        ? await syncLatestTransactionsForBank(itemId)
+        : await syncLatestTransactionsForBanks();
+      
+      return result;
+    } catch (error) {
+      console.error('Error resyncing transactions:', error);
+      state.error = 'Failed to sync transactions. Please try again.';
+      state.blueBar.loading = false;
+      state.blueBar.message = 'Sync failed. Please try again.';
+      return { completed: false, error: error.message };
+    }
+  }
 
   function handleConnectionError(error) {
     state.error = error.message || 'Failed to establish connection. Please try again.';
@@ -182,8 +206,8 @@ export function usePlaidIntegration() {
       // Fix: response.data contains the itemId
       const { itemId } = response.data || response;
 
-      // Start batch-by-batch sync process
-      const syncResult = await processAllBatches(itemId);
+      // Sync transactions for the newly connected bank
+      const syncResult = await syncLatestTransactionsForBank(itemId);
 
       if (syncResult && syncResult.completed) {
         // Update state after successful sync
@@ -191,19 +215,18 @@ export function usePlaidIntegration() {
         state.hasItems = true;
         console.log('Sync completed successfully:', syncResult);
 
-        // Wait briefly to show completion state before redirecting
-        // setTimeout(() => {
-        //   router.push('/dashboard');
-        // }, 2000);
-      } else {
-        // If sync encountered an error or timed out
-        if (syncResult.error) {
-          state.error = `Sync error: ${syncResult.error}`;
-          console.error('Sync failed:', syncResult.error);
-        } else {
-          console.log('Sync in progress or incomplete:', syncResult);
-        }
+        // Render the 'Go to Dashboard' button
+        return;
       }
+
+      // If sync encountered an error
+      if (syncResult.error) {
+        state.error = `Sync error: ${syncResult.error}`;
+        console.error('Sync failed:', syncResult.error);
+        return;
+      }
+
+      console.log('Sync result:', syncResult);
     } catch (error) {
       state.error = getErrorMessage(error);
       state.onboardingStep = 'connect';
@@ -219,6 +242,6 @@ export function usePlaidIntegration() {
     repairItem,
     connectBank,
     syncItems,
-    checkSyncStatus
+    resyncTransactions
   };
 } 

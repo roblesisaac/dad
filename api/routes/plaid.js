@@ -16,13 +16,9 @@ export default function(api, baseUrl) {
 
   // Transactions
   member.get('/plaid/transactions/:_id?', plaidController.getTransactions);
-  member.get('/plaid/sync/latest/transactions', plaidController.syncLatestTransactions);
+  member.get('/plaid/sync/latest/transactions/:itemId', plaidController.syncLatestTransactionsForItem);
   
   // Maintenance
   member.get('/plaid/get/duplicates', plaidController.getDuplicates);
   member.post('/plaid/remove/duplicates', plaidController.removeFromDb);
-
-  // Onboarding
-  member.post('/plaid/onboarding/sync/:itemId', plaidController.startOnboardingSync);
-  member.get('/plaid/onboarding/status/:itemId', plaidController.getOnboardingStatus);
 }

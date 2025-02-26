@@ -21,43 +21,35 @@ class PlaidTransactionService extends PlaidBaseService {
       // Get or validate item
       const validatedItem = await this._validateAndGetItem(item, user);
       
+      if (!validatedItem) {
+        throw new CustomError('INVALID_ITEM', 'Invalid item data');
+      }
+
+      const { syncData } = validatedItem;
+      const { status } = syncData || {};
+      
       // Initialize sync state if needed
-      if (!validatedItem.syncData?.status || 
-          validatedItem.syncData?.status === 'completed' || 
-          validatedItem.syncData?.status === 'error') {
-        await this._initializeBatchSync(validatedItem, user);
+      if (!status || status === 'completed' || status === 'error') {
+        const syncSession = await this._initializeBatchSync(validatedItem, user);
+        const result = await this._processBatchInternal(syncSession, user);
         
-        // Get the updated item with initialized sync data
-        const updatedItem = await this._validateAndGetItem(validatedItem._id, user);
-        const result = await this._processBatchInternal(updatedItem, user);
-        
-        // If there are more batches to process, start the continuation process
-        // without waiting for it to complete
-        if (result.hasMore) {
-          // Use setTimeout to ensure this runs after the current execution context
-          setTimeout(() => {
-            this.continueBatchSync(updatedItem._id, user)
-              .catch(err => console.error(`Error in batch continuation for item ${updatedItem._id}:`, err));
-          }, 500);
-        }
-        
-        return result;
+        return {
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+          batchResults: result.batchResults,
+          stats: result.stats || syncSession.syncData?.stats
+        };
       }
       
       // Process the next batch
       const result = await this._processBatchInternal(validatedItem, user);
       
-      // If there are more batches to process, start the continuation process
-      // without waiting for it to complete
-      if (result.hasMore) {
-        // Use setTimeout to ensure this runs after the current execution context
-        setTimeout(() => {
-          this.continueBatchSync(validatedItem._id, user)
-            .catch(err => console.error(`Error in batch continuation for item ${validatedItem._id}:`, err));
-        }, 500);
-      }
-      
-      return result;
+      return {
+        hasMore: result.hasMore,
+        nextCursor: result.nextCursor,
+        batchResults: result.batchResults,
+        stats: result.stats || syncData?.stats
+      };
     } catch (error) {
       throw CustomError.createFormattedError(error, { operation: 'batch_sync' });
     }
@@ -108,30 +100,33 @@ class PlaidTransactionService extends PlaidBaseService {
       const batchNumber = (item.syncData?.batchNumber || 0) + 1;
 
       // Fetch a single batch from Plaid
-      const batch = await this._fetchTransactionBatch(accessToken, cursor);
+      const batch = await plaidService.syncLatestTransactionsFromPlaid(accessToken, cursor);
       
       // Process the batch
       const batchResults = await this._processBatchData(batch, item, user);
       
       // Update item sync status
       const currentStats = item.syncData?.stats || { added: 0, modified: 0, removed: 0 };
+      const updatedStats = {
+        added: (currentStats.added || 0) + batchResults.added,
+        modified: (currentStats.modified || 0) + batchResults.modified,
+        removed: (currentStats.removed || 0) + batchResults.removed,
+        lastBatchTime: Date.now(),
+        lastTransactionDate: this._getLatestTransactionDate(batch.added || [])
+      };
+      
       await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
         status: batch.has_more ? 'in_progress' : 'completed',
         cursor: batch.next_cursor,
         batchNumber,
-        stats: {
-          added: (currentStats.added || 0) + batchResults.added,
-          modified: (currentStats.modified || 0) + batchResults.modified,
-          removed: (currentStats.removed || 0) + batchResults.removed,
-          lastBatchTime: Date.now(),
-          lastTransactionDate: this._getLatestTransactionDate(batch.added || [])
-        }
+        stats: updatedStats
       });
-      
+
       return {
         hasMore: batch.has_more,
         nextCursor: batch.next_cursor,
-        batchResults
+        batchResults,
+        stats: updatedStats
       };
     } catch (error) {
       // Update item to error state
@@ -145,30 +140,6 @@ class PlaidTransactionService extends PlaidBaseService {
       });
       
       throw error;
-    }
-  }
-
-  /**
-   * Fetch a batch of transactions from Plaid
-   * @param {string} accessToken - Plaid access token
-   * @param {string} cursor - Cursor for pagination
-   * @returns {Object} Batch of transactions
-   */
-  async _fetchTransactionBatch(accessToken, cursor) {
-    try {
-      const request = {
-        access_token: accessToken,
-        cursor: cursor,
-        options: {
-          include_original_description: true
-        }
-      };
-      
-      // Call Plaid API directly
-      const response = await this.client.transactionsSync(request);
-      return response.data;
-    } catch (error) {
-      throw CustomError.createFormattedError(error, { operation: 'fetch_transactions' });
     }
   }
 
@@ -271,15 +242,6 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 
   /**
-   * Checks if a sync is already in progress for the item.
-   * @param {Object} item - Item data.
-   * @returns {boolean} True if sync is in progress.
-   */
-  _isSyncInProgress(item) {
-    return ['in_progress', 'queued'].includes(item.syncData?.status);
-  }
-
-  /**
    * Saves new transactions to the database.
    * @param {Array} transactions - New transactions to save.
    * @param {string} itemId - Item ID.
@@ -358,86 +320,24 @@ class PlaidTransactionService extends PlaidBaseService {
   }
 
   /**
-   * Helper function to check if an object is empty
-   * @param {Object} obj - Object to check
-   * @returns {boolean} True if object is empty
-   */
-  _isEmptyObject(obj) {
-    return Object.keys(obj).length === 0;
-  }
-
-  /**
-   * Helper function to check if a property is metadata
-   * @param {string} prop - Property name
-   * @returns {boolean} True if property is metadata
-   */
-  _isMeta(prop) {
-    return ['userId', 'itemId', '_id', 'id'].includes(prop);
-  }
-
-  /**
-   * Formats a date range for Ampt's query format
-   * @param {string} userInfo - User prefix information
-   * @param {string} dateRange - Date range string
+   * Formats a date range for the accountdate query parameter
+   * @param {string} accountId - Account ID to use in formatting
+   * @param {string} dateRange - Date range string (format: 'startDate_endDate')
    * @returns {string} Formatted date string for query
    */
-  _formatDateForQuery(userInfo, dateRange) {
-    // Handle different separator formats
-    const separator = dateRange.includes('_') ? '_' : 
-                     dateRange.includes('|') ? '|' : 
-                     dateRange.includes(',') ? ',' : '_';
+  _formatDateForQuery(accountId, dateRange) {
+    if (!dateRange) return null;
     
-    const [startDate, endDate] = dateRange.split(separator);
-    let formatted = `${userInfo}`;
-
-    if (startDate) formatted += startDate.trim();
-
+    // Split the date range by underscore separator
+    const [startDate, endDate] = dateRange.split('_');
+    
+    if (!startDate) return null;
+    
     if (endDate) {
-      formatted += `|accountdate_${userInfo}${endDate.trim()}`;
+      return `${accountId}:${startDate.trim()}|accountdate_${accountId}:${endDate.trim()}`;
     } else {
-      formatted += '*';
+      return `${accountId}:${startDate.trim()}*`;
     }
-
-    return formatted;
-  }
-
-  /**
-   * Builds a query optimized for Ampt's data interface
-   * @param {string} userId - User ID
-   * @param {Object} query - Original query object
-   * @returns {Object} Formatted query object
-   */
-  _buildAmptQuery(userId, query) {
-    if (this._isEmptyObject(query)) {
-      return {
-        transaction_id: '*',
-        userId
-      };
-    }
-
-    const result = { userId };
-    const { account_id } = query;
-    const userInfo = `${account_id || ''}:`;
-
-    // Process each query property
-    for (const prop in query) {
-      if (this._isMeta(prop) || prop === 'select' || prop === 'userId') {
-        continue;
-      }
-
-      // Special handling for date
-      if (prop === 'date') {
-        result.accountdate = this._formatDateForQuery(userInfo, query[prop]);
-        continue;
-      }
-
-      // Format other properties
-      if (query[prop]) {
-        result[prop] = `${userInfo}${query[prop].toString().replace('*', '')}*`;
-      }
-    }
-
-    return result;
   }
 
   /**
@@ -445,14 +345,32 @@ class PlaidTransactionService extends PlaidBaseService {
    * @param {Object} query - Query object.
    * @returns {Array} Matching transactions.
    */
-  async fetchTransactions(query) {
+  async fetchTransactions(user, query) {
     try {
-      // Format the query for Ampt's data interface
-      const formattedQuery = this._buildAmptQuery(query.userId, query);
+      // Initialize the formatted query with the user ID
+      const formattedQuery = { userId: user._id };
       
-      // Execute the query with the formatted object
+      // Format account_id if present
+      if (query.account_id) {
+        formattedQuery.account_id = `${query.account_id}:${query.account_id}*`;
+      }
+      
+      // Format date range for accountdate if present
+      if (query.date && query.account_id) {
+        const formattedDate = this._formatDateForQuery(query.account_id, query.date);
+        if (formattedDate) {
+          formattedQuery.accountdate = formattedDate;
+        }
+      }
+      
+      // Remove any keys that shouldn't be in the final query
+      ['date', 'select'].forEach(key => {
+        delete query[key];
+      });
+      
+      // Execute the query
       const res = await plaidTransactions.find(formattedQuery);
-      return res.items;
+      return Array.isArray(res) ? res : (res.items || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
       throw new CustomError('FETCH_ERROR', error.message);
@@ -496,25 +414,7 @@ class PlaidTransactionService extends PlaidBaseService {
     }
 
     if (queryParams.date) {
-      // Parse the date range
-      let startDate, endDate;
-      
-      // Check if we have a date range with underscore separator
-      if (queryParams.date.includes('_')) {
-        [startDate, endDate] = queryParams.date.split('_');
-      } 
-      // Check if we have a date range with comma separator
-      else if (queryParams.date.includes(',')) {
-        [startDate, endDate] = queryParams.date.split(',');
-      }
-      
-      if (startDate && endDate) {
-        // Format as a simple date range with pipe character
-        query.date = `${startDate.trim()}|${endDate.trim()}`;
-      } else {
-        // If we only have one date or can't parse, use the original value
-        query.date = queryParams.date;
-      }
+      query.date = queryParams.date;
     }
 
     return query;
@@ -531,7 +431,7 @@ class PlaidTransactionService extends PlaidBaseService {
       const duplicates = new Map();
 
       transactions.forEach(transaction => {
-        const key = transaction.transaction_id; // Use transaction_id as the unique key
+        const key = transaction.transaction_id;
         if (!duplicates.has(key)) {
           duplicates.set(key, []);
         }
@@ -558,84 +458,6 @@ class PlaidTransactionService extends PlaidBaseService {
       return { removed: result.deletedCount };
     } catch (error) {
       throw new CustomError('DELETE_ERROR', error.message);
-    }
-  }
-
-  // Helper method to update sync progress
-  async _updateSyncProgress(itemId, userId, progressData) {
-    try {
-      const updatedItem = await itemService.updateItemSyncStatus(itemId, userId, progressData);
-      return updatedItem;
-    } catch (error) {
-      console.error('Failed to update sync progress:', error);
-      // Don't throw here - we don't want to interrupt the sync for a progress update failure
-    }
-  }
-
-  /**
-   * Continues the batch sync process for an item
-   * This should be called after processing a batch with hasMore=true
-   * 
-   * @param {Object|string} item - Item or item ID
-   * @param {Object} user - User data
-   * @returns {Promise<boolean>} True if sync is complete
-   */
-  async continueBatchSync(item, user) {
-    try {
-      if (!user) {
-        throw new CustomError('INVALID_USER', 'Missing required user data');
-      }
-      
-      // Validate item
-      const validatedItem = await this._validateAndGetItem(item, user);
-      
-      // Check if sync is still in progress
-      if (validatedItem.syncData?.status !== 'in_progress') {
-        // Sync already completed or errored
-        return true;
-      }
-      
-      // Process next batch
-      const batchResult = await this._processBatchInternal(validatedItem, user);
-      
-      // If there are more batches, continue the process
-      if (batchResult.hasMore) {
-        // Schedule the next batch with a small delay
-        setTimeout(() => {
-          this.continueBatchSync(validatedItem._id, user)
-            .catch(err => console.error(`Error continuing batch sync for item ${validatedItem._id}:`, err));
-        }, 500); // 500ms delay to prevent overwhelming the server
-        
-        return false;
-      }
-      
-      // No more batches, sync is complete
-      return true;
-    } catch (error) {
-      console.error('Error in continueBatchSync:', error);
-      
-      // Update item to error state
-      if (typeof item === 'string') {
-        await itemService.updateItemSyncStatus(item, user._id, {
-          status: 'error',
-          error: {
-            code: error.code || 'BATCH_PROCESSING_ERROR',
-            message: error.message,
-            timestamp: new Date().toISOString()
-          }
-        });
-      } else if (item?._id) {
-        await itemService.updateItemSyncStatus(item._id, user._id, {
-          status: 'error',
-          error: {
-            code: error.code || 'BATCH_PROCESSING_ERROR',
-            message: error.message,
-            timestamp: new Date().toISOString()
-          }
-        });
-      }
-      
-      return false;
     }
   }
 }

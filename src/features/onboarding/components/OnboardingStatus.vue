@@ -52,7 +52,9 @@
           <span class="stat-value">{{ formatLastSync }}</span>
         </div>
       </div>
-      <p class="success-message">You'll be redirected to your dashboard shortly...</p>
+      <button class="primary-button" @click="router.push('/dashboard')">
+        Go to Dashboard <ArrowRight class="icon" />
+      </button>
     </div>
   </div>
 </template>
@@ -60,6 +62,10 @@
 <script setup>
 import { computed } from 'vue';
 import { formatDistanceToNow } from 'date-fns';
+import { useRouter } from 'vue-router';
+import { ArrowRight } from 'lucide-vue-next';
+
+const router = useRouter();
 
 const props = defineProps({
   state: {
@@ -220,13 +226,6 @@ const retrySync = () => {
 .primary-button:hover {
   transform: translateY(-2px);
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.success-message {
-  color: var(--success);
-  margin-top: 1rem;
-  text-align: center;
-  font-weight: 500;
 }
 
 .retry-button {

@@ -15,10 +15,7 @@ export default {
         return res.json(transaction);
       }
       
-      // Build query from request parameters
-      const query = transactionService.buildUserQueryForTransactions(user._id, req.query);
-      
-      const transactions = await transactionService.fetchTransactions(query);
+      const transactions = await transactionService.fetchTransactions(req.user, req.query);
       
       return res.json(transactions);
     } catch (error) {
@@ -38,103 +35,31 @@ export default {
       });
     }
   },
-  
+
   /**
-   * Sync transactions for all user items using batch approach
-   * This initiates background syncing and returns status immediately
+   * Sync transactions for a specific item
    */
-  async syncLatestTransactions(req, res) {
+  async syncLatestTransactionsForItem(req, res) {
     try {
-      const user = req.user;      
-      const items = await itemService.getUserItems(user._id);
-      
-      if (!items || !items.length) {
+      const user = req.user;
+      const { itemId } = req.params;
+
+      const item = await itemService.getUserItems(user._id, itemId);
+
+      if (!item) {
         return res.status(404).json({
-          error: 'NO_ITEMS',
-          message: 'No items found for this user'
+          error: 'ITEM_NOT_FOUND',
+          message: 'Item not found for this user'
         });
       }
-      
-      // Process a single batch for each item and return status
-      const syncResults = [];
-      
-      for (const item of items) {
-        try {
-          // Check current sync status
-          const currentStatus = item.syncData?.status || 'none';
-          
-          // Only start a new batch if one is not already in progress
-          if (currentStatus !== 'in_progress') {
-            // Initialize sync state
-            await itemService.updateItemSyncStatus(item.itemId, user._id, {
-              status: 'in_progress',
-              lastSyncTime: Date.now(),
-              cursor: item.syncData?.cursor || null,
-              error: null,
-              batchNumber: 0,
-              stats: {
-                added: 0,
-                modified: 0,
-                removed: 0
-              }
-            });
-          }
-          
-          // Process just the first batch and wait for it
-          const batchResult = await transactionService.syncNextBatch(item, user);
-          
-          // Get updated item with latest stats
-          const updatedItem = await itemService.getUserItems(user._id, item.itemId);
-          
-          syncResults.push({
-            itemId: item._id,
-            status: batchResult.hasMore ? 'in_progress' : 'completed',
-            hasMore: batchResult.hasMore,
-            currentBatch: updatedItem.syncData?.batchNumber || 1,
-            cursor: batchResult.nextCursor,
-            stats: {
-              added: batchResult.batchResults.added || 0,
-              modified: batchResult.batchResults.modified || 0,
-              removed: batchResult.batchResults.removed || 0,
-              totalAdded: updatedItem.syncData?.stats?.added || 0,
-              totalModified: updatedItem.syncData?.stats?.modified || 0,
-              totalRemoved: updatedItem.syncData?.stats?.removed || 0
-            }
-          });
-        } catch (error) {
-          console.error(`Error processing batch for item ${item._id}:`, error);
-          
-          // Update item to error state
-          await itemService.updateItemSyncStatus(item.itemId, user._id, {
-            status: 'error',
-            error: {
-              code: error.code || 'BATCH_PROCESSING_ERROR',
-              message: error.message,
-              timestamp: new Date().toISOString()
-            }
-          });
-          
-          syncResults.push({
-            itemId: item._id,
-            status: 'error',
-            error: error.message || 'Unknown error'
-          });
-        }
-      }
-      
-      // Return all sync results 
-      res.json({
-        message: 'Batch processing completed',
-        items: syncResults
-      });
-      
+
+      const batchResult = await transactionService.processSingleBatch(item, user);
+
+      return res.json(batchResult);
     } catch (error) {
-      const errorCode = error.message.split(': ')[0] || 'SYNC_ERROR';
-      const errorMessage = error.message.split(': ')[1] || error.message;
-      
       return res.status(400).json({
-        error: errorCode,
-        message: errorMessage
+        error: 'TRANSACTION_ERROR',
+        message: error.message
       });
     }
   }
