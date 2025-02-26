@@ -19,24 +19,58 @@ class PlaidTransactionService extends PlaidBaseService {
 
     try {
       // Get or validate item
-      const validatedItem = await this._validateAndGetItem(item, user);
+      let validatedItem = await this._validateAndGetItem(item, user);
       
       if (!validatedItem) {
         throw new CustomError('INVALID_ITEM', 'Invalid item data');
       }
 
       const { syncData } = validatedItem;
-      const { status, error } = syncData || {};
+      const { status } = syncData || {};
       
-      // Check if we should enter recovery mode due to previous errors
-      const shouldRecover = status === 'error' && 
-                            syncData?.lastSuccessfulCursor && 
-                            syncData?.recoveryAttempts < 3;  // Limit recovery attempts
+      // Enhanced recovery logic - check if we need recovery
+      if (status === 'error' && syncData?.lastSuccessfulCursor) {
+        console.log(`Attempting to recover sync for item ${validatedItem.itemId || validatedItem._id}`);
+
+        // Use our dedicated recovery function to revert transactions and restore state
+        const recoveryResult = await this.recoverFailedSync(
+          validatedItem, 
+          user
+        );
+        
+        // Log recovery attempt
+        if (recoveryResult.recovered) {
+          console.log(`Successfully recovered sync for item to cursor: ${recoveryResult.revertedTo}`);
+          console.log(`Removed ${recoveryResult.removedCount} potentially corrupt transactions`);
+        } else {
+          console.warn(`Unable to recover sync: ${recoveryResult.message}`);
+        }
+        
+        // Refresh the item after recovery
+        validatedItem = await this._validateAndGetItem(validatedItem.itemId, user);
+      }
       
-      // Initialize sync state if needed or recovery is needed
-      if (!status || status === 'completed' || shouldRecover) {
+      // Determine if we need to initialize a new sync session
+      const shouldInitialize = !syncData?.status || 
+                              syncData?.status === 'completed' || 
+                              (syncData?.status === 'in_progress' && this.isStaleSync(syncData));
+      
+      if (shouldInitialize) {
         const syncSession = await this._initializeBatchSync(validatedItem, user);
         const result = await this._processBatchInternal(syncSession, user);
+        
+        // Check if this was an optimized "no changes" sync
+        if (result.noChangesOptimized) {
+          return {
+            hasMore: result.hasMore,
+            nextCursor: result.nextCursor,
+            batchResults: result.batchResults,
+            stats: result.stats || syncSession.syncData?.stats,
+            syncVersion: result.syncVersion,
+            noChangesOptimized: true,
+            message: "No changes detected, sync optimized"
+          };
+        }
         
         return {
           hasMore: result.hasMore,
@@ -49,7 +83,7 @@ class PlaidTransactionService extends PlaidBaseService {
       }
       
       // Check for a potential race condition - don't allow multiple concurrent syncs
-      if (status === 'in_progress') {
+      if (syncData?.status === 'in_progress') {
         const lastSyncTime = syncData?.lastSyncTime || 0;
         const now = Date.now();
         const syncAgeInMinutes = (now - lastSyncTime) / (1000 * 60);
@@ -65,13 +99,34 @@ class PlaidTransactionService extends PlaidBaseService {
       // Process the next batch
       const result = await this._processBatchInternal(validatedItem, user);
       
+      // Check if this was an optimized "no changes" sync
+      if (result.noChangesOptimized) {
+        return {
+          hasMore: result.hasMore,
+          nextCursor: result.nextCursor,
+          batchResults: result.batchResults,
+          stats: result.stats,
+          syncVersion: result.syncVersion,
+          noChangesOptimized: true,
+          message: "No changes detected, sync optimized"
+        };
+      }
+      
+      // Store the lastSuccessfulSyncTime when a batch completes successfully
+      if (result.hasMore === false) {
+        await itemService.updateItemSyncStatus(validatedItem.itemId || validatedItem._id, user._id, {
+          lastSuccessfulSyncTime: Date.now()
+        });
+      }
+      
       return {
         hasMore: result.hasMore,
         nextCursor: result.nextCursor,
         batchResults: result.batchResults,
         stats: result.stats || syncData?.stats,
         syncVersion: result.syncVersion,
-        inRecoveryMode: validatedItem.syncData?.inRecoveryMode || false
+        inRecoveryMode: validatedItem.syncData?.inRecoveryMode || false,
+        recovered: syncData?.inRecoveryMode || false // Indicate if this was a recovery sync
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { operation: 'batch_sync' });
@@ -89,8 +144,20 @@ class PlaidTransactionService extends PlaidBaseService {
     const inRecoveryMode = item.syncData?.status === 'error' && 
                           item.syncData?.lastSuccessfulCursor !== null;
     
-    // Increment syncVersion to prevent race conditions
-    const syncVersion = (item.syncData?.syncVersion || 0) + 1;
+    // Determine if we should increment the syncVersion
+    // We increment when:
+    // 1. We're entering recovery mode
+    // 2. We don't have a syncVersion yet
+    // 3. The previous sync was completed or had an error
+    const shouldIncrementVersion = 
+      inRecoveryMode || 
+      !item.syncData?.syncVersion ||
+      item.syncData?.status === 'error';
+    
+    // Increment syncVersion only when needed
+    const syncVersion = shouldIncrementVersion 
+      ? (item.syncData?.syncVersion || 0) + 1 
+      : (item.syncData?.syncVersion || 1);
     
     const syncData = {
       status: 'in_progress',
@@ -106,12 +173,11 @@ class PlaidTransactionService extends PlaidBaseService {
       inRecoveryMode: inRecoveryMode,
       recoveryAttempts: inRecoveryMode ? (item.syncData?.recoveryAttempts || 0) + 1 : 0,
       lastRecoveryTime: inRecoveryMode ? Date.now() : null,
-      stats: {
+      stats: item.syncData?.stats || {
         added: 0,
         modified: 0,
         removed: 0
-      },
-      batchStats: []
+      }
     };
 
     return await itemService.updateItemSyncStatus(
@@ -142,19 +208,46 @@ class PlaidTransactionService extends PlaidBaseService {
       // Fetch a single batch from Plaid
       const batch = await plaidService.syncLatestTransactionsFromPlaid(accessToken, cursor);
       
+      // Check if this batch contains any actual changes
+      const hasChanges = batch.added?.length > 0 || batch.modified?.length > 0 || batch.removed?.length > 0;
+      
+      // Check if cursor is unchanged - this happens when there are no new transactions
+      const cursorUnchanged = cursor === batch.next_cursor;
+      
+      // If there are no changes and the cursor didn't change, we can optimize
+      // by skipping most of the processing and just updating the minimal necessary fields
+      if (!hasChanges && cursorUnchanged && syncData?.lastSuccessfulSyncTime) {
+        console.log(`No changes detected for item ${item.itemId || item._id}, optimizing sync process`);
+        
+        // Only update the timestamps and status
+        await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
+          status: 'completed',
+          lastSyncTime: Date.now(),
+          nextSyncTime: Date.now() + (24 * 60 * 60 * 1000)
+        });
+        
+        return {
+          hasMore: false,
+          nextCursor: batch.next_cursor,
+          batchResults: {
+            added: 0,
+            modified: 0,
+            removed: 0
+          },
+          stats: syncData?.stats || { added: 0, modified: 0, removed: 0 },
+          syncVersion, // Keep the same syncVersion since nothing changed
+          noChangesOptimized: true // Flag to indicate we optimized this process
+        };
+      }
+      
+      // Store the next cursor before processing the batch
+      // This ensures we capture it even if processing fails
+      await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
+        nextCursor: batch.next_cursor
+      });
+      
       // Process the batch with version tracking
       const batchResults = await this._processBatchData(batch, item, user, syncVersion, batchNumber);
-      
-      // Calculate batch statistics
-      const batchStat = {
-        batchNumber,
-        processedAt: new Date().toISOString(),
-        added: batchResults.added,
-        modified: batchResults.modified,
-        removed: batchResults.removed,
-        cursor: batch.next_cursor,
-        hasMore: batch.has_more
-      };
       
       // Update item sync status
       const currentStats = syncData?.stats || { added: 0, modified: 0, removed: 0 };
@@ -169,9 +262,6 @@ class PlaidTransactionService extends PlaidBaseService {
       // Determine if this was a successful batch
       const isSuccessful = true; // We would add error checking logic here if needed
       
-      // Keep track of batchStats history
-      const batchStats = [...(syncData?.batchStats || []), batchStat].slice(-10); // Keep last 10 batches
-      
       // Update sync status
       await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
         status: batch.has_more ? 'in_progress' : 'completed',
@@ -180,8 +270,7 @@ class PlaidTransactionService extends PlaidBaseService {
         lastSuccessfulCursor: isSuccessful ? batch.next_cursor : syncData?.lastSuccessfulCursor,
         batchNumber,
         inRecoveryMode: inRecoveryMode && batch.has_more, // Exit recovery mode when sync completes
-        stats: updatedStats,
-        batchStats
+        stats: updatedStats
       });
 
       return {
@@ -271,25 +360,36 @@ class PlaidTransactionService extends PlaidBaseService {
 
     const prepared = [];
     const processedAt = new Date().toISOString();
+    const batchTime = Date.now();
+    
+    // Get the current item to retrieve the cursor
+    const item = await itemService.getUserItems(userId, itemId);
+    const cursor = item?.syncData?.cursor;
+    const nextCursor = item?.syncData?.nextCursor;
+    const hasMore = item?.syncData?.status === 'in_progress';
 
     for (const tx of transactions) {
       // Check if transaction already exists
       const existingTx = await plaidTransactions.findOne({ transaction_id: tx.transaction_id, userId });
       
       // Skip if already exists and has an equal or higher sync version
-      if (existingTx && existingTx.batchInfo?.syncVersion >= syncVersion) {
+      if (existingTx && existingTx.syncVersion >= syncVersion) {
         continue;
       }
       
+      // Create transaction object with all necessary properties for syncId creation
       const txToSave = {
         ...tx,
         userId,
-        syncId: itemId,
-        batchInfo: {
-          syncVersion,
-          batchNumber,
-          processedAt
-        }
+        // The syncId will be generated in the model based on userId, itemId and batchTime
+        user: { _id: userId }, // Required for model's syncId setter
+        itemId, // Required for model's syncId setter
+        batchTime,
+        syncVersion,
+        batchNumber,
+        processedAt,
+        cursor: cursor || nextCursor, // Store the cursor associated with this batch
+        hasMore // Whether there were more transactions after this batch
       };
       
       prepared.push(txToSave);
@@ -319,25 +419,36 @@ class PlaidTransactionService extends PlaidBaseService {
     }
 
     const processedAt = new Date().toISOString();
+    const batchTime = Date.now();
     let modifiedCount = 0;
+
+    // Get the current item to retrieve the cursor
+    const item = await itemService.getUserItems(userId, itemId);
+    const cursor = item?.syncData?.cursor;
+    const nextCursor = item?.syncData?.nextCursor;
+    const hasMore = item?.syncData?.status === 'in_progress';
 
     for (const tx of transactions) {
       const existingTx = await plaidTransactions.findOne({ transaction_id: tx.transaction_id, userId });
       
       // Skip if version check fails
-      if (existingTx && existingTx.batchInfo?.syncVersion >= syncVersion) {
+      if (existingTx && existingTx.syncVersion >= syncVersion) {
         continue;
       }
 
+      // Create transaction object with all necessary properties for syncId creation
       const txUpdate = {
         ...tx,
         userId,
-        syncId: itemId,
-        batchInfo: {
-          syncVersion,
-          batchNumber,
-          processedAt
-        }
+        // The syncId will be generated in the model based on userId, itemId and batchTime
+        user: { _id: userId }, // Required for model's syncId setter
+        itemId, // Required for model's syncId setter
+        batchTime,
+        syncVersion,
+        batchNumber,
+        processedAt,
+        cursor: cursor || nextCursor, // Store the cursor associated with this batch
+        hasMore // Whether there were more transactions after this batch
       };
 
       try {
@@ -581,6 +692,197 @@ class PlaidTransactionService extends PlaidBaseService {
     } catch (error) {
       throw new CustomError('DELETE_ERROR', error.message);
     }
+  }
+
+  /**
+   * Recover from a failed sync by reverting to last successful cursor
+   * @param {String} itemId - Item ID to recover
+   * @param {Object} user - User object
+   * @returns {Object} Recovery result
+   */
+  async recoverFailedSync(item, user) {
+    try {
+      
+      // Get item data
+      const validatedItem = await this._validateAndGetItem(item, user);
+      
+      if (!validatedItem) {
+        throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
+      }
+      
+      const { syncData } = validatedItem;
+      
+      // Check if recovery is needed
+      if (syncData?.status !== 'error') {
+        return {
+          recovered: false,
+          message: 'Item not in error state, recovery not needed'
+        };
+      }
+      
+      // Check if we have a last successful cursor
+      if (!syncData?.lastSuccessfulCursor) {
+        return {
+          recovered: false,
+          message: 'No last successful cursor found for recovery'
+        };
+      }
+      
+      // Revert transactions to the last successful cursor
+      const revertResult = await this.revertTransactionsToCursor(
+        item.itemId || item._id,
+        user._id,
+        syncData.lastSuccessfulCursor
+      );
+      
+      // Update recovery stats
+      await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
+        recoveryAttempts: (syncData.recoveryAttempts || 0) + 1,
+        lastRecoveryTime: Date.now(),
+        inRecoveryMode: true
+      });
+      
+      return {
+        recovered: revertResult.reverted,
+        removedCount: revertResult.removedCount,
+        revertedTo: revertResult.revertedTo,
+        message: 'Sync recovered to last successful cursor'
+      };
+    } catch (error) {
+      throw CustomError.createFormattedError(error, { operation: 'recover_sync' });
+    }
+  }
+  
+  /**
+   * Revert transactions to a specific cursor
+   * This will remove all transactions that were processed after the given cursor
+   * @param {String} itemId - Plaid item ID 
+   * @param {String} userId - User ID
+   * @param {String} cursorToRevertTo - Cursor to revert to
+   * @returns {Object} Revert results
+   */
+  async revertTransactionsToCursor(itemId, userId, cursorToRevertTo) {
+    try {
+      if (!itemId || !userId || !cursorToRevertTo) {
+        throw new CustomError('INVALID_PARAMS', 
+          'Missing required parameters for transaction reversion');
+      }
+      
+      // First find a transaction with the cursor we want to revert to
+      // This gives us a reference point for batchTime
+      const referenceTx = await plaidTransactions.findOne({
+        cursor: cursorToRevertTo,
+        userId
+      });
+      
+      if (!referenceTx) {
+        return { 
+          reverted: false,
+          message: 'No reference transaction found with the target cursor' 
+        };
+      }
+      
+      // Extract the reference transaction's processedAt and syncId components
+      const referenceTime = referenceTx.processedAt;
+      
+      // Parse the syncId parts - format is userId_itemId_timestamp
+      const syncIdParts = referenceTx.syncId.split('_');
+      if (syncIdParts.length < 3) {
+        return {
+          reverted: false,
+          message: 'Reference transaction has invalid syncId format'
+        };
+      }
+      
+      // The timestamp is the last part of the syncId
+      const referenceBatchTime = syncIdParts[syncIdParts.length - 1];
+      
+      // Use efficient label-based search to find transactions with higher syncIds
+      // Format: userId_itemId_timestamp where timestamp is greater than the reference transaction's timestamp
+      // Since we now include itemId in syncId, we can be more precise in our query
+      const syncIdStartValue = `${userId}_${itemId}_${referenceBatchTime}`;
+      const syncIdEndValue = `${userId}_${itemId}_999999999999`;
+      
+      // Use the built-in label mapping of our model to search by syncId range
+      const { items: newerTransactions } = await plaidTransactions.find({
+        syncId: `${syncIdStartValue}|${syncIdEndValue}`
+      });
+      
+      // Now we no longer need to filter by itemId since it's part of the syncId
+      // but we still need to filter out the reference transaction and check batch numbers
+      const transactionsToRevert = newerTransactions.filter(tx => {
+        // Exclude the reference transaction itself
+        if (tx._id === referenceTx._id) {
+          return false;
+        }
+        
+        // Handle transactions in the same batch
+        if (tx.batchNumber === referenceTx.batchNumber) {
+          // For same batch number, only include if processed after the reference
+          return tx.processedAt > referenceTime;
+        }
+        
+        // Include all transactions with higher batch numbers
+        return tx.batchNumber > referenceTx.batchNumber;
+      });
+      
+      // Get transaction IDs to remove
+      const txIdsToRemove = transactionsToRevert.map(tx => tx.transaction_id);
+      
+      // Nothing to remove
+      if (txIdsToRemove.length === 0) {
+        return { 
+          reverted: false,
+          message: 'No transactions found to revert' 
+        };
+      }
+      
+      // Remove the transactions
+      let removedCount = 0;
+      for (const id of txIdsToRemove) {
+        try {
+          const result = await plaidTransactions.erase({ transaction_id: id, userId });
+          if (result.removed) {
+            removedCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to remove transaction ${id}:`, error.message);
+        }
+      }
+      
+      // Update the item's sync status to use the cursor we reverted to
+      await itemService.updateItemSyncStatus(itemId, userId, {
+        cursor: cursorToRevertTo,
+        status: 'in_progress', // Set to in_progress so we can continue syncing
+        error: null  // Clear any errors
+      });
+      
+      return {
+        reverted: true,
+        removedCount,
+        revertedTo: cursorToRevertTo,
+        referenceTime: referenceTx.processedAt
+      };
+    } catch (error) {
+      throw CustomError.createFormattedError(error, { 
+        operation: 'revert_transactions' 
+      });
+    }
+  }
+
+  /**
+   * Helper function to determine if a sync is stale
+   * @param {Object} syncData - Sync data from item
+   * @returns {Boolean} True if sync is considered stale
+   */
+  isStaleSync(syncData) {
+    if (!syncData || !syncData.lastSyncTime) return true;
+    
+    const now = Date.now();
+    const syncAgeInMinutes = (now - syncData.lastSyncTime) / (1000 * 60);
+    
+    // Consider a sync stale if it's been more than 15 minutes since the last update
+    return syncAgeInMinutes > 15;
   }
 }
 

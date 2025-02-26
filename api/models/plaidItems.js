@@ -27,8 +27,9 @@ const itemSchema = {
       status: 'pending',
       cursor: null,
       lastSuccessfulCursor: null,
+      nextCursor: null,
       lastSyncTime: null,
-      nextSyncTime: null,
+      lastSuccessfulSyncTime: null,
       syncVersion: 0,
       error: null,
       history: [],
@@ -40,8 +41,7 @@ const itemSchema = {
         modified: 0,
         removed: 0,
         lastTransactionDate: null
-      },
-      batchStats: []
+      }
     })
   },
   
