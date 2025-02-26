@@ -53,7 +53,7 @@ export default {
         });
       }
 
-      const batchResult = await transactionService.processSingleBatch(item, user);
+      const batchResult = await transactionService.syncNextBatch(item, user);
 
       return res.json(batchResult);
     } catch (error) {

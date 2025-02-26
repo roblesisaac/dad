@@ -67,6 +67,11 @@ const transactionSchema = {
     type: String,
     unique: true
   },
+  batchInfo: {
+    syncVersion: Number,
+    batchNumber: Number,
+    processedAt: String
+  },
   transaction_code: String,
   transaction_type: String,
   website: String,

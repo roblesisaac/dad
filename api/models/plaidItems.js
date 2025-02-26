@@ -26,16 +26,22 @@ const itemSchema = {
     default: () => ({
       status: 'pending',
       cursor: null,
+      lastSuccessfulCursor: null,
       lastSyncTime: null,
       nextSyncTime: null,
+      syncVersion: 0,
       error: null,
       history: [],
+      inRecoveryMode: false,
+      recoveryAttempts: 0,
+      lastRecoveryTime: null,
       stats: {
         added: 0,
         modified: 0,
         removed: 0,
         lastTransactionDate: null
-      }
+      },
+      batchStats: []
     })
   },
   

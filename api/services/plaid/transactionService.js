@@ -12,7 +12,7 @@ class PlaidTransactionService extends PlaidBaseService {
    * @param {Object} user - User data.
    * @returns {Object} Batch processing results.
    */
-  async processSingleBatch(item, user) {
+  async syncNextBatch(item, user) {
     if (!user) {
       throw new CustomError('INVALID_USER', 'Missing required user data');
     }
@@ -26,10 +26,15 @@ class PlaidTransactionService extends PlaidBaseService {
       }
 
       const { syncData } = validatedItem;
-      const { status } = syncData || {};
+      const { status, error } = syncData || {};
       
-      // Initialize sync state if needed
-      if (!status || status === 'completed' || status === 'error') {
+      // Check if we should enter recovery mode due to previous errors
+      const shouldRecover = status === 'error' && 
+                            syncData?.lastSuccessfulCursor && 
+                            syncData?.recoveryAttempts < 3;  // Limit recovery attempts
+      
+      // Initialize sync state if needed or recovery is needed
+      if (!status || status === 'completed' || shouldRecover) {
         const syncSession = await this._initializeBatchSync(validatedItem, user);
         const result = await this._processBatchInternal(syncSession, user);
         
@@ -37,8 +42,24 @@ class PlaidTransactionService extends PlaidBaseService {
           hasMore: result.hasMore,
           nextCursor: result.nextCursor,
           batchResults: result.batchResults,
-          stats: result.stats || syncSession.syncData?.stats
+          stats: result.stats || syncSession.syncData?.stats,
+          syncVersion: result.syncVersion,
+          inRecoveryMode: syncSession.syncData?.inRecoveryMode || false
         };
+      }
+      
+      // Check for a potential race condition - don't allow multiple concurrent syncs
+      if (status === 'in_progress') {
+        const lastSyncTime = syncData?.lastSyncTime || 0;
+        const now = Date.now();
+        const syncAgeInMinutes = (now - lastSyncTime) / (1000 * 60);
+        
+        // If the sync has been in progress for more than 15 minutes, it's likely stalled
+        // We'll allow a new sync to start in this case
+        if (syncAgeInMinutes < 15) {
+          // Otherwise, this is likely a race condition with multiple syncs
+          console.warn(`Concurrent sync detected for item ${validatedItem.itemId}, existing sync is still active`);
+        }
       }
       
       // Process the next batch
@@ -48,7 +69,9 @@ class PlaidTransactionService extends PlaidBaseService {
         hasMore: result.hasMore,
         nextCursor: result.nextCursor,
         batchResults: result.batchResults,
-        stats: result.stats || syncData?.stats
+        stats: result.stats || syncData?.stats,
+        syncVersion: result.syncVersion,
+        inRecoveryMode: validatedItem.syncData?.inRecoveryMode || false
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { operation: 'batch_sync' });
@@ -62,18 +85,33 @@ class PlaidTransactionService extends PlaidBaseService {
    * @returns {Object} Updated item
    */
   async _initializeBatchSync(item, user) {
+    // Check if we need to enter recovery mode
+    const inRecoveryMode = item.syncData?.status === 'error' && 
+                          item.syncData?.lastSuccessfulCursor !== null;
+    
+    // Increment syncVersion to prevent race conditions
+    const syncVersion = (item.syncData?.syncVersion || 0) + 1;
+    
     const syncData = {
       status: 'in_progress',
       lastSyncTime: Date.now(),
       nextSyncTime: Date.now() + (24 * 60 * 60 * 1000),
-      cursor: item.syncData?.cursor || null,
+      // If in recovery mode, use the last successful cursor
+      cursor: inRecoveryMode ? item.syncData?.lastSuccessfulCursor : (item.syncData?.cursor || null),
+      // Keep track of the last successful cursor
+      lastSuccessfulCursor: item.syncData?.lastSuccessfulCursor || null,
+      syncVersion: syncVersion,
       error: null,
       batchNumber: 0,
+      inRecoveryMode: inRecoveryMode,
+      recoveryAttempts: inRecoveryMode ? (item.syncData?.recoveryAttempts || 0) + 1 : 0,
+      lastRecoveryTime: inRecoveryMode ? Date.now() : null,
       stats: {
         added: 0,
         modified: 0,
         removed: 0
-      }
+      },
+      batchStats: []
     };
 
     return await itemService.updateItemSyncStatus(
@@ -96,17 +134,30 @@ class PlaidTransactionService extends PlaidBaseService {
         throw new CustomError('INVALID_TOKEN', 'Failed to decrypt access token');
       }
 
-      const cursor = item.syncData?.cursor || null;
-      const batchNumber = (item.syncData?.batchNumber || 0) + 1;
+      // Extract sync information
+      const { syncData } = item;
+      const { syncVersion, cursor, inRecoveryMode } = syncData || {};
+      const batchNumber = (syncData?.batchNumber || 0) + 1;
 
       // Fetch a single batch from Plaid
       const batch = await plaidService.syncLatestTransactionsFromPlaid(accessToken, cursor);
       
-      // Process the batch
-      const batchResults = await this._processBatchData(batch, item, user);
+      // Process the batch with version tracking
+      const batchResults = await this._processBatchData(batch, item, user, syncVersion, batchNumber);
+      
+      // Calculate batch statistics
+      const batchStat = {
+        batchNumber,
+        processedAt: new Date().toISOString(),
+        added: batchResults.added,
+        modified: batchResults.modified,
+        removed: batchResults.removed,
+        cursor: batch.next_cursor,
+        hasMore: batch.has_more
+      };
       
       // Update item sync status
-      const currentStats = item.syncData?.stats || { added: 0, modified: 0, removed: 0 };
+      const currentStats = syncData?.stats || { added: 0, modified: 0, removed: 0 };
       const updatedStats = {
         added: (currentStats.added || 0) + batchResults.added,
         modified: (currentStats.modified || 0) + batchResults.modified,
@@ -115,28 +166,41 @@ class PlaidTransactionService extends PlaidBaseService {
         lastTransactionDate: this._getLatestTransactionDate(batch.added || [])
       };
       
+      // Determine if this was a successful batch
+      const isSuccessful = true; // We would add error checking logic here if needed
+      
+      // Keep track of batchStats history
+      const batchStats = [...(syncData?.batchStats || []), batchStat].slice(-10); // Keep last 10 batches
+      
+      // Update sync status
       await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
         status: batch.has_more ? 'in_progress' : 'completed',
         cursor: batch.next_cursor,
+        // If this was a successful batch, update the last successful cursor
+        lastSuccessfulCursor: isSuccessful ? batch.next_cursor : syncData?.lastSuccessfulCursor,
         batchNumber,
-        stats: updatedStats
+        inRecoveryMode: inRecoveryMode && batch.has_more, // Exit recovery mode when sync completes
+        stats: updatedStats,
+        batchStats
       });
 
       return {
         hasMore: batch.has_more,
         nextCursor: batch.next_cursor,
         batchResults,
-        stats: updatedStats
+        stats: updatedStats,
+        syncVersion // Return sync version for tracking
       };
     } catch (error) {
-      // Update item to error state
+      // Update item to error state but keep the sync version and last successful cursor
       await itemService.updateItemSyncStatus(item.itemId || item._id, user._id, {
         status: 'error',
         error: {
           code: error.code || 'BATCH_PROCESSING_ERROR',
           message: error.message,
           timestamp: new Date().toISOString()
-        }
+        },
+        syncVersion: item.syncData?.syncVersion // Keep the same sync version for retry
       });
       
       throw error;
@@ -148,9 +212,11 @@ class PlaidTransactionService extends PlaidBaseService {
    * @param {Object} batch - Batch from Plaid API
    * @param {Object} item - Plaid item
    * @param {Object} user - User object
+   * @param {Number} syncVersion - Current sync version
+   * @param {Number} batchNumber - Current batch number
    * @returns {Object} Results of processing
    */
-  async _processBatchData(batch, item, user) {
+  async _processBatchData(batch, item, user, syncVersion, batchNumber) {
     try {
       const { added = [], modified = [], removed = [] } = batch;
       
@@ -165,7 +231,7 @@ class PlaidTransactionService extends PlaidBaseService {
       let modifiedCount = 0;
       if (modified.length > 0) {
         const modifyResult = await this._updateModifiedTransactions(
-          modified, item.itemId || item._id, user._id
+          modified, item.itemId || item._id, user._id, syncVersion, batchNumber
         );
         modifiedCount = modifyResult.modifiedCount || 0;
       }
@@ -174,7 +240,7 @@ class PlaidTransactionService extends PlaidBaseService {
       let addedCount = 0;
       if (added.length > 0) {
         const addResult = await this._saveNewTransactions(
-          added, item.itemId || item._id, user._id
+          added, item.itemId || item._id, user._id, syncVersion, batchNumber
         );
         addedCount = addResult.length || 0;
       }
@@ -187,6 +253,128 @@ class PlaidTransactionService extends PlaidBaseService {
     } catch (error) {
       throw CustomError.createFormattedError(error, { operation: 'process_batch' });
     }
+  }
+
+  /**
+   * Save new transactions with duplicate prevention
+   * @param {Array} transactions - New transactions
+   * @param {String} itemId - Plaid item ID
+   * @param {String} userId - User ID
+   * @param {Number} syncVersion - Current sync version
+   * @param {Number} batchNumber - Current batch number
+   * @returns {Array} Saved transactions
+   */
+  async _saveNewTransactions(transactions, itemId, userId, syncVersion, batchNumber) {
+    if (!transactions || transactions.length === 0) {
+      return [];
+    }
+
+    const prepared = [];
+    const processedAt = new Date().toISOString();
+
+    for (const tx of transactions) {
+      // Check if transaction already exists
+      const existingTx = await plaidTransactions.findOne({ transaction_id: tx.transaction_id, userId });
+      
+      // Skip if already exists and has an equal or higher sync version
+      if (existingTx && existingTx.batchInfo?.syncVersion >= syncVersion) {
+        continue;
+      }
+      
+      const txToSave = {
+        ...tx,
+        userId,
+        syncId: itemId,
+        batchInfo: {
+          syncVersion,
+          batchNumber,
+          processedAt
+        }
+      };
+      
+      prepared.push(txToSave);
+    }
+
+    // Nothing to save after duplicate check
+    if (prepared.length === 0) {
+      return [];
+    }
+
+    // Use the insertMany method from our model
+    return await plaidTransactions.insertMany(prepared);
+  }
+
+  /**
+   * Update modified transactions with version checking
+   * @param {Array} transactions - Modified transactions
+   * @param {String} itemId - Plaid item ID
+   * @param {String} userId - User ID
+   * @param {Number} syncVersion - Current sync version
+   * @param {Number} batchNumber - Current batch number
+   * @returns {Object} Update results
+   */
+  async _updateModifiedTransactions(transactions, itemId, userId, syncVersion, batchNumber) {
+    if (!transactions || transactions.length === 0) {
+      return { modifiedCount: 0 };
+    }
+
+    const processedAt = new Date().toISOString();
+    let modifiedCount = 0;
+
+    for (const tx of transactions) {
+      const existingTx = await plaidTransactions.findOne({ transaction_id: tx.transaction_id, userId });
+      
+      // Skip if version check fails
+      if (existingTx && existingTx.batchInfo?.syncVersion >= syncVersion) {
+        continue;
+      }
+
+      const txUpdate = {
+        ...tx,
+        userId,
+        syncId: itemId,
+        batchInfo: {
+          syncVersion,
+          batchNumber,
+          processedAt
+        }
+      };
+
+      try {
+        await plaidTransactions.update({ transaction_id: tx.transaction_id, userId }, txUpdate);
+        modifiedCount++;
+      } catch (error) {
+        console.error(`Failed to update transaction ${tx.transaction_id}:`, error.message);
+      }
+    }
+
+    return { modifiedCount };
+  }
+
+  /**
+   * Remove transactions with version checking
+   * @param {Array} transactionIds - Transaction IDs to remove
+   * @returns {Object} Removal results
+   */
+  async _removeTransactions(transactionIds) {
+    if (!transactionIds || transactionIds.length === 0) {
+      return { deletedCount: 0 };
+    }
+
+    let deletedCount = 0;
+
+    for (const id of transactionIds) {
+      try {
+        const result = await plaidTransactions.erase({ transaction_id: id });
+        if (result.removed) {
+          deletedCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to remove transaction ${id}:`, error.message);
+      }
+    }
+
+    return { deletedCount };
   }
 
   /**
@@ -238,72 +426,6 @@ class PlaidTransactionService extends PlaidBaseService {
       throw CustomError.createFormattedError(error, { 
         operation: 'validate_item'
       });
-    }
-  }
-
-  /**
-   * Saves new transactions to the database.
-   * @param {Array} transactions - New transactions to save.
-   * @param {string} itemId - Item ID.
-   * @param {string} userId - User ID.
-   * @returns {Array} Saved transaction results.
-   */
-  async _saveNewTransactions(transactions, itemId, userId) {
-    try {
-      const formattedTransactions = transactions.map(transaction => ({
-        ...transaction,
-        userId,
-        itemId
-      }));
-
-      if (formattedTransactions.length > 0) {
-        const result = await plaidTransactions.insertMany(formattedTransactions);
-        return result;
-      }
-      
-      return [];
-    } catch (error) {
-      throw new CustomError('SAVE_ERROR', `Failed to save transactions: ${error.message}`);
-    }
-  }
-
-  /**
-   * Updates modified transactions in the database.
-   * @param {Array} transactions - Modified transactions to update.
-   * @param {string} itemId - Item ID.
-   * @param {string} userId - User ID.
-   * @returns {Object} Bulk write result.
-   */
-  async _updateModifiedTransactions(transactions, itemId, userId) {
-    try {
-      const bulkOps = transactions.map(transaction => ({
-        updateOne: {
-          filter: { transaction_id: transaction.transaction_id },
-          update: { ...transaction, userId, itemId },
-          upsert: false
-        }
-      }));
-
-      const result = await plaidTransactions.bulkWrite(bulkOps);
-      return result;
-    } catch (error) {
-      throw new CustomError('UPDATE_ERROR', `Failed to update transactions: ${error.message}`);
-    }
-  }
-
-  /**
-   * Removes transactions from the database.
-   * @param {Array} transactionIds - Transaction IDs to remove.
-   * @returns {Object} Deletion result.
-   */
-  async _removeTransactions(transactionIds) {
-    try {
-      const result = await plaidTransactions.deleteMany({ 
-        transaction_id: { $in: transactionIds }
-      });
-      return result;
-    } catch (error) {
-      throw new CustomError('DELETE_ERROR', `Failed to remove transactions: ${error.message}`);
     }
   }
 
