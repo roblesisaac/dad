@@ -31,7 +31,7 @@
 
       <!-- Scrolling Tabs Totals Row -->
       <div v-if="!state.isLoading" class="cell-1 totalsRow">
-        <ScrollingTabButtons :state="state" :app="app" />
+        <ScrollingTabButtons :state="state" :actions="actions" />
       </div>
 
       <!-- Category Rows -->
