@@ -10,7 +10,7 @@
 
   <!-- BackButton -->
   <Transition>
-    <button v-if="!isHome" @click="route.back()" class="backButton section b-bottom">
+    <button v-if="!isHome" @click="router.back()" class="backButton section b-bottom">
       <ChevronLeft class="icon" /> Back
     </button>
   </Transition>
@@ -52,7 +52,7 @@
 
 <script setup>
 import { computed, onMounted, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
 import { useGroupOperations } from '../composables/useGroupOperations.js';
@@ -69,6 +69,7 @@ import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
 import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
 
+const router = useRouter();
 const route = useRoute();
 const api = useApi();
 const { stickify } = useAppStore();

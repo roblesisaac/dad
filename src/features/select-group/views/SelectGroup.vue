@@ -6,15 +6,15 @@
   </div>
 
   <div v-if="!isEditing">
-    <Draggable v-model="state.allUserGroups" v-bind="dragOptions(100)" handle=".handlerGroup" class="cell-1">
+    <Draggable v-model="state.allUserGroups" v-bind="dragOptions(100)" handle=".handler-group" class="cell-1">
       <template #item="{element}">
-        <GroupRow :key="element._id" :app="app" :element="element" />
+        <GroupRow :key="element._id" :element="element" />
       </template>
     </Draggable>
 
     <!-- Create New Group -->
     <div class="cell-1 proper">
-      <button @click="app.createNewGroup" class="button expanded new-group">Create New Group +</button>
+      <button @click="createNewGroup" class="button expanded new-group">Create New Group +</button>
     </div>
 
     <!-- Reconnect Existing Institutions -->
@@ -37,7 +37,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import GroupRow from '../components/GroupRow.vue';
 import NetWorth from '../components/NetWorth.vue';
 import EditGroup from '../components/EditGroup.vue';
-import { useSelectGroup } from '../composables/useSelectGroup.js';
+import { useEditGroup } from '../composables/useEditGroup.js';
 import { useDraggable } from '@/shared/composables/useDraggable';
 
 const { Draggable, dragOptions } = useDraggable();
@@ -45,9 +45,7 @@ const router = useRouter();
 const { state } = useDashboardState();
 const isEditing = ref(false);
 
-const app = useSelectGroup(state, isEditing);
-
-app.init();
+const { createNewGroup } = useEditGroup();
 
 watch(() => state.allUserGroups, (groups) => {
   groups.forEach((group, groupIndex) => group.sort = groupIndex);

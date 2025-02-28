@@ -25,7 +25,7 @@ export function useGroupOperations() {
     if (!firstGroup) return null;
     
     firstGroup.isSelected = true;
-    await updateGroupSelection(firstGroup._id, true);
+    await groupsAPI.updateGroupSelection(firstGroup._id, true);
     return firstGroup;
   }
   
@@ -54,13 +54,6 @@ export function useGroupOperations() {
   }
   
   /**
-   * Update a group
-   */
-  async function updateGroup(groupId, groupData) {
-    return await groupsAPI.updateGroup(groupId, groupData);
-  }
-  
-  /**
    * Delete a group
    */
   async function deleteGroup(groupId) {
@@ -68,27 +61,21 @@ export function useGroupOperations() {
   }
   
   /**
-   * Update a group's selection state
-   */
-  async function updateGroupSelection(groupId, isSelected) {
-    return await groupsAPI.updateGroupSelection(groupId, isSelected);
-  }
-  
-  /**
    * Select a group and deselect others
    */
-  async function selectGroup(groupToSelect, allGroups) {
+  async function selectGroup(groupToSelect) {
+    const allGroups = state.allUserGroups;
     // First deselect all groups
     for (const group of allGroups) {
       if (group.isSelected && group._id !== groupToSelect._id) {
         group.isSelected = false;
-        await updateGroupSelection(group._id, false);
+        await groupsAPI.updateGroupSelection(group._id, false);
       }
     }
     
     // Select the target group
     groupToSelect.isSelected = true;
-    await updateGroupSelection(groupToSelect._id, true);
+    await groupsAPI.updateGroupSelection(groupToSelect._id, true);
     
     return groupToSelect;
   }
@@ -131,9 +118,7 @@ export function useGroupOperations() {
     fetchGroupsAndAccounts,
     handleGroupChange,
     createGroup,
-    updateGroup,
     deleteGroup,
-    updateGroupSelection,
     selectGroup,
     selectFirstGroup
   };

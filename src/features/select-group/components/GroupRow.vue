@@ -2,12 +2,12 @@
     <div :class="['x-grid middle proper text-left group-row', isSelected]">
         <!-- Edit Horizontal Dots -->
         <div class="cell-1 right">
-            <MoreHorizontal @click="editGroup(element)" class="handlerGroup pointer" />
+            <MoreHorizontal @click="editGroup(element)" class="handler-group pointer" />
         </div>
     
         <!-- Drag Handle -->
         <div class="cell-3-24 p20r">
-            <GripHorizontal class="handlerGroup pointer" />
+            <GripHorizontal class="handler-group pointer" />
         </div>
     
         <div class="cell-12-24 pointer" @click="selectGroup(element)">
@@ -63,13 +63,13 @@
 <script setup>
 import { computed } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useEditGroup } from '../composables/useEditGroup';
 import NetWorth from './NetWorth.vue';
 import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 
 const props = defineProps({
-    element: Object,
-    app: Object
+    element: Object
 });
 
 const { state } = useDashboardState();
@@ -81,8 +81,7 @@ const accountInfo = computed(() => state.allUserAccounts.find(
 const isSelected = computed(() => props.element.isSelected ? 'isSelected' : '');
 const isDefaultName = computed(() => props.element.name === props.element.accounts[0]?.mask);
 
-// Extract methods from props.app for cleaner template usage
-const { editGroup, selectGroup } = props.app;
+const { editGroup, selectGroup } = useEditGroup();
 
 </script>
     

@@ -1,8 +1,10 @@
-import { useApi } from '@/shared/composables/useApi';
 import { useRouter } from 'vue-router';
+import { useGroupsAPI } from '@/features/dashboard/composables/useGroupsAPI';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
-export function useEditGroup(state) {
-  const api = useApi();
+export function useEditGroup() {
+  const { state } = useDashboardState();
+  const groupsAPI = useGroupsAPI();
   const router = useRouter();
   const editGroupState = {
     typingTimer: null
@@ -49,12 +51,53 @@ export function useEditGroup(state) {
     router.back();
     state.editingGroup = null;
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
-    await api.delete(`groups/${idToRemove}`);
+    await groupsAPI.deleteGroup(idToRemove);
+  }
+
+  /**
+   * Create a new account group
+   */
+  async function createNewGroup() {
+    if(!confirm('Are you sure you want to create a new group?')) {
+      return;
+    }
+
+    const newGroupData = {
+      accounts: [],
+      isSelected: false,
+      name: `New Group ${state.allUserGroups.length}`
+    };
+
+    const savedNewGroup = await groupsAPI.createGroup(newGroupData);
+    state.allUserGroups.push(savedNewGroup);
+  }
+
+  /**
+   * Enter edit mode for a group
+   */
+  function editGroup(group) {
+    state.editingGroup = group;
+  }
+
+  /**
+   * Select a group and navigate back
+   */
+  async function selectGroup(groupToSelect) {
+    const selectedGroup = state.selected.group;
+
+    if(selectedGroup) {
+      await groupsAPI.deselectGroup(selectedGroup._id);          
+      selectedGroup.isSelected = false;
+    }
+
+    await groupsAPI.selectGroup(groupToSelect._id);
+    groupToSelect.isSelected = true;
+    router.back();
   }
 
   async function updateGroupName() {
     await waitUntilTypingStops();
-    await api.put(`groups/${state.editingGroup._id}`, {
+    await groupsAPI.updateGroup(state.editingGroup._id, { 
       name: state.editingGroup.name
     });
   }
@@ -71,11 +114,14 @@ export function useEditGroup(state) {
     };
 
     updateMemory(newGroupData);
-    await api.put(`groups/${state.editingGroup._id}`, newGroupData);
+    await groupsAPI.updateGroup(state.editingGroup._id, newGroupData);
   }
 
   return {
+    createNewGroup,
     deleteGroup,
+    editGroup,
+    selectGroup,
     updateGroupName,
     updateGroup
   };

@@ -69,7 +69,7 @@
     const { state } = useDashboardState();
     defineEmits(['close']);
     
-    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(state);
+    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup();
     
     const accountsNotInGroup = computed(() => {
       const accountsInGroup = state.editingGroup.accounts.map(account => account._id);
