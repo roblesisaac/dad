@@ -1,4 +1,8 @@
+import { useUtils } from './useUtils.js';
+
 export function useRules() {
+  const { lowercase, makeArray } = useUtils();
+
   const ruleMethods = {
     '>=': (itemValue, valueToCheck) => parseFloat(itemValue) >= parseFloat(valueToCheck),
     '>': (itemValue, valueToCheck) => parseFloat(itemValue) > parseFloat(valueToCheck),
@@ -26,17 +30,6 @@ export function useRules() {
     );
   }
 
-  function lowercase(string) {
-    if(typeof string === 'string') {
-      return string.toLowerCase();
-    }
-    return string;
-  }
-
-  function makeArray(value) {
-    return Array.isArray(value) ? value : [value];
-  }
-
   function filterGlobalRules(allRules) {
     return allRules.filter(ruleItem => {
       return ruleItem.applyForTabs.includes('_GLOBAL');
@@ -52,9 +45,17 @@ export function useRules() {
     });
   }
 
+  function combineRulesForTab(allRules, tabId) {
+    return [
+      ...filterRulesForTab(allRules, tabId),
+      ...filterGlobalRules(allRules)
+    ];
+  }
+
   return {
     ruleMethods,
     filterGlobalRules,
-    filterRulesForTab
+    filterRulesForTab,
+    combineRulesForTab
   };
 } 

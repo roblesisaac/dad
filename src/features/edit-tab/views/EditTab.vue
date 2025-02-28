@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { reactive, watch, computed } from 'vue';
+import { reactive, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useEditTab } from '../composables/useEditTab';
@@ -43,7 +43,7 @@ import ShareSection from '../components/ShareSection.vue';
 import ActionButtons from '../components/ActionButtons.vue';
 
 const route = useRoute();
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
 
 const editState = reactive({
   changeTabNameTo: state.selected.tab?.tabName || '',
@@ -73,7 +73,7 @@ const editState = reactive({
   }
 });
 
-const app = useEditTab(state, editState, actions);
+const app = useEditTab(state, editState);
 
 watch(() => editState.changeTabNameTo, async (newName) => {
   if(!state.selected.tab) return;

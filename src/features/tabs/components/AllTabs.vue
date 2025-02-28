@@ -16,7 +16,7 @@
   </div>
 
   <div class="cell-1">
-    <button @click="handleCreateNew" class="expanded createNewTab">
+    <button @click="handleCreateNew" class="expanded create-new-tab">
       + New Tab
     </button>
   </div>
@@ -31,11 +31,11 @@ import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
 
 const { Draggable, dragOptions } = useDraggable();
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 
 function handleCreateNew() {
-  createNewTab(actions.createNewTab, actions.goBack);
+  createNewTab();
 }
 
 onMounted(() => {
@@ -44,7 +44,7 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.createNewTab {
+.create-new-tab {
   background: lightblue;
   color: black;
   border-bottom: 2px solid;

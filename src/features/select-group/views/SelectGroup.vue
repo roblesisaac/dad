@@ -42,10 +42,10 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 
 const { Draggable, dragOptions } = useDraggable();
 const router = useRouter();
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
 const isEditing = ref(false);
 
-const app = useSelectGroup(state, actions, isEditing);
+const app = useSelectGroup(state, isEditing);
 
 app.init();
 

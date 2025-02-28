@@ -52,7 +52,7 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 const route = useRoute();
 
 const { Draggable, dragOptions } = useDraggable();
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
 
 const props = defineProps({
   editState: Object

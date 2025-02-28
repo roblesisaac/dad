@@ -1,11 +1,107 @@
-import { useRules } from './useRules';
-import { useUtils } from './useUtils';
+import { useRules } from './useRules.js';
+import { useUtils } from './useUtils.js';
 
 export function useTabProcessing() {
-  const { ruleMethods, filterGlobalRules, filterRulesForTab } = useRules();
+  const { ruleMethods, combineRulesForTab } = useRules();
   const { getDayOfWeekPST } = useUtils();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
+  /**
+   * Process transaction data for a tab based on rules
+   * @param {Array} data - Transaction data
+   * @param {Object} tab - Tab configuration
+   * @param {Array} allRules - All available rules
+   * @returns {Object} Processed tab data with total and categorized items
+   */
+  function processTabData(data, tab, allRules) {
+    if (!data || !tab) return null;
+
+    // Get rules for this tab by combining tab-specific and global rules
+    const tabRules = combineRulesForTab(allRules, tab._id);
+
+    // Build rule methods based on tab rules
+    const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules);
+
+    // Apply sorting
+    const dataCopy = sort(data);
+    const categorizedItems = [];
+    let tabTotal = 0;
+
+    // Process each transaction
+    for(const item of dataCopy) {
+      // Transform amount (negative becomes positive, positive becomes negative)
+      item.amount *= -1;
+      
+      // Apply categorization rules
+      categorize(item);
+      
+      // Determine how to group this item
+      const typeToGroupBy = groupBy(item);
+
+      // Skip items that don't pass filters
+      if(!filter(item)) continue;
+
+      // Calculate running total
+      const amt = parseFloat(item.amount);
+      tabTotal += amt;
+
+      // Skip detailed categorization if the tab isn't selected
+      if(!tab.isSelected) continue;
+
+      // Find or create category group
+      const storedCategory = categorizedItems.find(([storedGroupByName]) => 
+        storedGroupByName === typeToGroupBy
+      );
+
+      if(storedCategory) {
+        // Add to existing category
+        let [_, storedTransactions, storedTotal] = storedCategory;
+        storedTransactions.push(item);
+        storedCategory[2] = storedTotal + amt;
+      } else {
+        // Create new category
+        categorizedItems.push([typeToGroupBy, [item], amt]);
+      }
+    }
+
+    // Sort the grouped items
+    if(!['year', 'month', 'day', 'year_month'].includes(propToGroupBy)) {
+      // Sort by amount
+      if(tabTotal > 0) {
+        categorizedItems.sort((a, b) => b[2] - a[2]);
+      } else {
+        categorizedItems.sort((a, b) => a[2] - b[2]);
+      }
+    } else {
+      // Sort by date
+      categorizedItems.sort(groupByDate);
+    }
+
+    return { tabTotal, categorizedItems };
+  }
+
+  /**
+   * Sort function for date-based groupings
+   */
+  function groupByDate(a, b) {
+    const months = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+    };
+
+    const [yearA, monthA] = a[0].split(' ');
+    const [yearB, monthB] = b[0].split(' ');
+
+    if (yearA !== yearB) {
+      return yearB - yearA;
+    } else {
+      return months[monthB] - months[monthA];
+    }
+  }
+
+  /**
+   * Extract and organize rules by type
+   */
   function extractAndSortRuleTypes(tabRules) {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
 
@@ -55,12 +151,18 @@ export function useTabProcessing() {
     ];
   }
 
+  /**
+   * Safely get a property value from an item
+   */
   function getItemValue(item, propName) {
     return propName === 'category'
       ? item.personal_finance_category.primary
       : item[propName];
   }
 
+  /**
+   * Format the personal finance category for consistency
+   */
   function formatPersonalFinanceCategory(item) {
     const { primary } = item.personal_finance_category;
     if(!primary) return 'misc';
@@ -69,76 +171,9 @@ export function useTabProcessing() {
     item.personal_finance_category.primary = lower.split('_').join(' ');
   }
 
-  function processTabData(data, tab, allRules) {
-    if (!data || !tab) return null;
-
-    const tabRules = [
-      ...filterRulesForTab(allRules, tab._id),
-      ...filterGlobalRules(allRules)
-    ];
-
-    const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules);
-
-    const dataCopy = sort(data);
-    const categorizedItems = [];
-    let tabTotal = 0;
-
-    for(const item of dataCopy) {
-      item.amount *= -1;
-      categorize(item);
-      
-      const typeToGroupBy = groupBy(item);
-
-      if(!filter(item)) continue;
-
-      const amt = parseFloat(item.amount);
-      tabTotal += amt;
-
-      if(!tab.isSelected) continue;
-
-      const storedCategory = categorizedItems.find(([storedGroupByName]) => 
-        storedGroupByName === typeToGroupBy
-      );
-
-      if(storedCategory) {
-        let [_, storedTransactions, storedTotal] = storedCategory;
-        storedTransactions.push(item);
-        storedCategory[2] = storedTotal + amt;
-      } else {
-        categorizedItems.push([typeToGroupBy, [item], amt]);
-      }
-    }
-
-    // Sort grouped items
-    if(!['year', 'month', 'day', 'year_month'].includes(propToGroupBy)) {
-      if(tabTotal > 0) {
-        categorizedItems.sort((a, b) => b[2] - a[2]);
-      } else {
-        categorizedItems.sort((a, b) => a[2] - b[2]);
-      }
-    } else {
-      categorizedItems.sort(groupByDate);
-    }
-
-    return { tabTotal, categorizedItems };
-  }
-
-  function groupByDate(a, b) {
-    const months = {
-      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
-      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
-    };
-
-    const [yearA, monthA] = a[0].split(' ');
-    const [yearB, monthB] = b[0].split(' ');
-
-    if (yearA !== yearB) {
-      return yearB - yearA;
-    } else {
-      return months[monthB] - months[monthA];
-    }
-  }
-
+  /**
+   * Build rule methods for processing tab data
+   */
   function buildRuleMethods(tabRules) {
     const [sorters, categorizers, filters, propToGroupBy] = extractAndSortRuleTypes(tabRules);
 
@@ -147,10 +182,13 @@ export function useTabProcessing() {
       categorize: buildCategorizeMethod(categorizers),
       filter: buildFilterMethod(filters),
       groupBy: buildGroupByMethod(propToGroupBy),
-      propToGroupBy: propToGroupBy || 'category'
+      propToGroupBy: propToGroupBy[0] || 'category'
     };
   }
 
+  /**
+   * Build a method to sort transaction data
+   */
   function buildSortMethod(sorters) {
     return (arrayToSort) => {
       const arrayCopy = arrayToSort.map(item => (JSON.parse(JSON.stringify(item))));
@@ -173,6 +211,9 @@ export function useTabProcessing() {
     };
   }
 
+  /**
+   * Build a method to categorize transactions
+   */
   function buildCategorizeMethod(categorizers) {
     return (item) => {
       // Handle manual recategorization first
@@ -221,6 +262,9 @@ export function useTabProcessing() {
     };
   }
 
+  /**
+   * Build a method to filter transactions
+   */
   function buildFilterMethod(filters) {
     return (item) => {
       if(!filters.length) return true;
@@ -238,6 +282,9 @@ export function useTabProcessing() {
     };
   }
 
+  /**
+   * Build a method to group transactions
+   */
   function buildGroupByMethod(propToGroupBy) {
     return (item) => {
       return {
@@ -262,9 +309,6 @@ export function useTabProcessing() {
       }[propToGroupBy[0] || 'category']();
     };
   }
-
-  // Helper functions...
-  // (move existing helper functions here)
 
   return {
     processTabData,

@@ -15,7 +15,7 @@
     <button v-if="state.selected.tabsForGroup.length>1" 
             @click="router.push({ name: 'all-tabs' })" 
             class="view-all b-bottom b-left expanded">All</button>
-    <button v-else @click="actions.createNewTab" 
+    <button v-else @click="() => console.log('create new tab')" 
             class="view-all b-bottom b-left expanded">+</button>
   </div>
 </div>
@@ -31,7 +31,6 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 const { Draggable, dragOptions } = useDraggable();
 
 const props = defineProps({
-  actions: Object,
   state: Object
 });
 

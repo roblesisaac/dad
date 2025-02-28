@@ -10,7 +10,7 @@
 
   <!-- BackButton -->
   <Transition>
-    <button v-if="!isHome" @click="actions.goBack()" class="backButton section b-bottom">
+    <button v-if="!isHome" @click="route.back()" class="backButton section b-bottom">
       <ChevronLeft class="icon" /> Back
     </button>
   </Transition>
@@ -31,7 +31,7 @@
 
       <!-- Scrolling Tabs Totals Row -->
       <div v-if="!state.isLoading" class="cell-1 totalsRow">
-        <ScrollingTabButtons :state="state" :actions="actions" />
+        <ScrollingTabButtons :state="state" />
       </div>
 
       <!-- Category Rows -->
@@ -52,12 +52,15 @@
 
 <script setup>
 import { computed, onMounted, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
-import { useDashboardState } from '../composables/useDashboardState';
+import { useGroupOperations } from '../composables/useGroupOperations.js';
+import { useDashboardState } from '../composables/useDashboardState.js';
+import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import { useApi } from '@/shared/composables/useApi';
+import { useInit } from '../composables/useInit.js';
 
 // Core Components
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -66,18 +69,21 @@ import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
 import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
 
-const router = useRouter();
 const route = useRoute();
 const api = useApi();
 const { stickify } = useAppStore();
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
+const { init } = useInit();
+
+const { handleGroupChange } = useGroupOperations();
+const { processAllTabsForSelectedGroup, handleTabChange } = useTabs();
 const { syncLatestTransactionsForBanks } = usePlaidSync(api, state);
 
 const isHome = computed(() => route.name === 'dashboard');
 
 onMounted(async () => {
   stickify.register('.totalsRow');
-  await actions.init();
+  await init();
   
   // Start syncing transactions for all connected banks
   syncLatestTransactionsForBanks();
@@ -89,26 +95,24 @@ watch(
   (newRoute, oldRoute) => {
     if(newRoute === 'dashboard') {
       if(oldRoute === 'select-group') {
-        return actions.handleGroupChange();
+        return handleGroupChange();
       }
-      setTimeout(actions.processAllTabsForSelectedGroup, 500);
-      
-      // No longer need to check sync status, the sync progress is tracked by syncLatestTransactionsForBanks
+      setTimeout(processAllTabsForSelectedGroup, 500);
     }
   }
 );
 
 watch(() => state.date.start, (_, prevStart) => {
   if(prevStart === 'firstOfMonth') return;
-  actions.handleGroupChange();
+  handleGroupChange();
 });
 
 watch(() => state.date.end, (_, prevEnd) => {
   if(prevEnd === 'today') return;
-  actions.handleGroupChange();
+  handleGroupChange();
 });
 
-watch(() => state.selected.tab?._id, actions.handleTabChange);
+watch(() => state.selected.tab?._id, handleTabChange);
 </script>
 
 <style>

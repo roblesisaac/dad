@@ -27,13 +27,13 @@ const props = defineProps({
   element: Object
 });
 
-const { state, actions } = useDashboardState();
+const { state } = useDashboardState();
 const { selectTab, updateTabSort } = useTabs();
 
 const tabTotal = computed(() => calculateTabTotal(props.element));
 
 function handleTabSelect() {
-  selectTab(props.element, state.selected.tab, actions.goBack);
+  selectTab(props.element, state.selected.tab);
 }
 
 watch(() => props.element.sort, (newSort) => {

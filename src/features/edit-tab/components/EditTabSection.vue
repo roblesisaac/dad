@@ -20,12 +20,10 @@
     
     <script setup>
     import { useRoute } from 'vue-router';
-    import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
     import { Plus, Minus } from 'lucide-vue-next';
     import RulesRenderer from './RulesRenderer.vue';
     
     const route = useRoute();
-    const { state, actions } = useDashboardState();
     
     const props = defineProps({
       editState: Object,
