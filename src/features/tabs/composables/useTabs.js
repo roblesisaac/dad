@@ -45,11 +45,13 @@ export function useTabs() {
   /**
    * Select a tab and deselect the currently selected tab
    */
-  async function selectTab(tabToSelect, currentlySelectedTab) {
+  async function selectTab(tabToSelect, shouldRedirect = true) {
     if(tabToSelect.isSelected) {
-      router.back();
+      if(shouldRedirect) router.back();
       return;
     }
+
+    const currentlySelectedTab = state.selected.tab;
 
     if(currentlySelectedTab) {
       currentlySelectedTab.isSelected = false;
@@ -58,7 +60,7 @@ export function useTabs() {
 
     tabToSelect.isSelected = true;
     await tabsAPI.updateTabSelection(tabToSelect._id, true);
-    router.back();
+    if(shouldRedirect) router.back();
   }
 
    /**
