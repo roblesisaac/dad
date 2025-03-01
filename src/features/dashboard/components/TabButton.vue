@@ -1,12 +1,15 @@
 <template>
-  <button @click="selectTab(props.tab)" :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']">
+  <button 
+    @click="selectTab(tab)" 
+    :class="['tab-button', fontColor(tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
+  >
     <!-- Dots -->
-    <MoreVertical v-if="tab.isSelected" @click="editTab()" />
+    <MoreVertical v-if="tab.isSelected" @click.stop="editTab()" />
   
     <!-- Title & Total -->
     <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
-      <small class="section-title bold"><b v-if="tabIsShared(tab)">*</b>{{ props.tab.tabName }}</small>
-      <LoadingDots v-if="props.state.isLoading" />
+      <small class="section-title bold"><b v-if="isTabShared(tab)">*</b>{{ tab.tabName }}</small>
+      <LoadingDots v-if="state.isLoading" />
       <span v-else class="section-content">{{ tabTotal }}</span>
     </div>
 
@@ -16,37 +19,43 @@
 </template>
 
 <script setup>
-import { computed, nextTick, watch } from 'vue';
+import { computed, watch } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
-import { useApi } from '@/shared/composables/useApi';
-import { useRouter } from 'vue-router';
+import { useDashboardTabs } from '../composables/useDashboardTabs';
 
-const api = useApi();
-const router = useRouter();
 const props = defineProps({
-  tab: 'object',
-  state: 'object'
+  tab: {
+    type: Object,
+    required: true
+  },
+  state: {
+    type: Object,
+    required: true
+  }
 });
 
-function validIdString(inputString) {
-  return inputString.replace(/[:\-]/g, '_');
-}
+// Get tab functionality from our new composable
+const { 
+  selectTab, 
+  editTab, 
+  isTabShared, 
+  getUniqueTabClassName,
+  updateTabSort 
+} = useDashboardTabs();
 
-const uniqueTabClassName = computed(() => validIdString(props.tab._id));
-const tabsForGroup = computed(() => props.state.selected.tabsForGroup);
-const tabIndex = computed(() => tabsForGroup.value.findIndex(tab => tab._id === props.tab._id));
+// Get computed values
+const tab = props.tab;
+const state = props.state;
+const uniqueTabClassName = computed(() => getUniqueTabClassName(tab._id));
+const tabsForGroup = computed(() => state.selected.tabsForGroup);
+const tabIndex = computed(() => tabsForGroup.value.findIndex(t => t._id === tab._id));
 const shouldShowDragHandle = computed(() => tabsForGroup.value.length > 1);
 const tabShouldExpand = !shouldShowDragHandle.value;
 
-const isSelected = computed(() => {
-  return props.tab.isSelected;
-});
-
-const isSelectedClass = computed(() => {
-  return isSelected.value ? 'selected' : '';
-});
+const isSelected = computed(() => tab.isSelected);
+const isSelectedClass = computed(() => isSelected.value ? 'selected' : '');
 
 const borders = computed(() => {
   const rightBorder = isLastInArray.value || isSelected.value ? '' : 'b-right';
@@ -57,7 +66,7 @@ const borders = computed(() => {
 });
 
 const tabTotal = computed(() => {
-  const total = props.tab.total || 0;
+  const total = tab.total || 0;
   const toFixed = isSelected.value ? 2 : 0;
 
   return formatPrice(total, { toFixed });
@@ -67,40 +76,13 @@ const isLastInArray = computed(() => tabIndex.value === tabsForGroup.value.lengt
 
 const isPreviousTabSelected = computed(() => {
   const previousTab = tabsForGroup.value[tabIndex.value-1];
-
   return previousTab?.isSelected;
 });
 
-function editTab() {
-  router.push({ name: 'edit-tab' });
-}
-
-function selectTab(tabToSelect) {
-  if(tabToSelect.isSelected) {
-    return 
-  }
-
-  const currentlySelectedTab = props.state.selected.tab;
-
-  if(currentlySelectedTab) {
-    currentlySelectedTab.isSelected = false;
-    api.put(`tabs/${currentlySelectedTab._id}`, { isSelected: false });
-  }
-
-  nextTick(() => {
-    tabToSelect.isSelected = true;
-    api.put(`tabs/${tabToSelect._id}`, { isSelected: true });
-  });
-}
-
-function tabIsShared(tab) {
-  return tab.showForGroup.length > 1 || tab.showForGroup.includes('_GLOBAL')
-}
-
-watch(() => props.tab.sort, (newSort) => {
-  api.put(`tabs/${props.tab._id}`, { sort: newSort });
+// Watch for sort changes and update via the composable
+watch(() => tab.sort, (newSort) => {
+  updateTabSort(tab._id, newSort);
 });
-
 </script>
 
 <style>

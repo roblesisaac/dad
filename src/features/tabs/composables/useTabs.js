@@ -1,7 +1,5 @@
 import { useApi } from '@/shared/composables/useApi.js';
-import { useUtils } from '@/features/dashboard/composables/useUtils.js';
 import { useTabsAPI } from './useTabsAPI.js';
-import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from '@/features/dashboard/composables/useTabProcessing.js';
 import { useRouter } from 'vue-router';
@@ -11,9 +9,7 @@ export function useTabs() {
   const { processTabData } = useTabProcessing();
   const api = useApi();
   const router = useRouter();
-  const { waitUntilTypingStops } = useUtils();
   const tabsAPI = useTabsAPI(api);
-  const rulesAPI = useRulesAPI(api);
 
   /**
    * Find selected tabs in a group

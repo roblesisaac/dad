@@ -16,7 +16,12 @@
     <h4 class="bold">Groups Tab Is Shared With:</h4>
     <div class="dropHere">
       <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
-      <Draggable class="draggable" group="groupDragger" v-model="selectedTab.showForGroup" v-bind="dragOptions(100)">
+      <Draggable 
+        class="draggable" 
+        group="groupDragger" 
+        v-model="selectedTab.showForGroup" 
+        v-bind="dragOptions(100)"
+        @change="onDragChange">
         <template #item="{element}">
           <button class="sharedWith">{{ getGroupName(element) }}</button>
         </template>
@@ -26,7 +31,12 @@
 
   <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
     <ScrollingContent class="p30y">
-      <Draggable class="draggable" group="groupDragger" v-model="unselectedGroupsInTab" v-bind="dragOptions(100)">
+      <Draggable 
+        class="draggable" 
+        group="groupDragger" 
+        v-model="unselectedGroupsInTab" 
+        v-bind="dragOptions(100)"
+        @change="onDragChange">
         <template #item="{element}">
           <button class="button sharedWith">{{ getGroupName(element) }}</button>
         </template>
@@ -59,6 +69,16 @@ const {
   unselectedGroupsInTab,
   getGroupName,
   makeTabUnique,
+  saveTabGroups,
   select
 } = useEditTab(props.editState);
+
+/**
+ * Handle changes from drag and drop operations
+ * Saves the updated tab configuration to the API
+ */
+async function onDragChange() {
+  // Only save if changes actually happened (items were added or removed)
+  await saveTabGroups();
+}
 </script> 
