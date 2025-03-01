@@ -1,8 +1,10 @@
+import { useApi } from '@/shared/composables/useApi';
 /**
  * Tab API operations
  * This composable handles all API interactions related to tabs
  */
-export function useTabsAPI(api) {
+export function useTabsAPI() {
+  const api = useApi();
   /**
    * Fetch all tabs for the user
    */

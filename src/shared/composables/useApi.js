@@ -113,7 +113,7 @@ export function useApi() {
     post: (url, body, settings) => request('POST', url, body, settings),
     put: (url, body, settings) => request('PUT', url, body, settings),
     patch: (url, body, settings) => request('PATCH', url, body, settings),
-    remove: (url, body, settings) => request('DELETE', url, body, settings),
+    delete: (url, body, settings) => request('DELETE', url, body, settings),
     retry: retryRequest
   };
 }

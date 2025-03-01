@@ -32,26 +32,22 @@ const state = reactive({
   }
 });
 
-const app = function() {
-  function dateIsAPreset() {
-    return state.presets.hasOwnProperty(date[when]);
-  }
+function dateIsAPreset() {
+  return state.presets.hasOwnProperty(date[when]);
+}
 
-  function launchPreset() {
-    const { presets } = state;
-    date[when] = presets[date[when]]();
-  }
+function launchPreset() {
+  const { presets } = state;
+  date[when] = presets[date[when]]();
+}
 
-  return {
-    init: () => {
-      if(dateIsAPreset()) {
-        launchPreset();
-      }
-    }
+function init() {
+  if(dateIsAPreset()) {
+    launchPreset();
   }
-}();
+}
 
-app.init();
+init();
 </script>
 
 <style>

@@ -1,6 +1,6 @@
 <template>
 <div v-if="route.name === 'edit-tab'" class="x-grid middle dottedRow">
-  <div @click="app.select('sharing')" class="cell-1 p20">
+  <div @click="select('sharing')" class="cell-1 p20">
     <div class="x-grid">
       <div class="cell auto">
         Share
@@ -35,38 +35,30 @@
   </div>
 
   <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="cell-1 p10x p10b">
-    <button @click="app.makeTabUnique" class="uniqueBtn expanded">Make Tab Unique?</button>
+    <button @click="makeTabUnique" class="uniqueBtn expanded">Make Tab Unique?</button>
   </div>
 </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { Plus, Minus } from 'lucide-vue-next';
 import ScrollingContent from '@/shared/components/ScrollingContent.vue';
-
-import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useEditTab } from '../composables/useEditTab';
 import { useDraggable } from '@/shared/composables/useDraggable';
 
 const route = useRoute();
-
 const { Draggable, dragOptions } = useDraggable();
-const { state } = useDashboardState();
 
 const props = defineProps({
   editState: Object
 });
 
-const selectedTab = computed(() => state.selected.tab);
-
-const unselectedGroupsInTab = computed(() => {
-  return state.allUserGroups
-    .filter(group => !selectedTab.value.showForGroup.includes(group._id))
-    .map(group => group._id);
-});
-
-function getGroupName(groupId) {
-  return state.allUserGroups.find(group => group._id === groupId)?.name;
-}
+const { 
+  selectedTab,
+  unselectedGroupsInTab,
+  getGroupName,
+  makeTabUnique,
+  select
+} = useEditTab(props.editState);
 </script> 

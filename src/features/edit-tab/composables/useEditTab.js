@@ -1,124 +1,228 @@
 import { useRouter } from 'vue-router';
-import { useTabs } from '@/features/tabs/composables/useTabs.js';
+import { useUtils } from '@/features/dashboard/composables/useUtils.js';
+import { useTabsAPI } from '../../tabs/composables/useTabsAPI';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { computed } from 'vue';
 
-export function useEditTab(state, editState) {
+export function useEditTab(editState) {
+  const { state } = useDashboardState();
   const router = useRouter();
-  const { 
-    duplicateTab, 
-    makeTabUnique, 
-    updateTabName, 
-    deleteTab, 
-    saveTabGroups 
-  } = useTabs();
+  const { waitUntilTypingStops } = useUtils();
+  const tabsAPI = useTabsAPI();
 
-  const selectedTab = {
-    get value() {
-      return state.selected.tab;
-    }
-  };
+  /**
+   * Selected tab computed property
+   */
+  const selectedTab = computed(() => state.selected.tab);
 
-  const app = {
-    /**
-     * Change the tab name
-     */
-    changeTabName: async () => {
-      await updateTabName(
-        selectedTab.value, 
-        editState.changeTabNameTo
-      );
-    },
+  /**
+   * Computed property for groups not included in the tab
+   */
+  const unselectedGroupsInTab = computed(() => {
+    return state.allUserGroups
+      .filter(group => !selectedTab.value.showForGroup.includes(group._id))
+      .map(group => group._id);
+  });
 
-    /**
-     * Delete the current tab
-     */
-    deleteTab: async () => {
-      await deleteTab(
-        selectedTab.value, 
-        state.allUserTabs
-      );
-    },
+  /**
+   * Get a group name by its ID
+   */
+  function getGroupName(groupId) {
+    return state.allUserGroups.find(group => group._id === groupId)?.name;
+  }
 
-    /**
-     * Duplicate the current tab with all its rules
-     */
-    duplicateTab: async () => {
-      const callbacks = {
-        onStart: () => {
-          state.blueBar.message = 'Duplicating Tab';
-          state.blueBar.loading = true;
-          state.isLoading = true;
-        },
-        onNavigateBack: () => router.back(),
-        onCloneStart: () => {
-          state.blueBar.message = 'Cloning Rules';
-        },
-        onComplete: () => {
-          editState.ruleDetails = null;
-          state.blueBar.message = false;
-          state.blueBar.loading = false;
-          router.push({ name: 'edit-tab' });
-          state.isLoading = false;
-        }
+  /**
+   * Toggle rule type selection
+   */
+  function select(ruleType) {
+    if (!editState) return;
+    
+    editState.selectedRuleType = editState.selectedRuleType === ruleType 
+      ? '' 
+      : ruleType;
+  }
+
+  /**
+   * Clone rules from one tab to another
+   */
+  async function cloneRules(newTabId, sourceTabId, allUserRules) {
+    const newRules = [];
+    
+    for(const rule of allUserRules) {
+      if(!rule.applyForTabs.includes(sourceTabId)) {
+        continue;
+      }
+
+      const newRule = { 
+        rule: rule.rule,
+        _isImportant: rule._isImportant,
+        orderOfExecution: rule.orderOfExecution,
+        applyForTabs: [newTabId]
       };
 
-      await duplicateTab(
-        selectedTab.value, 
-        state.allUserTabs, 
-        state.allUserRules,
-        callbacks
-      );
-    },
-
-    /**
-     * Make current tab unique by duplicating and removing from original group
-     */
-    makeTabUnique: async () => {
-      if (!state.selected.group) return;
-
-      const callbacks = {
-        onStart: () => {
-          state.blueBar.message = 'Making Tab Unique';
-          state.blueBar.loading = true;
-          state.isLoading = true;
-        },
-        onNavigateBack: () => router.back(),
-        onCloneStart: () => {
-          state.blueBar.message = 'Cloning Rules';
-        },
-        onComplete: () => {
-          editState.ruleDetails = null;
-          state.blueBar.message = false;
-          state.blueBar.loading = false;
-          router.push({ name: 'edit-tab' });
-          state.isLoading = false;
-        }
-      };
-
-      await makeTabUnique(
-        selectedTab.value, 
-        state.selected.group,
-        state.allUserTabs, 
-        state.allUserRules,
-        callbacks
-      );
-    },
-
-    /**
-     * Save the groups assigned to the tab
-     */
-    saveGroups: async () => {
-      await saveTabGroups(selectedTab.value);
-    },
-
-    /**
-     * Toggle rule type selection
-     */
-    select: (ruleType) => {
-      editState.selectedRuleType = editState.selectedRuleType === ruleType 
-        ? '' 
-        : ruleType;
+      const savedRule = await rulesAPI.createRule(newRule);
+      newRules.push(savedRule);
     }
-  };
+    
+    return newRules;
+  }
 
-  return { app };
+  /**
+   * Create a copy of a tab
+   */
+  async function createNewTabCopy(sourceTab, baseName) {
+    return await tabsAPI.createTab({
+      tabName: `${baseName} Copy`,
+      showForGroup: [...sourceTab.showForGroup],
+      isSelected: true,
+      sort: sourceTab.sort + 1
+    });
+  }
+
+  /**
+   * Delete a tab
+   */
+  async function deleteTab() {
+    if(!confirm('You sure?')) {
+      return;
+    }
+    const tab = state.selected.tab;
+    const tabIndex = state.allUserTabs.findIndex(t => t._id === tab._id);
+    
+    router.back();
+    state.allUserTabs.splice(tabIndex, 1);
+    await tabsAPI.deleteTab(tab._id);
+  }
+
+  /**
+   * Duplicate a tab with its rules
+   */
+  async function duplicateTab(tab, allUserTabs, allUserRules) {
+    const tabName = tab.tabName;
+    const promptValue = prompt(`Please enter the tabName ('${tabName}') to duplicate.`);
+
+    if(promptValue !== tabName) {
+      return;
+    }
+
+    state.blueBar.message = 'Duplicating Tab';
+    state.blueBar.loading = true;
+    state.isLoading = true;
+    router.back()
+
+    // Create a new tab
+    const newTab = await createNewTabCopy(tab, tabName);
+    
+    state.blueBar.message = 'Cloning Rules';
+    
+    // Clone rules for the new tab
+    await cloneRules(newTab._id, tab._id, allUserRules);
+
+    // Deselect the current tab
+    await tabsAPI.updateTabSelection(tab._id, false);
+    tab.isSelected = false;
+
+    // Add the new tab to the list
+    allUserTabs.push(newTab);
+    editState.ruleDetails = null;
+    state.blueBar.message = false;
+    state.blueBar.loading = false;
+    router.push({ name: 'edit-tab' });
+    state.isLoading = false;
+    
+    return newTab;
+  }
+
+  /**
+   * Update a tab's name
+   */
+  async function updateTabName(tab, newName) {
+    if(!tab) return;
+
+    if(newName === tab.tabName) {
+      return;
+    }
+
+    await waitUntilTypingStops();
+    
+    await tabsAPI.updateTab(tab._id, {
+      tabName: newName
+    });
+
+    tab.tabName = newName;
+  }
+
+  /**
+   * Remove and deselect a group from a tab
+   */
+  async function removeAndDeselectGroupFromTab(tab, groupId) {
+    const showForGroup = tab.showForGroup
+      .filter(id => id !== groupId);
+
+    await tabsAPI.updateTab(tab._id, {
+      isSelected: false,
+      showForGroup
+    });
+
+    tab.isSelected = false;
+    tab.showForGroup = showForGroup;
+  }
+
+  /**
+   * Make a tab unique by duplicating it and removing the original group
+   */
+  async function makeTabUnique() {
+    const tab = selectedTab.value;
+    const selectedGroup = state.selected.group;
+    
+    if (!selectedGroup) return;
+    const tabName = tab.tabName;
+    const promptValue = prompt(`Please enter the tabName ('${tabName}') to make this tab unique.`);
+
+    if(promptValue !== tabName) {
+      return;
+    }
+
+    state.blueBar.message = 'Making Tab Unique';
+    state.blueBar.loading = true;
+    state.isLoading = true;
+    router.back()
+
+    // Create a new tab
+    const newTab = await createNewTabCopy(tab, tabName);
+    
+    state.blueBar.message = 'Cloning Rules';
+    
+    // Clone rules
+    await cloneRules(newTab._id, tab._id, state.allUserRules);
+    
+    // Remove and deselect group from current tab
+    await removeAndDeselectGroupFromTab(tab, selectedGroup._id);
+
+    // Add new tab to list
+    state.allUserTabs.push(newTab);
+    if (editState) {
+      editState.ruleDetails = null;
+    }
+    state.blueBar.message = false;
+    state.blueBar.loading = false;
+    router.push({ name: 'edit-tab' });
+    state.isLoading = false;
+    
+    return newTab;
+  }
+
+  return {
+    cloneRules,
+    createNewTabCopy,
+    deleteTab,
+    duplicateTab,
+    getGroupName,
+    makeTabUnique,
+    removeAndDeselectGroupFromTab,
+    select,
+    selectedTab,
+    unselectedGroupsInTab,
+    updateTabName
+  };
 } 

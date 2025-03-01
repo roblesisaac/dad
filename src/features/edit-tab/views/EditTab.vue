@@ -27,7 +27,7 @@
     <ShareSection :editState="editState" />
 
     <!-- Delete And Duplicate Buttons -->
-    <ActionButtons v-if="route.name === 'edit-tab'" :app="app" />
+    <ActionButtons v-if="route.name === 'edit-tab'" />
 
   </div>
 </div>
@@ -73,12 +73,10 @@ const editState = reactive({
   }
 });
 
-const app = useEditTab(state, editState);
+const { updateTabName } = useEditTab(editState);
 
 watch(() => editState.changeTabNameTo, async (newName) => {
-  if(!state.selected.tab) return;
-  state.selected.tab.tabName = newName;
-  await api.put(`tabs/${state.selected.tab._id}`, { tabName: newName });
+  await updateTabName(state.selected.tab, newName);
 });
 </script>
 

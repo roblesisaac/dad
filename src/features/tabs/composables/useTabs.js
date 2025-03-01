@@ -187,122 +187,6 @@ export function useTabs() {
   }
 
   /**
-   * Duplicate a tab with its rules
-   */
-  async function duplicateTab(tab, allUserTabs, allUserRules, callbacks = {}) {
-    const { 
-      onStart, 
-      onComplete, 
-      onNavigateBack, 
-      onCloneStart
-    } = callbacks;
-
-    const tabName = tab.tabName;
-    const promptValue = prompt(`Please enter the tabName ('${tabName}') to duplicate.`);
-
-    if(promptValue !== tabName) {
-      return;
-    }
-
-    onStart?.();
-    onNavigateBack?.();
-
-    // Create a new tab
-    const newTab = await createNewTabCopy(tab, tabName);
-    
-    onCloneStart?.();
-    
-    // Clone rules for the new tab
-    await cloneRules(newTab._id, tab._id, allUserRules);
-
-    // Deselect the current tab
-    await tabsAPI.updateTabSelection(tab._id, false);
-    tab.isSelected = false;
-
-    // Add the new tab to the list
-    allUserTabs.push(newTab);
-    onComplete?.();
-    
-    return newTab;
-  }
-
-  /**
-   * Create a copy of a tab
-   */
-  async function createNewTabCopy(sourceTab, baseName) {
-    return await tabsAPI.createTab({
-      tabName: `${baseName} Copy`,
-      showForGroup: [...sourceTab.showForGroup],
-      isSelected: true,
-      sort: sourceTab.sort + 1
-    });
-  }
-
-  /**
-   * Clone rules from one tab to another
-   */
-  async function cloneRules(newTabId, sourceTabId, allUserRules) {
-    const newRules = [];
-    
-    for(const rule of allUserRules) {
-      if(!rule.applyForTabs.includes(sourceTabId)) {
-        continue;
-      }
-
-      const newRule = { 
-        rule: rule.rule,
-        _isImportant: rule._isImportant,
-        orderOfExecution: rule.orderOfExecution,
-        applyForTabs: [newTabId]
-      };
-
-      const savedRule = await rulesAPI.createRule(newRule);
-      newRules.push(savedRule);
-    }
-    
-    return newRules;
-  }
-
-  /**
-   * Make a tab unique by duplicating it and removing the original group
-   */
-  async function makeTabUnique(tab, selectedGroup, allUserTabs, allUserRules, callbacks = {}) {
-    const { 
-      onStart, 
-      onComplete, 
-      onNavigateBack, 
-      onCloneStart
-    } = callbacks;
-
-    const tabName = tab.tabName;
-    const promptValue = prompt(`Please enter the tabName ('${tabName}') to make this tab unique.`);
-
-    if(promptValue !== tabName) {
-      return;
-    }
-
-    onStart?.();
-    onNavigateBack?.();
-
-    // Create a new tab
-    const newTab = await createNewTabCopy(tab, tabName);
-    
-    onCloneStart?.();
-    
-    // Clone rules
-    await cloneRules(newTab._id, tab._id, allUserRules);
-    
-    // Remove and deselect group from current tab
-    await removeAndDeselectGroupFromTab(tab, selectedGroup._id);
-
-    // Add new tab to list
-    allUserTabs.push(newTab);
-    onComplete?.();
-    
-    return newTab;
-  }
-
-  /**
    * Remove a group from a tab and deselect it
    */
   async function removeAndDeselectGroupFromTab(tab, groupId) {
@@ -316,38 +200,6 @@ export function useTabs() {
 
     tab.isSelected = false;
     tab.showForGroup = showForGroup;
-  }
-
-  /**
-   * Update a tab's name
-   */
-  async function updateTabName(tab, newName) {
-    if(newName === tab.tabName) {
-      return;
-    }
-
-    await waitUntilTypingStops();
-    
-    await tabsAPI.updateTab(tab._id, {
-      tabName: newName
-    });
-
-    tab.tabName = newName;
-  }
-
-  /**
-   * Delete a tab
-   */
-  async function deleteTab(tab, allUserTabs) {
-    if(!confirm('You sure?')) {
-      return;
-    }
-    
-    const tabIndex = allUserTabs.findIndex(t => t._id === tab._id);
-    
-    router.back();
-    allUserTabs.splice(tabIndex, 1);
-    await tabsAPI.deleteTab(tab._id);
   }
 
   /**
@@ -394,14 +246,9 @@ export function useTabs() {
     updateTabSort,
     createNewTab,
     createDashboardTab,
-    duplicateTab,
-    makeTabUnique,
     handleTabChange,
-    updateTabName,
-    deleteTab,
     findTab,
     saveTabGroups,
-    cloneRules,
     selectedTabsInGroup,
     selectFirstTab,
     deselectOtherTabs,
