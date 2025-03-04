@@ -20,7 +20,7 @@ export function useInit() {
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
   const rulesAPI = useRulesAPI(api);
-  const { fetchGroupsAndAccounts } = useGroupOperations();
+  const { fetchGroupsAndAccounts, handleGroupChange } = useGroupOperations();
 
   async function init() {
     try {
@@ -49,6 +49,8 @@ export function useInit() {
 
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
+
+        await handleGroupChange();
       } catch (error) {
         const errorData = error.response?.data;
         state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';
@@ -58,7 +60,10 @@ export function useInit() {
       console.error('Init error:', error);
       state.blueBar.message = 'Unable to initialize application. Please refresh the page.';
     } finally {
+      console.log('finally');
       state.blueBar.loading = false;
+      state.blueBar.message = null;
+      state.isLoading = false;
     }
   }
 

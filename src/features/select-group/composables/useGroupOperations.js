@@ -1,4 +1,3 @@
-import { nextTick } from 'vue';
 import { useGroupsAPI } from './useGroupsAPI.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabs } from '../../tabs/composables/useTabs.js';
@@ -104,14 +103,12 @@ export function useGroupOperations() {
       state.date
     );
 
-    if(!!tabsForGroup.length) {
+    if(tabsForGroup.length) {
       return await processAllTabsForSelectedGroup();
     }
     
-    nextTick(async () => {
-      // await createNewTab();
-      state.isLoading = false;
-    });
+    state.isLoading = false;
+    state.blueBar.message = false;
   }
   
   return {

@@ -252,6 +252,10 @@ export function usePlaidSync() {
     if (state && state.blueBar) {
       state.blueBar.message = message;
       state.blueBar.loading = loading;
+      setTimeout(() => {
+        state.blueBar.message = null;
+        state.blueBar.loading = false;
+      }, 1000);
     }
   };
 
