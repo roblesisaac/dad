@@ -1,4 +1,6 @@
 import { ref, computed, onUnmounted } from 'vue';
+import { useApi } from '@/shared/composables/useApi.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
 /**
  * Unified composable for handling Plaid transaction sync operations
@@ -8,7 +10,9 @@ import { ref, computed, onUnmounted } from 'vue';
  * @param {Object} state - Component state to update (can be different for dashboard/onboarding)
  * @returns {Object} Sync methods and properties
  */
-export function usePlaidSync(api, state) {
+export function usePlaidSync() {
+  const api = useApi();
+  const { state } = useDashboardState();
   const isSyncing = ref(false);
   const syncProgress = ref({});
   const currentBankIndex = ref(0);

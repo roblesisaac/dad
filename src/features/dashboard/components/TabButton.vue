@@ -1,20 +1,20 @@
 <template>
   <button 
-    @click="selectTab(tab)" 
-    :class="['tab-button', fontColor(tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
+    @click="selectTab(props.tab)" 
+    :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
   >
     <!-- Dots -->
-    <MoreVertical v-if="tab.isSelected" @click.stop="editTab()" />
+    <MoreVertical v-if="props.tab.isSelected" @click.stop="editTab()" />
   
     <!-- Title & Total -->
     <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
-      <small class="section-title bold"><b v-if="isTabShared(tab)">*</b>{{ tab.tabName }}</small>
+      <small class="section-title bold"><b v-if="isTabShared(props.tab)">*</b>{{ props.tab.tabName }}</small>
       <LoadingDots v-if="state.isLoading" />
       <span v-else class="section-content">{{ tabTotal }}</span>
     </div>
 
     <!-- Drag Handle -->
-    <GripVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
+    <GripVertical v-if="props.tab.isSelected && shouldShowDragHandle" class="handleTab" />    
   </button>
 </template>
 
@@ -24,17 +24,16 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 import { useDashboardTabs } from '../composables/useDashboardTabs';
+import { useDashboardState } from '../composables/useDashboardState';
 
 const props = defineProps({
   tab: {
     type: Object,
     required: true
-  },
-  state: {
-    type: Object,
-    required: true
   }
 });
+
+const { state } = useDashboardState();
 
 // Get tab functionality from our new composable
 const { 
@@ -46,15 +45,13 @@ const {
 } = useDashboardTabs();
 
 // Get computed values
-const tab = props.tab;
-const state = props.state;
-const uniqueTabClassName = computed(() => getUniqueTabClassName(tab._id));
+const uniqueTabClassName = computed(() => getUniqueTabClassName(props.tab._id));
 const tabsForGroup = computed(() => state.selected.tabsForGroup);
-const tabIndex = computed(() => tabsForGroup.value.findIndex(t => t._id === tab._id));
+const tabIndex = computed(() => tabsForGroup.value.findIndex(t => t._id === props.tab._id));
 const shouldShowDragHandle = computed(() => tabsForGroup.value.length > 1);
 const tabShouldExpand = !shouldShowDragHandle.value;
 
-const isSelected = computed(() => tab.isSelected);
+const isSelected = computed(() => props.tab.isSelected);
 const isSelectedClass = computed(() => isSelected.value ? 'selected' : '');
 
 const borders = computed(() => {
@@ -66,7 +63,7 @@ const borders = computed(() => {
 });
 
 const tabTotal = computed(() => {
-  const total = tab.total || 0;
+  const total = props.tab.total || 0;
   const toFixed = isSelected.value ? 2 : 0;
 
   return formatPrice(total, { toFixed });
@@ -80,8 +77,8 @@ const isPreviousTabSelected = computed(() => {
 });
 
 // Watch for sort changes and update via the composable
-watch(() => tab.sort, (newSort) => {
-  updateTabSort(tab._id, newSort);
+watch(() => props.tab.sort, (newSort) => {
+  updateTabSort(props.tab._id, newSort);
 });
 </script>
 

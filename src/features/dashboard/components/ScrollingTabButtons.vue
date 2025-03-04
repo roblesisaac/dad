@@ -1,13 +1,13 @@
 <template>
 <div class="x-grid">
-  <div class="cell-20-24">
+  <Transition>
+  <div v-if="!state.reordering" class="cell-20-24">
     <Draggable 
       class="draggable button-container" 
       :class="{ 'toggle-scroll': !isSmallScreen }" 
       handle=".handleTab" 
-      v-model="tabsForGroup" 
-      v-bind="dragOptions(1)"
-      @end="handleDragEnd">
+      v-model="state.selected.tabsForGroup" 
+      v-bind="dragOptions(1)">
       <template #item="{element}">
         <TabButton
           :state="state" 
@@ -17,6 +17,7 @@
       </template>
     </Draggable>
   </div>
+  </Transition>
   <div class="cell-4-24">
     <button v-if="state.selected.tabsForGroup.length>1" 
             @click="router.push({ name: 'all-tabs' })" 
@@ -29,32 +30,17 @@
 </template>
 
 <script setup>
-import { computed, onMounted, watch, ref } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import TabButton from './TabButton.vue';
 import { useRouter } from 'vue-router';
 import { useDraggable } from '@/shared/composables/useDraggable';
-import { useDashboardTabs } from '../composables/useDashboardTabs';
-
-const { Draggable, dragOptions } = useDraggable();
-const { updateTabSort, updateTabsOrder } = useDashboardTabs();
-
-const props = defineProps({
-  state: Object
-});
+import Draggable from 'vuedraggable';
+import { useDashboardState } from '../composables/useDashboardState';
+const { dragOptions } = useDraggable();
 
 const router = useRouter();
-const state = props.state;
+const { state } = useDashboardState();
 const isSmallScreen = true;
-
-// Create a reactive reference to tabs to ensure changes propagate
-const tabsForGroup = computed({
-  get: () => state.selected.tabsForGroup,
-  set: (newTabs) => {
-    state.selected.tabsForGroup = newTabs;
-    // Update sort values whenever the array order changes
-    updateTabsOrder(newTabs);
-  }
-});
 
 function validIdString(inputString) {
   return inputString.replace(/[^a-zA-Z0-9]/g, '_');
@@ -77,15 +63,6 @@ function scrollToSelectedTab(toTheLeft) {
   const newScrollPosition = scrollableDiv.scrollLeft + selectedTabPosition.left - toTheLeft;
   
   scrollableDiv.scrollLeft = newScrollPosition;
-}
-
-/**
- * Handle drag end event for tab reordering
- * This is a fallback for the reactive approach above
- */
-function handleDragEnd() {
-  // Force update with current tab order to ensure reactivity
-  updateTabsOrder([...tabsForGroup.value]);
 }
 
 onMounted(() => scrollToSelectedTab(20));

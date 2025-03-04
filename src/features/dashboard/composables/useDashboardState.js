@@ -18,6 +18,7 @@ const state = reactive({
   isLoading: true,
   linkToken: null,
   showReorder: false,
+  // reordering: false,
   selected: {
     allGroupTransactions: [],
     group: computed(() => state.allUserGroups.find(group => group.isSelected)),
@@ -35,7 +36,7 @@ const state = reactive({
         return tabs.sort((a,b) => a.sort - b.sort);
       },
       set: (reorderedTabs) => {
-        reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);
+        reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);       
       }
     }),
     tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected)),

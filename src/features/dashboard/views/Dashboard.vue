@@ -31,7 +31,7 @@
 
       <!-- Scrolling Tabs Totals Row -->
       <div v-if="!state.isLoading" class="cell-1 totalsRow">
-        <ScrollingTabButtons :state="state" />
+        <ScrollingTabButtons />
       </div>
 
       <!-- Category Rows -->
@@ -59,7 +59,6 @@ import { useGroupOperations } from '../composables/useGroupOperations.js';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
-import { useApi } from '@/shared/composables/useApi';
 import { useInit } from '../composables/useInit.js';
 
 // Core Components
@@ -71,14 +70,13 @@ import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
 
 const router = useRouter();
 const route = useRoute();
-const api = useApi();
 const { stickify } = useAppStore();
 const { state } = useDashboardState();
 const { init } = useInit();
 
 const { handleGroupChange } = useGroupOperations();
 const { processAllTabsForSelectedGroup, handleTabChange } = useTabs();
-const { syncLatestTransactionsForBanks } = usePlaidSync(api, state);
+const { syncLatestTransactionsForBanks } = usePlaidSync();
 
 const isHome = computed(() => route.name === 'dashboard');
 
