@@ -60,7 +60,6 @@ export function useInit() {
       console.error('Init error:', error);
       state.blueBar.message = 'Unable to initialize application. Please refresh the page.';
     } finally {
-      console.log('finally');
       state.blueBar.loading = false;
       state.blueBar.message = null;
       state.isLoading = false;
