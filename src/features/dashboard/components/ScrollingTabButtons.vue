@@ -22,7 +22,7 @@
     <button v-if="state.selected.tabsForGroup.length>1" 
             @click="router.push({ name: 'all-tabs' })" 
             class="view-all b-bottom b-left expanded">All</button>
-    <button v-else @click="() => console.log('create new tab')" 
+    <button v-else @click="createNewTab()" 
             class="view-all b-bottom b-left expanded">+</button>
   </div>
 </div>
@@ -34,12 +34,13 @@ import { computed, onMounted, watch } from 'vue';
 import TabButton from './TabButton.vue';
 import { useRouter } from 'vue-router';
 import { useDraggable } from '@/shared/composables/useDraggable';
-import Draggable from 'vuedraggable';
 import { useDashboardState } from '../composables/useDashboardState';
-const { dragOptions } = useDraggable();
+import { useDashboardTabs } from '../composables/useDashboardTabs';
+const { dragOptions, Draggable } = useDraggable();
 
 const router = useRouter();
 const { state } = useDashboardState();
+const { createNewTab } = useDashboardTabs();
 const isSmallScreen = true;
 
 function validIdString(inputString) {

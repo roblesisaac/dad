@@ -10,8 +10,9 @@
 
 <script setup>
 import CategoryDetails from './CategoryDetails.vue';
+import { useDashboardState } from '../composables/useDashboardState';
 
-const { state } = defineProps({ state: Object });
+const { state } = useDashboardState();
 const selectedTab = state.selected.tab;
 
 </script>

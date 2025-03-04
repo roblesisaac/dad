@@ -1,4 +1,4 @@
-import { useUtils } from './useUtils.js';
+import { useUtils } from '@/shared/composables/useUtils.js';
 
 export function useRules() {
   const { lowercase, makeArray } = useUtils();

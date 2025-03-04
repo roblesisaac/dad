@@ -1,10 +1,10 @@
 import { nextTick } from 'vue';
 import { useGroupsAPI } from './useGroupsAPI.js';
-import { useUtils } from './useUtils.js';
+import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabs } from '../../tabs/composables/useTabs.js';
-import { useDashboardState } from './useDashboardState.js';
+import { useDashboardState } from '../../dashboard/composables/useDashboardState.js';
 import { useRouter } from 'vue-router';
-import { useTransactions } from './useTransactions.js';
+import { useTransactions } from '../../dashboard/composables/useTransactions.js';
 
 /**
  * Composable for group operations

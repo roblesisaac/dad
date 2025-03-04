@@ -181,6 +181,12 @@ export function useTabs() {
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
+    
+    const currentRoute = router.currentRoute.value;    
+    if(currentRoute.name === 'dashboard') {
+      return
+    }
+
     router.back();
   }
 

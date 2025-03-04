@@ -6,7 +6,7 @@ import { useTabs } from '@/features/tabs/composables/useTabs.js';
  * Acts as a bridge between dashboard components and tabs feature
  */
 export function useDashboardTabs() {
-  const { updateTabSort, selectTab: selectTabInTabs } = useTabs();
+  const { createNewTab, updateTabSort, selectTab: selectTabInTabs } = useTabs();
   const router = useRouter();
   /**
    * Select a tab from a dashboard component
@@ -42,6 +42,7 @@ export function useDashboardTabs() {
   }
   
   return {
+    createNewTab,
     selectTab,
     editTab,
     isTabShared,

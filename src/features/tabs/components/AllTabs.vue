@@ -4,11 +4,11 @@
     <Draggable 
       v-model="state.selected.tabsForGroup" 
       v-bind="dragOptions()" 
-      handle=".handlerTab"
+      handle=".handler-tab"
     >
       <template #item="{element}">
-        <AllTabRow 
-          :element="element" 
+        <AllTabRow
+          :element="element"
           :key="element._id" 
         />
       </template>

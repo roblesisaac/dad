@@ -1,5 +1,5 @@
 import { useRouter } from 'vue-router';
-import { useUtils } from '@/features/dashboard/composables/useUtils.js';
+import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabsAPI } from '../../tabs/composables/useTabsAPI';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { computed } from 'vue';

@@ -1,4 +1,4 @@
-import { useUtils } from './useUtils.js';
+import { useUtils } from '../../../shared/composables/useUtils.js';
 import { useApi } from '@/shared/composables/useApi.js';
 
 export function useTransactions() {

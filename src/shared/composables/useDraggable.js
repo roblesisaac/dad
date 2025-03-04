@@ -1,3 +1,5 @@
+import Draggable from 'vuedraggable';
+
 export function useDraggable() {
   const dragOptions = (delayMs=100) => ({
     animation: 200,
@@ -5,5 +7,5 @@ export function useDraggable() {
     touchStartThreshold: 100
   });
 
-  return { dragOptions };
+  return { dragOptions, Draggable };
 }

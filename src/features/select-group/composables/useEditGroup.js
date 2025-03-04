@@ -1,14 +1,13 @@
 import { useRouter } from 'vue-router';
-import { useGroupsAPI } from '@/features/dashboard/composables/useGroupsAPI';
+import { useGroupsAPI } from './useGroupsAPI';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useUtils } from '@/shared/composables/useUtils';
 
 export function useEditGroup() {
   const { state } = useDashboardState();
   const groupsAPI = useGroupsAPI();
   const router = useRouter();
-  const editGroupState = {
-    typingTimer: null
-  };
+  const { waitUntilTypingStops } = useUtils();
 
   function formatAccounts(accounts) {
     const propsToKeep = ['_id', 'account_id', 'mask', 'current', 'available'];
@@ -33,13 +32,6 @@ export function useEditGroup() {
     const groupToUpdate = state.allUserGroups.find(group => group._id === state.editingGroup._id);
     groupToUpdate.totalAvailableBalance = newGroupData.totalAvailableBalance;
     groupToUpdate.totalCurrentBalance = newGroupData.totalCurrentBalance;
-  }
-
-  function waitUntilTypingStops(ms=500) {
-    return new Promise((resolve) => {
-      clearTimeout(editGroupState.typingTimer);
-      editGroupState.typingTimer = setTimeout(resolve, ms);
-    });
   }
 
   async function deleteGroup() {
@@ -117,12 +109,17 @@ export function useEditGroup() {
     await groupsAPI.updateGroup(state.editingGroup._id, newGroupData);
   }
 
+  async function updateGroupSort(groupId, sort) {
+    await groupsAPI.updateGroupSort(groupId, sort);
+  }
+
   return {
     createNewGroup,
     deleteGroup,
     editGroup,
     selectGroup,
     updateGroupName,
-    updateGroup
+    updateGroup,
+    updateGroupSort
   };
 } 

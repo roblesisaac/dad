@@ -61,7 +61,7 @@
 </template>
     
 <script setup>
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useEditGroup } from '../composables/useEditGroup';
 import NetWorth from './NetWorth.vue';
@@ -81,7 +81,11 @@ const accountInfo = computed(() => state.allUserAccounts.find(
 const isSelected = computed(() => props.element.isSelected ? 'isSelected' : '');
 const isDefaultName = computed(() => props.element.name === props.element.accounts[0]?.mask);
 
-const { editGroup, selectGroup } = useEditGroup();
+const { editGroup, selectGroup, updateGroupSort } = useEditGroup();
+
+watch(props.element, (newVal) => {
+    updateGroupSort(newVal._id, newVal.sort);
+});
 
 </script>
     

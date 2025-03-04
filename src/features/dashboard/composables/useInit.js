@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from './useRulesAPI.js';
-import { useGroupOperations } from './useGroupOperations.js';
+import { useGroupOperations } from '../../select-group/composables/useGroupOperations.js';
 import loadScript from '@/shared/utils/loadScript.js';
 
 

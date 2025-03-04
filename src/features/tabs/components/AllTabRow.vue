@@ -11,7 +11,7 @@
   </div>
 
   <div class="cell-2-24">
-    <GripHorizontal class="handlerTab pointer" />
+    <GripHorizontal class="handler-tab pointer" />
   </div>
 </div>
 </template>

@@ -1,5 +1,5 @@
 import { useRules } from './useRules.js';
-import { useUtils } from './useUtils.js';
+import { useUtils } from '@/shared/composables/useUtils.js';
 
 export function useTabProcessing() {
   const { ruleMethods, combineRulesForTab } = useRules();

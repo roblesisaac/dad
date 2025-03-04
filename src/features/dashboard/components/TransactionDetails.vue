@@ -92,9 +92,10 @@ import { computed, ref, watch } from 'vue';
 import EditRule from '../../edit-tab/components/EditRule.vue';
 import { formatPrice } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
+import { useUtils } from '@/shared/composables/useUtils';
 
 const api = useApi();
-
+const { waitUntilTypingStops } = useUtils();
 const { item, state } = defineProps({
   item: Object,
   state: Object
@@ -127,13 +128,6 @@ const rulesAppliedToItem = computed(() => {
     });
   });
 });
-
-function waitUntilTypingStops(ms=500) {
-  return new Promise((resolve) => {
-    clearTimeout(transactionDetailsState.typingTimer);
-    transactionDetailsState.typingTimer = setTimeout(resolve, ms);
-  });
-}
 
 async function updateTransaction() {
   await waitUntilTypingStops();

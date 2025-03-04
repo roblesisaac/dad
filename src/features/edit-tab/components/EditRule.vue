@@ -47,10 +47,12 @@
   import DynamicTextArea from './DynamicTextArea.vue';
   import ScrollingContent from '@/shared/components/ScrollingContent.vue';
   import { useApi } from '@/shared/composables/useApi';
+  import { useUtils } from '@/shared/composables/useUtils';
   
   const api = useApi();
   const route = useRoute();
   const router = useRouter();
+  const { waitUntilTypingStops } = useUtils();
   const { ruleConfig, state } = defineProps({
     ruleConfig: Object,
     state: Object
@@ -105,13 +107,6 @@
       });
 
       return propNamesToSave.length === fillCount;
-    }
-
-    function waitUntilTypingStops(ms=500) {
-      return new Promise((resolve) => {
-        clearTimeout(editRuleState.typingTimer);
-        editRuleState.typingTimer = setTimeout(resolve, ms);
-      });
     }
 
     return {

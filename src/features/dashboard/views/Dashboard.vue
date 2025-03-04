@@ -22,9 +22,9 @@
       <!-- Selected Group + Date -->
       <div class="cell-1 dateRow b-bottom">
         <div class="x-grid middle">
-          <ShowSelectGroupButton class="cell-8-24 b-right" :state="state" />
+          <ShowSelectGroupButton class="cell-8-24 b-right" />
           <div class="cell-16-24 line50">          
-            <DatePickers :state="state" />
+            <DatePickers />
           </div>
         </div>
       </div>
@@ -37,7 +37,7 @@
       <!-- Category Rows -->
       <Transition>
         <div v-if="!state.isLoading && state.selected.tab" class="cell-1">
-          <CategoriesWrapper :state="state" />
+          <CategoriesWrapper />
         </div>
       </Transition>
       <Transition>
@@ -55,7 +55,7 @@ import { computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
-import { useGroupOperations } from '../composables/useGroupOperations.js';
+import { useGroupOperations } from '../../select-group/composables/useGroupOperations.js';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
