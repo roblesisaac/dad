@@ -1,7 +1,7 @@
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
-import { useTabProcessing } from '@/features/dashboard/composables/useTabProcessing.js';
+import { useTabProcessing } from './useTabProcessing.js';
 import { useRouter } from 'vue-router';
 
 export function useTabs() {

@@ -1,4 +1,4 @@
-import { useRules } from './useRules.js';
+import { useRules } from '../../dashboard/composables/useRules.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
 export function useTabProcessing() {
@@ -311,7 +311,6 @@ export function useTabProcessing() {
   }
 
   return {
-    processTabData,
-    buildRuleMethods
+    processTabData
   };
 } 
