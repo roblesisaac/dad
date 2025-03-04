@@ -1,9 +1,6 @@
 import { useGroupsAPI } from './useGroupsAPI.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
-import { useTabs } from '../../tabs/composables/useTabs.js';
-import { useDashboardState } from '../../dashboard/composables/useDashboardState.js';
-import { useRouter } from 'vue-router';
-import { useTransactions } from '../../dashboard/composables/useTransactions.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
 /**
  * Composable for group operations
@@ -12,10 +9,7 @@ import { useTransactions } from '../../dashboard/composables/useTransactions.js'
 export function useGroupOperations() {
   const groupsAPI = useGroupsAPI();
   const { sortBy } = useUtils();
-  const { processAllTabsForSelectedGroup } = useTabs();
   const { state } = useDashboardState();
-  const router = useRouter();
-  const { fetchTransactionsForGroup } = useTransactions();
   /**
    * Select the first group in a list
    */
@@ -78,42 +72,9 @@ export function useGroupOperations() {
     
     return groupToSelect;
   }
-
-  /**
-   * Handle group selection change
-   */
-  async function handleGroupChange() {
-    let selectedGroup = state.selected.group;
-    const tabsForGroup = state.selected.tabsForGroup;
-
-    if(state.date.start > state.date.end) return;
-
-    if(!selectedGroup) {
-      if(!state.allUserGroups.length) {
-        router.push({ name: 'select-group' });
-        return;
-      }
-      selectedGroup = await selectFirstGroup(state.allUserGroups);
-    }
-    state.isLoading = true;
-    
-    // Fetch transactions for all accounts in the selected group
-    state.selected.allGroupTransactions = await fetchTransactionsForGroup(
-      selectedGroup, 
-      state.date
-    );
-
-    if(tabsForGroup.length) {
-      return await processAllTabsForSelectedGroup();
-    }
-    
-    state.isLoading = false;
-    state.blueBar.message = false;
-  }
   
   return {
     fetchGroupsAndAccounts,
-    handleGroupChange,
     createGroup,
     deleteGroup,
     selectGroup,

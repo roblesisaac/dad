@@ -3,7 +3,11 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from './useRulesAPI.js';
-import { useGroupOperations } from '../../select-group/composables/useGroupOperations.js';
+import { useGroupOperations } from '@/features/select-group/composables/useGroupOperations.js';
+
+import { useTabs } from '@/features/tabs/composables/useTabs.js';
+
+import { useTransactions } from './useTransactions.js';
 import loadScript from '@/shared/utils/loadScript.js';
 
 
@@ -15,12 +19,14 @@ export function useInit() {
   // Initialize API and router
   const api = useApi();
   const router = useRouter();
+  const { fetchTransactionsForGroup } = useTransactions();
+  const { processAllTabsForSelectedGroup } = useTabs();
   const { state } = useDashboardState();
   
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
   const rulesAPI = useRulesAPI(api);
-  const { fetchGroupsAndAccounts, handleGroupChange } = useGroupOperations();
+  const { fetchGroupsAndAccounts } = useGroupOperations();
 
   async function init() {
     try {
@@ -66,7 +72,40 @@ export function useInit() {
     }
   }
 
+  /**
+   * Handle group selection change
+   */
+  async function handleGroupChange() {
+    let selectedGroup = state.selected.group;
+    const tabsForGroup = state.selected.tabsForGroup;
+
+    if(state.date.start > state.date.end) return;
+
+    if(!selectedGroup) {
+      if(!state.allUserGroups.length) {
+        router.push({ name: 'select-group' });
+        return;
+      }
+      selectedGroup = await selectFirstGroup(state.allUserGroups);
+    }
+    state.isLoading = true;
+    
+    // Fetch transactions for all accounts in the selected group
+    state.selected.allGroupTransactions = await fetchTransactionsForGroup(
+      selectedGroup, 
+      state.date
+    );
+
+    if(tabsForGroup.length) {
+      return await processAllTabsForSelectedGroup();
+    }
+    
+    state.isLoading = false;
+    state.blueBar.message = false;
+  }
+
   return {
-    init
+    init,
+    handleGroupChange
   };
 } 

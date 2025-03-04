@@ -55,7 +55,6 @@ import { computed, onMounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ChevronLeft } from 'lucide-vue-next';
 import { useAppStore } from '@/stores/state';
-import { useGroupOperations } from '../../select-group/composables/useGroupOperations.js';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
@@ -72,9 +71,8 @@ const router = useRouter();
 const route = useRoute();
 const { stickify } = useAppStore();
 const { state } = useDashboardState();
-const { init } = useInit();
+const { init, handleGroupChange } = useInit();
 
-const { handleGroupChange } = useGroupOperations();
 const { processAllTabsForSelectedGroup, handleTabChange } = useTabs();
 const { syncLatestTransactionsForBanks } = usePlaidSync();
 
