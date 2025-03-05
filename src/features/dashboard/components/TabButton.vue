@@ -2,28 +2,38 @@
   <button 
     @click="selectTab(tab)" 
     :class="[
-      'flex justify-between font-bold items-center h-[50px] pr-2.5 pl-0 text-left border-t border-r border-l border-gray-500 shadow-sm',
-      fontColor(tab.total),
+      'flex justify-between items-center h-10 px-3 text-left transition-all font-mono border-t border-l border-r',
       uniqueTabClassName,
-      tabShouldExpand ? 'w-full' : '',
-      isSelected ? 'bg-white border-b-0 font-semibold rounded-t-md' : 'bg-gray-50 border-b border-gray-900 hover:bg-gray-100 transition-colors duration-200',
+      tabShouldExpand ? 'w-full' : 'min-w-[120px]',
+      isSelected 
+        ? 'bg-white border-gray-400 text-gray-800' 
+        : 'bg-gray-100 hover:bg-gray-200 border-gray-300 text-gray-600',
     ]"
   >
-    <!-- More Options -->
-    <MoreVertical v-if="isSelected" @click.stop="editTab()" class="ml-auto text-gray-500 hover:text-blue-600" />
-
     <!-- Title & Total -->
-    <div :class="['flex flex-col pl-2.5 pr-[50px]', tabShouldExpand ? 'w-full' : '']">
+    <div class="flex flex-col overflow-hidden">
       <div class="flex items-center">
-        <span v-if="isTabShared(tab)" class="text-blue-600 mr-1">*</span>
-        <span class="uppercase text-sm" :class="isSelected ? 'text-blue-800' : 'text-gray-700'">{{ tab.tabName }}</span>
+        <span class="uppercase text-xs text-gray-900 font-bold tracking-wide truncate max-w-[100px]">{{ tab.tabName }}</span>
       </div>
       <LoadingDots v-if="state.isLoading" />
-      <span v-else class="font-normal" :class="isSelected ? 'text-gray-800' : 'text-gray-600'">{{ tabTotal }}</span>
+      <span v-else class="text-xs truncate" :class="[isSelected ? 'font-bold' : 'font-normal', fontColor(tab.total)]">{{ tabTotal }}</span>
     </div>
 
-    <!-- Drag Handle -->
-    <GripVertical v-if="isSelected && shouldShowDragHandle" class="mr-2 text-gray-400 handleTab" />
+    <!-- Right side controls -->
+    <div class="flex items-center ml-1.5">
+      <!-- More Options -->
+      <MoreVertical 
+        v-if="isSelected" 
+        @click.stop="editTab()" 
+        class="w-4 h-4 text-gray-500 hover:text-gray-700 cursor-pointer" 
+      />
+      
+      <!-- Drag Handle -->
+      <GripVertical 
+        v-if="isSelected && shouldShowDragHandle" 
+        class="w-4 h-4 text-gray-400 cursor-grab handleTab ml-1" 
+      />
+    </div>
   </button>
 </template>
 
@@ -31,10 +41,11 @@
 import { computed, watch } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { MoreVertical, GripVertical } from 'lucide-vue-next';
-import { fontColor, formatPrice } from '@/utils';
+import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardTabs } from '../composables/useDashboardTabs';
 import { useDashboardState } from '../composables/useDashboardState';
 
+const { fontColor, formatPrice } = useUtils();
 const props = defineProps({
   tab: {
     type: Object,

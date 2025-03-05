@@ -69,11 +69,11 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useEditGroup } from '../composables/useEditGroup';
 import NetWorth from './NetWorth.vue';
 import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
-import { fontColor, formatPrice } from '@/utils';
-
+import { useUtils } from '@/shared/composables/useUtils';
 // define emits
 const emit = defineEmits(['edit-group']);
 
+const { fontColor, formatPrice } = useUtils();
 const props = defineProps({
     element: Object
 });

@@ -1,8 +1,8 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-    <div v-if="state.blueBar.message" class="w-full bg-indigo-800 border-b-2 border-indigo-900 px-4 py-2">
-      <div class="font-bold">
+    <div v-if="state.blueBar.message" class="w-full bg-indigo-700 border-b border-indigo-900 px-4 py-1.5">
+      <div class="font-medium">
         <small class="text-indigo-100">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
       </div>
     </div>
@@ -10,28 +10,28 @@
 
   <!-- BackButton -->
   <Transition>
-    <button v-if="!isHome" @click="router.back()" class="w-full flex items-center justify-start px-4 py-3 bg-blue-200 border-b-2 border-black font-medium text-black hover:bg-blue-300 transition-colors">
-      <ChevronLeft class="w-5 h-5 mr-2" /> Back
+    <button v-if="!isHome" @click="router.back()" class="w-full flex items-center justify-start px-4 py-2 bg-blue-100 border-b border-gray-400 font-medium text-black hover:bg-blue-200 transition-colors">
+      <ChevronLeft class="w-4 h-4 mr-2" /> Back
     </button>
   </Transition>
 
   <!-- Main Dashboard Content -->
   <template v-if="isHome">
-    <!-- Small Screens -->
-    <div class="w-full">
+    <!-- Dashboard Container -->
+    <div class="w-full bg-white">
       <!-- Selected Group + Date -->
-      <div class="border-b-2 border-black">
-        <div class="grid grid-cols-12">
-          <ShowSelectGroupButton class="col-span-4 sm:col-span-3 border-r-2 border-black py-2 px-3" />
-          <div class="col-span-8 sm:col-span-9 h-[50px] flex items-center px-3">          
+      <div>
+        <div class="grid grid-cols-2">
+          <ShowSelectGroupButton class="col-span-1 border-r-2 border-black" />
+          <div class="col-span-1">          
             <DatePickers />
           </div>
         </div>
       </div>
 
-      <!-- Scrolling Tabs Totals Row -->
-      <div v-if="!state.isLoading" class="h-[50px] bg-white sticky top-0 z-10 border-b-2 border-black shadow-md">
-        <ScrollingTabButtons />
+      <!-- Active Tab Display (replacing Scrolling Tabs Totals Row) -->
+      <div v-if="!state.isLoading" class="sticky-tabs-row bg-white sticky top-0 z-10">
+        <ActiveTabDisplay />
       </div>
 
       <!-- Category Rows -->
@@ -41,7 +41,7 @@
         </div>
       </Transition>
       <Transition>
-        <div v-if="state.isLoading" class="w-full flex justify-center py-8">
+        <div v-if="state.isLoading" class="w-full flex justify-center py-6">
           <LoadingDots></LoadingDots>
         </div>
       </Transition>
@@ -67,7 +67,7 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import DatePickers from '../components/DatePickers.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
-import ScrollingTabButtons from '../components/ScrollingTabButtons.vue';
+import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -81,7 +81,15 @@ const { syncLatestTransactionsForBanks } = usePlaidSync();
 const isHome = computed(() => route.name === 'dashboard');
 
 onMounted(async () => {
-  // stickify.register('.sticky-tabs-row');
+  // Register with a short timeout to ensure DOM is ready
+  setTimeout(() => {
+    try {
+      stickify.register('.sticky-tabs-row');
+    } catch (e) {
+      console.error('Stickify error:', e);
+    }
+  }, 100);
+  
   await init();
   
   // Start syncing transactions for all connected banks
@@ -101,13 +109,15 @@ watch(
   }
 );
 
-watch(() => state.date.start, (_, prevStart) => {
+watch(() => state.date.start, (newStart, prevStart) => {
   if(prevStart === 'firstOfMonth') return;
+  // Only react to date changes when applied via the Apply button
   handleGroupChange();
 });
 
-watch(() => state.date.end, (_, prevEnd) => {
+watch(() => state.date.end, (newEnd, prevEnd) => {
   if(prevEnd === 'today') return;
+  // Only react to date changes when applied via the Apply button
   handleGroupChange();
 });
 

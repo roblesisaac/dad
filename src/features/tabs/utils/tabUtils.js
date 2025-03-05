@@ -1,4 +1,6 @@
-import { formatPrice } from '@/utils';
+import { useUtils } from '@/shared/composables/useUtils';
+
+const { formatPrice } = useUtils();
 
 export function calculateTabTotal(tab) {
   const total = tab.total || 0;

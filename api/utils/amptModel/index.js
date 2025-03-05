@@ -1,11 +1,56 @@
 import { data } from '@ampt/data';
 import validator from './validate';
-import { generateDate } from '../../../src/utils';
 import LabelsMap from './labelsMap';
 
 export default function(collectionNameConfig, schemaConfig, globalConfig) {
   const labelsMap = LabelsMap(collectionNameConfig, schemaConfig);
   const schema = extractSchema(schemaConfig);
+
+  const generateDate = (function() {
+    function format(num, pad = 2) {
+      return String(num).padStart(pad, '0');
+    }
+  
+    function generateRandomTime() {
+        const hours = String(Math.floor(Math.random() * 24)).padStart(2, '0');
+        const mins = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+        const seconds = String(Math.floor(Math.random() * 60)).padStart(2, '0');
+        return `-${hours}-${mins}-${seconds}`;
+    }
+  
+    function isMissingTime(date) {
+        return !/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(date);
+    }
+  
+    function pacificTimezoneOffset() { 
+        return -7 * 60 * 60 * 1000;
+    };
+  
+    function validDate(inputDate) {
+        if (inputDate) {
+            const [year, month, day, hours, minutes, seconds] = inputDate.split('-');
+            return new Date(Date.UTC(year, month - 1, day, hours, minutes, seconds));
+        } else {
+            return new Date(Date.now() + pacificTimezoneOffset());
+        }
+    }
+  
+    return (inputDate) => {
+        if (inputDate && isMissingTime(inputDate)) {
+            inputDate += generateRandomTime();
+        }
+  
+        const d = validDate(inputDate);           
+        const year = d.getUTCFullYear();        
+        const month = format(d.getUTCMonth() + 1);
+        const day = format(d.getUTCDate());
+        const hours = format(d.getUTCHours());
+        const minutes = format(d.getUTCMinutes());
+        const seconds = format(d.getUTCSeconds());
+        
+        return `${year}-${month}-${day}T${hours}-${minutes}-${seconds}Z`;
+    }
+  })();
 
   function buildId(yyyymmdd) {
     const random = Math.random().toString(16).substring(2);

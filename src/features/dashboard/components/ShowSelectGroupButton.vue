@@ -1,9 +1,8 @@
 <template>
   <div @click="router.push({ name: 'select-group' })" 
-    class="h-[50px] pl-5 leading-none pt-2.5 font-bold cursor-pointer">
-    <b v-html="groupName"></b>
-    <br />
-    <small><NetWorth :accounts="state.selected?.group?.accounts" :state="state" :digits="0" /></small>
+    class="h-full px-4 py-2 flex items-center justify-between cursor-pointer">
+    <div class="text-base font-bold" v-html="groupName"></div>
+    <div class="font-medium ml-2"><NetWorth :accounts="state.selected?.group?.accounts" :state="state" :digits="0" /></div>
   </div>
 </template>
 

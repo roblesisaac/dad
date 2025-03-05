@@ -1,62 +1,65 @@
 <template>
-<div class="flex w-full">
-  <!-- Tabs container with scroll buttons -->
-  <div class="flex-grow relative overflow-hidden">
-    <Transition>
-    <div v-if="!state.reordering" class="relative w-full">
-      <!-- Left scroll button with improved styling -->
-      <div 
-        v-show="scrollPosition > 0"
-        @click="scrollTabs('left')" 
-        class="absolute left-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-r from-white to-transparent pr-6 transition-opacity duration-200 cursor-pointer group"
-      >
-        <div class="p-1.5 rounded-full bg-white/80 shadow-sm hover:bg-white hover:shadow group-hover:scale-110 transition-all duration-200 border border-gray-200">
-          <ChevronLeft size="16" class="text-gray-600 group-hover:text-blue-600" />
+  <div class="flex w-full bg-gray-800 border-b border-gray-600">
+    <!-- Tabs container with scroll buttons -->
+    <div class="flex-grow relative overflow-hidden">
+      <Transition>
+        <div v-if="!state.reordering" class="relative w-full">
+          <!-- Left scroll button with monospace styling -->
+          <div 
+            v-show="scrollPosition > 0"
+            @click="scrollTabs('left')" 
+            class="absolute left-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 bg-gray-900 border-r border-gray-600"
+          >
+            <div class="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-white">
+              <ChevronLeft size="16" />
+            </div>
+          </div>
+          
+          <div ref="scrollContainer" class="w-full">
+            <Draggable 
+              ref="draggable"
+              class="draggable flex overflow-x-auto whitespace-nowrap scrollbar-hide" 
+              handle=".handleTab" 
+              v-model="state.selected.tabsForGroup" 
+              v-bind="dragOptions(1)"
+              @scroll="updateScrollPosition"
+            >
+              <template #item="{element}">
+                <TabButton
+                  :state="state" 
+                  :tab="element" 
+                  :key="element._id" />
+              </template>
+            </Draggable>
+          </div>
+          
+          <!-- Right scroll button with monospace styling -->
+          <div 
+            v-show="scrollPosition < maxScroll && maxScroll > 0"
+            @click="scrollTabs('right')" 
+            class="absolute right-0 top-0 bottom-0 z-10 flex items-center justify-center w-8 bg-gray-900 border-l border-gray-600"
+          >
+            <div class="w-6 h-6 flex items-center justify-center text-gray-300 hover:text-white">
+              <ChevronRight size="16" />
+            </div>
+          </div>
         </div>
-      </div>
-      
-      <div ref="scrollContainer" class="overflow-hidden w-full border-b border-gray-200">
-        <Draggable 
-          ref="draggable"
-          class="draggable flex overflow-x-auto whitespace-nowrap scrollbar-hide" 
-          handle=".handleTab" 
-          v-model="state.selected.tabsForGroup" 
-          v-bind="dragOptions(1)"
-          @scroll="updateScrollPosition"
-        >
-          <template #item="{element}">
-            <TabButton
-              :state="state" 
-              :tab="element" 
-              :key="element._id" />
-          </template>
-        </Draggable>
-      </div>
-      
-      <!-- Right scroll button with improved styling -->
-      <div 
-        v-show="scrollPosition < maxScroll && maxScroll > 0"
-        @click="scrollTabs('right')" 
-        class="absolute right-0 top-0 bottom-0 z-10 flex items-center bg-gradient-to-l from-white to-transparent pl-6 transition-opacity duration-200 cursor-pointer group"
-      >
-        <div class="p-1.5 rounded-full bg-white/80 shadow-sm hover:bg-white hover:shadow group-hover:scale-110 transition-all duration-200 border border-gray-200">
-          <ChevronRight size="16" class="text-gray-600 group-hover:text-blue-600" />
-        </div>
-      </div>
+      </Transition>
     </div>
-    </Transition>
-  </div>
 
-  <!-- Fixed width All/+ button container with improved styling -->
-  <div class="w-[70px] flex-shrink-0">
-    <button v-if="state.selected.tabsForGroup.length>1" 
-            @click="router.push({ name: 'all-tabs' })" 
-            class="h-[50px] border-b border-l border-gray-200 rounded-b w-full hover:text-blue-600 hover:bg-blue-50 focus:outline-none transition-colors duration-200">All</button>
-    <button v-else @click="createNewTab()" 
-            class="h-[50px] border-b border-l border-gray-200 rounded-b w-full hover:text-blue-600 hover:bg-blue-50 focus:outline-none transition-colors duration-200">+</button>
+    <!-- Fixed width All/+ button container with vintage styling -->
+    <div class="w-12 flex-shrink-0 border-l border-gray-600">
+      <button v-if="state.selected.tabsForGroup.length>1" 
+              @click="router.push({ name: 'all-tabs' })" 
+              class="h-full w-full bg-gray-900 font-mono text-gray-300 hover:text-white px-1">
+        ALL
+      </button>
+      <button v-else @click="createNewTab()" 
+              class="h-full w-full bg-gray-900 font-mono text-gray-300 hover:text-white px-1">
+        +
+      </button>
+    </div>
   </div>
-</div>
-
 </template>
 
 <script setup>

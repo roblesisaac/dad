@@ -5,7 +5,7 @@
   </div>
 
   <div @click="handleTabSelect" class="cell-20-24 pointer">
-    <b class="proper bold">{{ element.tabName }}</b>
+    <b class="capitalize bold">{{ element.tabName }}</b>
     <br />
     <span class="sectionContent bold">{{ tabTotal }}</span>
   </div>

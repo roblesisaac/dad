@@ -3,12 +3,14 @@
   type="date" 
   :value="formatDateForInput(date[when])" 
   @input="handleDateChange($event)"
-  class="bg-transparent border-none text-gray-700 text-sm w-full truncate text-center focus:outline-none focus:ring-0 py-2.5 font-bold"
+  class="bg-white border border-gray-400 px-3 py-2 text-gray-700 w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
 />
 </template>
 
 <script setup>
 import { reactive } from 'vue';
+
+const emit = defineEmits(['date-selected']);
 
 const { date, when } = defineProps({
   date: {
@@ -58,6 +60,7 @@ function formatDateForInput(dateValue) {
 function handleDateChange(event) {
   const newDate = new Date(event.target.value);
   date[when] = newDate;
+  emit('date-selected', { when, date: newDate });
 }
 
 function init() {

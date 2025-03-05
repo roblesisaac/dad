@@ -5,7 +5,9 @@
 <script setup>
 import { computed } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import { fontColor, formatPrice } from '@/utils';
+import { useUtils } from '@/shared/composables/useUtils';
+
+const { fontColor, formatPrice } = useUtils();
 
 const props = defineProps({
     accounts: {

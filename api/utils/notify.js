@@ -4,7 +4,7 @@ import { createSSRApp} from "vue";
 import { renderToString } from "@vue/server-renderer";
 import inlineBase64 from "nodemailer-plugin-inline-base64";
 
-import { proper } from "../../src/utils";
+import { proper } from "./proper";
 
 const { GMAIL_USERNAME, GMAIL_SECRET, APP_NAME } = params().list();
 

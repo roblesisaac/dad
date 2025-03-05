@@ -1,48 +1,50 @@
 <template>
-  <div class="grid py-5">
+  <div class="grid py-4">
     <!-- Transaction Details -->
-    <div class="w-full">
-      <p>
-        <b v-if="item.amount<0">Paid With:</b>
-        <b v-else>Debosited To:</b>
-        <br />
-        <span>{{ accountData.name }}</span> <span class="text-gray-600 font-bold">#{{ accountData.mask }}</span>
-        <br v-if="accountName && accountName !== accountData.name" />
-        <span v-if="accountName && accountName !== accountData.name">{{ accountName }}</span>
-        <br />
-        Current Balance: <span class="text-green-800 font-bold">{{ formatPrice(accountData.balances?.current) }}</span>
-      </p>
-      <p>
-        <b>Channel:</b> {{ item.payment_channel }}
-      </p>
-      <p>
-        <b>Status:</b> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
-      </p>
-      <p>
-        <b>Category:</b> {{ prettyCategory }}
-      </p>
+    <div class="w-full text-sm space-y-2.5">
+      <div>
+        <div class="font-medium mb-0.5">
+          {{ item.amount < 0 ? 'Paid With:' : 'Deposited To:' }}
+        </div>
+        <div>{{ accountData.name }} <span class="text-gray-600 font-medium">#{{ accountData.mask }}</span></div>
+        <div v-if="accountName && accountName !== accountData.name">{{ accountName }}</div>
+        <div class="mt-1">
+          Current Balance: <span class="text-green-700 font-medium">{{ formatPrice(accountData.balances?.current) }}</span>
+        </div>
+      </div>
+      <div>
+        <span class="font-medium">Channel:</span> {{ item.payment_channel }}
+      </div>
+      <div>
+        <span class="font-medium">Status:</span> <span v-if="item.pending">Pending</span><span v-else>Settled</span>
+      </div>
+      <div>
+        <span class="font-medium">Category:</span> {{ prettyCategory }}
+      </div>
     </div>
 
     <!-- Transaction Controls -->
-    <div class="w-full">
+    <div class="w-full mt-3">
 
       <!-- Add Note -->
-      <div class="grid pb-5">
-        <div class="w-full">
-          <b>Add Note:</b>
+      <div class="grid pb-4">
+        <div class="w-full mb-1">
+          <span class="font-medium text-sm">Add Note:</span>
         </div>
         <div class="w-full">
-          <textarea rows="3" class="w-full border border-gray-300 rounded" v-model="item.notes"></textarea>
+          <textarea rows="3" class="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm" 
+                   v-model="item.notes"></textarea>
         </div>
       </div>
 
       <!-- Recategorize As -->
       <div class="grid">
-        <div class="w-full">
-          <b>Recategorize<span v-if="item.recategorizeAs">d</span> As:</b>
+        <div class="w-full mb-1">
+          <span class="font-medium text-sm">Recategorize<span v-if="item.recategorizeAs">d</span> As:</span>
         </div>
         <div class="w-full">
-          <input v-model="item.recategorizeAs" type="text" class="w-full border border-gray-300 rounded" />
+          <input v-model="item.recategorizeAs" type="text" 
+                class="w-full border border-gray-300 rounded-sm px-2 py-1 text-sm" />
         </div>
         
         <!-- Apply-to options -->
@@ -90,12 +92,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import EditRule from '../../edit-tab/components/EditRule.vue';
-import { formatPrice } from '@/utils';
 import { useApi } from '@/shared/composables/useApi';
 import { useUtils } from '@/shared/composables/useUtils';
 
 const api = useApi();
-const { waitUntilTypingStops } = useUtils();
+const { waitUntilTypingStops, formatPrice } = useUtils();
 const { item, state } = defineProps({
   item: Object,
   state: Object

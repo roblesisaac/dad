@@ -48,6 +48,18 @@ export function useUtils() {
     });
   }
 
+  function fontColor(amt) {
+    return amt > 0
+      ? 'text-blue-500' 
+      : amt === 0
+      ? 'text-gray-700'
+      : 'text-red-500'
+  }
+
+  function formatPrice(amt, { toFixed = 2 } = {}) {
+    return amt.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: toFixed, maximumFractionDigits: toFixed });
+  }
+
   return {
     // Date utilities
     extractDateRange,
@@ -62,6 +74,8 @@ export function useUtils() {
     makeArray,
     
     // UI helpers
-    waitUntilTypingStops
+    waitUntilTypingStops,
+    fontColor,
+    formatPrice
   };
 } 
