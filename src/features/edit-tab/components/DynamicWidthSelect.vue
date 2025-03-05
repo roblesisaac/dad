@@ -1,6 +1,9 @@
 <template>
   <div>
-    <select :style="{ width }" v-model="selectedValue" class="editRule">
+    <select 
+      :style="{ width }" 
+      v-model="selectedValue" 
+      class="appearance-none bg-transparent font-bold text-blue-700 border-b-2 border-blue-600 focus:outline-none focus:border-blue-800 px-0 py-0 cursor-pointer">
       <option>{{ title }}</option>
       <option v-for="option in options" :key="option" :value="option">
         {{ option }}

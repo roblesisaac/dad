@@ -1,13 +1,13 @@
 <template>
-<div class="x-grid">
-  <div class="cell-1">
+<div class="w-full">
+  <div class="w-full">
     <!-- Tab Name -->
-    <div v-if="route.name === 'edit-tab'" class="x-grid middle b-bottom">
-      <div class="cell-1-5 section b-right bold line50">
+    <div v-if="route.name === 'edit-tab'" class="grid grid-cols-5 border-b-2 border-black">
+      <div class="col-span-1 py-3 px-4 border-r-2 border-black font-bold flex items-center bg-gray-100">
         <small>Name</small>
       </div>
-      <div class="cell-4-5 section">
-        <input v-model="editState.changeTabNameTo" class="transparent bold section colorBlue" type="text" />
+      <div class="col-span-4 py-3 px-4">
+        <input v-model="editState.changeTabNameTo" class="w-full bg-transparent border-0 font-bold text-blue-700 focus:outline-none focus:ring-0" type="text" />
       </div>
     </div>
 
@@ -81,48 +81,5 @@ watch(() => editState.changeTabNameTo, async (newName) => {
 </script>
 
 <style>
-.draggable {
-  min-height: 50px;
-  width: 100%;
-}
-
-.dropHere {
-  padding: 15px;
-  border: 2px dashed #BFBCB3;
-  min-height: 50px;
-}
-
-.sharedWith {
-  background-color: #333;
-  margin-right: 20px;
-  margin-bottom: 20px;
-}
-
-.saveTabName {
-  height: 50px;
-  width: 100%;
-  border-radius: 0;
-}
-
-.saveTabName:hover, .saveTabName:active {
-  background: #333;
-}
-
-.transparent {
-  border: 0 !important;
-  background-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.transparent:focus {
-  outline: none;
-  border: 0 !important;
-  box-shadow: none !important;
-}
-
-.uniqueBtn {
-  background-color: #f9c844;
-  color: #3c3943;
-}
+/* Tailwind handles all styling */
 </style> 

@@ -1,36 +1,36 @@
 <template>
-  <div class="x-grid middle left p30">
+  <div class="grid items-center text-left p-7">
     <!-- Rule Rendered -->
-    <div class="cell-1 p30b">      
-      <div class="x-grid">
-        <h4 class="proper">{{ ruleType }}</h4>
-        <div class="cell-1">
+    <div class="w-full pb-7">      
+      <div class="grid">
+        <h4>{{ ruleType }}</h4>
+        <div class="w-full">
           <EditRule :ruleConfig="props.ruleConfig" :state="state" />
         </div>
       </div>
     </div>
 
     <!-- Tabs -->
-    <div class="cell-1">
-      <div class="x-grid">
+    <div class="w-full">
+      <div class="grid">
 
-        <div class="cell-1">
+        <div class="w-full">
           <b>Tabs Shared With:</b>
-          <div class="dropHere">
+          <div class="border border-dashed border-gray-300 p-2 min-h-[50px]">
             <span v-if="!ruleConfig.applyForTabs.length">Drag and drop tabs here.</span>
-            <Draggable class="draggable" group="tabDragger" v-model="ruleConfig.applyForTabs" v-bind="dragOptions()">
+            <Draggable class="flex flex-wrap" group="tabDragger" v-model="ruleConfig.applyForTabs" v-bind="dragOptions()">
               <template #item="{element}">
-                <button class="button sharedWith proper">{{ getTabName(element) }}</button>
+                <button class="m-1 px-2 py-1 border border-gray-300 rounded">{{ getTabName(element) }}</button>
               </template>
             </Draggable>
           </div>
         </div>
 
-        <div class="cell-1">
-          <ScrollingContent class="p30y">
-          <Draggable class="draggable" group="tabDragger" v-model="unselectedTabsInRule" v-bind="dragOptions()">
+        <div class="w-full">
+          <ScrollingContent class="py-7">
+          <Draggable class="flex flex-wrap" group="tabDragger" v-model="unselectedTabsInRule" v-bind="dragOptions()">
             <template #item="{element}">
-              <button class="button sharedWith proper">{{ getTabName(element) }}</button>
+              <button class="m-1 px-2 py-1 border border-gray-300 rounded">{{ getTabName(element) }}</button>
             </template>
           </Draggable>
           </ScrollingContent>
@@ -40,15 +40,15 @@
     </div>
 
     <!-- Make Global-->
-    <div class="cell-1 p30b">
-      <div class="x-grid">
-        <div class="cell shrink bold p20r">Global?</div>
-        <div class="cell auto"><Switch v-model="isGlobal" /></div>
+    <div class="w-full pb-7">
+      <div class="grid grid-cols-12">
+        <div class="col-span-2 font-bold pr-5">Global?</div>
+        <div class="col-span-10"><Switch v-model="isGlobal" /></div>
       </div>
     </div>
 
-    <div class="cell-1">
-      <button @click="removeRule" class="button bgDarkRed expanded">Delete Rule</button>
+    <div class="w-full">
+      <button @click="removeRule" class="w-full bg-red-700 text-white py-2 px-4 rounded">Delete Rule</button>
     </div>
 
   </div>

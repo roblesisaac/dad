@@ -1,6 +1,6 @@
 <template>
   <div @click="router.push({ name: 'select-group' })" 
-    class="acctButton proper pointer bold">
+    class="h-[50px] pl-5 leading-none pt-2.5 font-bold cursor-pointer">
     <b v-html="groupName"></b>
     <br />
     <small><NetWorth :accounts="state.selected?.group?.accounts" :state="state" :digits="0" /></small>
@@ -23,11 +23,3 @@ const groupName = computed(() => {
     : `<span class="underline">Account</span>`;
 });
 </script>
-
-<style>
-.acctButton {
-  height: 50px;
-  line-height: 1em;
-  padding-top: 10px;
-}
-</style>

@@ -1,20 +1,29 @@
 <template>
   <button 
     @click="selectTab(tab)" 
-    :class="['tab-button', fontColor(tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
+    :class="[
+      'flex justify-between font-bold items-center h-[50px] pr-2.5 pl-0 text-left border-t border-r border-l border-gray-500 shadow-sm',
+      fontColor(tab.total),
+      uniqueTabClassName,
+      tabShouldExpand ? 'w-full' : '',
+      isSelected ? 'bg-white border-b-0 font-semibold rounded-t-md' : 'bg-gray-50 border-b border-gray-900 hover:bg-gray-100 transition-colors duration-200',
+    ]"
   >
-    <!-- Dots -->
-    <MoreVertical v-if="tab.isSelected" @click.stop="editTab()" />
-  
+    <!-- More Options -->
+    <MoreVertical v-if="isSelected" @click.stop="editTab()" class="ml-auto text-gray-500 hover:text-blue-600" />
+
     <!-- Title & Total -->
-    <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
-      <small class="section-title bold"><b v-if="isTabShared(tab)">*</b>{{ tab.tabName }}</small>
+    <div :class="['flex flex-col pl-2.5 pr-[50px]', tabShouldExpand ? 'w-full' : '']">
+      <div class="flex items-center">
+        <span v-if="isTabShared(tab)" class="text-blue-600 mr-1">*</span>
+        <span class="uppercase text-sm" :class="isSelected ? 'text-blue-800' : 'text-gray-700'">{{ tab.tabName }}</span>
+      </div>
       <LoadingDots v-if="state.isLoading" />
-      <span v-else class="section-content">{{ tabTotal }}</span>
+      <span v-else class="font-normal" :class="isSelected ? 'text-gray-800' : 'text-gray-600'">{{ tabTotal }}</span>
     </div>
 
     <!-- Drag Handle -->
-    <GripVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
+    <GripVertical v-if="isSelected && shouldShowDragHandle" class="mr-2 text-gray-400 handleTab" />
   </button>
 </template>
 
@@ -47,20 +56,10 @@ const {
 // Get computed values
 const uniqueTabClassName = computed(() => getUniqueTabClassName(props.tab._id));
 const tabsForGroup = computed(() => state.selected.tabsForGroup);
-const tabIndex = computed(() => tabsForGroup.value.findIndex(t => t._id === props.tab._id));
 const shouldShowDragHandle = computed(() => tabsForGroup.value.length > 1);
 const tabShouldExpand = !shouldShowDragHandle.value;
 
 const isSelected = computed(() => props.tab.isSelected);
-const isSelectedClass = computed(() => isSelected.value ? 'selected' : '');
-
-const borders = computed(() => {
-  const rightBorder = isLastInArray.value || isSelected.value ? '' : 'b-right';
-  const bottomBorder = isSelected.value ? 'b-bottom-none' : 'b-bottom';
-  const borderLeft = isPreviousTabSelected.value ? 'b-left' : '';
-
-  return [bottomBorder, rightBorder, borderLeft];
-});
 
 const tabTotal = computed(() => {
   const total = props.tab.total || 0;
@@ -69,58 +68,8 @@ const tabTotal = computed(() => {
   return formatPrice(total, { toFixed });
 });
 
-const isLastInArray = computed(() => tabIndex.value === tabsForGroup.value.length - 1);
-
-const isPreviousTabSelected = computed(() => {
-  const previousTab = tabsForGroup.value[tabIndex.value-1];
-  return previousTab?.isSelected;
-});
-
 // Watch for sort changes and update via the composable
 watch(() => props.tab.sort, (newSort) => {
   updateTabSort(props.tab._id, newSort);
 });
 </script>
-
-<style>
-.expandTab {
-  width: 100%;
-}
-
-.tab-button {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  height: 50px;
-  padding: 0 10px 0 0;
-  text-align: left;
-  border-radius: 0 0 3px 3px;
-}
-
-.tab-button:hover,
-.tab-button:active,
-.tab-button:focus {
-  outline: none;
-}
-
-.title-total {
-  display: flex;
-  flex-direction: column;
-  padding-left: 10px;
-  padding-right: 50px;
-}
-
-.section-title {
-  text-transform: uppercase;
-  font-weight: 900;
-  color: #000
-}
-
-.handleTab {
-  margin-right: auto;
-}
-
-.MoreVertical {
-  margin-left: auto;
-}
-</style>

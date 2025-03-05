@@ -1,62 +1,65 @@
 <template>
-    <div :class="['x-grid middle proper text-left group-row', isSelected]">
-        <!-- Edit Horizontal Dots -->
-        <div class="cell-1 right">
-            <MoreHorizontal @click="emit('edit-group', element)" class="handler-group pointer" />
+    <div :class="[
+        'flex items-center text-left rounded-md mb-5 px-4 py-3 border-2 border-gray-800 shadow-[4px_4px_0px_#000] bg-white transition-all duration-200 hover:shadow-[2px_2px_0px_#000]',
+        isSelected ? 'bg-purple-50 shadow-[2px_2px_0px_#6366f1] border-indigo-500 text-indigo-700' : ''
+    ]">
+        <!-- Left Actions Section -->
+        <div class="flex-shrink-0 mr-3">
+            <!-- Drag Handle -->
+            <GripHorizontal class="w-5 h-5 cursor-grab active:cursor-grabbing hover:text-indigo-600 handler-group" />
         </div>
-    
-        <!-- Drag Handle -->
-        <div class="cell-3-24 p20r">
-            <GripHorizontal class="handler-group pointer" />
+        
+        <!-- Main Content Section -->
+        <div class="flex-grow cursor-pointer pr-4" @click="selectGroup(element)">
+            <!-- Element Name and Info -->
+            <div class="flex flex-col">
+                <!-- Element Name -->
+                <div class="mb-1">
+                    <span class="font-bold tracking-wide text-base">{{ element.name }}</span>
+                </div>
+                
+                <!-- Account Type -->
+                <div v-if="isDefaultName" class="mb-1">
+                    <span class="text-sm text-gray-600">{{ accountInfo }}</span>
+                </div>
+                
+                <!-- Custom Info -->
+                <div v-if="element.info" class="mb-1">
+                    <span class="text-sm text-gray-600">{{ element.info }}</span>
+                </div>
+                
+                <!-- Element Group -->
+                <div v-if="element.accounts.length > 1" class="flex items-center flex-wrap">
+                    <span class="font-bold text-sm mr-1">Accts:</span>
+                    <span v-for="(account, accountIndex) in element.accounts" :key="index" class="text-sm">
+                        #{{ account.mask }}<span v-if="accountIndex < element.accounts.length - 1" class="font-bold mx-1">+</span>
+                    </span>
+                </div>
+            </div>
         </div>
-    
-        <div class="cell-12-24 pointer" @click="selectGroup(element)">
-        <div class="x-grid p10r">
-    
-            <!-- Element Name -->
-            <div class="cell-1">
-                <b>{{ element.name }}</b>
-            </div>
-    
-            <!-- Element Accounts -->
-            <div v-if="isDefaultName" class="cell-1">
-                <small>{{ accountInfo }}</small>
-            </div>
-    
-            <!-- Custom Info -->
-            <div v-if="element.info" class="cell-1">
-                <small v-if="element.info">{{ element.info }}</small>
-            </div>
-    
-            <!-- Element Group -->
-            <div v-if="element.accounts.length > 1" class="cell-1">
-                <b><small>Accts: </small></b><small v-for="(account, accountIndex) in element.accounts" :key="index">
-                    #{{ account.mask }} <b v-if="accountIndex < element.accounts.length - 1">+</b>
-                </small>
-            </div>
-    
-        </div>
-        </div>
-    
-        <!-- Balances + View -->
-        <div class="cell-9-24 right p10r pointer" @click="selectGroup(element)">
-        <div class="x-grid">
-    
+        
+        <!-- Balances Section -->
+        <div class="flex-shrink-0 text-right cursor-pointer min-w-[120px]" @click="selectGroup(element)">
             <!-- Current Balance -->
-            <div v-if="element.accounts.length" class="cell-1 bold right">
+            <div v-if="element.accounts.length" class="font-bold">
                 <NetWorth :accounts="element.accounts" :state="state" />
-                <br /><small>Available Balance</small>
+                <div class="text-xs text-gray-600 mt-1">Available Balance</div>
             </div>
-    
+            
             <!-- Available Balance -->
-            <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="cell-1">
+            <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="mt-2">
                 <span :class="fontColor(element.totalAvailableBalance)">{{ formatPrice(element.totalAvailableBalance) }}</span>
-                <br /><small>Current</small>
+                <div class="text-xs text-gray-600 mt-1">Current</div>
             </div>
-    
         </div>
+        
+        <!-- Edit Button (Moved to right) -->
+        <div class="flex-shrink-0 ml-2 self-start mt-1">
+            <MoreHorizontal 
+                @click="emit('edit-group', element)" 
+                class="w-5 h-5 cursor-pointer hover:text-indigo-600 p-0.5 rounded-full hover:bg-gray-100" 
+            />
         </div>
-    
     </div>
 </template>
     
@@ -89,22 +92,4 @@ const { selectGroup, updateGroupSort } = useEditGroup();
 watch(props.element, (newVal) => {
     updateGroupSort(newVal._id, newVal.sort);
 });
-
 </script>
-    
-<style>
-.group-row {
-    background-color: #fff;
-    margin-bottom: 20px;
-    border: 1px solid #000;
-    box-shadow: 3px 3px #000;
-    padding: 0 5px 15px 15px;
-    border-radius: 3px;
-}
-.group-row.isSelected {
-    background-color: whitesmoke;
-    box-shadow: 1px 1px blue;
-    border: 1px solid blue;
-    color: blue
-}
-</style>

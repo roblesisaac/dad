@@ -1,16 +1,16 @@
 <template>
-  <div class="x-grid p20y">
+  <div class="grid py-5">
     <!-- Transaction Details -->
-    <div class="cell-1 proper">
+    <div class="w-full">
       <p>
         <b v-if="item.amount<0">Paid With:</b>
         <b v-else>Debosited To:</b>
         <br />
-        <span>{{ accountData.name }}</span> <span class="count bold">#{{ accountData.mask }}</span>
+        <span>{{ accountData.name }}</span> <span class="text-gray-600 font-bold">#{{ accountData.mask }}</span>
         <br v-if="accountName && accountName !== accountData.name" />
         <span v-if="accountName && accountName !== accountData.name">{{ accountName }}</span>
         <br />
-        Current Balance: <span class="colorDarkGreen bold">{{ formatPrice(accountData.balances?.current) }}</span>
+        Current Balance: <span class="text-green-800 font-bold">{{ formatPrice(accountData.balances?.current) }}</span>
       </p>
       <p>
         <b>Channel:</b> {{ item.payment_channel }}
@@ -24,51 +24,51 @@
     </div>
 
     <!-- Transaction Controls -->
-    <div class="cell-1">
+    <div class="w-full">
 
       <!-- Add Note -->
-      <div class="x-grid p20b">
-        <div class="cell-1">
+      <div class="grid pb-5">
+        <div class="w-full">
           <b>Add Note:</b>
         </div>
-        <div class="cell-1">
-          <textarea rows="3" class="add-note" v-model="item.notes"></textarea>
+        <div class="w-full">
+          <textarea rows="3" class="w-full border border-gray-300 rounded" v-model="item.notes"></textarea>
         </div>
       </div>
 
       <!-- Recategorize As -->
-      <div class="x-grid">
-        <div class="cell-1">
+      <div class="grid">
+        <div class="w-full">
           <b>Recategorize<span v-if="item.recategorizeAs">d</span> As:</b>
         </div>
-        <div class="cell-1">
-          <input v-model="item.recategorizeAs" type="text" />
+        <div class="w-full">
+          <input v-model="item.recategorizeAs" type="text" class="w-full border border-gray-300 rounded" />
         </div>
         
         <!-- Apply-to options -->
         <Transition>
-        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="x-grid">
-          <div class="cell-1 p10t">
+        <div v-if="item.recategorizeAs !== transactionDetailsState.originalCategory" class="grid">
+          <div class="w-full pt-2.5">
             <b>Apply New Category To:</b>
           </div>
 
-          <div class="cell-1 p10l">
+          <div class="w-full pl-2.5">
             <!-- This item only -->
-            <div class="x-grid">
-              <div class="cell shrink">
+            <div class="grid grid-cols-12">
+              <div class="col-span-1">
                 <input type="radio" id="this-item-only" name="apply-to" value="this-item-only" checked>
               </div>
-              <div class="cell auto p10l">
+              <div class="col-span-11 pl-2.5">
                 <label for="this-item-only">This item only</label>
               </div>
             </div>
 
             <!-- Anything that matches -->
-            <div class="x-grid">
-              <div class="cell shrink">
+            <div class="grid grid-cols-12">
+              <div class="col-span-1">
                 <input type="radio" id="anything-that-matches" name="apply-to" value="anything-that-matches">
               </div>
-              <div class="cell auto p10l">
+              <div class="col-span-11 pl-2.5">
                 <label for="anything-that-matches">Anything that matches</label>
               </div>
             </div>
@@ -81,7 +81,7 @@
     </div>
 
     <!-- Rules Applied -->
-    <div class="cell-1" v-for="rule in rulesAppliedToItem" :key="rule._id">
+    <div class="w-full" v-for="rule in rulesAppliedToItem" :key="rule._id">
       <EditRule :ruleConfig="rule" :state="state" :showReorder="false" />
     </div>
   </div>
@@ -138,11 +138,3 @@ watch(() => item.recategorizeAs, updateTransaction);
 watch(() => item.notes, updateTransaction);
 
 </script>
-
-<style>
-.add-note {
-  width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-</style>

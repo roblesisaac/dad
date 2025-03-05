@@ -1,59 +1,59 @@
 <template>
-    <div class="x-grid p20 text-left">
+    <div class="grid gap-5 p-5 text-left">
     
       <!-- Back button -->
-      <div class="cell-1 p10b">
-        <button @click="$emit('close')" class="button">← Back</button>
+      <div class="w-full pb-2.5">
+        <button @click="$emit('close')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded">← Back</button>
       </div>
     
       <!-- Group Name -->
-      <div class="cell-1 p20b">
+      <div class="w-full pb-5">
     
-        <div class="x-grid middle">
-          <div class="cell-1-5 bold">
+        <div class="grid grid-cols-5 items-center">
+          <div class="col-span-1 font-bold">
             Name:
           </div>
-          <div class="cell-4-5">
-            <input type="text" v-model="props.group.name" class="transparent bold colorBlue" />
+          <div class="col-span-4">
+            <input type="text" v-model="props.group.name" class="w-full bg-transparent font-bold text-blue-600 focus:outline-none" />
           </div>
         </div>
     
-        <div class="x-grid">
-          <div class="cell-1 bold ">Info:</div>
-          <div class="cell-1">
-            <textarea v-model="props.group.info" class="edit-info" ></textarea>
+        <div class="grid grid-cols-1">
+          <div class="font-bold">Info:</div>
+          <div class="w-full">
+            <textarea v-model="props.group.info" class="w-full border border-gray-300 rounded-md p-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
           </div>
         </div>
     
       </div>
     
       <!-- Accounts In Group -->
-      <div class="cell-1">
+      <div class="w-full">
         <b>Accounts In Group:</b>
-        <div class="dropHere">
-          <span v-if="!props.group.accounts.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="accountDragger" v-model="props.group.accounts" v-bind="dragOptions(1)">
+        <div class="min-h-[100px] border border-gray-300 rounded-md p-2 bg-gray-50">
+          <span v-if="!props.group.accounts.length" class="text-gray-500">Drag and drop groups here.</span>
+          <Draggable class="flex flex-wrap gap-2" group="accountDragger" v-model="props.group.accounts" v-bind="dragOptions(1)">
             <template #item="{element}">
-              <button class="sharedWith">{{ element.mask }}</button>
+              <button class="px-3 py-1 bg-blue-500 text-white rounded-full text-sm">{{ element.mask }}</button>
             </template>
           </Draggable>
         </div>
       </div>
     
       <!-- Accounts Not In Group -->
-      <div class="cell-1 p30y">
+      <div class="w-full py-7">
         <b>Accounts Not In Group:</b>
-        <div class="dropHere">
-          <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions(1)">
+        <div class="min-h-[100px] border border-gray-300 rounded-md p-2 bg-gray-50">
+          <Draggable class="flex flex-wrap gap-2" group="accountDragger" v-model="accountsNotInGroup" v-bind="dragOptions(1)">
             <template #item="{element}">
-              <button class="button sharedWith">{{ element.mask }}</button>
+              <button class="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-full text-sm">{{ element.mask }}</button>
             </template>
         </Draggable>
         </div>
       </div>
     
-      <div class="cell-1">
-        <button @click="handleDeleteGroup" class="transparent expanded colorRed">Remove Group</button>
+      <div class="w-full">
+        <button @click="handleDeleteGroup" class="w-full bg-transparent text-red-600 hover:bg-red-100 py-2 rounded">Remove Group</button>
       </div>
     
     </div>
@@ -91,11 +91,3 @@
     watch(() => props.group, updateGroup, { deep: true });
     
     </script>
-    
-    <style>
-    .edit-info {
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    </style>

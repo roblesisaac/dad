@@ -1,9 +1,9 @@
 <template>
-  <div class="onboarding-view">
+  <div class="max-w-6xl mx-auto p-8">
     <!-- Onboarding Flow -->
-    <div class="welcome-container">
-      <h2>Welcome to Your Financial Dashboard!</h2>
-      <p>Let's get started by connecting your first bank account.</p>
+    <div class="max-w-xl mx-auto bg-white p-8 border-2 border-black shadow-[5px_5px_0px_#000]">
+      <h2 class="text-3xl font-bold mb-3 text-center text-purple-800">Welcome to Your Financial Dashboard!</h2>
+      <p class="mb-8 text-center text-gray-700">Let's get started by connecting your first bank account.</p>
       
       <OnboardingStatus 
         v-if="['syncing', 'complete'].includes(state.onboardingStep)"
@@ -12,37 +12,37 @@
       />
 
       <div v-else>
-        <div class="benefits">
-          <ul>
-            <li>
-              <LucideShieldCheck class="icon" />
-              Securely connect your accounts
+        <div class="mb-8 bg-gray-100 border-2 border-black p-6 shadow-[3px_3px_0px_#000]">
+          <ul class="space-y-4">
+            <li class="flex items-center gap-3 text-gray-800">
+              <LucideShieldCheck class="w-6 h-6 text-purple-700" />
+              <span class="text-lg">Securely connect your accounts</span>
             </li>
-            <li>
-              <LucideLineChart class="icon" />
-              Track your spending
+            <li class="flex items-center gap-3 text-gray-800">
+              <LucideLineChart class="w-6 h-6 text-purple-700" />
+              <span class="text-lg">Track your spending</span>
             </li>
-            <li>
-              <LucideWallet class="icon" />
-              Manage your finances
+            <li class="flex items-center gap-3 text-gray-800">
+              <LucideWallet class="w-6 h-6 text-purple-700" />
+              <span class="text-lg">Manage your finances</span>
             </li>
           </ul>
         </div>
         
         <button 
-          class="primary-button"
+          class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold border-2 border-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] transition-all duration-200 flex items-center justify-center"
           @click="connectBank"
           :disabled="state.loading"
         >
-          <LucidePlus v-if="!state.loading" class="icon" />
-          <LucideLoader v-else class="icon spinning" />
+          <LucidePlus v-if="!state.loading" class="w-5 h-5 mr-2" />
+          <LucideLoader v-else class="w-5 h-5 mr-2 animate-spin" />
           {{ state.loading ? 'Connecting...' : 'Connect Your Bank' }}
         </button>
       </div>
 
-      <div v-if="state.error" class="error-message">
-        <LucideAlertCircle class="icon" />
-        {{ state.error }}
+      <div v-if="state.error" class="mt-6 p-4 bg-red-100 border-2 border-red-600 text-red-700 flex items-center gap-2">
+        <LucideAlertCircle class="w-5 h-5 flex-shrink-0" />
+        <span>{{ state.error }}</span>
       </div>
     </div>
   </div>
@@ -87,86 +87,4 @@ const handleRetry = async () => {
   state.error = null;
   await resyncTransactions();
 };
-</script>
-
-<style scoped>
-.onboarding-view {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.welcome-container {
-  text-align: center;
-  padding: 2rem;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.benefits {
-  margin: 2rem 0;
-  text-align: left;
-}
-
-.benefits ul {
-  list-style: none;
-  padding: 0;
-}
-
-.benefits li {
-  margin: 1rem 0;
-  font-size: 1.1rem;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.primary-button {
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  background: var(--primary);
-  color: var(--on-primary);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-}
-
-.primary-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.primary-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--error);
-  margin-top: 1rem;
-}
-
-.icon {
-  width: 1.2em;
-  height: 1.2em;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style> 
+</script> 

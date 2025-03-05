@@ -1,59 +1,65 @@
 <template>
-  <div class="onboarding-status">
+  <div class="max-w-xl mx-auto px-6 py-8 bg-white border-2 border-black shadow-[4px_4px_0px_#000]">
     <div v-if="state.onboardingStep === 'syncing'" class="sync-status">
-      <h3>Setting Up Your Account</h3>
-      <p>We're syncing your transactions. This may take a few minutes...</p>
+      <h3 class="text-2xl font-bold mb-2 text-purple-800">Setting Up Your Account</h3>
+      <p class="mb-6 text-gray-700">We're syncing your transactions. This may take a few minutes...</p>
       
-      <div class="progress-container">
-        <div class="progress-bar">
-          <div class="progress-fill" :style="{ width: progressWidth }"></div>
+      <div class="bg-gray-100 p-6 border-2 border-black shadow-[3px_3px_0px_#000]">
+        <div class="relative h-4 bg-gray-300 mb-4 overflow-hidden border border-gray-800">
+          <div class="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-500 to-indigo-600 transition-all duration-500" :style="{ width: progressWidth }"></div>
         </div>
         
-        <div class="progress-stats">
-          <div class="stat-item">
-            <span class="stat-label">Added</span>
-            <span class="stat-value">{{ state.syncProgress.added }}</span>
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="flex flex-col items-center text-center">
+            <span class="text-sm text-gray-600 mb-1">Added</span>
+            <span class="text-2xl font-bold text-purple-800">{{ state.syncProgress.added }}</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Modified</span>
-            <span class="stat-value">{{ state.syncProgress.modified }}</span>
+          <div class="flex flex-col items-center text-center">
+            <span class="text-sm text-gray-600 mb-1">Modified</span>
+            <span class="text-2xl font-bold text-purple-800">{{ state.syncProgress.modified }}</span>
           </div>
-          <div class="stat-item">
-            <span class="stat-label">Removed</span>
-            <span class="stat-value">{{ state.syncProgress.removed }}</span>
+          <div class="flex flex-col items-center text-center">
+            <span class="text-sm text-gray-600 mb-1">Removed</span>
+            <span class="text-2xl font-bold text-purple-800">{{ state.syncProgress.removed }}</span>
           </div>
         </div>
 
-        <div class="status-indicator">
-          <div class="status-badge" :class="state.syncProgress.status">
+        <div class="flex justify-center mb-4">
+          <div class="inline-block px-4 py-1 rounded-full text-sm font-medium border-2"
+               :class="{
+                 'bg-gray-200 border-gray-800 text-gray-800': state.syncProgress.status === 'queued',
+                 'bg-blue-100 border-blue-800 text-blue-800': ['syncing', 'in_progress'].includes(state.syncProgress.status),
+                 'bg-green-100 border-green-800 text-green-800': state.syncProgress.status === 'completed',
+                 'bg-red-100 border-red-800 text-red-800': state.syncProgress.status === 'error'
+               }">
             {{ formatStatus(state.syncProgress.status) }}
           </div>
         </div>
 
-        <div v-if="state.error" class="error-message">
+        <div v-if="state.error" class="text-center mt-4 text-red-600">
           {{ state.error }}
-          <button class="retry-button" @click="retrySync">
+          <button class="mt-2 px-4 py-2 bg-white border-2 border-red-600 text-red-600 hover:bg-red-100 font-medium shadow-[2px_2px_0px_#a40000]" @click="retrySync">
             Retry Sync
           </button>
         </div>
       </div>
     </div>
 
-    <div v-else-if="state.onboardingStep === 'complete'" class="sync-complete">
-      <h3>Setup Complete!</h3>
-      <p>Successfully synced your accounts:</p>
-      <div class="final-stats">
-        <div class="stat-item">
-          <span class="stat-label">Transactions Added</span>
-          <span class="stat-value">{{ state.syncProgress.added }}</span>
+    <div v-else-if="state.onboardingStep === 'complete'" class="text-center">
+      <h3 class="text-2xl font-bold mb-2 text-purple-800">Setup Complete!</h3>
+      <p class="mb-6 text-gray-700">Successfully synced your accounts:</p>
+      <div class="mb-6 space-y-4">
+        <div class="flex justify-between items-center bg-gray-100 p-4 border-2 border-black shadow-[2px_2px_0px_#000]">
+          <span class="text-gray-700">Transactions Added</span>
+          <span class="text-xl font-bold text-purple-800">{{ state.syncProgress.added }}</span>
         </div>
-        <div class="stat-item">
-          <span class="stat-label">Last Synced</span>
-          <span class="stat-value">{{ formatLastSync }}</span>
+        <div class="flex justify-between items-center bg-gray-100 p-4 border-2 border-black shadow-[2px_2px_0px_#000]">
+          <span class="text-gray-700">Last Synced</span>
+          <span class="text-xl font-bold text-purple-800">{{ formatLastSync }}</span>
         </div>
       </div>
-      <button class="primary-button" @click="router.push('/dashboard')">
-        Go to Dashboard <ArrowRight class="icon" />
+      <button class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold border-2 border-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] transition-all duration-200 flex items-center justify-center" @click="router.push('/dashboard')">
+        Go to Dashboard <ArrowRight class="ml-2 w-5 h-5" />
       </button>
     </div>
   </div>
@@ -109,136 +115,4 @@ const formatLastSync = computed(() => {
 const retrySync = () => {
   emit('retry');
 };
-</script>
-
-<style scoped>
-.onboarding-status {
-  max-width: 600px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.progress-container {
-  background: var(--surface-variant);
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.progress-bar {
-  height: 8px;
-  background-color: var(--surface);
-  border-radius: 4px;
-  margin-bottom: 1rem;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: var(--primary);
-  transition: width 0.5s ease;
-}
-
-.progress-stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.stat-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.5rem;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: bold;
-}
-
-.status-indicator {
-  display: flex;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.status-badge {
-  padding: 0.5rem 1rem;
-  border-radius: 20px;
-  font-weight: 500;
-  text-transform: capitalize;
-}
-
-.status-badge.queued {
-  background: var(--surface);
-  color: var(--text-primary);
-}
-
-.status-badge.syncing,
-.status-badge.in_progress {
-  background: var(--primary-container);
-  color: var(--on-primary-container);
-}
-
-.status-badge.completed {
-  background: var(--success-container);
-  color: var(--on-success-container);
-}
-
-.status-badge.error {
-  background: var(--error-container);
-  color: var(--on-error-container);
-}
-
-.final-stats {
-  display: grid;
-  gap: 1rem;
-  margin: 1.5rem 0;
-}
-
-.error-message {
-  color: var(--error);
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.primary-button {
-  width: 100%;
-  padding: 1rem;
-  margin-top: 1.5rem;
-  background: var(--primary);
-  color: var(--on-primary);
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.primary-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.retry-button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background: var(--surface);
-  border: 1px solid var(--error);
-  color: var(--error);
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.retry-button:hover {
-  background: var(--error-container);
-}
-</style> 
+</script> 

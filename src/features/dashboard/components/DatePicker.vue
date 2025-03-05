@@ -1,24 +1,27 @@
 <template>
-<VueDatePicker class="section-content bold" v-model="date[when]" :format="state.format" hide-input-icon :clearable="false" autocomplete="on" :enable-time-picker="false" :auto-apply="true" />
+<input 
+  type="date" 
+  :value="formatDateForInput(date[when])" 
+  @input="handleDateChange($event)"
+  class="bg-transparent border-none text-gray-700 text-sm w-full truncate text-center focus:outline-none focus:ring-0 py-2.5 font-bold"
+/>
 </template>
 
 <script setup>
 import { reactive } from 'vue';
-import VueDatePicker from '@vuepic/vue-datepicker';
 
 const { date, when } = defineProps({
-  date: 'object',
-  when: 'string'
+  date: {
+    type: Object,
+    required: true
+  },
+  when: {
+    type: String,
+    required: true
+  }
 });
 
 const state = reactive({
-  format: (date) => {
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-
-    return `${month}/${day}/${year}`;
-  },
   presets: {
     firstOfMonth() {
       const currentDate = new Date();
@@ -41,6 +44,22 @@ function launchPreset() {
   date[when] = presets[date[when]]();
 }
 
+function formatDateForInput(dateValue) {
+  if (!dateValue) return '';
+  
+  const d = new Date(dateValue);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}`;
+}
+
+function handleDateChange(event) {
+  const newDate = new Date(event.target.value);
+  date[when] = newDate;
+}
+
 function init() {
   if(dateIsAPreset()) {
     launchPreset();
@@ -49,22 +68,3 @@ function init() {
 
 init();
 </script>
-
-<style>
-.dp__input {
-  background: transparent !important;
-  border: 0 !important;
-  font-weight: bold !important;
-  font-family: 'Sometype Mono Variable', monospace !important;
-  padding: 0 !important;
-  text-align: center !important;
-}
-
-.dp__btn {
-  box-shadow: none !important;
-}
-
-.dp__calendar_header_separator {
-  background: transparent !important;
-}
-</style>

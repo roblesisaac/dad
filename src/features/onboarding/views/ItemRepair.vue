@@ -1,49 +1,54 @@
 <template>
-  <div class="repair-container">
-    <div class="x-grid">
-      <div class="cell-1 p20 text-center">
-        <h2>Account Reconnection Required</h2>
-        <p class="mb20">Some of your accounts need to be reconnected to continue syncing transactions.</p>
+  <div class="max-w-3xl mx-auto p-8">
+    <div class="w-full bg-white border-2 border-black shadow-[4px_4px_0px_#000] p-6">
+      <div class="text-center mb-8">
+        <h2 class="text-2xl font-bold mb-2 text-purple-800">Account Reconnection Required</h2>
+        <p class="text-gray-700">Some of your accounts need to be reconnected to continue syncing transactions.</p>
       </div>
 
-      <div v-if="state.syncedItems.length" class="cell-1">
+      <div v-if="state.syncedItems.length" class="space-y-4">
         <div 
           v-for="item in state.syncedItems" 
           :key="item.item_id" 
-          class="item-row"
-          :class="{ 'has-error': item.error }"
+          class="border-2 border-black p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+          :class="{ 'bg-red-50': item.error, 'bg-gray-50': !item.error }"
         >
-          <div class="institution-info">
-            <div class="institution-name">
+          <div class="flex-grow">
+            <div class="font-bold text-lg mb-1">
               {{ item.institution_name || item.institution_id }}
             </div>
-            <div v-if="item.error" class="error-message">
-              <LucideAlertCircle class="icon" />
+            <div v-if="item.error" class="flex items-center text-red-600 text-sm">
+              <LucideAlertCircle class="w-4 h-4 mr-1" />
               {{ getErrorMessage(item.error) }}
             </div>
-            <div v-else class="sync-status">
-              <LucideCheckCircle2 class="icon" />
+            <div v-else class="flex items-center text-green-600 text-sm">
+              <LucideCheckCircle2 class="w-4 h-4 mr-1" />
               Connected
             </div>
           </div>
           
-          <div class="action-buttons">
+          <div>
             <button 
               @click="repairItem(item.item_id)" 
-              :class="['button', item.error ? 'repair' : 'reconnect']"
+              :class="[
+                'px-4 py-2 border-2 border-black font-medium shadow-[3px_3px_0px_#000] hover:shadow-[1px_1px_0px_#000] transition-all duration-200',
+                item.error ? 'bg-red-500 hover:bg-red-600 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'
+              ]"
               :disabled="state.isRepairing"
             >
-              <LucideRefreshCw v-if="!state.isRepairing" class="icon" />
-              <LucideLoader v-else class="icon spinning" />
-              {{ item.error ? 'Repair Connection' : 'Reconnect' }}
+              <div class="flex items-center">
+                <LucideRefreshCw v-if="!state.isRepairing" class="w-4 h-4 mr-2" />
+                <LucideLoader v-else class="w-4 h-4 mr-2 animate-spin" />
+                {{ item.error ? 'Repair Connection' : 'Reconnect' }}
+              </div>
             </button>
           </div>
         </div>
       </div>
 
-      <div v-if="state.error" class="cell-1 p20 error-message">
-        <LucideAlertCircle class="icon" />
-        {{ state.error }}
+      <div v-if="state.error" class="mt-6 p-4 bg-red-100 border-2 border-red-600 text-red-700 flex items-center">
+        <LucideAlertCircle class="w-5 h-5 mr-2 flex-shrink-0" />
+        <span>{{ state.error }}</span>
       </div>
     </div>
   </div>
@@ -64,107 +69,3 @@ const {
   repairItem
 } = usePlaidIntegration();
 </script>
-
-<style scoped>
-.repair-container {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-}
-
-.item-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid var(--border);
-  transition: background-color 0.2s;
-}
-
-.item-row:hover {
-  background-color: var(--surface-variant);
-}
-
-.item-row.has-error {
-  background-color: var(--error-container);
-}
-
-.institution-info {
-  flex: 1;
-}
-
-.institution-name {
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin-bottom: 0.5rem;
-}
-
-.sync-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--success);
-  font-size: 0.9rem;
-}
-
-.error-message {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: var(--error);
-  font-size: 0.9rem;
-  margin-top: 0.5rem;
-}
-
-.action-buttons {
-  display: flex;
-  gap: 1rem;
-}
-
-.button {
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: all 0.2s;
-}
-
-.button.repair {
-  background: var(--error);
-  color: var(--on-error);
-  border: none;
-}
-
-.button.reconnect {
-  background: var(--primary);
-  color: var(--on-primary);
-  border: none;
-}
-
-.button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
-.icon {
-  width: 1.2em;
-  height: 1.2em;
-}
-
-.spinning {
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-</style>

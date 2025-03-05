@@ -1,13 +1,13 @@
 <template>
-  <div :id="id" class="x-grid dottedRow proper">
+  <div :id="id" class="grid border-dotted border-b">
     
-    <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
-      <div class="x-grid">
-        <div class="cell auto">
-          <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
+    <div @click="selectCategory()" :id="id+'title'" class="w-full p-5 leading-8 cursor-pointer">
+      <div class="grid grid-cols-12">
+        <div class="col-span-11">
+          <b class="font-bold">{{ categoryItems.length }}</b> <b class="capitalize">{{ categoryName }}</b> <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
         </div>
-        <div class="cell shrink categoryExpand">
-          <span class="bold colorJet icon">
+        <div class="col-span-1 text-right text-black font-bold">
+          <span class="font-bold text-black">
             <Minus v-if="isSelected" />
             <Plus v-else />
           </span>
@@ -15,7 +15,7 @@
       </div>
     </div>
     
-    <div v-if="isSelected" class="cell-1">
+    <div v-if="isSelected" class="w-full">
       <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
     
@@ -67,9 +67,9 @@ function makeSelectedCategorySticky() {
   const selector = id+'title';
   
   if(isSelected.value) {
-    stickify.register(selector);
+    // stickify.register(selector);
   } else {
-    stickify.deregister(selector);  
+    // stickify.deregister(selector);  
   }
 
   const isSmallScreen = true;
@@ -151,15 +151,3 @@ onBeforeUnmount(() => {
 });
 
 </script>
-
-<style>
-.categoryTitle {
-  line-height: 2;
-  cursor: pointer;
-}
-
-.expandedCat {
-  position: absolute;
-}
-
-</style>

@@ -1,39 +1,39 @@
 <template>
-<div class="x-grid">
-  <div class="cell-1">
+<div class="grid grid-cols-1">
+  <div class="col-span-1">
   <ScrollingContent>
     <Transition>
-      <div v-if="ruleConfig._id && state.showReorder" class="cell shrink p10y p5r bold handle">
-        <small><GripHorizontal /></small>
+      <div v-if="ruleConfig._id && state.showReorder" class="flex-none py-2.5 pr-1.5 font-bold cursor-grab">
+        <span class="text-sm"><GripHorizontal /></span>
       </div>
     </Transition>
-    <div v-if="ruleIsGlobal" class="cell shrink p10y bold">*</div>
-    <div v-if="ruleIsShared" class="cell shrink p10y bold">**</div>
-    <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold"><small>As</small></div>
-    <div v-if="ruleType === 'sort'" class="cell shrink p10y p10r bold"><small>By</small></div>
-    <div v-if="ruleType === 'filter'" class="cell shrink p10y p10r bold"><small>Show if</small></div>
-    <div v-if="app.shouldShow('categorizeAs')" class="cell shrink p10y p10r">
-      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="editRule" placeholder="something" />
+    <div v-if="ruleIsGlobal" class="flex-none py-2.5 font-bold text-indigo-700">*</div>
+    <div v-if="ruleIsShared" class="flex-none py-2.5 font-bold text-purple-700">**</div>
+    <div v-if="ruleType === 'categorize'" class="flex-none py-2.5 px-2.5 font-bold"><span class="text-sm text-teal-700">As</span></div>
+    <div v-if="ruleType === 'sort'" class="flex-none py-2.5 px-2.5 font-bold"><span class="text-sm text-cyan-700">By</span></div>
+    <div v-if="ruleType === 'filter'" class="flex-none py-2.5 px-2.5 font-bold"><span class="text-sm text-amber-700">Show if</span></div>
+    <div v-if="app.shouldShow('categorizeAs')" class="flex-none py-2.5 px-2.5">
+      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="4" class="bg-transparent font-bold text-blue-700 border-b-2 border-blue-600 focus:outline-none focus:border-blue-800 px-0 py-0" placeholder="something" />
     </div>
-    <div v-if="ruleType === 'categorize'" class="cell shrink p10y p10r bold"><small>If</small></div>
-    <div v-if="app.shouldShow('itemProp')" class="cell shrink p10y p10r">
-      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].itemProps" title="something" :data="ruleConfig.rule" :prop="1" />
+    <div v-if="ruleType === 'categorize'" class="flex-none py-2.5 px-2.5 font-bold"><span class="text-sm text-indigo-700">If</span></div>
+    <div v-if="app.shouldShow('itemProp')" class="flex-none py-2.5 px-2.5">
+      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].itemProps" title="something" :data="ruleConfig.rule" :prop="1" class="bg-transparent font-bold text-blue-700 border-b-2 border-blue-600 focus:outline-none focus:border-blue-800" />
     </div>
-    <div v-if="app.shouldShow('ruleMethodName')" class="cell shrink p10y p10r">
-      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" />
+    <div v-if="app.shouldShow('ruleMethodName')" class="flex-none py-2.5 px-2.5">
+      <DynamicWidthSelect :options="editRuleState.ruleTypes[ruleType].ruleMethodNames" title="does" :data="ruleConfig.rule" :prop="2" class="bg-transparent font-bold text-blue-700 border-b-2 border-blue-600 focus:outline-none focus:border-blue-800" />
     </div>
-    <div v-if="app.shouldShow('testStandard') && route.name === 'edit-tab' || route.name === 'dashboard'" class="cell shrink p10y p10r">
-      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="editRule" placeholder="something" />
+    <div v-if="app.shouldShow('testStandard') && route.name === 'edit-tab' || route.name === 'dashboard'" class="flex-none py-2.5 px-2.5">
+      <DynamicWidthInput type="text" :state="ruleConfig.rule" propToUpdate="3" class="bg-transparent font-bold text-blue-700 border-b-2 border-blue-600 focus:outline-none focus:border-blue-800 px-0 py-0" placeholder="something" />
     </div>
-    <div v-if="ruleConfig._id && route.name === 'edit-tab'" class="cell shrink p10y p10r bold">
-      <small>
-        <Settings2 @click="app.editRule" />
-      </small>
+    <div v-if="ruleConfig._id && route.name === 'edit-tab'" class="flex-none py-2.5 px-2.5 font-bold">
+      <span class="text-sm">
+        <Settings2 @click="app.editRule" class="cursor-pointer hover:text-blue-600" />
+      </span>
     </div>
   </ScrollingContent>
   </div>
-  <div v-if="app.shouldShow('testStandard') && route.name === 'rule-details'" class="cell-1">
-    <DynamicTextArea :data="ruleConfig.rule" prop="3" class="code-editor" />
+  <div v-if="app.shouldShow('testStandard') && route.name === 'rule-details'" class="col-span-1">
+    <DynamicTextArea :data="ruleConfig.rule" prop="3" class="font-mono text-sm font-bold p-2.5 bg-gray-900 text-gray-300 border border-gray-700 rounded shadow-[2px_2px_0px_#6366f1] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_5px_rgba(30,144,255,0.5)] w-full" />
   </div>
 </div>
 </template>

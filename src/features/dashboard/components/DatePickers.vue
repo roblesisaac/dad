@@ -1,10 +1,10 @@
 <template>
-<div class="x-grid datePickers line50">
-  <div class="cell-11-24">
+<div class="flex items-center w-full max-w-full bg-white border-none px-2">
+  <div class="flex-1 min-w-0 overflow-hidden">
     <DatePicker :date="state.date" when="start" />
   </div>
-  <div class="cell-1-24 bold">-</div>
-  <div class="cell-12-24">
+  <div class="flex-none px-1 text-gray-400">-</div>
+  <div class="flex-1 min-w-0 overflow-hidden">
     <DatePicker :date="state.date" when="end" />
   </div>
 </div>

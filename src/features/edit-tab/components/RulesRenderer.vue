@@ -1,16 +1,16 @@
 <template>
-<div class="x-grid p20x">
-  <div v-if="filteredRulesByType.length > 1" class="cell-1 p15t">
-    <div class="underline bold colorBlue">
+<div class="grid grid-cols-1 px-5">
+  <div v-if="filteredRulesByType.length > 1" class="col-span-1 pt-4">
+    <div class="underline font-bold text-blue-700 cursor-pointer hover:text-blue-900">
       <span @click="state.showReorder=true" v-if="!state.showReorder">Reorder</span>
       <span v-else @click="state.showReorder=false">Done</span>
     </div>
   </div>
   
-  <div class="cell-1 p15b">
+  <div class="col-span-1 pb-4">
     <Draggable
       v-if="filteredRulesByType.length"
-      class="draggable" 
+      class="space-y-3" 
       v-model="filteredRulesByType" 
       group="rules" 
       handle=".handle"
@@ -22,11 +22,15 @@
     </Draggable>
   </div>
 
-  <div class="cell-1 p20b">
-    <hr v-if="filteredRulesByType.length">
-    <div class="x-grid" v-if="filteredRulesByType.length">
-      <div class="cell-1 proper p10t">
-        New {{ ruleType }} Rule ↓
+  <div class="col-span-1 pb-5">
+    <hr v-if="filteredRulesByType.length" class="border-t border-gray-300 my-3">
+    <div class="grid grid-cols-1" v-if="filteredRulesByType.length">
+      <div class="col-span-1 pt-2.5 mb-3">
+        <span class="text-indigo-700 font-bold" :class="{
+          'text-teal-700': ruleType === 'categorize',
+          'text-cyan-700': ruleType === 'sort',
+          'text-amber-700': ruleType === 'filter'
+        }">New {{ ruleType }} Rule ↓</span>
       </div>
     </div>
 

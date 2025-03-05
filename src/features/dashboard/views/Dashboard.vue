@@ -1,47 +1,49 @@
 <template>
   <!-- BlueBar -->
   <Transition>
-    <div v-if="state.blueBar.message" class="x-grid">
-      <div class="cell-1 p10l blue-bar bold">
-        <small class="colorBleach">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
+    <div v-if="state.blueBar.message" class="w-full bg-indigo-800 border-b-2 border-indigo-900 px-4 py-2">
+      <div class="font-bold">
+        <small class="text-indigo-100">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
       </div>
     </div>
   </Transition>
 
   <!-- BackButton -->
   <Transition>
-    <button v-if="!isHome" @click="router.back()" class="backButton section b-bottom">
-      <ChevronLeft class="icon" /> Back
+    <button v-if="!isHome" @click="router.back()" class="w-full flex items-center justify-start px-4 py-3 bg-blue-200 border-b-2 border-black font-medium text-black hover:bg-blue-300 transition-colors">
+      <ChevronLeft class="w-5 h-5 mr-2" /> Back
     </button>
   </Transition>
 
   <!-- Main Dashboard Content -->
   <template v-if="isHome">
     <!-- Small Screens -->
-    <div class="x-grid middle">
+    <div class="w-full">
       <!-- Selected Group + Date -->
-      <div class="cell-1 dateRow b-bottom">
-        <div class="x-grid middle">
-          <ShowSelectGroupButton class="cell-8-24 b-right" />
-          <div class="cell-16-24 line50">          
+      <div class="border-b-2 border-black">
+        <div class="grid grid-cols-12">
+          <ShowSelectGroupButton class="col-span-4 sm:col-span-3 border-r-2 border-black py-2 px-3" />
+          <div class="col-span-8 sm:col-span-9 h-[50px] flex items-center px-3">          
             <DatePickers />
           </div>
         </div>
       </div>
 
       <!-- Scrolling Tabs Totals Row -->
-      <div v-if="!state.isLoading" class="cell-1 totalsRow">
+      <div v-if="!state.isLoading" class="h-[50px] bg-white sticky top-0 z-10 border-b-2 border-black shadow-md">
         <ScrollingTabButtons />
       </div>
 
       <!-- Category Rows -->
       <Transition>
-        <div v-if="!state.isLoading && state.selected.tab" class="cell-1">
+        <div v-if="!state.isLoading && state.selected.tab" class="w-full">
           <CategoriesWrapper />
         </div>
       </Transition>
       <Transition>
-        <LoadingDots v-if="state.isLoading"></LoadingDots>
+        <div v-if="state.isLoading" class="w-full flex justify-center py-8">
+          <LoadingDots></LoadingDots>
+        </div>
       </Transition>
     </div>
   </template>
@@ -79,7 +81,7 @@ const { syncLatestTransactionsForBanks } = usePlaidSync();
 const isHome = computed(() => route.name === 'dashboard');
 
 onMounted(async () => {
-  stickify.register('.totalsRow');
+  // stickify.register('.sticky-tabs-row');
   await init();
   
   // Start syncing transactions for all connected banks
@@ -113,136 +115,5 @@ watch(() => state.selected.tab?._id, handleTabChange);
 </script>
 
 <style>
-.topNav {
-  background: #fff;
-}
-
-.logoBtn {
-  box-shadow: 3px 3px darkgrey;
-}
-
-html, body, .divider-text, .tab-button.selected, .allTabRow, .dottedRow,
-button.acctButton:hover, button.tab-button:hover, button.view-all:hover, button.linkAccount:hover,
-button.acctButton:focus, button.tab-button:focus, button.view-all:focus, button.linkAccount:focus,
-button.acctButton:active, button.tab-button:active, button.view-all:active, button.linkAccount:active {
-  background: #fff;
-}
-
-.acctButton {
-  background: lightsteelblue;
-}
-
-.backButton {
-  background: lightblue;
-  width: 100%;
-  color: black;
-}
-
-.blue-bar {
-  background-color: slateblue;
-  border-bottom: 2px solid darkblue;
-}
-
-.datePickers {
-  background: ghostwhite;
-}
-
-.view-all {
-  background-color: whitesmoke;
-}
-
-.logoBtn {
-  background-color: #efeff5;
-}
-
-.tab-button  {
-  background: #efeff5;
-}
-
-.count {
-  color: mediumblue;
-}
-
-.font-color-positive {
-  color: darkblue;
-}
-
-.font-color-neutral {
-  color: #333;
-}
-
-.font-color-negative {
-  color: darkred;
-}
-
-.tab-button.selected {
-  z-index: 300;
-  box-shadow: 3px 3px #000;
-  border-radius: 0;
-}
-
-.acctButton, .dp__input_reg, .view-all, .acctButton:hover {
-  color: #000
-}
-
-.categoryTitle.stickified {
-  background: #fff;
-  box-shadow: 3px 3px lightblue;
-}
-
-.dottedRow {
-  border-bottom: 2px dotted #000;
-  text-align: left;
-  font-weight: bold;
-}
-
-.icon {
-  color: #333;
-  line-height: 1;
-}
-
-.line50 {
-  line-height: 50px;
-}
-
-.panel {
-  height: 100vh;
-}
-
-.b-right {
-  border-right: 2px solid #000;
-}
-
-.b-left {
-  border-left: 2px solid #000;
-}
-
-.b-bottom {
-  border-bottom: 2px solid #000;
-}
-
-.b-bottom-dashed {
-  border-bottom: 2px dotted #000;
-}
-
-.b-bottom-none {
-  border-bottom: none !important;
-}
-
-.b-top {
-  border-top: 2px solid #000;
-}
-
-.relative {
-  position: relative;
-}
-
-.totalsRow {
-  height: 50px;
-  background: #fff;
-}
-
-.underline {
-  text-decoration: underline;
-}
+/* Tailwind classes handle all styling */
 </style>

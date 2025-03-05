@@ -1,51 +1,51 @@
 <template>
-<div v-if="route.name === 'edit-tab'" class="x-grid middle dottedRow">
-  <div @click="select('sharing')" class="cell-1 p20">
-    <div class="x-grid">
-      <div class="cell auto">
-        Share
+<div v-if="route.name === 'edit-tab'" class="grid grid-cols-1 items-center border-b border-dotted border-gray-400">
+  <div @click="select('sharing')" class="col-span-1 p-5 cursor-pointer hover:bg-gray-100">
+    <div class="grid grid-cols-2">
+      <div class="col-span-1">
+        <span class="text-indigo-800 font-bold tracking-wider">Share</span>
       </div>
-      <div class="cell auto right">        
-        <Minus v-if="editState.selectedRuleType==='sharing'" />
-        <Plus v-else />
+      <div class="col-span-1 text-right">        
+        <Minus v-if="editState.selectedRuleType==='sharing'" class="text-pink-600" />
+        <Plus v-else class="text-green-600" />
       </div>
     </div>
   </div>
 
-  <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
-    <h4 class="bold">Groups Tab Is Shared With:</h4>
-    <div class="dropHere">
-      <span v-if="!selectedTab.showForGroup.length">Drag and drop groups here.</span>
+  <div v-if="editState.selectedRuleType==='sharing'" class="col-span-1 px-2.5">
+    <h4 class="font-bold text-indigo-800 mb-2">Groups Tab Is Shared With:</h4>
+    <div class="border-2 border-dashed border-gray-400 rounded p-4 bg-gray-50 min-h-[80px]">
+      <span v-if="!selectedTab.showForGroup.length" class="text-gray-500 italic">Drag and drop groups here.</span>
       <Draggable 
-        class="draggable" 
+        class="flex flex-wrap gap-2" 
         group="groupDragger" 
         v-model="selectedTab.showForGroup" 
         v-bind="dragOptions(100)"
         @change="onDragChange">
         <template #item="{element}">
-          <button class="sharedWith">{{ getGroupName(element) }}</button>
+          <button class="bg-purple-100 border-2 border-purple-700 text-purple-800 font-bold py-1 px-3 rounded shadow-[2px_2px_0px_#805ad5] hover:shadow-[1px_1px_0px_#805ad5] transition-all duration-200">{{ getGroupName(element) }}</button>
         </template>
       </Draggable>
     </div>
   </div>
 
-  <div v-if="editState.selectedRuleType==='sharing'" class="cell-1 p10x">
-    <ScrollingContent class="p30y">
+  <div v-if="editState.selectedRuleType==='sharing'" class="col-span-1 px-2.5">
+    <ScrollingContent class="py-7">
       <Draggable 
-        class="draggable" 
+        class="flex flex-wrap gap-2" 
         group="groupDragger" 
         v-model="unselectedGroupsInTab" 
         v-bind="dragOptions(100)"
         @change="onDragChange">
         <template #item="{element}">
-          <button class="button sharedWith">{{ getGroupName(element) }}</button>
+          <button class="bg-cyan-100 border-2 border-cyan-700 text-cyan-800 font-bold py-1 px-3 rounded shadow-[2px_2px_0px_#0987a0] hover:shadow-[1px_1px_0px_#0987a0] transition-all duration-200">{{ getGroupName(element) }}</button>
         </template>
       </Draggable>
     </ScrollingContent>
   </div>
 
-  <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="cell-1 p10x p10b">
-    <button @click="makeTabUnique" class="uniqueBtn expanded">Make Tab Unique?</button>
+  <div v-if="editState.selectedRuleType==='sharing' && selectedTab.showForGroup.length > 1" class="col-span-1 px-2.5 pb-2.5">
+    <button @click="makeTabUnique" class="w-full bg-yellow-100 border-2 border-yellow-600 text-yellow-800 font-bold py-2 px-4 rounded shadow-[3px_3px_0px_#d69e2e] hover:shadow-[1px_1px_0px_#d69e2e] transition-all duration-200">Make Tab Unique?</button>
   </div>
 </div>
 </template>
