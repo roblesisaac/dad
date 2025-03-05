@@ -11,7 +11,6 @@ const state = reactive({
   },
   date: { start: 'firstOfMonth', end: 'today' },
   editingRule: null,
-  editingGroup: null,
   elems: {
     body: document.documentElement.style
   },

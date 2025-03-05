@@ -5,10 +5,10 @@
     Net-Worth: <NetWorth :accounts="state.allUserAccounts" :digits="0" />
   </div>
 
-  <div v-if="!isEditing">
+  <div v-if="!editingGroup">
     <Draggable v-model="state.allUserGroups" v-bind="dragOptions(100)" handle=".handler-group" class="cell-1">
       <template #item="{element}">
-        <GroupRow :key="element._id" :element="element" />
+        <GroupRow :key="element._id" :element="element" @edit-group="editingGroup = element" />
       </template>
     </Draggable>
 
@@ -25,7 +25,7 @@
   </div>
 
   <div v-else class="cell-1">
-    <EditGroup @close="isEditing = false" />
+    <EditGroup @close="editingGroup = null" :group="editingGroup" />
   </div>
 </div>
 </template>
@@ -43,7 +43,7 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 const { Draggable, dragOptions } = useDraggable();
 const router = useRouter();
 const { state } = useDashboardState();
-const isEditing = ref(false);
+const editingGroup = ref(null);
 
 const { createNewGroup } = useEditGroup();
 

@@ -2,7 +2,7 @@
     <div :class="['x-grid middle proper text-left group-row', isSelected]">
         <!-- Edit Horizontal Dots -->
         <div class="cell-1 right">
-            <MoreHorizontal @click="editGroup(element)" class="handler-group pointer" />
+            <MoreHorizontal @click="emit('edit-group', element)" class="handler-group pointer" />
         </div>
     
         <!-- Drag Handle -->
@@ -68,6 +68,9 @@ import NetWorth from './NetWorth.vue';
 import { MoreHorizontal, GripHorizontal } from 'lucide-vue-next';
 import { fontColor, formatPrice } from '@/utils';
 
+// define emits
+const emit = defineEmits(['edit-group']);
+
 const props = defineProps({
     element: Object
 });
@@ -81,7 +84,7 @@ const accountInfo = computed(() => state.allUserAccounts.find(
 const isSelected = computed(() => props.element.isSelected ? 'isSelected' : '');
 const isDefaultName = computed(() => props.element.name === props.element.accounts[0]?.mask);
 
-const { editGroup, selectGroup, updateGroupSort } = useEditGroup();
+const { selectGroup, updateGroupSort } = useEditGroup();
 
 watch(props.element, (newVal) => {
     updateGroupSort(newVal._id, newVal.sort);

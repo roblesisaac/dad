@@ -28,20 +28,18 @@ export function useEditGroup() {
     return accounts.reduce((acc, curr) => numeric(curr[propName]) + numeric(acc), 0);
   }
 
-  function updateMemory(newGroupData) {
-    const groupToUpdate = state.allUserGroups.find(group => group._id === state.editingGroup._id);
+  function updateStateMemory(groupId, newGroupData) {
+    const groupToUpdate = state.allUserGroups.find(group => group._id === groupId);
     groupToUpdate.totalAvailableBalance = newGroupData.totalAvailableBalance;
     groupToUpdate.totalCurrentBalance = newGroupData.totalCurrentBalance;
   }
 
-  async function deleteGroup() {
+  async function deleteGroup(groupToDelete) {
     if(!confirm('Remove Group?')) {
       return;
     }
 
-    const idToRemove = state.editingGroup._id;
-    router.back();
-    state.editingGroup = null;
+    const idToRemove = groupToDelete._id;
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
     await groupsAPI.deleteGroup(idToRemove);
   }
@@ -65,13 +63,6 @@ export function useEditGroup() {
   }
 
   /**
-   * Enter edit mode for a group
-   */
-  function editGroup(group) {
-    state.editingGroup = group;
-  }
-
-  /**
    * Select a group and navigate back
    */
   async function selectGroup(groupToSelect) {
@@ -87,26 +78,31 @@ export function useEditGroup() {
     router.back();
   }
 
-  async function updateGroupName() {
+  async function updateGroupName(updatedGroup) {
     await waitUntilTypingStops();
-    await groupsAPI.updateGroup(state.editingGroup._id, { 
-      name: state.editingGroup.name
+    await groupsAPI.updateGroup(updatedGroup._id, { 
+      name: updatedGroup.name
     });
   }
 
-  async function updateGroup() {
-    const accounts = formatAccounts(state.editingGroup.accounts);
+  async function updateGroup(updatedGroup, previousGroup) {
+    if(updatedGroup.name !== previousGroup.name) {
+      await updateGroupName();
+      return;
+    }
+
+    const accounts = formatAccounts(updatedGroup.accounts);
 
     const newGroupData = {
-      name: state.editingGroup.name,
-      info: state.editingGroup.info,
+      name: updatedGroup.name,
+      info: updatedGroup.info,
       accounts,
       totalCurrentBalance: sumOf(accounts, 'current'),
       totalAvailableBalance: sumOf(accounts, 'available')
     };
 
-    updateMemory(newGroupData);
-    await groupsAPI.updateGroup(state.editingGroup._id, newGroupData);
+    updateStateMemory(updatedGroup._id, newGroupData);
+    await groupsAPI.updateGroup(updatedGroup._id, newGroupData);
   }
 
   async function updateGroupSort(groupId, sort) {
@@ -116,7 +112,6 @@ export function useEditGroup() {
   return {
     createNewGroup,
     deleteGroup,
-    editGroup,
     selectGroup,
     updateGroupName,
     updateGroup,

@@ -1,20 +1,20 @@
 <template>
   <button 
-    @click="selectTab(props.tab)" 
-    :class="['tab-button', fontColor(props.tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
+    @click="selectTab(tab)" 
+    :class="['tab-button', fontColor(tab.total), uniqueTabClassName, borders, isSelectedClass, tabShouldExpand ? 'expandTab' : '']"
   >
     <!-- Dots -->
-    <MoreVertical v-if="props.tab.isSelected" @click.stop="editTab()" />
+    <MoreVertical v-if="tab.isSelected" @click.stop="editTab()" />
   
     <!-- Title & Total -->
     <div :class="['title-total', tabShouldExpand ? 'expandTab' : '']">
-      <small class="section-title bold"><b v-if="isTabShared(props.tab)">*</b>{{ props.tab.tabName }}</small>
+      <small class="section-title bold"><b v-if="isTabShared(tab)">*</b>{{ tab.tabName }}</small>
       <LoadingDots v-if="state.isLoading" />
       <span v-else class="section-content">{{ tabTotal }}</span>
     </div>
 
     <!-- Drag Handle -->
-    <GripVertical v-if="props.tab.isSelected && shouldShowDragHandle" class="handleTab" />    
+    <GripVertical v-if="tab.isSelected && shouldShowDragHandle" class="handleTab" />    
   </button>
 </template>
 

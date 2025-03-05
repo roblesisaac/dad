@@ -14,14 +14,14 @@
             Name:
           </div>
           <div class="cell-4-5">
-            <input type="text" v-model="state.editingGroup.name" class="transparent bold colorBlue" />
+            <input type="text" v-model="props.group.name" class="transparent bold colorBlue" />
           </div>
         </div>
     
         <div class="x-grid">
           <div class="cell-1 bold ">Info:</div>
           <div class="cell-1">
-            <textarea v-model="state.editingGroup.info" class="edit-info" ></textarea>
+            <textarea v-model="props.group.info" class="edit-info" ></textarea>
           </div>
         </div>
     
@@ -31,8 +31,8 @@
       <div class="cell-1">
         <b>Accounts In Group:</b>
         <div class="dropHere">
-          <span v-if="!state.editingGroup.accounts.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="accountDragger" v-model="state.editingGroup.accounts" v-bind="dragOptions(1)">
+          <span v-if="!props.group.accounts.length">Drag and drop groups here.</span>
+          <Draggable class="draggable" group="accountDragger" v-model="props.group.accounts" v-bind="dragOptions(1)">
             <template #item="{element}">
               <button class="sharedWith">{{ element.mask }}</button>
             </template>
@@ -53,7 +53,7 @@
       </div>
     
       <div class="cell-1">
-        <button @click="deleteGroup" class="transparent expanded colorRed">Remove Group</button>
+        <button @click="handleDeleteGroup" class="transparent expanded colorRed">Remove Group</button>
       </div>
     
     </div>
@@ -67,21 +67,28 @@
     
     const { Draggable, dragOptions } = useDraggable();    
     const { state } = useDashboardState();
-    defineEmits(['close']);
-    
-    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup();
+    const emit = defineEmits(['close']);
+
+    const props = defineProps({
+      group: Object
+    });
+
+    const { deleteGroup, updateGroup } = useEditGroup();
     
     const accountsNotInGroup = computed(() => {
-      const accountsInGroup = state.editingGroup.accounts.map(account => account._id);
+      const accountsInGroup = props.group.accounts.map(account => account._id);
     
       return state.allUserAccounts.filter(account => {
         return !accountsInGroup.includes(account._id);
       });
     });
+
+    function handleDeleteGroup() {
+      deleteGroup(props.group);
+      emit('close');
+    }
     
-    watch(() => state.editingGroup.name, updateGroupName);
-    watch(() => state.editingGroup.info, updateGroup);
-    watch(() => state.editingGroup.accounts.length, updateGroup);
+    watch(() => props.group, updateGroup, { deep: true });
     
     </script>
     
