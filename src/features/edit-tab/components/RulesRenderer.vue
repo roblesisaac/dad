@@ -14,8 +14,8 @@
       :class="showReorder ? 
         'bg-gray-100 text-gray-700 hover:bg-gray-200' : 
         'bg-blue-50 text-blue-700 hover:bg-blue-100'">
-      <svg v-if="!showReorder" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/><path d="m21 16-4 4-4-4"/><path d="M17 20V4"/></svg>
-      <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+      <MoveVertical v-if="!showReorder" class="h-4 w-4 mr-1.5" />
+      <ChevronRight v-else class="h-4 w-4 mr-1.5" />
       {{ showReorder ? 'Done' : 'Reorder' }}
     </button>
   </div>
@@ -54,6 +54,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { MoveVertical, ChevronRight } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import EditRule from './EditRule.vue';
 import { useDraggable } from '@/shared/composables/useDraggable';
@@ -98,7 +99,7 @@ watch(() => state.allUserRules.length, () => {
   filteredRulesByType.value = setFilteredRulesByType();
 });
 
-watch(filteredRulesByType, (newRules) => {
+watch(() => filteredRulesByType.value, (newRules) => {
   newRules.forEach((rule, ruleIndex) => rule.orderOfExecution = ruleIndex);
 }, { deep: true });
 </script> 

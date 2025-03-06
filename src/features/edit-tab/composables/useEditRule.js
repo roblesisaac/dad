@@ -113,16 +113,13 @@ export function useEditRule(ruleConfig) {
   };
 
   // Setup watchers
+  watch(() => ruleConfig.orderOfExecution, (newOrderOfExecution) => {
+    rulesAPI.updateRuleOrder(ruleConfig._id, newOrderOfExecution);
+  });
+
   watch(
-    () => ruleConfig, 
-    async (newValue, oldValue) => {
-      console.log(newValue.orderOfExecution, oldValue.orderOfExecution);
-      if (newValue.orderOfExecution !== oldValue.orderOfExecution && newValue._id) {
-        await rulesAPI.updateRuleOrder(newValue._id, newValue);
-        return;
-      }
-      
-      // Continue with normal rule saving for other changes
+    () => ruleConfig.rule, 
+    async () => {
       saveRule();
     },
     { deep: true }
