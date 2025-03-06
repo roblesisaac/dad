@@ -95,10 +95,35 @@ export function useTabs() {
   }
 
   /**
-   * Update a tab's sort order
+   * Updates the sort order of a tab
    */
   async function updateTabSort(tabId, newSort) {
-    await tabsAPI.updateTabSort(tabId, newSort);
+    try {
+      // Find the tab in state
+      const tab = state.allUserTabs.find(t => t._id === tabId);
+      if (!tab) return;
+      
+      // Set loading indicator if not already set
+      if (!state.blueBar.loading) {
+        state.blueBar.message = "Saving tab order...";
+        state.blueBar.loading = true;
+      }
+      
+      // Call API to update sort value
+      const updatedTab = await tabsAPI.updateTabSort(tabId, newSort);
+      
+      return updatedTab;
+    } catch (error) {
+      console.error('Error updating tab sort:', error);
+      state.blueBar.message = "Error saving tab order";
+    } finally {
+      // Clear loading state after a delay
+      // Using a setTimeout to avoid rapid flashing if multiple tabs are sorted at once
+      setTimeout(() => {
+        state.blueBar.loading = false;
+        state.blueBar.message = "";
+      }, 1000);
+    }
   }
 
   /**
@@ -245,6 +270,97 @@ export function useTabs() {
       }
     }
 
+  /**
+   * Toggle a tab's visibility for a specific group
+   */
+  async function toggleTabForGroup(tabId, groupId) {
+    try {
+      // Find the tab in state
+      const tab = state.allUserTabs.find(t => t._id === tabId);
+      if (!tab) return;
+      
+      // Set loading indicator
+      state.blueBar.message = "Updating tab visibility...";
+      state.blueBar.loading = true;
+      
+      // Update showForGroup in memory
+      let isEnabled = false;
+      if (tab.showForGroup.includes(groupId)) {
+        // Disable tab for this group
+        tab.showForGroup = tab.showForGroup.filter(id => id !== groupId);
+      } else {
+        // Enable tab for this group
+        tab.showForGroup.push(groupId);
+        isEnabled = true;
+      }
+      
+      // Save changes to backend
+      const updatedTab = await tabsAPI.updateTab(tab._id, { 
+        showForGroup: tab.showForGroup 
+      });
+      
+      // Update tab in state with response from server
+      if (updatedTab) {
+        const index = state.allUserTabs.findIndex(t => t._id === updatedTab._id);
+        if (index !== -1) {
+          state.allUserTabs[index] = updatedTab;
+        }
+        
+        // If we just enabled the tab, update its sort value to be at the end
+        if (isEnabled) {
+          const enabledTabs = state.allUserTabs.filter(t => 
+            t.showForGroup.includes(groupId)
+          );
+          
+          if (enabledTabs.length > 0) {
+            // Set sort to be higher than the highest current sort value
+            const maxSort = Math.max(...enabledTabs.map(t => t.sort || 0));
+            await updateTabSort(tabId, maxSort + 1);
+          }
+        }
+      }
+      
+      return updatedTab;
+    } catch (error) {
+      console.error('Error toggling tab visibility:', error);
+      state.blueBar.message = "Error updating tab";
+    } finally {
+      // Clear loading state after a delay
+      setTimeout(() => {
+        state.blueBar.loading = false;
+        state.blueBar.message = "";
+      }, 1000);
+    }
+  }
+
+  async function updateTab(tab) {
+    try {
+      // Set the loading state
+      state.blueBar.message = "Saving tab changes...";
+      state.blueBar.loading = true;
+      
+      // Use the existing tabsAPI.updateTab method instead of a custom fetch
+      const updatedTab = await tabsAPI.updateTab(tab._id, tab);
+      
+      // Update the tab in state
+      const index = state.allUserTabs.findIndex(t => t._id === updatedTab._id);
+      if (index !== -1) {
+        state.allUserTabs[index] = updatedTab;
+      }
+      
+      return updatedTab;
+    } catch (error) {
+      console.error('Error updating tab:', error);
+      state.blueBar.message = "Error saving changes";
+    } finally {
+      // Clear loading state after a delay
+      setTimeout(() => {
+        state.blueBar.loading = false;
+        state.blueBar.message = false;
+      }, 1500);
+    }
+  }
+
   return {
     selectTab,
     updateTabSort,
@@ -256,6 +372,8 @@ export function useTabs() {
     selectedTabsInGroup,
     selectFirstTab,
     deselectOtherTabs,
-    processAllTabsForSelectedGroup
+    processAllTabsForSelectedGroup,
+    toggleTabForGroup,
+    updateTab
   };
 } 

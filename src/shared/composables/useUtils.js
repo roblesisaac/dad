@@ -50,7 +50,7 @@ export function useUtils() {
 
   function fontColor(amt) {
     return amt > 0
-      ? 'text-blue-500' 
+      ? 'text-blue-800' 
       : amt === 0
       ? 'text-gray-700'
       : 'text-red-500'

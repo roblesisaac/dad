@@ -3,7 +3,7 @@
   type="date" 
   :value="formatDateForInput(date[when])" 
   @input="handleDateChange($event)"
-  class="bg-white border border-gray-400 px-3 py-2 text-gray-700 w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+  class="bg-white border border-gray-400 px-3 py-2 text-gray-700 font-bold w-full focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
 />
 </template>
 
