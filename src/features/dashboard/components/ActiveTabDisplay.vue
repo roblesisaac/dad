@@ -64,7 +64,6 @@
         @click="showEditTabModal = true" 
         class="h-full w-full bg-black flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
         title="Filter and customize tab"
-        v-if="state.selected.tab"
       >
         <Filter size="16" />
       </button>
