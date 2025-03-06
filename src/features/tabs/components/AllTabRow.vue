@@ -88,11 +88,35 @@ const isEnabled = computed(() => {
 });
 
 // Navigate to edit tab page
-function editTab(tabId) {
-  router.push({ 
-    name: 'edit-tab',
-    params: { id: tabId }
-  });
+async function editTab(tabId) {
+  // Handle tab selection before navigating to edit page
+  if (isEnabled.value) {
+    // If tab is enabled, just select it
+    await selectTab(props.element);
+    
+    // Then navigate to the edit page
+    router.push({ 
+      name: 'edit-tab',
+      params: { id: tabId }
+    });
+  } else {
+    // If the tab is disabled, toggle it on first, then select it and navigate
+    const currentGroupId = state.selected.group?._id;
+    if (currentGroupId) {
+      toggleTabForGroup(tabId, currentGroupId);
+      
+      // Short delay to allow the toggle to complete before selecting
+      setTimeout(() => {
+        selectTab(props.element);
+        
+        // Navigate to edit page
+        router.push({ 
+          name: 'edit-tab',
+          params: { id: tabId }
+        });
+      }, 100);
+    }
+  }
 }
 
 // Select the tab and go back to dashboard

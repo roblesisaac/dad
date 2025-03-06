@@ -50,13 +50,13 @@ export function useTabs() {
 
     const currentlySelectedTab = state.selected.tab;
 
-    if(currentlySelectedTab) {
-      currentlySelectedTab.isSelected = false;
-      await tabsAPI.updateTabSelection(currentlySelectedTab._id, false);
-    }
-
     tabToSelect.isSelected = true;
     await tabsAPI.updateTabSelection(tabToSelect._id, true);
+
+    if(currentlySelectedTab) {
+      currentlySelectedTab.isSelected = false;
+      tabsAPI.updateTabSelection(currentlySelectedTab._id, false);
+    }
   }
 
    /**
