@@ -4,9 +4,10 @@
     @click="selectTabAndGoBack(element)"
   >
     <div class="flex items-center justify-between px-4 py-3">
-      <!-- Drag Handle -->
+      <!-- Tab Info with Conditional Drag Handle -->
       <div class="flex items-center">
-        <div v-if="isEnabled" class="handler-tab cursor-grab text-gray-400 mr-3" @mousedown.stop>
+        <!-- Only show grip handles in edit mode -->
+        <div v-if="isEnabled && isEditMode" class="handler-tab cursor-grab text-gray-400 mr-3" @mousedown.stop>
           <GripVertical size="16" />
         </div>
         
@@ -26,14 +27,16 @@
       
       <!-- Actions -->
       <div class="flex items-center space-x-4">
+        <!-- Only show edit button in edit mode -->
         <button 
+          v-if="isEditMode"
           @click.stop="editTab(element._id)" 
           class="text-blue-600 hover:text-blue-800 cursor-pointer"
         >
           <Edit2 size="16" />
         </button>
         
-        <!-- Toggle Switch -->
+        <!-- Toggle Switch - always visible -->
         <div class="relative inline-block w-10 mr-2 align-middle select-none cursor-pointer" @click.stop>
           <input 
             :id="`toggle-${element._id}`" 
@@ -85,6 +88,10 @@ const props = defineProps({
   element: {
     type: Object,
     required: true
+  },
+  isEditMode: {
+    type: Boolean,
+    default: false
   }
 });
 

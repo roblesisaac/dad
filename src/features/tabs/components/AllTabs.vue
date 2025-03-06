@@ -18,6 +18,7 @@
           <AllTabRow
             :element="element"
             :key="element._id" 
+            :is-edit-mode="isEditMode"
             @tab-selected="handleTabSelected"
           />
         </template>
@@ -45,7 +46,8 @@
         <div v-if="disabledTabs.length > 0">
           <div v-for="tab in disabledTabs" :key="tab._id">
             <AllTabRow 
-              :element="tab" 
+              :element="tab"
+              :is-edit-mode="isEditMode" 
               @tab-selected="handleTabSelected"
             />
           </div>
@@ -80,6 +82,10 @@ const props = defineProps({
   inModal: {
     type: Boolean,
     default: false
+  },
+  isEditMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -112,6 +118,16 @@ function handleCreateNew() {
 
 function handleTabSelected(tab) {
   emit('tab-selected', tab);
+}
+
+// Handle drag end event
+function handleDragEnd() {
+  // Update tab ordering in the database
+  state.selected.tabsForGroup.forEach((tab, index) => {
+    if (tab.sort !== index) {
+      tab.sort = index;
+    }
+  });
 }
 
 onMounted(() => {
