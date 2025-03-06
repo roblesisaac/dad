@@ -106,11 +106,11 @@ export function useTabProcessing() {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
 
     for(const ruleConfig of tabRules) {
-      const [ruleType, itemPropName, ruleMethodName, testStandard, categorizeAs] = ruleConfig.rule;
+      const [ruleType, itemPropName, ruleMethodName, criterion, categorizeAs] = ruleConfig.rule;
 
       const ruleMethod = (item) => {
         const itemValue = getItemValue(item, itemPropName);
-        return ruleMethods[ruleMethodName]?.(itemValue, testStandard);
+        return ruleMethods[ruleMethodName]?.(itemValue, criterion);
       };
 
       const { orderOfExecution, _isImportant } = ruleConfig;
@@ -128,7 +128,7 @@ export function useTabProcessing() {
           _id: ruleConfig._id,
           method: ruleMethod,
           categorizeAs,
-          itemPropName, ruleMethodName, testStandard,
+          itemPropName, ruleMethodName, criterion,
           orderOfExecution,
           _isImportant
         });

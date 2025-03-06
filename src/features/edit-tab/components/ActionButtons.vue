@@ -1,6 +1,6 @@
 <template>
 <div class="grid grid-cols-1 gap-4">
-  <div class="col-span-1 p-5">
+  <div class="col-span-1 pb-2 pt-5">
     <button @click="duplicateTab" class="w-full bg-gray-800 text-white font-bold py-2 px-4 border-2 border-black rounded shadow-[3px_3px_0px_#000] hover:shadow-[1px_1px_0px_#000] transition-all duration-200">Duplicate Tab</button>
   </div>
   <div class="col-span-1 pb-5">

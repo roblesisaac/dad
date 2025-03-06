@@ -1,5 +1,5 @@
 <template>
-    <span :class="fontColor(netWorth)">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
+    <span class="font-bold" :class="fontColor(netWorth)">{{ formatPrice(netWorth, { toFixed: digits }) }}</span>
 </template>
 
 <script setup>

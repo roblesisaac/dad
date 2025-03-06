@@ -1,15 +1,15 @@
 <template>
-  <div :id="id" class="overflow-hidden border-gray-200 border-b bg-white">
+  <div :id="id" class="overflow-hidden bg-white border-b border-gray-200">
     <div 
       @click="selectCategory()" 
       :id="id+'title'" 
-      class="flex items-center justify-between w-full px-5 py-3 transition-colors duration-150 hover:bg-gray-50 cursor-pointer"
+      class="flex items-center justify-between w-full px-5 py-5 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
     >
       <div class="flex items-center space-x-3">
-        <span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded-md text-sm font-medium">
+        <span class="px-2 py-0.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md">
           {{ categoryItems.length }}
         </span>
-        <span class="font-medium text-gray-800 capitalize">{{ categoryName }}</span>
+        <span class="font-medium text-gray-800 first-letter:uppercase">{{ categoryName }}</span>
         <span :class="[fontColor(categoryTotal), 'text-sm font-medium']">{{ catTotal }}</span>
       </div>
       <div class="text-gray-500">

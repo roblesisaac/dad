@@ -1,45 +1,64 @@
 <template>
-  <div v-if="items.length" class="grid bg-gray-100 border-t border-gray-400 p-4">
-
-    <div class="w-full">
+  <div v-if="items.length" class="p-5 bg-gray-50 rounded-lg shadow-inner">
+    <div class="space-y-4">
       <div 
-        :class="[
-          'grid py-2 px-3 mb-3 bg-white border rounded-sm cursor-pointer hover:bg-gray-50',
-          itemIsSelected(item._id) ? 'border-blue-400' : 'border-gray-300'
-        ]" 
         v-for="(item, i) in items"
+        :key="item._id"
+        :class="[
+          'bg-white rounded-md shadow-sm transition-all duration-200',
+          itemIsSelected(item._id) ? 'border-l-4 border-indigo-500' : 'hover:shadow-md'
+        ]" 
       >
         <div class="w-full">
-
-          <!-- Minimized Transaction -->
-          <div @click="selectTransaction(item)" class="grid grid-cols-24">
-            <!-- Hide Details (minus) icon -->
-            <div v-if="itemIsSelected(item._id)" class="col-span-24 text-right"><Minus class="w-4 h-4 text-gray-700" /></div>
-
-            <div class="col-span-4 pr-2">
-              <img v-if="item.logo_url" :src="item.logo_url" class="h-10" alt="Logo" />
-              <img v-else :src="'/chart.svg'" class="h-10" />
-            </div>
-            <div class="col-span-15">
-              <div class="text-xs text-green-700 font-medium">#{{ i + 1 }}. {{ item.authorized_date }}</div>
-              <div>{{ item.name }} <span v-if="item.check_number?.length">#{{ item.check_number }}</span></div>
-              <div v-if="itemIsSelected(item._id)" :class="fontColor(item.amount)" class="font-medium mt-1">
-                {{ formatPrice(item.amount) }}
+          <!-- Transaction Header -->
+          <div 
+            @click="selectTransaction(item)" 
+            class="grid grid-cols-12 p-3 cursor-pointer"
+          >
+            <!-- Logo section -->
+            <div class="col-span-2 flex items-center justify-center">
+              <div class="bg-gray-100 rounded-full p-2 flex items-center justify-center">
+                <img v-if="item.logo_url" :src="item.logo_url" class="h-8 w-8 object-contain" alt="Logo" />
+                <img v-else :src="'/chart.svg'" class="h-8 w-8 object-contain" />
               </div>
             </div>
-            <div v-if="!itemIsSelected(item._id)" :class="['col-span-5 p-2 text-left font-medium', fontColor(item.amount)]">
-              {{ formatPrice(item.amount, { toFixed: 0 }) }}
-              <div v-if="item.pending" class="text-xs text-gray-600">Pending</div>
+            
+            <!-- Info section -->
+            <div class="col-span-7 flex flex-col justify-center">
+              <div class="text-xs text-emerald-600 font-medium">
+                {{ item.authorized_date }}
+              </div>
+              <div class="text-gray-800 font-medium text-transform-capitalize">
+                {{ item.name }} <span v-if="item.check_number?.length" class="text-gray-500 text-sm">#{{ item.check_number }}</span>
+              </div>
+              <div v-if="item.pending" class="text-xs text-gray-500 mt-1">
+                <span class="inline-flex items-center">
+                  <span class="h-2 w-2 rounded-full bg-amber-400 mr-1"></span>
+                  Pending
+                </span>
+              </div>
+            </div>
+            
+            <!-- Amount section -->
+            <div class="col-span-3 flex flex-col items-end justify-center">
+              <div :class="['font-semibold text-right', fontColor(item.amount)]">
+                {{ formatPrice(item.amount) }}
+              </div>
+              <div class="text-xs text-gray-500 mt-1">#{{ i + 1 }}</div>
+            </div>
+
+            <!-- Expand/Collapse indicator -->
+            <div class="absolute right-4">
+              <ChevronDown v-if="itemIsSelected(item._id)" class="w-5 h-5 text-gray-400" />
+              <ChevronRight v-else class="w-5 h-5 text-gray-400" />
             </div>
           </div>
 
           <!-- Expanded Transaction -->
           <TransactionDetails v-if="itemIsSelected(item._id)" :state="state" :item="item" />
-
         </div>
       </div>
     </div>
-
   </div>
 </template>
 

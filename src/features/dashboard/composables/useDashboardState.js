@@ -16,7 +16,6 @@ const state = reactive({
   },
   isLoading: true,
   linkToken: null,
-  showReorder: false,
   // reordering: false,
   selected: {
     allGroupTransactions: [],

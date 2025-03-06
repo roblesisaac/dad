@@ -11,23 +11,25 @@
       </div>
     </div>
 
-    <!-- Sort -->
-    <EditTabSection :editState="editState" :sectionName="'sort'" />
+    <div class="p-4">
+      <!-- Sort -->
+      <EditTabSection :editState="editState" :sectionName="'sort'" />
 
-    <!-- Categorize -->
-    <EditTabSection :editState="editState" :sectionName="'categorize'" />
+      <!-- Categorize -->
+      <EditTabSection :editState="editState" :sectionName="'categorize'" />
 
-    <!-- Filter -->
-    <EditTabSection :editState="editState" :sectionName="'filter'" />
+      <!-- Filter -->
+      <EditTabSection :editState="editState" :sectionName="'filter'" />
 
-    <!-- GroupBy -->
-    <EditTabSection :editState="editState" :sectionName="'groupBy'" />
+      <!-- GroupBy -->
+      <EditTabSection :editState="editState" :sectionName="'groupBy'" />
 
-    <!-- Share -->
-    <ShareSection :editState="editState" />
+      <!-- Share -->
+      <!-- <ShareSection :editState="editState" /> -->
 
-    <!-- Delete And Duplicate Buttons -->
-    <ActionButtons v-if="route.name === 'edit-tab'" />
+      <!-- Delete And Duplicate Buttons -->
+      <ActionButtons v-if="route.name === 'edit-tab'" />
+    </div>
 
   </div>
 </div>
@@ -53,22 +55,22 @@ const editState = reactive({
     sort: {
       itemProps: ['amount', 'date', 'name'],
       ruleMethodNames: ['is', 'contains', 'startsWith', 'endsWith'],
-      propNamesToSave: ['itemProp', 'ruleMethodName', 'testStandard']
+      propNamesToSave: ['itemProp', 'ruleMethodName', 'criterion']
     },
     categorize: {
       itemProps: ['amount', 'date', 'name'],
       ruleMethodNames: ['is', 'contains', 'startsWith', 'endsWith'],
-      propNamesToSave: ['categorizeAs', 'itemProp', 'ruleMethodName', 'testStandard']
+      propNamesToSave: ['categorizeAs', 'itemProp', 'ruleMethodName', 'criterion']
     },
     filter: {
       itemProps: ['amount', 'date', 'name'],
       ruleMethodNames: ['is', 'contains', 'startsWith', 'endsWith'],
-      propNamesToSave: ['itemProp', 'ruleMethodName', 'testStandard']
+      propNamesToSave: ['itemProp', 'ruleMethodName', 'criterion']
     },
     groupBy: {
       itemProps: ['amount', 'date', 'name'],
       ruleMethodNames: ['is', 'contains', 'startsWith', 'endsWith'],
-      propNamesToSave: ['itemProp', 'ruleMethodName', 'testStandard']
+      propNamesToSave: ['itemProp', 'ruleMethodName', 'criterion']
     }
   }
 });

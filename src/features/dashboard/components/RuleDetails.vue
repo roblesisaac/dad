@@ -5,7 +5,7 @@
       <div class="grid">
         <h4>{{ ruleType }}</h4>
         <div class="w-full">
-          <EditRule :ruleConfig="props.ruleConfig" :state="state" />
+          <EditRule :ruleConfig="state.editingRule" :state="state" />
         </div>
       </div>
     </div>
@@ -69,12 +69,9 @@ const router = useRouter();
 const api = useApi();
 const { state } = useDashboardState();
 
-const props = defineProps({
-  ruleConfig: Object
-});
-
-const ruleType = computed(() => props.ruleConfig.rule[0]);
-const isGlobal = ref(props.ruleConfig.applyForTabs.includes('_GLOBAL'));
+const ruleConfig = computed(() => state.editingRule);
+const ruleType = computed(() => state.editingRule.rule[0]);
+const isGlobal = ref(state.editingRule.applyForTabs.includes('_GLOBAL'));
 
 function getTabName(tabId) {
   return state.allUserTabs.find(tab => tab._id === tabId)?.tabName || tabId;
@@ -85,7 +82,7 @@ function removeRule() {
     return;
   }
 
-  const { _id } = props.ruleConfig;
+  const { _id } = state.editingRule;
   const ruleIndex = state.allUserRules.findIndex(rule => rule._id === _id);
 
   api.delete(`rules/${_id}`);
@@ -98,29 +95,29 @@ function removeRule() {
 }
 
 function updateRule() {
-  const { _id } = props.ruleConfig;
+  const { _id } = state.editingRule;
   api.put(`rules/${_id}`, {
-    applyForTabs: props.ruleConfig.applyForTabs
+    applyForTabs: state.editingRule.applyForTabs
   });
 }
 
 const unselectedTabsInRule = computed(() => {
   return state.selected.tabsForGroup
-    .filter(tab => !props.ruleConfig.applyForTabs.includes(tab._id))
+    .filter(tab => !state.editingRule.applyForTabs.includes(tab._id))
     .map(tab => tab._id);
 });
 
 watch(isGlobal, () => {
   if(isGlobal.value) {
-    props.ruleConfig.applyForTabs = ['_GLOBAL'];
+    state.editingRule.applyForTabs = ['_GLOBAL'];
     return;
   }
 
-  const index = props.ruleConfig.applyForTabs.indexOf('_GLOBAL');
+  const index = state.editingRule.applyForTabs.indexOf('_GLOBAL');
   if (index !== -1) {
-    props.ruleConfig.applyForTabs.splice(index, 1);
+    state.editingRule.applyForTabs.splice(index, 1);
   }
 });
 
-watch(() => props.ruleConfig, updateRule, { deep: true });
+watch(() => state.editingRule, updateRule, { deep: true });
 </script>
