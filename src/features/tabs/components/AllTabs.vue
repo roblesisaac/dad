@@ -18,6 +18,7 @@
           <AllTabRow
             :element="element"
             :key="element._id" 
+            @tab-selected="handleTabSelected"
           />
         </template>
       </Draggable>
@@ -43,7 +44,10 @@
       <div v-if="showDisabledTabs">
         <div v-if="disabledTabs.length > 0">
           <div v-for="tab in disabledTabs" :key="tab._id">
-            <AllTabRow :element="tab" />
+            <AllTabRow 
+              :element="tab" 
+              @tab-selected="handleTabSelected"
+            />
           </div>
         </div>
         <div v-else class="px-4 py-6 text-center text-gray-500 italic">
@@ -72,6 +76,15 @@ import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
 
+const props = defineProps({
+  inModal: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const emit = defineEmits(['tab-selected']);
+
 const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
 const { createNewTab } = useTabs();
@@ -97,7 +110,13 @@ function handleCreateNew() {
   createNewTab();
 }
 
+function handleTabSelected(tab) {
+  emit('tab-selected', tab);
+}
+
 onMounted(() => {
-  window.scrollTo(0, 0);
+  if (!props.inModal) {
+    window.scrollTo(0, 0);
+  }
 });
 </script> 

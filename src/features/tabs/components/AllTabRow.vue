@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+    class="border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors cursor-pointer"
     @click="selectTabAndGoBack(element)"
   >
     <div class="flex items-center justify-between px-4 py-3">
@@ -28,13 +28,13 @@
       <div class="flex items-center space-x-4">
         <button 
           @click.stop="editTab(element._id)" 
-          class="text-blue-600 hover:text-blue-800"
+          class="text-blue-600 hover:text-blue-800 cursor-pointer"
         >
           <Edit2 size="16" />
         </button>
         
         <!-- Toggle Switch -->
-        <div class="relative inline-block w-10 mr-2 align-middle select-none" @click.stop>
+        <div class="relative inline-block w-10 mr-2 align-middle select-none cursor-pointer" @click.stop>
           <input 
             :id="`toggle-${element._id}`" 
             type="checkbox" 
@@ -77,6 +77,8 @@ const props = defineProps({
   }
 });
 
+const emit = defineEmits(['tab-selected']);
+
 // Determine if this tab is enabled for the current group
 const isEnabled = computed(() => {
   const currentGroupId = state.selected.group?._id;
@@ -97,13 +99,17 @@ function editTab(tabId) {
 function selectTabAndGoBack(tab) {
   if (isEnabled.value) {
     selectTab(tab);
+    emit('tab-selected', tab);
   } else {
     // If the tab is disabled, toggle it on first, then select it
     const currentGroupId = state.selected.group?._id;
     if (currentGroupId) {
       toggleTabForGroup(tab._id, currentGroupId);
       // Short delay to allow the toggle to complete before selecting
-      setTimeout(() => selectTab(tab), 100);
+      setTimeout(() => {
+        selectTab(tab);
+        emit('tab-selected', tab);
+      }, 100);
     }
   }
 }

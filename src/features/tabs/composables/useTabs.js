@@ -2,13 +2,11 @@ import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
-import { useRouter } from 'vue-router';
 
 export function useTabs() {
   const { state } = useDashboardState();
   const { processTabData } = useTabProcessing();
   const api = useApi();
-  const router = useRouter();
   const tabsAPI = useTabsAPI(api);
 
   /**
@@ -45,9 +43,8 @@ export function useTabs() {
   /**
    * Select a tab and deselect the currently selected tab
    */
-  async function selectTab(tabToSelect, shouldRedirect = true) {
+  async function selectTab(tabToSelect) {
     if(tabToSelect.isSelected) {
-      if(shouldRedirect) router.back();
       return;
     }
 
@@ -60,7 +57,6 @@ export function useTabs() {
 
     tabToSelect.isSelected = true;
     await tabsAPI.updateTabSelection(tabToSelect._id, true);
-    if(shouldRedirect) router.back();
   }
 
    /**
@@ -206,13 +202,6 @@ export function useTabs() {
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
-    
-    const currentRoute = router.currentRoute.value;    
-    if(currentRoute.name === 'dashboard') {
-      return
-    }
-
-    router.back();
   }
 
   /**
