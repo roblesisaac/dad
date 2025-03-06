@@ -12,7 +12,7 @@
   <template v-if="isHome">
     <!-- Dashboard Container -->
     <div class="w-full bg-white">
-      
+
       <!-- Selected Group + Date -->
       <div>
         <div class="grid grid-cols-2 border-b-2 border-black">
@@ -24,7 +24,7 @@
       </div>
 
       <!-- Active Tab Display (replacing Scrolling Tabs Totals Row) -->
-      <div v-if="!state.isLoading" class="sticky-tabs-row bg-white sticky top-0 z-10">
+      <div class="sticky-tabs-row bg-white sticky top-0 z-10">
         <ActiveTabDisplay />
       </div>
 

@@ -127,55 +127,6 @@ export function useTabs() {
   }
 
   /**
-   * Create a new tab for the dashboard using a prompt
-   * @param {Array} allUserTabs - Array to add the new tab to
-   * @param {Object} selectedGroup - The currently selected group
-   * @param {Object} selectedTab - The currently selected tab
-   * @param {Array} tabsForGroup - Tabs for the current group
-   * @param {Function} postCreateCallback - Function to call after tab is created
-   * @returns {Object|null} The created tab or null if creation was canceled
-   */
-  async function createDashboardTab(allUserTabs, selectedGroup, selectedTab, tabsForGroup, postCreateCallback) {
-    // Only run on dashboard page
-    if(location.pathname !== '/dashboard') return null;
-
-    // Generate tab name suggestion
-    let tabName = `Tab ${tabsForGroup.length+1}`;
-    
-    // Prompt for tab name
-    const response = prompt('What would you like to name this tab?', tabName);
-    if(!response) return null;
-    tabName = response;
-
-    // Ensure we have a group selected
-    if(!selectedGroup) return null;
-
-    // Deselect previous tab if it exists
-    if(selectedTab) {
-      selectedTab.isSelected = false;
-      await tabsAPI.updateTabSelection(selectedTab._id, false);
-    }
-
-    // Create the new tab
-    const newTab = await tabsAPI.createTab({
-      tabName,
-      showForGroup: [selectedGroup._id],
-      isSelected: true,
-      sort: tabsForGroup.length+1
-    });
-
-    // Add to tabs array
-    allUserTabs.push(newTab);
-    
-    // Run callback if provided
-    if (postCreateCallback) {
-      await postCreateCallback();
-    }
-    
-    return newTab;
-  }
-
-  /**
    * Create a new tab using the provided function
    */
   async function createNewTab() {
@@ -231,7 +182,7 @@ export function useTabs() {
       if (processed) {
         selectedTab.categorizedItems = processed.categorizedItems;
       }
-    }
+  }
 
   /**
    * Toggle a tab's visibility for a specific group
@@ -328,7 +279,6 @@ export function useTabs() {
     selectTab,
     updateTabSort,
     createNewTab,
-    createDashboardTab,
     selectedTabsInGroup,
     selectFirstTab,
     deselectOtherTabs,
