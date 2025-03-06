@@ -16,11 +16,16 @@
     <div class="flex-grow flex items-center justify-between overflow-hidden min-w-0">
       <div class="flex items-center px-4 py-2.5 overflow-hidden min-w-0">
         <div class="flex items-center overflow-hidden min-w-0">
-          <span class="font-semibold text-gray-800 truncate leading-tight max-w-full">
+          <Transition>
+            <span v-if="state.isLoading" class="font-bold text-blue-800 truncate leading-tight max-w-full">
+              Loading<LoadingDots />
+            </span>
+          </Transition>
+          <span v-if="!state.isLoading" class="font-semibold text-gray-800 truncate leading-tight max-w-full">
             {{ state.selected.tab?.tabName || 'No tab selected' }}
           </span>
           <span 
-            v-if="state.selected.tab" 
+            v-if="state.selected.tab && !state.isLoading" 
             class="font-bold leading-tight ml-2 flex-shrink-0" 
             :class="fontColor(state.selected.tab.total)"
           >
@@ -78,6 +83,7 @@ import { useTabs } from '@/features/tabs/composables/useTabs';
 import { ChevronLeft, ChevronRight, Filter, LayoutGrid } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { computed, ref, nextTick } from 'vue';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
 
 const router = useRouter();
