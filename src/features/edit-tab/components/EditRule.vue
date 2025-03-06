@@ -65,6 +65,7 @@
 </template>
     
 <script setup>
+  import { watch } from 'vue';
   import { useRoute } from 'vue-router';
   import { Settings2, GripHorizontal } from 'lucide-vue-next';
   import DynamicWidthInput from './DynamicWidthInput.vue';
@@ -72,8 +73,10 @@
   import DynamicTextArea from './DynamicTextArea.vue';
   import ScrollingContent from '@/shared/components/ScrollingContent.vue';
   import { useEditRule } from '../composables/useEditRule.js';
+  import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI.js';
 
   const route = useRoute();
+  const rulesAPI = useRulesAPI();
   const props = defineProps({
     ruleConfig: Object,
     showReorder: Boolean
@@ -95,6 +98,19 @@
     saveRule,
     shouldShow
   };
+
+  // Setup watchers
+  watch(() => props.ruleConfig.orderOfExecution, (newOrderOfExecution) => {
+    rulesAPI.updateRuleOrder(props.ruleConfig._id, newOrderOfExecution);
+  });
+
+  watch(
+    () => props.ruleConfig.rule, 
+    async () => {
+      saveRule();
+    },
+    { deep: true }
+  );
 </script>
     
 <style>

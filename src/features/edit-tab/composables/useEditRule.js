@@ -1,13 +1,11 @@
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive } from 'vue';
 import { useRouter } from 'vue-router';
-import { useApi } from '@/shared/composables/useApi';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI.js';
 
 export function useEditRule(ruleConfig) {
-  const api = useApi();
-  const rulesAPI = useRulesAPI(api);
+  const rulesAPI = useRulesAPI();
   const { state } = useDashboardState();
   const router = useRouter();
   const { waitUntilTypingStops } = useUtils();
@@ -111,19 +109,6 @@ export function useEditRule(ruleConfig) {
   const shouldShow = (propName) => {
     return editRuleState.ruleTypes[ruleType.value].propNamesToSave.includes(propName);
   };
-
-  // Setup watchers
-  watch(() => ruleConfig.orderOfExecution, (newOrderOfExecution) => {
-    rulesAPI.updateRuleOrder(ruleConfig._id, newOrderOfExecution);
-  });
-
-  watch(
-    () => ruleConfig.rule, 
-    async () => {
-      saveRule();
-    },
-    { deep: true }
-  );
 
   // Return public API
   return {
