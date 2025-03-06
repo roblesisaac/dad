@@ -173,37 +173,6 @@ export function useEditTab(editState) {
   }
 
   /**
-   * Save the groups associated with a tab
-   * Called after drag and drop operations
-   */
-  async function saveTabGroups() {
-    const tab = selectedTab.value;
-    if (!tab) return;
-    
-    try {
-      state.blueBar.loading = true;
-      state.blueBar.message = 'Saving tab sharing settings...';
-      
-      await tabsAPI.updateTab(tab._id, { 
-        showForGroup: tab.showForGroup 
-      });
-      
-      state.blueBar.message = 'Tab sharing updated successfully';
-      setTimeout(() => {
-        state.blueBar.message = false;
-        state.blueBar.loading = false;
-      }, 1500);
-    } catch (error) {
-      console.error('Error saving tab groups:', error);
-      state.blueBar.message = 'Error saving tab sharing settings';
-      setTimeout(() => {
-        state.blueBar.message = false;
-        state.blueBar.loading = false;
-      }, 3000);
-    }
-  }
-
-  /**
    * Make a tab unique by duplicating it and removing the original group
    */
   async function makeTabUnique() {
@@ -255,7 +224,6 @@ export function useEditTab(editState) {
     getGroupName,
     makeTabUnique,
     removeAndDeselectGroupFromTab,
-    saveTabGroups,
     select,
     selectedTab,
     unselectedGroupsInTab,

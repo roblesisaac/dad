@@ -24,9 +24,6 @@
       <!-- GroupBy -->
       <EditTabSection :editState="editState" :sectionName="'groupBy'" />
 
-      <!-- Share -->
-      <!-- <ShareSection :editState="editState" /> -->
-
       <!-- Delete And Duplicate Buttons -->
       <ActionButtons v-if="route.name === 'edit-tab'" />
     </div>
@@ -41,7 +38,6 @@ import { useRoute } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useEditTab } from '../composables/useEditTab';
 import EditTabSection from '../components/EditTabSection.vue';
-import ShareSection from '../components/ShareSection.vue';
 import ActionButtons from '../components/ActionButtons.vue';
 
 const route = useRoute();

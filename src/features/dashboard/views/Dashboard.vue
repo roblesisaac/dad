@@ -1,12 +1,5 @@
 <template>
-  <!-- BlueBar -->
-  <Transition>
-    <div v-if="state.blueBar.message" class="w-full bg-indigo-700 border-b border-indigo-900 px-4 py-1.5">
-      <div class="font-medium">
-        <small class="text-indigo-100">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
-      </div>
-    </div>
-  </Transition>
+  <BlueBar />
 
   <!-- BackButton -->
   <Transition>
@@ -19,6 +12,7 @@
   <template v-if="isHome">
     <!-- Dashboard Container -->
     <div class="w-full bg-white">
+      
       <!-- Selected Group + Date -->
       <div>
         <div class="grid grid-cols-2 border-b-2 border-black">
@@ -63,6 +57,7 @@ import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import { useInit } from '../composables/useInit.js';
 
 // Core Components
+import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import DatePickers from '../components/DatePickers.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
@@ -75,7 +70,7 @@ const { stickify } = useAppStore();
 const { state } = useDashboardState();
 const { init, handleGroupChange } = useInit();
 
-const { processAllTabsForSelectedGroup, handleTabChange } = useTabs();
+const { processAllTabsForSelectedGroup } = useTabs();
 const { syncLatestTransactionsForBanks } = usePlaidSync();
 
 const isHome = computed(() => route.name === 'dashboard');
@@ -120,8 +115,6 @@ watch(() => state.date.end, (newEnd, prevEnd) => {
   // Only react to date changes when applied via the Apply button
   handleGroupChange();
 });
-
-watch(() => state.selected.tab?._id, handleTabChange);
 </script>
 
 <style>

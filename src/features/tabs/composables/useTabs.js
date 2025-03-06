@@ -2,6 +2,7 @@ import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
+import { nextTick } from 'vue';
 
 export function useTabs() {
   const { state } = useDashboardState();
@@ -48,15 +49,20 @@ export function useTabs() {
       return;
     }
 
-    const currentlySelectedTab = state.selected.tab;
+    state.isLoading = true;
+    const prevSelectedTab = state.selected.tab;
 
     tabToSelect.isSelected = true;
     await tabsAPI.updateTabSelection(tabToSelect._id, true);
 
-    if(currentlySelectedTab) {
-      currentlySelectedTab.isSelected = false;
-      tabsAPI.updateTabSelection(currentlySelectedTab._id, false);
+    if(prevSelectedTab) {
+      prevSelectedTab.isSelected = false;
+      tabsAPI.updateTabSelection(prevSelectedTab._id, false);
     }
+
+    handleTabChange(tabToSelect._id, prevSelectedTab._id);
+    await nextTick();
+    state.isLoading = false;
   }
 
    /**
@@ -65,8 +71,6 @@ export function useTabs() {
   async function processAllTabsForSelectedGroup() {
     const tabsForGroup = state.selected.tabsForGroup;
     if(!tabsForGroup?.length) return;
-
-    state.isLoading = true;
 
     const selectedTabs = selectedTabsInGroup(tabsForGroup);
 
@@ -205,41 +209,11 @@ export function useTabs() {
   }
 
   /**
-   * Remove a group from a tab and deselect it
-   */
-  async function removeAndDeselectGroupFromTab(tab, groupId) {
-    const showForGroup = tab.showForGroup
-      .filter(id => id !== groupId);
-
-    await tabsAPI.updateTab(tab._id, {
-      isSelected: false,
-      showForGroup
-    });
-
-    tab.isSelected = false;
-    tab.showForGroup = showForGroup;
-  }
-
-  /**
-   * Find a tab by ID in a list of tabs
-   */
-  function findTab(tabId, tabs) {
-    return tabs.find(tab => tab._id === tabId);
-  }
-
-  /**
-   * Save tab groups
-   */
-  async function saveTabGroups(tab) {
-    const { _id, showForGroup } = tab;
-    await tabsAPI.updateTab(_id, { showForGroup });
-  }
-
-    /**
    * Handle tab selection change
    */
   function handleTabChange(newSelectedTabId, oldSelectedTabId) {
       if (newSelectedTabId === oldSelectedTabId) return;
+      state.isLoading = true;
   
       if(oldSelectedTabId) {
         const oldSelectedTab = state.allUserTabs?.find(({ _id }) => _id === oldSelectedTabId);
@@ -355,9 +329,6 @@ export function useTabs() {
     updateTabSort,
     createNewTab,
     createDashboardTab,
-    handleTabChange,
-    findTab,
-    saveTabGroups,
     selectedTabsInGroup,
     selectFirstTab,
     deselectOtherTabs,
