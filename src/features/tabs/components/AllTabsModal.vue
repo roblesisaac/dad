@@ -87,7 +87,8 @@ const closeModal = () => {
 
 // Handle tab selection and close modal
 const handleTabSelected = (tab) => {
-  selectTab(tab, false);
+  // Don't call selectTab here - it's already called in AllTabRow component
+  // Just emit the event and close the modal
   emit('tab-selected', tab);
   closeModal();
 };

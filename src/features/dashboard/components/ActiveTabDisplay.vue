@@ -1,7 +1,7 @@
 <template>
-  <div class="flex w-full bg-gray-100 border-b-2 border-black shadow-sm">
+  <div class="flex w-full bg-gray-100 border-b-2 border-black shadow-sm overflow-hidden">
     <!-- Tab Navigation -->
-    <div class="flex items-center border-r border-gray-300">
+    <div class="flex-shrink-0 flex items-center border-r border-gray-300">
       <button 
         @click="navigateToPreviousTab" 
         class="px-3 py-2.5 text-gray-700 hover:text-blue-600 transition-colors"
@@ -13,15 +13,15 @@
     </div>
     
     <!-- Active Tab Display -->
-    <div class="flex-grow flex items-center justify-between">
-      <div class="flex items-center px-4 py-2.5">
-        <div class="flex items-center">
-          <span class="font-semibold text-gray-800 truncate leading-tight">
+    <div class="flex-grow flex items-center justify-between overflow-hidden min-w-0">
+      <div class="flex items-center px-4 py-2.5 overflow-hidden min-w-0">
+        <div class="flex items-center overflow-hidden min-w-0">
+          <span class="font-semibold text-gray-800 truncate leading-tight max-w-full">
             {{ state.selected.tab?.tabName || 'No tab selected' }}
           </span>
           <span 
             v-if="state.selected.tab" 
-            class="font-bold leading-tight ml-2" 
+            class="font-bold leading-tight ml-2 flex-shrink-0" 
             :class="fontColor(state.selected.tab.total)"
           >
             {{ tabTotal }}
@@ -31,7 +31,7 @@
       
       <button 
         @click="router.push({ name: 'edit-tab' })" 
-        class="px-4 text-gray-600 hover:text-blue-600 transition-colors"
+        class="px-4 text-gray-600 hover:text-blue-600 transition-colors flex-shrink-0"
         v-if="state.selected.tab"
         title="Filter and customize tab"
       >
@@ -40,7 +40,7 @@
     </div>
     
     <!-- Tab Navigation -->
-    <div class="flex items-center border-l border-gray-300">
+    <div class="flex-shrink-0 flex items-center border-l border-gray-300">
       <button 
         @click="navigateToNextTab" 
         class="px-3 py-2.5 text-gray-700 hover:text-blue-600 transition-colors"
@@ -77,7 +77,7 @@ import { useDashboardState } from '../composables/useDashboardState';
 import { useTabs } from '@/features/tabs/composables/useTabs';
 import { ChevronLeft, ChevronRight, Filter, LayoutGrid } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
-import { computed, ref } from 'vue';
+import { computed, ref, nextTick } from 'vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
 
 const router = useRouter();
@@ -114,7 +114,7 @@ const navigateToPreviousTab = () => {
   if (!hasPreviousTab.value) return;
   const previousTab = state.selected.tabsForGroup[currentTabIndex.value - 1];
   if (previousTab) {
-    selectTab(previousTab, false);
+    selectTab(previousTab);
   }
 };
 
@@ -122,12 +122,15 @@ const navigateToNextTab = () => {
   if (!hasNextTab.value) return;
   const nextTab = state.selected.tabsForGroup[currentTabIndex.value + 1];
   if (nextTab) {
-    selectTab(nextTab, false);
+    selectTab(nextTab);
   }
 };
 
 // Handle tab selection from modal
 const handleTabSelected = () => {
-  showAllTabsModal.value = false;
+  // Just close the modal - the actual tab selection is handled in AllTabRow
+  nextTick(() => {
+    showAllTabsModal.value = false;
+  });
 };
 </script> 
