@@ -55,20 +55,31 @@
       </div>
     </div>
   </div>
+  
+  <!-- Edit Tab Modal -->
+  <EditTabModal
+    :is-open="showEditTabModal"
+    @close="showEditTabModal = false"
+  />
 </template>
 
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { GripVertical, Edit2 } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
+import EditTabModal from '@/features/edit-tab/components/EditTabModal.vue';
 
 const router = useRouter();
 const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
 const { toggleTabForGroup, selectTab, updateTabSort } = useTabs();
+
+// Add ref for edit tab modal
+const showEditTabModal = ref(false);
+const currentTabToEdit = ref(null);
 
 const props = defineProps({
   element: {
@@ -87,20 +98,14 @@ const isEnabled = computed(() => {
   return props.element.showForGroup.includes(currentGroupId);
 });
 
-// Navigate to edit tab page
+// Edit tab function - now opens modal instead of navigating
 async function editTab(tabId) {
-  // Handle tab selection before navigating to edit page
+  // Handle tab selection before opening modal
   if (isEnabled.value) {
     // If tab is enabled, just select it
     await selectTab(props.element);
-    
-    // Then navigate to the edit page
-    router.push({ 
-      name: 'edit-tab',
-      params: { id: tabId }
-    });
   } else {
-    // If the tab is disabled, toggle it on first, then select it and navigate
+    // If the tab is disabled, toggle it on first, then select it
     const currentGroupId = state.selected.group?._id;
     if (currentGroupId) {
       toggleTabForGroup(tabId, currentGroupId);
@@ -108,15 +113,13 @@ async function editTab(tabId) {
       // Short delay to allow the toggle to complete before selecting
       setTimeout(() => {
         selectTab(props.element);
-        
-        // Navigate to edit page
-        router.push({ 
-          name: 'edit-tab',
-          params: { id: tabId }
-        });
       }, 100);
     }
   }
+  
+  // Open edit modal
+  currentTabToEdit.value = props.element;
+  showEditTabModal.value = true;
 }
 
 // Select the tab and go back to dashboard

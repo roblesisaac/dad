@@ -1,5 +1,5 @@
 <template>
-    <div v-if="route.name === 'edit-tab'" class="mb-3 border-2 border-gray-800 rounded shadow-[3px_3px_0px_#000] overflow-hidden">
+    <div class="mb-3 border-2 border-gray-800 rounded shadow-[3px_3px_0px_#000] overflow-hidden">
       <!-- Section Header -->
       <div 
         @click="select" 
@@ -48,11 +48,8 @@
     </template>
     
     <script setup>
-    import { useRoute } from 'vue-router';
     import { Plus, Minus } from 'lucide-vue-next';
     import RulesRenderer from './RulesRenderer.vue';
-    
-    const route = useRoute();
     
     const props = defineProps({
       editState: Object,

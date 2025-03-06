@@ -4,16 +4,22 @@
     <div class="flex-shrink-0 flex items-center border-r border-gray-300">
       <button 
         @click="navigateToPreviousTab" 
-        class="px-3 py-2.5 text-gray-700 hover:text-blue-600 transition-colors"
+        class="px-3 py-2.5 hover:text-blue-600 transition-colors"
+        :class="[
+          hasPreviousTab ? 'text-blue-800' : 'text-gray-700',
+          {'opacity-50 cursor-not-allowed': !hasPreviousTab}
+        ]"
         :disabled="!hasPreviousTab"
-        :class="{'opacity-50 cursor-not-allowed': !hasPreviousTab}"
       >
         <ChevronLeft size="18" />
       </button>
     </div>
     
     <!-- Active Tab Display -->
-    <div class="flex-grow flex items-center justify-between overflow-hidden min-w-0">
+    <div 
+      class="flex-grow flex items-center justify-between overflow-hidden min-w-0 cursor-pointer hover:bg-gray-200 transition-colors"
+      @click="showAllTabsModal = true"
+    >
       <div class="flex items-center px-4 py-2.5 overflow-hidden min-w-0">
         <div class="flex items-center overflow-hidden min-w-0">
           <Transition>
@@ -34,36 +40,33 @@
         </div>
       </div>
       
-      <button 
-        @click="router.push({ name: 'edit-tab' })" 
-        class="px-4 text-gray-600 hover:text-blue-600 transition-colors flex-shrink-0"
-        v-if="state.selected.tab"
-        title="Filter and customize tab"
-      >
-        <Filter size="16" />
-      </button>
+      <!-- Removed the filter button from here as we're moving it to the right side -->
     </div>
     
     <!-- Tab Navigation -->
     <div class="flex-shrink-0 flex items-center border-l border-gray-300">
       <button 
         @click="navigateToNextTab" 
-        class="px-3 py-2.5 text-gray-700 hover:text-blue-600 transition-colors"
+        class="px-3 py-2.5 hover:text-blue-600 transition-colors"
+        :class="[
+          hasNextTab ? 'text-blue-800' : 'text-gray-700',
+          {'opacity-50 cursor-not-allowed': !hasNextTab}
+        ]"
         :disabled="!hasNextTab"
-        :class="{'opacity-50 cursor-not-allowed': !hasNextTab}"
       >
         <ChevronRight size="18" />
       </button>
     </div>
 
-    <!-- All tabs button -->
+    <!-- Filter button -->
     <div class="w-12 flex-shrink-0">
       <button 
-        @click="showAllTabsModal = true" 
+        @click="showEditTabModal = true" 
         class="h-full w-full bg-black flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-        title="View all tabs"
+        title="Filter and customize tab"
+        v-if="state.selected.tab"
       >
-        <LayoutGrid size="16" />
+        <Filter size="16" />
       </button>
     </div>
   </div>
@@ -74,25 +77,31 @@
     @close="showAllTabsModal = false"
     @tab-selected="handleTabSelected"
   />
+
+  <!-- Use the new EditTabModal component -->
+  <EditTabModal
+    :is-open="showEditTabModal"
+    @close="showEditTabModal = false"
+  />
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState';
 import { useTabs } from '@/features/tabs/composables/useTabs';
-import { ChevronLeft, ChevronRight, Filter, LayoutGrid } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { computed, ref, nextTick } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
+import EditTabModal from '@/features/edit-tab/components/EditTabModal.vue';
 
-const router = useRouter();
 const { state } = useDashboardState();
 const { selectTab } = useTabs();
 const { fontColor, formatPrice } = useUtils();
 
-// Modal state
+// Modal states
 const showAllTabsModal = ref(false);
+const showEditTabModal = ref(false);
 
 const tabTotal = computed(() => {
   const tab = state.selected.tab;
