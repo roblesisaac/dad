@@ -18,20 +18,10 @@ export default [
         component: () => import('@/features/select-group/views/SelectGroup.vue')
       },
       {
-        path: 'edit-tab',
-        name: 'edit-tab',
-        component: () => import('@/features/edit-tab/views/EditTab.vue')
-      },
-      {
         path: 'rule-details',
         name: 'rule-details',
         component: () => import('@/features/dashboard/components/RuleDetails.vue'),
         props: true
-      },
-      {
-        path: 'all-tabs',
-        name: 'all-tabs',
-        component: () => import('@/features/tabs/components/AllTabs.vue')
       }
     ]
   },
