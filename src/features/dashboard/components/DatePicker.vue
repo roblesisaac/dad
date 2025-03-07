@@ -58,7 +58,14 @@ function formatDateForInput(dateValue) {
 }
 
 function handleDateChange(event) {
-  const newDate = new Date(event.target.value);
+  // Fix for timezone issue - create date with time set to noon to avoid day shifts
+  const dateString = event.target.value; // YYYY-MM-DD format
+  const [year, month, day] = dateString.split('-').map(num => parseInt(num, 10));
+  
+  // Create date using local timezone by setting year, month, day directly
+  // Month is 0-based in JavaScript Date
+  const newDate = new Date(year, month - 1, day, 12, 0, 0);
+  
   date[when] = newDate;
   emit('date-selected', { when, date: newDate });
 }
