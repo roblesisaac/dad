@@ -30,6 +30,7 @@
 
     <!-- Rule Content -->
     <div class="flex items-start pl-4"> <!-- Added left padding for drag handle -->
+      
       <div class="flex-1">
         <!-- Rule info -->
         <div class="mb-2">
@@ -82,10 +83,10 @@
           </div>
           
           <div class="flex space-x-2 items-center">
-            <!-- Using enhanced Switch component -->
+            <!-- Global Switch component -->
             <Switch 
-              :model-value="isEnabledForCurrentTab"
-              @update:model-value="handleToggle" 
+              :model-value="isEnabledForCurrentTab" 
+              @update:model-value="$emit('toggle', rule)" 
             />
             
             <button 
@@ -131,12 +132,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['edit', 'toggle', 'delete']);
-
-// Updated handle toggle function for enhanced Switch
-function handleToggle() {
-    emit('toggle', props.rule._id);
-}
+defineEmits(['edit', 'toggle', 'delete']);
 
 // Determine if rule is global or tab-specific
 const isGlobalRule = computed(() => props.rule.applyForTabs.includes('_GLOBAL'));

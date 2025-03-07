@@ -146,6 +146,7 @@ export function useRuleManager() {
       // Disabling a rule
       if (updatedRule.applyForTabs.includes('_GLOBAL')) {
         // If it's a global rule, make it apply to all tabs except the current one
+        updatedRule.applyForTabs = ['_GLOBAL'];
         updatedRule.applyForTabs = state.allUserTabs
           .map(tab => tab._id)
           .filter(tabId => tabId !== currentTabId);
@@ -162,15 +163,6 @@ export function useRuleManager() {
       }
     }
     
-    // Before we update the rule on the server, also update it in the local state
-    // This helps to avoid race conditions and provides immediate feedback
-    const ruleIndex = state.allUserRules.findIndex(r => r._id === updatedRule._id);
-    if (ruleIndex !== -1) {
-      // Replace the rule in the array with the updated version
-      state.allUserRules.splice(ruleIndex, 1, updatedRule);
-    }
-    
-    // Then update on the server
     return await updateRule(updatedRule);
   }
   

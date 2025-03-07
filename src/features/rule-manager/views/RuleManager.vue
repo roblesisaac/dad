@@ -15,7 +15,7 @@
             />
           </div>
           <div v-else class="flex items-center">
-            <h1 class="text-xl font-semibold">Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"</h1>
+          <h1 class="text-xl font-semibold">Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"</h1>
             <button 
               @click="startTabNameEdit" 
               class="ml-2 p-1 text-blue-200 hover:text-white rounded-full focus:outline-none"
@@ -48,7 +48,7 @@
                 </span>
               </div>
               <ChevronDown 
-                :class="[
+            :class="[
                   'w-5 h-5 transition-transform', 
                   collapsedSections[ruleType.id] ? '' : 'transform rotate-180'
                 ]" 
@@ -73,17 +73,16 @@
                 >
                   <template #item="{ element }">
                     <RuleCard 
-                      :key="element._id"
                       :rule="element"
                       :rule-type="ruleType"
                       @edit="editRule"
-                      @toggle="ruleId => toggleRuleById(ruleId, true)"
+                      @toggle="toggleRuleContextStatus"
                       @delete="confirmDeleteRule"
                     />
                   </template>
                 </draggable>
-              </div>
-              
+      </div>
+      
               <!-- For categorize rules, also show disabled rules -->
               <div v-if="ruleType.id === 'categorize' && getDisabledRulesByType('categorize').length > 0" class="mt-8">
                 <div 
@@ -101,8 +100,8 @@
                     <span>Disabled Categorize Rules ({{ getDisabledRulesByType('categorize').length }})</span>
                   </div>
                   <div class="flex-grow border-t border-gray-200"></div>
-                </div>
-                
+          </div>
+          
                 <div v-if="!disabledSectionCollapsed" class="space-y-3">
                   <RuleCard 
                     v-for="rule in getDisabledRulesByType('categorize')" 
@@ -110,12 +109,12 @@
                     :rule="rule"
                     :rule-type="ruleType"
                     @edit="editRule"
-                    @toggle="ruleId => toggleRuleById(ruleId, false)"
+                    @toggle="toggleRuleContextStatus"
                     @delete="confirmDeleteRule"
-                  />
-                </div>
-              </div>
-            </div>
+            />
+          </div>
+        </div>
+      </div>
           </div>
         </div>
       </div>
@@ -281,7 +280,7 @@ const enabledRules = computed(() => {
 
 // Get disabled rules (rules that are explicitly disabled or don't apply to current tab)
 const disabledRules = computed(() => {
-  const tabId = state.selected.tab?._id;
+    const tabId = state.selected.tab?._id;
   if (!tabId) return [];
   
   return state.allUserRules.filter(rule => 
@@ -343,23 +342,6 @@ async function onDragEnd(event) {
   }
 }
 
-// Toggle a rule by ID
-async function toggleRuleById(ruleId, isCurrentlyEnabled) {
-  try {
-    // Find the rule by ID in the original state
-    const rule = state.allUserRules.find(r => r._id === ruleId);
-    if (!rule) return;
-    
-    // Make a deep copy to avoid reference issues
-    const ruleCopy = JSON.parse(JSON.stringify(rule));
-    
-    // Toggle based on current state
-    await toggleRuleContext(ruleCopy, !isCurrentlyEnabled);
-  } catch (error) {
-    console.error('Error toggling rule status:', error);
-  }
-}
-
 // Create a new rule
 function createNewRule() {
   // Find first non-empty rule type for default
@@ -402,6 +384,20 @@ async function saveRule(rule) {
     closeRuleEditModal();
   } catch (error) {
     console.error('Error saving rule:', error);
+  }
+}
+
+// Toggle a rule's context status
+async function toggleRuleContextStatus(rule) {
+  try {
+    // If rule is enabled for this tab, disable it; otherwise enable it
+    const tabId = state.selected.tab?._id;
+    const isEnabledForCurrentTab = rule._isEnabled !== false && 
+      (rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId));
+    
+    await toggleRuleContext(rule, !isEnabledForCurrentTab);
+  } catch (error) {
+    console.error('Error toggling rule status:', error);
   }
 }
 
