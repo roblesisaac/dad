@@ -39,8 +39,6 @@
           </span>
         </div>
       </div>
-      
-      <!-- Removed the filter button from here as we're moving it to the right side -->
     </div>
     
     <!-- Tab Navigation -->
@@ -58,12 +56,12 @@
       </button>
     </div>
 
-    <!-- Filter button -->
+    <!-- Rules Manager Button -->
     <div class="w-12 flex-shrink-0">
       <button 
-        @click="showEditTabModal = true" 
+        @click="showRuleManagerModal = true" 
         class="h-full w-full bg-black flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
-        title="Filter and customize tab"
+        title="Manage tab rules"
       >
         <Filter size="16" />
       </button>
@@ -77,10 +75,10 @@
     @tab-selected="handleTabSelected"
   />
 
-  <!-- Use the new EditTabModal component -->
-  <EditTabModal
-    :is-open="showEditTabModal"
-    @close="showEditTabModal = false"
+  <!-- Use the new RuleManagerModal component -->
+  <RuleManagerModal
+    :is-open="showRuleManagerModal"
+    @close="showRuleManagerModal = false"
   />
 </template>
 
@@ -92,7 +90,7 @@ import { useUtils } from '@/shared/composables/useUtils';
 import { computed, ref, nextTick } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
-import EditTabModal from '@/features/edit-tab/components/EditTabModal.vue';
+import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
 const { state } = useDashboardState();
 const { selectTab } = useTabs();
@@ -100,7 +98,7 @@ const { fontColor, formatPrice } = useUtils();
 
 // Modal states
 const showAllTabsModal = ref(false);
-const showEditTabModal = ref(false);
+const showRuleManagerModal = ref(false);
 
 const tabTotal = computed(() => {
   const tab = state.selected.tab;

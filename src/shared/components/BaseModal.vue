@@ -9,17 +9,26 @@
       <div class="absolute inset-x-4 inset-y-4 md:inset-x-6 md:inset-y-6 flex items-center justify-center">
         <!-- Modal container with fixed dimensions -->
         <div 
-          class="bg-white rounded-lg shadow-2xl w-full max-w-screen-lg flex flex-col"
+          :class="[
+            'bg-white rounded-lg shadow-2xl w-full flex flex-col',
+            {
+              'max-w-screen-md': size === 'md',
+              'max-w-screen-lg': size === 'lg',
+              'max-w-screen-xl': size === 'xl',
+              'max-w-screen-2xl': size === '2xl'
+            }
+          ]"
           style="max-height: calc(100% - 16px);"
           ref="modalContent"
           @click.stop
         >
           <!-- Modal header - sticky to top -->
-          <div class="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg sticky top-0 z-10">
+          <div v-if="!hideHeader" class="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg sticky top-0 z-10">
             <slot name="header">
               <h3 class="text-lg font-semibold text-gray-800">{{ title }}</h3>
             </slot>
             <button 
+              v-if="showCloseButton"
               @click="closeModal" 
               class="text-gray-500 hover:text-black transition-colors p-1 rounded hover:bg-gray-200"
               aria-label="Close modal"
@@ -30,8 +39,10 @@
           
           <!-- Content area - this is the only scrollable element -->
           <div class="flex-1 overflow-y-auto">
-            <div class="p-4">
-              <slot></slot>
+            <div :class="contentPadding ? 'p-4' : ''">
+              <slot name="content">
+                <slot></slot>
+              </slot>
             </div>
           </div>
         </div>
@@ -67,6 +78,23 @@ const props = defineProps({
   title: {
     type: String,
     default: 'Modal'
+  },
+  size: {
+    type: String,
+    default: 'lg',
+    validator: (value) => ['md', 'lg', 'xl', '2xl'].includes(value)
+  },
+  hideHeader: {
+    type: Boolean,
+    default: false
+  },
+  showCloseButton: {
+    type: Boolean,
+    default: true
+  },
+  contentPadding: {
+    type: Boolean,
+    default: true
   }
 });
 

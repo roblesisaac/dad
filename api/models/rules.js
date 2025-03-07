@@ -6,7 +6,6 @@ const ruleSchema = {
   rule: [String],
   _isImportant: Boolean,
   orderOfExecution: Number,
-  // orderOfExecution: [{ tabId: Number }],
   label1: 'userId'
 };
 

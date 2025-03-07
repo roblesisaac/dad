@@ -1,16 +1,25 @@
 <template>
     <div class="switch">
-      <input type="checkbox" id="toggle" class="toggle" @change="toggleSwitch" :checked="props.modelValue">
-      <label for="toggle" class="label"></label>
+      <input type="checkbox" :id="uniqueId" class="toggle" @change="toggleSwitch" :checked="props.modelValue">
+      <label :for="uniqueId" class="label"></label>
     </div>
   </template>
   
   <script setup>
+  import { computed } from 'vue'
+
   const props = defineProps({
-    modelValue: Boolean
+    modelValue: Boolean,
+    id: {
+      type: String,
+      default: () => `switch-${Math.random().toString(36).substring(2, 9)}`
+    }
   })
   
   const emit = defineEmits(['update:modelValue'])
+  
+  // Generate a unique ID for the input element
+  const uniqueId = computed(() => props.id)
   
   const toggleSwitch = () => {
     emit('update:modelValue', !props.modelValue)
