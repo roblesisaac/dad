@@ -1,71 +1,37 @@
 <template>
-    <div class="switch">
-      <input type="checkbox" :id="uniqueId" class="toggle" @change="toggleSwitch" :checked="props.modelValue">
-      <label :for="uniqueId" class="label"></label>
-    </div>
-  </template>
-  
-  <script setup>
-  import { computed } from 'vue'
+  <label class="inline-flex items-center cursor-pointer">
+    <input 
+      type="checkbox" 
+      class="sr-only peer"
+      :id="uniqueId"
+      @change="toggleSwitch"
+      :checked="props.modelValue"
+    />
+    <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 dark:peer-checked:bg-blue-600"></div>
+    <span v-if="label" class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{ label }}</span>
+  </label>
+</template>
 
-  const props = defineProps({
-    modelValue: Boolean,
-    id: {
-      type: String,
-      default: () => `switch-${Math.random().toString(36).substring(2, 9)}`
-    }
-  })
-  
-  const emit = defineEmits(['update:modelValue'])
-  
-  // Generate a unique ID for the input element
-  const uniqueId = computed(() => props.id)
-  
-  const toggleSwitch = () => {
-    emit('update:modelValue', !props.modelValue)
+<script setup>
+import { computed } from 'vue'
+
+const props = defineProps({
+  modelValue: Boolean,
+  id: {
+    type: String,
+    default: () => `switch-${Math.random().toString(36).substring(2, 9)}`
+  },
+  label: {
+    type: String,
+    default: ''
   }
-  </script>
-  
-  <style scoped>
-  .switch {
-    display: inline-block;
-    position: relative;
-  }
-  
-  .toggle {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  
-  .label {
-    display: block;
-    width: 50px;
-    height: 26px;
-    background-color: #ccc;
-    border-radius: 25px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-  
-  .label::before {
-    content: "";
-    position: absolute;
-    width: 22px;
-    height: 22px;
-    background-color: white;
-    border-radius: 50%;
-    left: 2px;
-    top: 2px;
-    transition: transform 0.2s;
-  }
-  
-  .toggle:checked + .label {
-    background-color: #659ef6;
-  }
-  
-  .toggle:checked + .label::before {
-    transform: translateX(24px);
-  }
-  </style>
+})
+
+const emit = defineEmits(['update:modelValue'])
+
+const uniqueId = computed(() => props.id)
+
+const toggleSwitch = () => {
+  emit('update:modelValue', !props.modelValue)
+}
+</script>
