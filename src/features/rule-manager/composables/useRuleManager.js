@@ -108,15 +108,6 @@ export function useRuleManager() {
   }
   
   /**
-   * Toggle a rule's enabled status
-   * @param {Object} rule - Rule object to toggle
-   */
-  async function toggleRuleEnabled(rule) {
-    const updatedRule = { ...rule, _isEnabled: !rule._isEnabled };
-    return await updateRule(updatedRule);
-  }
-  
-  /**
    * Intuitively enable or disable a rule based on tab context
    * @param {Object} rule - Rule object to toggle
    * @param {Boolean} enable - Whether to enable or disable the rule
@@ -126,9 +117,8 @@ export function useRuleManager() {
     const currentTabId = state.selected.tab?._id;
     
     if (!currentTabId) {
-      // If no tab is selected, just toggle the enabled status
-      updatedRule._isEnabled = enable;
-      return await updateRule(updatedRule);
+      // If no tab is selected, we can't do much
+      return rule;
     }
     
     // Clone the applyForTabs array to avoid modifying the original
@@ -139,27 +129,27 @@ export function useRuleManager() {
       if (!updatedRule.applyForTabs.includes(currentTabId)) {
         updatedRule.applyForTabs.push(currentTabId);
       }
-      
-      // If it was fully disabled, make sure it's enabled
-      updatedRule._isEnabled = true;
     } else {
       // Disabling a rule
       if (updatedRule.applyForTabs.includes('_GLOBAL')) {
-        // If it's a global rule, make it apply to all tabs except the current one
-        updatedRule.applyForTabs = ['_GLOBAL'];
-        updatedRule.applyForTabs = state.allUserTabs
+        // If it's a global rule, we need to be more explicit
+        // Remove _GLOBAL and add all other tabs except the current one
+        updatedRule.applyForTabs = updatedRule.applyForTabs.filter(id => id !== '_GLOBAL');
+        
+        // Add all other tabs
+        const otherTabIds = state.allUserTabs
           .map(tab => tab._id)
           .filter(tabId => tabId !== currentTabId);
+          
+        updatedRule.applyForTabs = [...updatedRule.applyForTabs, ...otherTabIds];
+        
+        // Remove duplicates
+        updatedRule.applyForTabs = [...new Set(updatedRule.applyForTabs)];
       } else {
         // If it's a tab-specific rule, remove the current tab
         updatedRule.applyForTabs = updatedRule.applyForTabs.filter(tabId => 
           tabId !== currentTabId
         );
-        
-        // If no tabs are left, fully disable the rule
-        if (updatedRule.applyForTabs.length === 0) {
-          updatedRule._isEnabled = false;
-        }
       }
     }
     
@@ -253,7 +243,6 @@ export function useRuleManager() {
     createRule,
     updateRule,
     deleteRuleById,
-    toggleRuleEnabled,
     toggleRuleContext,
     updateRuleOrder,
     addTabToRule,

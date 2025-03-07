@@ -163,14 +163,6 @@
                 description="Important rules take precedence over non-important rules"
               />
             </div>
-            
-            <!-- Rule is enabled -->
-            <div class="mb-4">
-              <ToggleSwitch 
-                v-model="ruleData._isEnabled"
-                label="Enable rule"
-              />
-            </div>
           </form>
         </div>
         
@@ -210,8 +202,7 @@ const props = defineProps({
       rule: ['categorize', '', '', '', ''],
       applyForTabs: ['_GLOBAL'],
       _isImportant: false,
-      orderOfExecution: 0,
-      _isEnabled: true
+      orderOfExecution: 0
     })
   },
   isNew: {
@@ -249,10 +240,7 @@ const isGlobalRule = computed({
 
 // Set default values when creating a new rule
 if (props.isNew) {
-  // Ensure rule has all necessary fields
-  if (!ruleData.value._isEnabled) {
-    ruleData.value._isEnabled = true;
-  }
+  // Nothing to do here now
 }
 
 // Helper function to capitalize the first letter of a string

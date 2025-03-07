@@ -109,7 +109,10 @@
     <div v-if="rulesAppliedToItem && rulesAppliedToItem.length" class="mt-6 bg-white p-4 rounded-md shadow-sm">
       <h3 class="text-sm font-semibold text-gray-700 mb-3">Applied Rules</h3>
       <div v-for="rule in rulesAppliedToItem" :key="rule._id">
-        <EditRule :ruleConfig="rule" :state="state" :showReorder="false" />
+        <RuleCard 
+          :rule="rule" 
+          :ruleType="getRuleType(rule)"
+        />
       </div>
     </div>
   </div>
@@ -117,7 +120,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import EditRule from '../../edit-tab/components/EditRule.vue';
+import RuleCard from '@/features/rule-manager/components/RuleCard.vue';
 import { useApi } from '@/shared/composables/useApi';
 import { useUtils } from '@/shared/composables/useUtils';
 
@@ -155,6 +158,25 @@ const rulesAppliedToItem = computed(() => {
     });
   });
 });
+
+// Helper function to determine rule type based on rule structure
+function getRuleType(rule) {
+  // Default colors and descriptions for different rule types
+  const types = {
+    filter: { id: 'filter', name: 'Filter Rules', color: 'blue', description: 'Controls which items are visible' },
+    sort: { id: 'sort', name: 'Sort Rules', color: 'amber', description: 'Controls the order of items' },
+    categorize: { id: 'categorize', name: 'Categorize Rules', color: 'emerald', description: 'Assigns categories to items' },
+    groupBy: { id: 'groupBy', name: 'Group Rules', color: 'purple', description: 'Groups items by properties' }
+  };
+  
+  // Determine rule type based on rule structure
+  if (!rule.rule || !Array.isArray(rule.rule) || rule.rule.length < 1) {
+    return types.filter; // Default fallback
+  }
+  
+  const ruleType = rule.rule[0];
+  return types[ruleType] || types.filter;
+}
 
 async function updateTransaction() {
   await waitUntilTypingStops();

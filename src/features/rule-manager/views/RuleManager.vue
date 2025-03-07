@@ -273,19 +273,17 @@ const enabledRules = computed(() => {
   if (!tabId) return [];
   
   return state.allUserRules.filter(rule => 
-    rule._isEnabled !== false &&
-    (rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId))
+    rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId)
   );
 });
 
-// Get disabled rules (rules that are explicitly disabled or don't apply to current tab)
+// Get disabled rules (rules that don't apply to current tab)
 const disabledRules = computed(() => {
-    const tabId = state.selected.tab?._id;
+  const tabId = state.selected.tab?._id;
   if (!tabId) return [];
   
   return state.allUserRules.filter(rule => 
-    rule._isEnabled === false ||
-    (!rule.applyForTabs.includes('_GLOBAL') && !rule.applyForTabs.includes(tabId))
+    !rule.applyForTabs.includes('_GLOBAL') && !rule.applyForTabs.includes(tabId)
   );
 });
 
@@ -353,8 +351,7 @@ function createNewRule() {
     rule: [defaultRuleType, '', '', '', ''],
     applyForTabs: state.selected.tab?._id ? [state.selected.tab._id] : ['_GLOBAL'],
     _isImportant: false,
-    orderOfExecution: enabledRules.value.length,
-    _isEnabled: true
+    orderOfExecution: enabledRules.value.length
   };
   isNewRule.value = true;
   showRuleEditModal.value = true;
@@ -392,8 +389,7 @@ async function toggleRuleContextStatus(rule) {
   try {
     // If rule is enabled for this tab, disable it; otherwise enable it
     const tabId = state.selected.tab?._id;
-    const isEnabledForCurrentTab = rule._isEnabled !== false && 
-      (rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId));
+    const isEnabledForCurrentTab = rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId);
     
     await toggleRuleContext(rule, !isEnabledForCurrentTab);
   } catch (error) {

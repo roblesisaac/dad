@@ -2,7 +2,7 @@
   <div 
     class="p-4 rounded-md border relative"
     :class="[
-      rule._isEnabled && (isGlobalRule || isTabSpecificRule)
+      isGlobalRule || isTabSpecificRule
         ? `border-${ruleType.color}-200 bg-${ruleType.color}-50`
         : 'border-gray-200 bg-gray-50 opacity-75'
     ]"
@@ -144,8 +144,7 @@ const isTabSpecificRule = computed(() => {
 // Check if rule is enabled for current tab
 const isEnabledForCurrentTab = computed(() => {
   const tabId = state.selected.tab?._id;
-  return props.rule._isEnabled !== false && 
-    (props.rule.applyForTabs.includes('_GLOBAL') || props.rule.applyForTabs.includes(tabId));
+  return props.rule.applyForTabs.includes('_GLOBAL') || props.rule.applyForTabs.includes(tabId);
 });
 
 // Get operator display text

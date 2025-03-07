@@ -60,7 +60,7 @@
   </div>
   
   <!-- Edit Tab Modal -->
-  <EditTabModal
+  <RuleManagerModal
     :is-open="showEditTabModal"
     @close="showEditTabModal = false"
   />
@@ -68,14 +68,12 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import { GripVertical, Edit2 } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
-import EditTabModal from '@/features/edit-tab/components/EditTabModal.vue';
+import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
-const router = useRouter();
 const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
 const { toggleTabForGroup, selectTab, updateTabSort } = useTabs();

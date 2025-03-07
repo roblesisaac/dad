@@ -16,12 +16,6 @@ export default [
         path: 'select-group',
         name: 'select-group',
         component: () => import('@/features/select-group/views/SelectGroup.vue')
-      },
-      {
-        path: 'rule-details',
-        name: 'rule-details',
-        component: () => import('@/features/dashboard/components/RuleDetails.vue'),
-        props: true
       }
     ]
   },
