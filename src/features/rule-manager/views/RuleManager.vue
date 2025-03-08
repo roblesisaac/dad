@@ -159,6 +159,7 @@ import {
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRuleManager } from '../composables/useRuleManager';
+import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
 import draggable from 'vuedraggable';
 
 import RuleCard from '../components/RuleCard.vue';
@@ -166,6 +167,7 @@ import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
 
 const { state } = useDashboardState();
+const { updateTabName } = useTabsAPI();
 const { 
   createRule,
   updateRule,
@@ -254,11 +256,9 @@ function startTabNameEdit() {
 
 function saveTabName() {
   if (state.selected.tab && editedTabName.value.trim()) {
-    // Update tab name in state
     state.selected.tab.tabName = editedTabName.value.trim();
     
-    // Here you would also call an API to persist the change
-    // For example: updateTabName(state.selected.tab._id, editedTabName.value.trim());
+    updateTabName(state.selected.tab._id, editedTabName.value.trim());
   }
   isEditingTabName.value = false;
 }

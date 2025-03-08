@@ -48,6 +48,10 @@ export function useTabsAPI() {
     return await api.put(`tabs/${tabId}`, updateData);
   }
 
+  async function updateTabName(tabId, newName) {
+    return await api.put(`tabs/${tabId}`, { tabName: newName });
+  }
+
   return {
     fetchUserTabs,
     updateTabSelection,

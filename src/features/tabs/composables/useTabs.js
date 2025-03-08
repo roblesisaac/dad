@@ -6,40 +6,9 @@ import { nextTick } from 'vue';
 
 export function useTabs() {
   const { state } = useDashboardState();
-  const { processTabData } = useTabProcessing();
+  const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
   const api = useApi();
   const tabsAPI = useTabsAPI(api);
-
-  /**
-   * Find selected tabs in a group
-   */
-  function selectedTabsInGroup(tabsForGroup) {
-    return tabsForGroup?.filter(tab => tab.isSelected) || [];
-  }
-
-  /**
-   * Select the first tab in a group
-   */
-  async function selectFirstTab(tabsForGroup) {
-    const firstTab = tabsForGroup[0];
-    if (!firstTab) return;
-
-    firstTab.isSelected = true;
-    await tabsAPI.updateTabSelection(firstTab._id, true);
-    return firstTab;
-  }
-
-  /**
-   * Deselect all tabs except the first one
-   */
-  async function deselectOtherTabs(selectedTabs) {
-    if (!selectedTabs?.length) return;
-    
-    for(const tab of selectedTabs.splice(1)) {
-      tab.isSelected = false;
-      await tabsAPI.updateTabSelection(tab._id, false);
-    }
-  }
 
   /**
    * Select a tab and deselect the currently selected tab
@@ -62,35 +31,6 @@ export function useTabs() {
 
     handleTabChange(tabToSelect._id, prevSelectedTab._id);
     await nextTick();
-    state.isLoading = false;
-  }
-
-   /**
-   * Process data for all tabs in the selected group
-   */
-  async function processAllTabsForSelectedGroup() {
-    const tabsForGroup = state.selected.tabsForGroup;
-    if(!tabsForGroup?.length) return;
-
-    const selectedTabs = selectedTabsInGroup(tabsForGroup);
-
-    if(selectedTabs.length < 1) {
-      await selectFirstTab(tabsForGroup);
-    }
-
-    if(selectedTabs.length > 1) {
-      await deselectOtherTabs(selectedTabs);
-    }
-
-    for(const tab of tabsForGroup) {
-      tab.categorizedItems = [];
-      const processed = processTabData(state.selected.allGroupTransactions, tab, state.allUserRules);
-      if (processed) {
-        tab.total = processed.tabTotal;
-        tab.categorizedItems = processed.categorizedItems;
-      }
-    }
-
     state.isLoading = false;
   }
 
@@ -279,9 +219,6 @@ export function useTabs() {
     selectTab,
     updateTabSort,
     createNewTab,
-    selectedTabsInGroup,
-    selectFirstTab,
-    deselectOtherTabs,
     processAllTabsForSelectedGroup,
     toggleTabForGroup,
     updateTab
