@@ -49,7 +49,7 @@ import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';
 
 const { stickify } = useAppStore();
 const { state } = useDashboardState();
-const { init, handleGroupChange } = useInit();
+const { init } = useInit();
 const { syncLatestTransactionsForBanks } = usePlaidSync();
 
 onMounted(async () => {
@@ -66,17 +66,5 @@ onMounted(async () => {
   
   // Start syncing transactions for all connected banks
   syncLatestTransactionsForBanks();
-});
-
-watch(() => state.date.start, (newStart, prevStart) => {
-  if(prevStart === 'firstOfMonth') return;
-  // Only react to date changes when applied via the Apply button
-  handleGroupChange();
-});
-
-watch(() => state.date.end, (newEnd, prevEnd) => {
-  if(prevEnd === 'today') return;
-  // Only react to date changes when applied via the Apply button
-  handleGroupChange();
 });
 </script>

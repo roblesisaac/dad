@@ -146,8 +146,10 @@ import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useInit } from '@/features/dashboard/composables/useInit';
 
 const { state } = useDashboardState();
+const { handleGroupChange } = useInit();
 const showDatePicker = ref(false);
 const tempDate = reactive({
   start: null,
@@ -281,6 +283,7 @@ const applyDates = () => {
   state.date.start = tempDate.start;
   state.date.end = tempDate.end;
   showDatePicker.value = false;
+  handleGroupChange();
 };
 
 const formatDate = (date) => {
