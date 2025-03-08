@@ -376,6 +376,7 @@ export function useTabProcessing() {
   }
 
   return {
+    processTabData,
     processAllTabsForSelectedGroup
   };
-} 
+}

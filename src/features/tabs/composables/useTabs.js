@@ -6,7 +6,7 @@ import { nextTick } from 'vue';
 
 export function useTabs() {
   const { state } = useDashboardState();
-  const { processAllTabsForSelectedGroup } = useTabProcessing();
+  const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
   const api = useApi();
   const tabsAPI = useTabsAPI(api);
 
@@ -29,6 +29,7 @@ export function useTabs() {
       tabsAPI.updateTabSelection(prevSelectedTab._id, false);
     }
 
+    handleTabChange(tabToSelect._id, prevSelectedTab._id);
     await nextTick();
     state.isLoading = false;
   }
@@ -96,6 +97,31 @@ export function useTabs() {
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
+  }
+
+  /**
+   * Handle tab selection change
+   */
+  function handleTabChange(newSelectedTabId, oldSelectedTabId) {
+      if (newSelectedTabId === oldSelectedTabId) return;
+      state.isLoading = true;
+  
+      if(oldSelectedTabId) {
+        const oldSelectedTab = state.allUserTabs?.find(({ _id }) => _id === oldSelectedTabId);
+        if (oldSelectedTab) {
+          oldSelectedTab.categorizedItems = [];
+        }
+      }
+  
+      if(!newSelectedTabId) return;
+      
+      const selectedTab = state.selected.tab;
+      if (!selectedTab) return;
+  
+      const processed = processTabData(state.selected.allGroupTransactions, selectedTab, state.allUserRules);
+      if (processed) {
+        selectedTab.categorizedItems = processed.categorizedItems;
+      }
   }
 
   /**
