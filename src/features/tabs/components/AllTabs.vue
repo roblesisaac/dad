@@ -5,9 +5,10 @@
       <h2 class="font-medium text-blue-800">Enabled Tabs ({{ enabledTabs.length }})</h2>
     </div>
     
-    <!-- Draggable list of enabled tabs -->
+    <!-- Draggable list of enabled tabs - Only use Draggable when in edit mode -->
     <div v-if="enabledTabs.length > 0">
       <Draggable 
+        v-if="isEditMode"
         v-model="state.selected.tabsForGroup" 
         v-bind="dragOptions()" 
         handle=".handler-tab"
@@ -23,6 +24,17 @@
           />
         </template>
       </Draggable>
+      
+      <!-- Regular list when not in edit mode -->
+      <div v-else>
+        <div v-for="element in enabledTabs" :key="element._id">
+          <AllTabRow
+            :element="element"
+            :is-edit-mode="isEditMode"
+            @tab-selected="handleTabSelected"
+          />
+        </div>
+      </div>
     </div>
     <div v-else class="px-4 py-6 text-center text-gray-500 italic">
       No enabled tabs for this group
