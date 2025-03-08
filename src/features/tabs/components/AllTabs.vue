@@ -46,7 +46,7 @@
         @click="toggleDisabledSection" 
         class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
       >
-        <h2 class="font-medium text-gray-700">Disabled Tabs ({{ disabledTabs.length }})</h2>
+        <h2 class="font-medium text-gray-700">Hidden Tabs ({{ disabledTabs.length }})</h2>
         <div class="text-gray-500">
           <ChevronDown v-if="showDisabledTabs" class="w-5 h-5" />
           <ChevronRight v-else class="w-5 h-5" />
@@ -65,7 +65,7 @@
           </div>
         </div>
         <div v-else class="px-4 py-6 text-center text-gray-500 italic">
-          No disabled tabs for this group
+          No hidden tabs for this group
         </div>
       </div>
     </div>

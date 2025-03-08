@@ -1,7 +1,7 @@
 import { nextTick } from 'vue';
-import { useRules } from '../../dashboard/composables/useRules.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
-import { useDashboardState } from '../../dashboard/composables/useDashboardState.js';
+import { useRules } from '@/features/rule-manager/composables/useRules.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
 export function useTabProcessing() {
   const { state } = useDashboardState();

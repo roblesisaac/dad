@@ -1,6 +1,7 @@
 <template>
   <BaseModal 
     :is-open="isOpen" 
+    :contentPadding="false"
     title="Select Tab"
     @close="closeModal"
   >

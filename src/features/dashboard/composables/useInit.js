@@ -2,7 +2,7 @@ import { useDashboardState } from './useDashboardState.js';
 import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
-import { useRulesAPI } from './useRulesAPI.js';
+import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
 import { useTransactions } from './useTransactions.js';

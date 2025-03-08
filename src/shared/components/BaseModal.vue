@@ -3,14 +3,14 @@
     <!-- Fixed overlay with padding enforcement -->
     <div 
       v-if="isOpen" 
-      class="fixed inset-0 bg-black bg-opacity-50 z-50"
+      class="fixed inset-0 bg-white z-50"
     >
       <!-- This div ensures padding through absolute positioning -->
       <div class="absolute inset-x-4 inset-y-4 md:inset-x-6 md:inset-y-6 flex items-center justify-center">
         <!-- Modal container with fixed dimensions -->
         <div 
           :class="[
-            'bg-white rounded-lg shadow-2xl w-full flex flex-col',
+            'bg-white border-2 border-black shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] w-full flex flex-col',
             {
               'max-w-screen-md': size === 'md',
               'max-w-screen-lg': size === 'lg',
@@ -23,9 +23,9 @@
           @click.stop
         >
           <!-- Modal header - sticky to top -->
-          <div v-if="!hideHeader" class="flex items-center justify-between p-4 border-b bg-gray-50 rounded-t-lg sticky top-0 z-10">
+          <div v-if="!hideHeader" class="flex items-center justify-between p-4 border-b bg-gray-50 sticky top-0 z-10">
             <slot name="header">
-              <h3 class="text-lg font-semibold text-gray-800">{{ title }}</h3>
+              <h3 class="text-lg font-semibold text-blue-800">{{ title }}</h3>
             </slot>
             <button 
               v-if="showCloseButton"

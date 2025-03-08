@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI';
+import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 
 export function useRuleManager() {
