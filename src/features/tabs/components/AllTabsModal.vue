@@ -1,7 +1,7 @@
 <template>
   <BaseModal 
     :is-open="isOpen" 
-    title="Manage Tabs"
+    title="Select Tab"
     @close="closeModal"
   >
     <template #header>

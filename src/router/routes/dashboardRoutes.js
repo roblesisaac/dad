@@ -10,14 +10,7 @@ export default [
       requiresAuth: true,
       requiresPlaidItems: true,
       title: 'Spending Report'
-    },
-    children: [
-      {
-        path: 'select-group',
-        name: 'select-group',
-        component: () => import('@/features/select-group/views/SelectGroup.vue')
-      }
-    ]
+    }
   },
   {
     path: '/onboarding',

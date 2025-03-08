@@ -96,9 +96,6 @@ watch(
   () => route.name,
   (newRoute, oldRoute) => {
     if(newRoute === 'dashboard') {
-      if(oldRoute === 'select-group') {
-        return handleGroupChange();
-      }
       setTimeout(processAllTabsForSelectedGroup, 500);
     }
   }

@@ -1,13 +1,28 @@
-import { useRouter } from 'vue-router';
 import { useGroupsAPI } from './useGroupsAPI';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
 
-export function useEditGroup() {
+export function useSelectGroup() {
   const { state } = useDashboardState();
   const groupsAPI = useGroupsAPI();
-  const router = useRouter();
-  const { waitUntilTypingStops } = useUtils();
+  const { sortBy,waitUntilTypingStops } = useUtils();
+
+  /**
+   * Fetch groups and accounts data
+   */
+  async function fetchGroupsAndAccounts() {
+    const { groups, accounts } = await groupsAPI.fetchGroupsAndAccounts();
+    
+    if (groups) {
+      // Sort groups by sort order
+      return {
+        groups: groups.sort(sortBy('sort')),
+        accounts
+      };
+    }
+    
+    return { groups, accounts };
+  }
 
   function formatAccounts(accounts) {
     const propsToKeep = ['_id', 'account_id', 'mask', 'current', 'available'];
@@ -43,10 +58,7 @@ export function useEditGroup() {
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
     await groupsAPI.deleteGroup(idToRemove);
   }
-
-  /**
-   * Create a new account group
-   */
+  
   async function createNewGroup() {
     if(!confirm('Are you sure you want to create a new group?')) {
       return;
@@ -60,22 +72,6 @@ export function useEditGroup() {
 
     const savedNewGroup = await groupsAPI.createGroup(newGroupData);
     state.allUserGroups.push(savedNewGroup);
-  }
-
-  /**
-   * Select a group and navigate back
-   */
-  async function selectGroup(groupToSelect) {
-    const selectedGroup = state.selected.group;
-
-    if(selectedGroup) {
-      await groupsAPI.deselectGroup(selectedGroup._id);          
-      selectedGroup.isSelected = false;
-    }
-
-    await groupsAPI.selectGroup(groupToSelect._id);
-    groupToSelect.isSelected = true;
-    router.back();
   }
 
   async function updateGroupName(updatedGroup) {
@@ -104,6 +100,38 @@ export function useEditGroup() {
     updateStateMemory(updatedGroup._id, newGroupData);
     await groupsAPI.updateGroup(updatedGroup._id, newGroupData);
   }
+  
+  /**
+   * Select a group and deselect others
+   */
+  async function selectGroup(groupToSelect) {
+    const allGroups = state.allUserGroups;
+    // First deselect all groups
+    for (const group of allGroups) {
+      if (group.isSelected && group._id !== groupToSelect._id) {
+        group.isSelected = false;
+        await groupsAPI.updateGroupSelection(group._id, false);
+      }
+    }
+    
+    // Select the target group
+    groupToSelect.isSelected = true;
+    await groupsAPI.updateGroupSelection(groupToSelect._id, true);
+    
+    return groupToSelect;
+  }
+
+  /**
+   * Select the first group in a list
+   */
+  async function selectFirstGroup(allGroups) {
+    const firstGroup = allGroups[0];
+    if (!firstGroup) return null;
+    
+    firstGroup.isSelected = true;
+    await groupsAPI.updateGroupSelection(firstGroup._id, true);
+    return firstGroup;
+  }
 
   async function updateGroupSort(groupId, sort) {
     await groupsAPI.updateGroupSort(groupId, sort);
@@ -112,7 +140,9 @@ export function useEditGroup() {
   return {
     createNewGroup,
     deleteGroup,
+    fetchGroupsAndAccounts,
     selectGroup,
+    selectFirstGroup,
     updateGroupName,
     updateGroup,
     updateGroupSort

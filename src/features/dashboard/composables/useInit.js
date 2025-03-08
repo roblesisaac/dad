@@ -3,8 +3,7 @@ import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from './useRulesAPI.js';
-import { useGroupOperations } from '@/features/select-group/composables/useGroupOperations.js';
-
+import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 
 import { useTransactions } from './useTransactions.js';
@@ -26,7 +25,7 @@ export function useInit() {
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
   const rulesAPI = useRulesAPI(api);
-  const { fetchGroupsAndAccounts } = useGroupOperations();
+  const { fetchGroupsAndAccounts } = useSelectGroup();
 
   async function init() {
     try {
@@ -86,7 +85,7 @@ export function useInit() {
         router.push({ name: 'select-group' });
         return;
       }
-      selectedGroup = await selectFirstGroup(state.allUserGroups);
+      // selectedGroup = await selectFirstGroup(state.allUserGroups);
     }
     state.isLoading = true;
     

@@ -37,24 +37,11 @@
         </button>
         
         <!-- Toggle Switch - always visible -->
-        <div class="relative inline-block w-10 mr-2 align-middle select-none cursor-pointer" @click.stop>
-          <input 
-            :id="`toggle-${element._id}`" 
-            type="checkbox" 
-            :checked="isEnabled"
-            @change="toggleTabVisibility(element._id)" 
-            class="sr-only"
-          />
-          <label 
-            :for="`toggle-${element._id}`" 
-            class="block h-6 overflow-hidden rounded-full bg-gray-300 cursor-pointer"
-          >
-            <span 
-              :class="isEnabled ? 'translate-x-4 bg-blue-600' : 'translate-x-0 bg-white'"
-              class="absolute block w-6 h-6 rounded-full border border-gray-300 shadow transform transition-transform duration-200 ease-in"
-            ></span>
-          </label>
-        </div>
+        <Switch
+          v-if="isEditMode"
+          :checked="isEnabled"
+          @change="toggleTabVisibility(element._id)"
+        />
       </div>
     </div>
   </div>
@@ -72,6 +59,7 @@ import { GripVertical, Edit2 } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
+import Switch from '@/shared/components/Switch.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
 const { fontColor, formatPrice } = useUtils();
