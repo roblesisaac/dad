@@ -142,10 +142,10 @@ import {
   isSameMonth,
   isSameYear
 } from 'date-fns';
-import DatePicker from './DatePicker.vue';
+import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next';
-import { useDashboardState } from '../composables/useDashboardState';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
 const { state } = useDashboardState();
 const showDatePicker = ref(false);

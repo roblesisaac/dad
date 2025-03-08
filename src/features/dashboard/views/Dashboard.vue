@@ -8,7 +8,7 @@
   <div class="grid grid-cols-2 border-b-2 border-black">
     <ShowSelectGroupButton class="col-span-1 border-r-2 border-black" />
     <div class="col-span-1">          
-      <DatePickers />
+      <SelectDate />
     </div>
   </div>
 </div>
@@ -42,7 +42,7 @@ import { useInit } from '../composables/useInit.js';
 // Core Components
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
-import DatePickers from '../components/DatePickers.vue';
+import SelectDate from '../../select-date/views/SelectDate.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
 import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';

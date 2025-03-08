@@ -1,10 +1,11 @@
 import { ref } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI';
-import { processAllTabsForSelectedGroup } from '@/features/tabs/composables/useTabProcessing';
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 
 export function useRuleManager() {
   const { state } = useDashboardState();
+  const { processAllTabsForSelectedGroup } = useTabProcessing();
   const rulesAPI = useRulesAPI();
   const isLoading = ref(false);
   const error = ref(null);
@@ -25,6 +26,10 @@ export function useRuleManager() {
       
       if (createdRule) {
         state.allUserRules.push(createdRule);
+        
+        // Process all tabs for the selected group with the new rule
+        await processAllTabsForSelectedGroup();
+        
         return createdRule;
       } else {
         throw new Error('Failed to create rule');
@@ -61,6 +66,9 @@ export function useRuleManager() {
           state.allUserRules[index] = updatedRule;
         }
         
+        // Process all tabs for the selected group with the updated rule
+        await processAllTabsForSelectedGroup();
+        
         return updatedRule;
       } else {
         throw new Error('Failed to update rule');
@@ -93,6 +101,10 @@ export function useRuleManager() {
       if (success) {
         // Remove the rule from the state
         state.allUserRules = state.allUserRules.filter(rule => rule._id !== ruleId);
+        
+        // Process all tabs for the selected group after rule deletion
+        await processAllTabsForSelectedGroup();
+        
         return true;
       } else {
         throw new Error('Failed to delete rule');
@@ -154,7 +166,8 @@ export function useRuleManager() {
       }
     }
     
-    return await updateRule(updatedRule);
+    const result = await updateRule(updatedRule);
+    return result;
   }
   
   /**
@@ -171,6 +184,9 @@ export function useRuleManager() {
       if (rule) {
         rule.orderOfExecution = orderOfExecution;
       }
+      
+      // Process all tabs for the selected group with the reordered rule
+      await processAllTabsForSelectedGroup();
       
       return true;
     } catch (err) {
@@ -196,6 +212,7 @@ export function useRuleManager() {
     const applyForTabs = [...rule.applyForTabs, tabId];
     const updatedRule = { ...rule, applyForTabs };
     return updateRule(updatedRule);
+    // Note: processAllTabsForSelectedGroup is called inside updateRule
   }
   
   /**
@@ -211,6 +228,7 @@ export function useRuleManager() {
     const applyForTabs = rule.applyForTabs.filter(id => id !== tabId);
     const updatedRule = { ...rule, applyForTabs };
     return updateRule(updatedRule);
+    // Note: processAllTabsForSelectedGroup is called inside updateRule
   }
   
   /**
@@ -236,6 +254,7 @@ export function useRuleManager() {
     
     const updatedRule = { ...rule, applyForTabs };
     return updateRule(updatedRule);
+    // Note: processAllTabsForSelectedGroup is called inside updateRule
   }
   
   return {
