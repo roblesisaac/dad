@@ -18,90 +18,17 @@
     </template>
     
     <template #content>
-      <div class="px-4 py-5">
-        <!-- Net-worth Card -->
-        <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-indigo-100 shadow-sm">
-          <div class="flex items-center justify-between">
-            <h4 class="text-sm font-medium text-gray-500">Total Net Worth</h4>
-            <div class="text-lg font-bold text-indigo-700">
-              <NetWorth :accounts="state.allUserAccounts" :digits="0" />
-            </div>
-          </div>
-        </div>
-
-        <!-- Groups List -->
-        <div v-if="!editingGroup" class="space-y-3">
-          <!-- Groups Header -->
-          <div class="flex items-center justify-between mb-2">
-            <h4 class="font-medium text-gray-700">Your Account Groups</h4>
-            <span class="text-xs text-gray-500">{{ state.allUserGroups.length }} groups</span>
-          </div>
-          
-          <!-- Draggable Group List -->
-          <Draggable 
-            v-model="state.allUserGroups" 
-            v-bind="dragOptions(100)" 
-            handle=".handler-group" 
-            class="space-y-3"
-          >
-            <template #item="{element}">
-              <GroupRow 
-                :key="element._id" 
-                :element="element" 
-                @edit-group="editGroup(element)" 
-                @select-group="handleSelectGroup(element)"
-              />
-            </template>
-          </Draggable>
-
-          <!-- Action Buttons -->
-          <div class="grid grid-cols-1 gap-3 mt-6">
-            <button 
-              @click="createNewGroup" 
-              class="flex items-center justify-center px-4 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-md hover:from-blue-600 hover:to-indigo-700 transition-colors shadow-sm"
-            >
-              <PlusCircle class="w-4 h-4 mr-2" />
-              Create New Group
-            </button>
-            
-            <button 
-              @click="goToOnboarding" 
-              class="flex items-center justify-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
-            >
-              <RefreshCw class="w-4 h-4 mr-2" />
-              Update Existing Institutions
-            </button>
-          </div>
-        </div>
-
-        <!-- Edit Group Form -->
-        <div v-else class="w-full">
-          <div class="flex items-center mb-4">
-            <button 
-              @click="editingGroup = null" 
-              class="flex items-center text-gray-600 hover:text-gray-900"
-            >
-              <ChevronLeft class="w-4 h-4 mr-1" /> Back to Groups
-            </button>
-          </div>
-          <EditGroup @close="editingGroup = null" :group="editingGroup" />
-        </div>
-      </div>
+      <SelectGroup @close="closeModal" />
     </template>
   </BaseModal>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import GroupRow from './GroupRow.vue';
-import NetWorth from './NetWorth.vue';
-import EditGroup from './EditGroup.vue';
+import SelectGroup from '../views/SelectGroup.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { useSelectGroup } from '../composables/useSelectGroup.js';
-import { useDraggable } from '@/shared/composables/useDraggable';
-import { Settings, PlusCircle, RefreshCw, ChevronLeft } from 'lucide-vue-next';
+import { Settings } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -110,14 +37,10 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'group-selected']);
+const emit = defineEmits(['close']);
 
-const router = useRouter();
 const { state } = useDashboardState();
-// const { handleGroupChange } = useInit();
 const editingGroup = ref(null);
-const { Draggable, dragOptions } = useDraggable();
-const { createNewGroup, selectGroup } = useSelectGroup();
 
 // Close modal handler
 const closeModal = () => {
@@ -129,22 +52,6 @@ const closeModal = () => {
 // Toggle edit mode through the settings button
 const toggleEditMode = () => {
   editingGroup.value = editingGroup.value ? null : { isEmptyState: true };
-};
-
-// Edit a specific group
-const editGroup = (group) => {
-  editingGroup.value = group;
-};
-
-const goToOnboarding = () => {
-  emit('close');
-  router.push({ name: 'onboarding' });
-};
-
-const handleSelectGroup = (group) => {
-  emit('close');
-  emit('group-selected', group);
-  selectGroup(group);
 };
 
 watch(() => state.allUserGroups, (groups) => {

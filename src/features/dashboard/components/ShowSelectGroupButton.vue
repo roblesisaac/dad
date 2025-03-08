@@ -29,13 +29,11 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState';
 import NetWorth from '@/features/select-group/components/NetWorth.vue';
 import SelectGroupModal from '@/features/select-group/components/SelectGroupModal.vue';
 import { Users, ChevronDown } from 'lucide-vue-next';
 
-const router = useRouter();
 const { state } = useDashboardState();
 const showModal = ref(false);
 
