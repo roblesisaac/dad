@@ -219,7 +219,6 @@ export function useTabs() {
     selectTab,
     updateTabSort,
     createNewTab,
-    processAllTabsForSelectedGroup,
     toggleTabForGroup,
     updateTab
   };

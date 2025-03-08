@@ -4,8 +4,7 @@ import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from './useRulesAPI.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
-import { useTabs } from '@/features/tabs/composables/useTabs.js';
-
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
 import { useTransactions } from './useTransactions.js';
 import loadScript from '@/shared/utils/loadScript.js';
 
@@ -19,7 +18,7 @@ export function useInit() {
   const api = useApi();
   const router = useRouter();
   const { fetchTransactionsForGroup } = useTransactions();
-  const { processAllTabsForSelectedGroup } = useTabs();
+  const { processAllTabsForSelectedGroup } = useTabProcessing();
   const { state } = useDashboardState();
   
   // Initialize API composables

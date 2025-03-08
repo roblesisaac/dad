@@ -1,6 +1,7 @@
 import { ref } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRulesAPI } from '@/features/dashboard/composables/useRulesAPI';
+import { processAllTabsForSelectedGroup } from '@/features/tabs/composables/useTabProcessing';
 
 export function useRuleManager() {
   const { state } = useDashboardState();
