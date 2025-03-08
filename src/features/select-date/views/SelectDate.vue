@@ -187,7 +187,6 @@ const onDateSelected = () => {
 const quickSelect = (period) => {
   const today = new Date();
   const currentStart = tempDate.start || today;
-  const currentEnd = tempDate.end || today;
   
   // Helper function to determine if we have a monthly or yearly range
   const isMonthRange = () => {

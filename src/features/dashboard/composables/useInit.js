@@ -81,7 +81,7 @@ export function useInit() {
 
     if(!selectedGroup) {
       if(!state.allUserGroups.length) {
-        router.push({ name: 'select-group' });
+        alert('No groups found. Please create a group first.');
         return;
       }
       // selectedGroup = await selectFirstGroup(state.allUserGroups);
