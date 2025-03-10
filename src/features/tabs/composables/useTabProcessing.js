@@ -16,10 +16,12 @@ export function useTabProcessing() {
   * @param {Array} allRules - All available rules
   * @returns {Object} Processed tab data with total and categorized items
   */
-  function processTabData(data, tab, allRules) {
+  function processTabData(tab) {
+    const data = state.selected.allGroupTransactions;
     if (!data || !tab) return null;
     
     // Get rules for this tab by combining tab-specific and global rules
+    const allRules = state.allUserRules;
     const tabRules = combineRulesForTab(allRules, tab._id);
     
     // Build rule methods based on tab rules
@@ -364,7 +366,7 @@ export function useTabProcessing() {
     
     for(const tab of tabsForGroup) {
       tab.categorizedItems = [];
-      const processed = processTabData(state.selected.allGroupTransactions, tab, state.allUserRules);
+      const processed = processTabData(tab);
       if (processed) {
         tab.total = processed.tabTotal;
         tab.categorizedItems = processed.categorizedItems;

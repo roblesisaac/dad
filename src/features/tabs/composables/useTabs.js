@@ -20,16 +20,22 @@ export function useTabs() {
 
     state.isLoading = true;
     const prevSelectedTab = state.selected.tab;
-
-    tabToSelect.isSelected = true;
-    await tabsAPI.updateTabSelection(tabToSelect._id, true);
+    const prevSelectedTabId = prevSelectedTab?._id;
+    const tabToSelectId = tabToSelect._id;
 
     if(prevSelectedTab) {
       prevSelectedTab.isSelected = false;
-      tabsAPI.updateTabSelection(prevSelectedTab._id, false);
+      prevSelectedTab.categorizedItems = [];
+      tabsAPI.updateTabSelection(prevSelectedTabId, false);
     }
 
-    handleTabChange(tabToSelect._id, prevSelectedTab._id);
+    tabToSelect.isSelected = true;
+    const processed = processTabData(tabToSelect);
+    if(processed) {
+      tabToSelect.categorizedItems = processed.categorizedItems;
+    }
+    tabsAPI.updateTabSelection(tabToSelectId, true);
+    
     await nextTick();
     state.isLoading = false;
   }
@@ -97,31 +103,6 @@ export function useTabs() {
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
-  }
-
-  /**
-   * Handle tab selection change
-   */
-  function handleTabChange(newSelectedTabId, oldSelectedTabId) {
-      if (newSelectedTabId === oldSelectedTabId) return;
-      state.isLoading = true;
-  
-      if(oldSelectedTabId) {
-        const oldSelectedTab = state.allUserTabs?.find(({ _id }) => _id === oldSelectedTabId);
-        if (oldSelectedTab) {
-          oldSelectedTab.categorizedItems = [];
-        }
-      }
-  
-      if(!newSelectedTabId) return;
-      
-      const selectedTab = state.selected.tab;
-      if (!selectedTab) return;
-  
-      const processed = processTabData(state.selected.allGroupTransactions, selectedTab, state.allUserRules);
-      if (processed) {
-        selectedTab.categorizedItems = processed.categorizedItems;
-      }
   }
 
   /**
