@@ -1,6 +1,8 @@
 <template>
 <div 
   class="border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+  @click.stop="!isEditMode && isEnabled && selectTabAndGoBack(element)"
+  :class="{ 'cursor-pointer': !isEditMode && isEnabled }"
 >
   <div class="flex items-center justify-between px-4 py-3">
     <!-- Drag Handle -->
@@ -23,14 +25,9 @@
       </div>
     </div>
     
-    <!-- Select Button - Only visible when NOT in edit mode -->
-    <div v-if="!isEditMode && isEnabled" class="flex items-center">
-      <button 
-        @click.stop="selectTabAndGoBack(element)"
-        class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
-      >
-        Select
-      </button>
+    <!-- ChevronRight - Only visible when NOT in edit mode -->
+    <div v-if="!isEditMode && isEnabled" class="flex items-center text-gray-400">
+      <ChevronRight size="20" />
     </div>
     
     <!-- Actions - Only visible in edit mode -->
@@ -63,7 +60,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { GripVertical, Edit2 } from 'lucide-vue-next';
+import { GripVertical, Edit2, ChevronRight } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
