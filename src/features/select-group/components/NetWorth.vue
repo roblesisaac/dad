@@ -2,8 +2,7 @@
   <span 
     :class="[
       fontColor(netWorth), 
-      'font-medium',
-      { 'text-lg': isLarge }
+      'font-bold'
     ]"
   >
     {{ formattedNetWorth }}
@@ -25,14 +24,6 @@ const props = defineProps({
   digits: {
     type: Number,
     default: 2
-  },
-  isLarge: {
-    type: Boolean,
-    default: false
-  },
-  showSign: {
-    type: Boolean,
-    default: false 
   }
 });
 
@@ -53,9 +44,6 @@ const netWorth = computed(() => {
 
 const formattedNetWorth = computed(() => {
   const amount = formatPrice(netWorth.value, { toFixed: props.digits });
-  if (props.showSign && netWorth.value > 0) {
-    return `+${amount}`;
-  }
   return amount;
 });
 

@@ -7,7 +7,7 @@
   >
     <div class="flex items-center">
       <Calendar class="h-4 w-4 mr-2 text-gray-700" />
-      <span class="text-sm font-medium">{{ dateRangeSummary }}</span>
+      <span class="text-sm font-bold">{{ dateRangeSummary }}</span>
     </div>
     <ChevronDown 
       class="h-4 w-4 text-gray-600 transition-transform duration-200"
@@ -114,7 +114,7 @@
       <div class="flex justify-end mt-6">
         <button 
           @click="applyDates" 
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium border border-blue-900 shadow-[2px_2px_0px_#000] hover:shadow-[1px_1px_0px_#000] transition-all duration-200 rounded"
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 rounded"
         >
           Apply
         </button>

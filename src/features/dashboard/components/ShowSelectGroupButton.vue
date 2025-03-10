@@ -5,7 +5,7 @@
   >
     <div class="flex items-center space-x-2">
       <Users class="w-4 h-4 text-indigo-600" />
-      <div class="font-medium text-gray-800" v-html="groupName"></div>
+      <div class="font-bold text-gray-800" v-html="groupName"></div>
     </div>
     
     <div class="flex items-center">
