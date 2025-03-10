@@ -52,7 +52,7 @@
     <div class="w-12 flex-shrink-0">
       <button 
         @click="showRuleManagerModal = true" 
-        class="h-full w-full bg-black flex items-center justify-center text-white hover:bg-gray-800 transition-colors"
+        class="h-full w-full bg-gray-300 border-l-2 border-black flex items-center justify-center hover:bg-gray-500 transition-colors"
         title="Manage tab rules"
       >
         <Filter size="16" />
