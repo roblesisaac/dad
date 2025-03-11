@@ -1,6 +1,6 @@
 import itemService from '../../services/plaid/itemService.js';
-import transactionQueryService from '../../services/plaid/transactionQueryService.js';
-import transactionSyncService from '../../services/plaid/transactionSyncService2.js';
+import transactionQueryService from '../../services/plaid/transactionsCrudService.js';
+import transactionSyncService from '../../services/plaid/transactionSyncService.js';
 
 export default {
   /**
@@ -46,7 +46,7 @@ export default {
       const user = req.user;
       const { itemId } = req.params;
 
-      const item = await itemService.getUserItems(user._id, itemId);
+      const item = await itemService.getItem(itemId, user._id)
 
       if (!item) {
         return res.status(404).json({

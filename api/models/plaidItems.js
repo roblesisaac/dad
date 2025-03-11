@@ -36,6 +36,12 @@ const itemSchema = {
       inRecoveryMode: false,
       recoveryAttempts: 0,
       lastRecoveryTime: null,
+      // Track counts from the last sync operation for validation
+      lastSyncCounts: {
+        expected: { added: 0, modified: 0, removed: 0 },
+        actual: { added: 0, modified: 0, removed: 0 },
+        countsMatch: true
+      },
       stats: {
         added: 0,
         modified: 0,

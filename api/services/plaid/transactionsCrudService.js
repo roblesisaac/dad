@@ -8,26 +8,6 @@ import { CustomError } from './customError.js';
  */
 class TransactionQueryService extends PlaidBaseService {
   /**
-   * Get the latest transaction date from a set of transactions
-   * @private
-   */
-  _getLatestTransactionDate(transactions) {
-    if (!transactions || !transactions.length) {
-      return null;
-    }
-    
-    // Sort transactions by date (descending)
-    const sorted = [...transactions].sort((a, b) => {
-      const dateA = new Date(a.date || a.authorized_date);
-      const dateB = new Date(b.date || b.authorized_date);
-      return dateB - dateA;
-    });
-    
-    // Return the date of the most recent transaction
-    return sorted[0].date || sorted[0].authorized_date;
-  }
-
-  /**
    * Format a date range query for specific account
    * @private
    */
@@ -117,55 +97,20 @@ class TransactionQueryService extends PlaidBaseService {
     }
   }
 
-  /**
-   * Builds a query for transactions based on user ID and query parameters.
-   * @param {string} userId - User ID.
-   * @param {Object} queryParams - Query parameters.
-   * @returns {Object} Formatted query.
-   */
-  buildUserQueryForTransactions(userId, queryParams) {
-    const { account_id, date, limit, offset, sort_by, sort_desc } = queryParams;
-    
-    // Start with the user ID
-    const query = { userId };
-    
-    // Add account ID if specified
-    if (account_id) {
-      query.account_id = account_id;
-    }
-    
-    // Add date range if specified
-    if (date) {
-      // Parse the date range
-      const [startDate, endDate] = date.split('_');
-      
-      if (startDate && endDate) {
-        // Date range query
-        query.date = `${startDate.trim()}|${endDate.trim()}`;
-      } else if (startDate) {
-        // Single date query
-        query.date = startDate.trim();
-      }
-    }
-    
-    // Add pagination
-    const options = {};
-    if (limit) {
-      options.limit = parseInt(limit, 10);
-    }
-    if (offset) {
-      options.offset = parseInt(offset, 10);
-    }
-    
-    // Add sorting
-    if (sort_by) {
-      options.sort = { [sort_by]: sort_desc === 'true' ? -1 : 1 };
-    } else {
-      // Default sort by date, newest first
-      options.sort = { date: -1 };
-    }
-    
-    return { query, options };
+  async fetchTransactionByTransactionId(transactionId, userId) {
+    const transaction = await plaidTransactions.findOne({
+      transaction_id: transactionId,
+      userId
+    });
+    return transaction;
+  }
+
+  async fetchTransactionsBySyncId(syncId, userId) {
+    const transactions = await plaidTransactions.findAll({
+      syncId,
+      userId
+    });
+    return transactions;
   }
 
   /**
@@ -176,8 +121,9 @@ class TransactionQueryService extends PlaidBaseService {
   async findDuplicates(userId) {
     try {
       // Find potential duplicates based on name, amount, and date
-      const transactions = await plaidTransactions.find({
-        userId
+      const transactions = await plaidTransactions.findAll({
+        userId,
+        transaction_id: '*'
       });
       
       const duplicateGroups = {};
@@ -208,6 +154,24 @@ class TransactionQueryService extends PlaidBaseService {
       console.error('Error finding duplicates:', error);
       throw new CustomError('DUPLICATE_SEARCH_ERROR', error.message);
     }
+  }
+
+  /**
+   * Removes transactions by ID with error handling
+   */
+  async removeTransactionsById(transactionIds, userId) {
+    let removedCount = 0;
+    for (const id of transactionIds) {
+      try {
+        const result = await plaidTransactions.erase({ transaction_id: id, userId });
+        if (result.removed) {
+          removedCount++;
+        }
+      } catch (error) {
+        console.error(`Failed to remove transaction ${id}:`, error.message);
+      }
+    }
+    return removedCount;
   }
 }
 

@@ -1,6 +1,7 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
 import { decrypt, decryptWithKey } from '../../utils/encryption.js';
+import { CustomError } from './customError.js';
 
 class ItemService extends PlaidBaseService {
   decryptAccessToken(item, user) {
@@ -20,26 +21,31 @@ class ItemService extends PlaidBaseService {
     }
   }
 
-  async getUserItems(userId, itemId = null) {
+  async getUserItems(userId) {
     if (!userId) {
       throw new Error('INVALID_USER: User ID is required');
     }
 
     try {
-      if (itemId) {
-        const item = await plaidItems.findOne({ userId, itemId });
-        if (!item) {
-          return null;
-        }
-        item.user = { _id: userId };
-        return item;
+      const { items } = await plaidItems.find({ itemId: '*', userId });
+
+      if (!items) {
+        return [];
       }
 
-      const { items } = await plaidItems.find({ itemId: '*', userId });
       return items.map(item => ({ ...item, user: { _id: userId } }));
     } catch (error) {
       throw new Error(`ITEM_FETCH_ERROR: ${error.message}`);
     }
+  }
+
+  async getItem(itemId, userId) {
+    const item = await plaidItems.findOne({ itemId, userId });
+    if (!item) {
+      return null;
+    }
+    item.user = { _id: userId };
+    return item;
   }
 
   /**
@@ -56,7 +62,7 @@ class ItemService extends PlaidBaseService {
       }
 
       // Get the current item first
-      const currentItem = await this.getUserItems(userId, itemId);
+      const currentItem = await this.getItem(itemId, userId);
       
       if (!currentItem) {
         throw new Error('ITEM_NOT_FOUND: Could not find item to update');
@@ -108,7 +114,7 @@ class ItemService extends PlaidBaseService {
       }
       
       // Return the updated item
-      return this.getUserItems(userId, itemId);
+      return updatedItem;
     } catch (error) {
       console.error('Error updating item sync status:', error);
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
@@ -151,6 +157,42 @@ class ItemService extends PlaidBaseService {
       console.error('Save error:', error);
       throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
     }
+  }
+
+  /**
+   * Validates item data and retrieves it if needed
+   * @param {Object|String} item - Item object or ID
+   * @param {Object} user - User object
+   * @returns {Object} Validated item object
+   */
+  async validateAndGetItem(item, user) {
+    // If item is a string (ID), fetch the actual item
+    if (typeof item === 'string') {
+      const fetchedItem = await this.getItem(item, user._id)
+      if (!fetchedItem) {
+        throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
+      }
+      return fetchedItem;
+    }
+    
+    // If item is an object, ensure it has required fields
+    if (typeof item === 'object' && item !== null) {
+      if (!item.itemId && !item._id) {
+        throw new CustomError('INVALID_ITEM', 'Item is missing ID');
+      }
+      
+      if (!item.accessToken) {
+        const fetchedItem = await this.getItem(item._id, user._id);
+        if (!fetchedItem) {
+          throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
+        }
+        return fetchedItem;
+      }
+      
+      return item;
+    }
+    
+    throw new CustomError('INVALID_ITEM', 'Invalid item data type');
   }
 }
 

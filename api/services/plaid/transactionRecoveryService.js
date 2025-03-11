@@ -1,7 +1,7 @@
 import PlaidBaseService from './baseService.js';
-import plaidTransactions from '../../models/plaidTransactions.js';
 import itemService from './itemService.js';
 import { CustomError } from './customError.js';
+import transactionsCrudService from './transactionsCrudService.js';
 
 /**
  * Service responsible for transaction recovery operations
@@ -17,7 +17,7 @@ class TransactionRecoveryService extends PlaidBaseService {
   async recoverFailedSync(item, user) {
     try {
       // Get item data
-      const validatedItem = await this._validateAndGetItem(item, user);
+      const validatedItem = await itemService.validateAndGetItem(item, user);
       
       if (!validatedItem) {
         throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
@@ -91,10 +91,7 @@ class TransactionRecoveryService extends PlaidBaseService {
    * @private
    */
   async _findReferenceTransaction(cursorToRevertTo, userId) {
-    const referenceTx = await plaidTransactions.findOne({
-      cursor: cursorToRevertTo,
-      userId
-    });
+    const referenceTx = await transactionsCrudService.fetchTransactionByTransactionId(cursorToRevertTo, userId);
     
     if (!referenceTx) {
       return { 
@@ -145,18 +142,12 @@ class TransactionRecoveryService extends PlaidBaseService {
    * Filters transactions to determine which ones should be reverted
    * @private
    */
-  _filterTransactionsToRevert(newerTransactions, referenceTx) {
-    // Add debug output for reference transaction
-    console.log(`Reference transaction: ID=${referenceTx._id}, batchNumber=${referenceTx.batchNumber}, processedAt=${referenceTx.processedAt}`);
-    
+  _filterTransactionsToRevert(newerTransactions, referenceTx) {    
     // Filter and log detailed information about why transactions are included/excluded
     return newerTransactions.filter(tx => {
-      // Debug information for each transaction being evaluated
-      const logPrefix = `Transaction ${tx.transaction_id}`;
       
       // Exclude the reference transaction itself
       if (tx._id === referenceTx._id) {
-        console.log(`${logPrefix}: Excluded - Is the reference transaction itself`);
         return false;
       }
       
@@ -170,42 +161,19 @@ class TransactionRecoveryService extends PlaidBaseService {
         const refTimestamp = refSyncIdParts[refSyncIdParts.length - 1];
         
         const shouldRevert = txTimestamp > refTimestamp;
-        console.log(`${logPrefix}: ${shouldRevert ? 'Included' : 'Excluded'} - Using syncId timestamp comparison: ${txTimestamp} vs ${refTimestamp}`);
         return shouldRevert;
       }
       
       // Handle transactions in the same batch
       if (tx.batchNumber === referenceTx.batchNumber) {
-        // For same batch number, only include if processed after the reference
         const shouldRevert = tx.processedAt > referenceTx.processedAt;
-        console.log(`${logPrefix}: ${shouldRevert ? 'Included' : 'Excluded'} - Same batch: ${tx.batchNumber}, processedAt comparison: ${tx.processedAt} vs ${referenceTx.processedAt}`);
         return shouldRevert;
       }
       
       // Include all transactions with higher batch numbers
       const shouldRevert = tx.batchNumber > referenceTx.batchNumber;
-      console.log(`${logPrefix}: ${shouldRevert ? 'Included' : 'Excluded'} - Batch number comparison: ${tx.batchNumber} vs ${referenceTx.batchNumber}`);
       return shouldRevert;
     });
-  }
-
-  /**
-   * Removes transactions by ID with error handling
-   * @private
-   */
-  async _removeTransactionsById(transactionIds, userId) {
-    let removedCount = 0;
-    for (const id of transactionIds) {
-      try {
-        const result = await plaidTransactions.erase({ transaction_id: id, userId });
-        if (result.removed) {
-          removedCount++;
-        }
-      } catch (error) {
-        console.error(`Failed to remove transaction ${id}:`, error.message);
-      }
-    }
-    return removedCount;
   }
 
   /**
@@ -238,16 +206,10 @@ class TransactionRecoveryService extends PlaidBaseService {
       
       // Use the label4 (syncId) query directly for more efficient querying
       // This leverages the label4 defined in the plaidTransactions model
-      const { items: newerTransactions = [] } = await plaidTransactions.find({
-        syncId: syncIdRange,
-        userId
-      });
-      
-      console.log(`Retrieved ${newerTransactions.length} transactions in the specified range`);
+      const { items: newerTransactions = [] } = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
       
       // Filter transactions that should be reverted
       const transactionsToRevert = this._filterTransactionsToRevert(newerTransactions, referenceTx);
-      console.log(`Final transactions to revert: ${transactionsToRevert.length}`);
       
       // Get transaction IDs to remove
       const txIdsToRemove = transactionsToRevert.map(tx => tx.transaction_id);
@@ -263,7 +225,7 @@ class TransactionRecoveryService extends PlaidBaseService {
       }
       
       // Remove the transactions
-      const removedCount = await this._removeTransactionsById(txIdsToRemove, userId);
+      const removedCount = await transactionsCrudService.removeTransactionsById(txIdsToRemove, userId);
       
       // Update the item's sync status to use the cursor we reverted to
       await itemService.updateItemSyncStatus(itemId, userId, {
@@ -283,41 +245,6 @@ class TransactionRecoveryService extends PlaidBaseService {
         operation: 'revert_transactions' 
       });
     }
-  }
-
-  /**
-   * Validates item data and retrieves it if needed
-   * @private
-   */
-  async _validateAndGetItem(item, user) {
-    // If item is a string (ID), fetch the actual item
-    if (typeof item === 'string') {
-      const fetchedItem = await itemService.getItem(item, user._id);
-      if (!fetchedItem) {
-        throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
-      }
-      return fetchedItem;
-    }
-    
-    // If item is an object, ensure it has required fields
-    if (typeof item === 'object' && item !== null) {
-      if (!item.itemId && !item._id) {
-        throw new CustomError('INVALID_ITEM', 'Item is missing ID');
-      }
-      
-      if (!item.accessToken) {
-        // If no access token, fetch the full item
-        const fetchedItem = await itemService.getItem(item.itemId || item._id, user._id);
-        if (!fetchedItem) {
-          throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
-        }
-        return fetchedItem;
-      }
-      
-      return item;
-    }
-    
-    throw new CustomError('INVALID_ITEM', 'Invalid item data type');
   }
 }
 

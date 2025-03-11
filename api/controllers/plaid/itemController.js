@@ -7,7 +7,11 @@ export default {
   async getUserItems(req, res) {
     try {
       const { _id: itemId } = req.params;
-      const items = await itemService.getUserItems(req.user._id, itemId);
+      const userId = req.user._id;
+      const items = itemId 
+        ? await itemService.getItem(itemId, userId) 
+        : await itemService.getUserItems(userId);
+        
       res.json(scrub(items, 'accessToken'));
     } catch (error) {
       const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');

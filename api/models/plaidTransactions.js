@@ -64,8 +64,6 @@ const transactionSchema = {
   account_owner: String,
   syncId: {
     set: (_, { user, itemId, batchTime }) => {
-      // Create a more meaningful syncId combining userId, itemId and batch time
-      // Format: userId_itemId_timestamp - ensure consistent format for BETWEEN queries
       return `${user._id}_${itemId}_${batchTime || Date.now()}`;
     }
   },

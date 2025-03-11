@@ -1,4 +1,4 @@
-import transactionQueryService from '../../services/plaid/transactionQueryService.js';
+import transactionQueryService from '../../services/plaid/transactionsCrudService.js';
 import transactionManagementService from '../../services/plaid/transactionManagementService.js';
 
 export default {
