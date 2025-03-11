@@ -1,7 +1,8 @@
 import PlaidBaseService from './baseService.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
-import { itemService, plaidService } from './index.js';
+import itemService from './itemService.js';
+import plaidService from './plaidService.js';
 
 class PlaidAccountService extends PlaidBaseService {
   async syncAccountsAndGroups(user) {

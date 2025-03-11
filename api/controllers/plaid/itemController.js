@@ -1,4 +1,6 @@
-import { plaidService, itemService, accountService } from '../../services/plaid';
+import plaidService from '../../services/plaid/plaidService.js';
+import itemService from '../../services/plaid/itemService.js';
+import accountService from '../../services/plaid/accountService.js';
 import scrub from '../../utils/scrub';
 
 export default {

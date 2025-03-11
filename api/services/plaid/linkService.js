@@ -1,5 +1,5 @@
 import PlaidBaseService from './baseService.js';
-import { itemService } from './index.js';
+import itemService from './itemService.js';
 import crypto from 'crypto';
 
 class PlaidLinkService extends PlaidBaseService {

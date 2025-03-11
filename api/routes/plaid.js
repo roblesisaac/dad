@@ -1,4 +1,7 @@
-import plaidController from '../controllers/plaid';
+import linkController from '../controllers/plaid/linkController.js';
+import itemController from '../controllers/plaid/itemController.js';
+import transactionController from '../controllers/plaid/transactionController.js';
+import maintenanceController from '../controllers/plaid/maintenanceController.js';
 import Protect from '../middlewares/protect';
 
 export default function(api, baseUrl) {
@@ -6,19 +9,19 @@ export default function(api, baseUrl) {
   const member = protect('member');
 
   // Link and Authentication
-  member.post('/plaid/connect/link/:itemId?', plaidController.connectLink);
-  member.post('/plaid/exchange/token', plaidController.exchangeTokenAndSavePlaidItem);
+  member.post('/plaid/connect/link/:itemId?', linkController.createLink);
+  member.post('/plaid/exchange/token', linkController.exchangeTokenAndSavePlaidItem);
 
   // Items and Accounts
-  member.get('/plaid/items/:_id?', plaidController.getUserItems);
-  member.get('/plaid/sync/items', plaidController.retreivePlaidItems);
-  member.get('/plaid/sync/accounts/and/groups', plaidController.syncAccountsAndGroups);
+  member.get('/plaid/items/:_id?', itemController.getUserItems);
+  member.get('/plaid/sync/items', itemController.syncItems);
+  member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
 
   // Transactions
-  member.get('/plaid/transactions/:_id?', plaidController.getTransactions);
-  member.get('/plaid/sync/latest/transactions/:itemId', plaidController.syncLatestTransactionsForItem);
+  member.get('/plaid/transactions/:_id?', transactionController.getTransactions);
+  member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
   
   // Maintenance
-  member.get('/plaid/get/duplicates', plaidController.getDuplicates);
-  member.post('/plaid/remove/duplicates', plaidController.removeFromDb);
+  member.get('/plaid/get/duplicates', maintenanceController.getDuplicates);
+  member.post('/plaid/remove/duplicates', maintenanceController.removeDuplicates);
 }

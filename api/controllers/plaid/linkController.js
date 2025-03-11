@@ -1,4 +1,5 @@
-import { itemService, linkService } from '../../services/plaid';
+import itemService from '../../services/plaid/itemService.js';
+import linkService from '../../services/plaid/linkService.js';
 
 export default {
   async createLink(req, res) {

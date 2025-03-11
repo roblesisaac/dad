@@ -1,4 +1,6 @@
-import { transactionService, itemService } from '../../services/plaid/index.js';
+import itemService from '../../services/plaid/itemService.js';
+import transactionQueryService from '../../services/plaid/transactionQueryService.js';
+import transactionSyncService from '../../services/plaid/transactionSyncService2.js';
 
 export default {
   /**
@@ -11,11 +13,11 @@ export default {
       
       // Handle case with transaction ID
       if (_id) {
-        const transaction = await transactionService.fetchTransactionById(_id, user._id);
+        const transaction = await transactionQueryService.fetchTransactionById(_id, user._id);
         return res.json(transaction);
       }
       
-      const transactions = await transactionService.fetchTransactions(req.user, req.query);
+      const transactions = await transactionQueryService.fetchTransactions(req.user, req.query);
       
       return res.json(transactions);
     } catch (error) {
@@ -53,13 +55,50 @@ export default {
         });
       }
 
-      const batchResult = await transactionService.syncNextBatch(item, user);
+      const syncResult = await transactionSyncService.syncTransactions(item, user);
 
-      return res.json(batchResult);
+      const batchResults = {
+        added: syncResult.added,
+        modified: syncResult.modified,
+        removed: syncResult.removed
+      };
+
+      const response = {
+        hasMore: syncResult.hasMore,
+        cursor: syncResult.cursor,
+        batchResults,
+      };
+      
+      if (syncResult.recoveryPerformed) {
+        response.recovery = {
+          performed: true,
+          revertedTo: syncResult.revertedTo,
+          removedTransactions: syncResult.recoveryRemovedCount
+        };
+      }
+
+      return res.json(response);
     } catch (error) {
-      return res.status(400).json({
-        error: 'TRANSACTION_ERROR',
-        message: error.message
+      let status = 400;
+      let errorCode = 'TRANSACTION_ERROR';
+      let errorMessage = error.message;
+      
+      if (error.code === 'SYNC_IN_PROGRESS') {
+        status = 409;
+      } else if (error.code === 'ITEM_NOT_FOUND') {
+        status = 404;
+      } else if (error.code === 'RECOVERY_FAILED') {
+        status = 500;
+        errorCode = 'RECOVERY_FAILED';
+      }
+      
+      if (error.code) {
+        errorCode = error.code;
+      }
+      
+      return res.status(status).json({
+        error: errorCode,
+        message: errorMessage
       });
     }
   }

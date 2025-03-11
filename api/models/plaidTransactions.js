@@ -65,7 +65,7 @@ const transactionSchema = {
   syncId: {
     set: (_, { user, itemId, batchTime }) => {
       // Create a more meaningful syncId combining userId, itemId and batch time
-      // Format: userId_itemId_timestamp
+      // Format: userId_itemId_timestamp - ensure consistent format for BETWEEN queries
       return `${user._id}_${itemId}_${batchTime || Date.now()}`;
     }
   },
@@ -94,16 +94,7 @@ const transactionSchema = {
     concat: ['account_id', 'authorized_date']
   },
   label4: 'syncId',
-  label5: {
-    name: 'category',
-    computed: item => {
-      const cat = item.personal_finance_category;
-      const details = cat.primary+cat.detailed+cat.confidence_level;
-      const response = details || '';
-
-      return response.toLowerCase();
-    }
-  }
+  label5: 'cursor'
 }
 
 export default AmptModel(['plaidtransactions', 'userId'], transactionSchema);

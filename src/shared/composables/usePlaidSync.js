@@ -17,7 +17,7 @@ export function usePlaidSync() {
   const syncProgress = ref({});
   const currentBankIndex = ref(0);
   const syncedBanks = ref([]);
-  const MAX_RETRIES = 3; // Max retries per sync operation
+  const MAX_RETRIES = 0; // Max retries per sync operation
 
   /**
    * Sync latest transactions for a single bank/item
