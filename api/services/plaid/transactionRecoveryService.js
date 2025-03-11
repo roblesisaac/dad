@@ -102,7 +102,7 @@ class TransactionRecoveryService extends PlaidBaseService {
     
     // Validate syncId format
     const syncIdParts = referenceTx.syncId.split('_');
-    if (syncIdParts.length < 3) {
+    if (syncIdParts.length < 2) {
       return {
         valid: false,
         message: 'Reference transaction has invalid syncId format'
