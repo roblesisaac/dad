@@ -182,7 +182,7 @@ class ItemService extends PlaidBaseService {
       }
       
       if (!item.accessToken) {
-        const fetchedItem = await this.getItem(item._id, user._id);
+        const fetchedItem = await this.getItem(item.itemId, user._id);
         if (!fetchedItem) {
           throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
         }

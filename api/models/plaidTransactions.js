@@ -63,15 +63,13 @@ const transactionSchema = {
   },
   account_owner: String,
   syncId: {
-    set: (_, { user, itemId, batchTime }) => {
-      return `${user._id}_${itemId}_${batchTime || Date.now()}`;
+    set: (_, { itemId, batchTime }) => {
+      return `${itemId}_${batchTime || Date.now()}`;
     }
   },
-  syncVersion: Number,
   batchNumber: Number,
   processedAt: String,
   cursor: String,
-  hasMore: Boolean,
   transaction_id: {
     type: String,
     unique: true

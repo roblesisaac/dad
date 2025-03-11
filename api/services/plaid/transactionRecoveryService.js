@@ -57,7 +57,7 @@ class TransactionRecoveryService extends PlaidBaseService {
       }
       
       // Update recovery stats
-      await itemService.updateItemSyncStatus(validatedItem.itemId || validatedItem._id, user._id, {
+      await itemService.updateItemSyncStatus(validatedItem.itemId, user._id, {
         recoveryAttempts: (syncData.recoveryAttempts || 0) + 1,
         lastRecoveryAt: new Date().toISOString()
       });
@@ -91,7 +91,7 @@ class TransactionRecoveryService extends PlaidBaseService {
    * @private
    */
   async _findReferenceTransaction(cursorToRevertTo, userId) {
-    const referenceTx = await transactionsCrudService.fetchTransactionByTransactionId(cursorToRevertTo, userId);
+    const referenceTx = await transactionsCrudService.fetchTransactionByCursor(cursorToRevertTo, userId);
     
     if (!referenceTx) {
       return { 
@@ -120,9 +120,9 @@ class TransactionRecoveryService extends PlaidBaseService {
    * Builds a syncId range query for finding transactions newer than a reference point
    * @private
    */
-  _buildSyncIdRangeQuery(userId, itemId, referenceBatchTime) {
+  _buildSyncIdRangeQuery(itemId, referenceBatchTime) {
     // Format base values without prefix
-    const baseSyncId = `${userId}_${itemId}`;
+    const baseSyncId = `${itemId}`;
     
     // Start from the reference batch time
     const startValue = `${baseSyncId}_${referenceBatchTime}`;
@@ -202,9 +202,8 @@ class TransactionRecoveryService extends PlaidBaseService {
       const referenceBatchTime = referenceResult.batchTime;
       
       // Build syncId range query
-      const syncIdRange = this._buildSyncIdRangeQuery(userId, itemId, referenceBatchTime);
+      const syncIdRange = this._buildSyncIdRangeQuery(itemId, referenceBatchTime);
       
-      // Use the label4 (syncId) query directly for more efficient querying
       // This leverages the label4 defined in the plaidTransactions model
       const { items: newerTransactions = [] } = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
       

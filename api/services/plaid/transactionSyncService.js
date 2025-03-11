@@ -85,19 +85,7 @@ class TransactionSyncService {
    * @private
    */
   async _getAndLockItem(item, user) {
-    let itemData;
-    
-    if (typeof item === 'string') {
-      // Get item by ID
-      itemData = await itemService.getItem(item, user._id);
-    } else if (typeof item === 'object' && item !== null) {
-      // Use provided item or fetch if missing fields
-      if (!item.accessToken) {
-        itemData = await itemService.getItem(item.itemId || item._id, user._id);
-      } else {
-        itemData = item;
-      }
-    }
+    const itemData = await itemService.validateAndGetItem(item, user);
     
     if (!itemData) {
       throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
@@ -110,10 +98,11 @@ class TransactionSyncService {
     
     // Set status to in_progress
     const now = new Date().toISOString();
-    await itemService.updateItemSyncStatus(itemData.itemId, user._id, {
+    await itemService.updateItemSyncStatus(
+      itemData.itemId, 
+      user._id, {
       status: 'in_progress',
       lastSyncTime: now, // match plaidItems schema
-      syncVersion: Date.now(), // update sync version
       error: null // clear any previous errors
     });
     
@@ -324,7 +313,6 @@ class TransactionSyncService {
     const syncDataUpdate = {
       cursor: syncResult.cursor,
       lastSuccessfulCursor: syncResult.countsMatch ? syncResult.cursor : item.syncData?.lastSuccessfulCursor,
-      lastSuccessfulSyncTime: syncResult.countsMatch ? now : item.syncData?.lastSuccessfulSyncTime,
       lastSyncTime: now,
       status,
       error,

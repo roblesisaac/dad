@@ -110,7 +110,16 @@ class TransactionQueryService extends PlaidBaseService {
       syncId,
       userId
     });
+    
     return transactions;
+  }
+
+  async fetchTransactionByCursor(cursor, userId) {
+    const transaction = await plaidTransactions.findOne({
+      cursor,
+      userId
+    });
+    return transaction;
   }
 
   /**

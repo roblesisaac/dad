@@ -27,15 +27,9 @@ const itemSchema = {
       status: 'pending',
       cursor: null,
       lastSuccessfulCursor: null,
-      nextCursor: null,
       lastSyncTime: null,
-      lastSuccessfulSyncTime: null,
-      syncVersion: 0,
       error: null,
-      history: [],
-      inRecoveryMode: false,
       recoveryAttempts: 0,
-      lastRecoveryTime: null,
       // Track counts from the last sync operation for validation
       lastSyncCounts: {
         expected: { added: 0, modified: 0, removed: 0 },
@@ -51,7 +45,6 @@ const itemSchema = {
     })
   },
   
-  accessTokenExpiration: String,
   label1: 'itemId',
   label2: 'cursor'
 };
