@@ -113,9 +113,7 @@ class TransactionSyncService {
    * Process transaction sync data from Plaid
    * @private
    */
-  async _processSyncData(item, user, cursor) {
-    const now = new Date().toISOString();
-    
+  async _processSyncData(item, user, cursor) {    
     // Call Plaid to get transactions
     const accessToken = itemService.decryptAccessToken(item, user);
     const plaidData = await plaidService.syncLatestTransactionsFromPlaid(
@@ -135,10 +133,14 @@ class TransactionSyncService {
       removed: plaidData.removed?.length || 0
     };
     
+    // Use the current cursor for transaction processing to correctly track which sync operation
+    // was responsible for this transaction. This is important for recovery and auditing.
+    const currentCursor = cursor || 'initial_sync';
+    
     // Process transactions in parallel with transaction safety
     const [addedCount, modifiedCount, removedCount] = await Promise.all([
-      this._processAddedTransactions(plaidData.added, item, user, plaidData.next_cursor),
-      this._processModifiedTransactions(plaidData.modified, user, plaidData.next_cursor),
+      this._processAddedTransactions(plaidData.added, item, user, currentCursor),
+      this._processModifiedTransactions(plaidData.modified, user, currentCursor),
       this._processRemovedTransactions(plaidData.removed, user._id)
     ]);
     
