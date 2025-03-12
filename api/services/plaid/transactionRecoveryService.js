@@ -203,10 +203,10 @@ class TransactionRecoveryService extends PlaidBaseService {
       
       // Build syncId range query
       const syncIdRange = this._buildSyncIdRangeQuery(itemId, referenceBatchTime);
-      
+
       // This leverages the label4 defined in the plaidTransactions model
-      const { items: newerTransactions = [] } = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
-      
+      const newerTransactions = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
+
       // Filter transactions that should be reverted
       const transactionsToRevert = this._filterTransactionsToRevert(newerTransactions, referenceTx);
       

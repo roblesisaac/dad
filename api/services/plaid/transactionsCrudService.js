@@ -111,7 +111,7 @@ class TransactionQueryService extends PlaidBaseService {
       userId
     });
     
-    return transactions;
+    return transactions || [];
   }
 
   async fetchTransactionByCursor(cursor, userId) {
