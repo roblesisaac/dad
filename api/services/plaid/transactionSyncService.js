@@ -137,8 +137,8 @@ class TransactionSyncService {
     
     // Process transactions in parallel with transaction safety
     const [addedCount, modifiedCount, removedCount] = await Promise.all([
-      this._processAddedTransactions(plaidData.added, item, user, now, plaidData.next_cursor),
-      this._processModifiedTransactions(plaidData.modified, user, now, plaidData.next_cursor),
+      this._processAddedTransactions(plaidData.added, item, user, plaidData.next_cursor),
+      this._processModifiedTransactions(plaidData.modified, user, plaidData.next_cursor),
       this._processRemovedTransactions(plaidData.removed, user._id)
     ]);
     
@@ -171,7 +171,7 @@ class TransactionSyncService {
    * Process and save added transactions
    * @private
    */
-  async _processAddedTransactions(transactions, item, user, processedAt, cursor) {
+  async _processAddedTransactions(transactions, item, user, cursor) {
     if (!transactions || !transactions.length) {
       return 0;
     }
@@ -182,7 +182,6 @@ class TransactionSyncService {
         ...transaction,
         userId: user._id,
         itemId: item.itemId,
-        processedAt,
         cursor,
         user: { _id: user._id },
         batchTime // Add batchTime to ensure unique syncId generation
@@ -202,7 +201,7 @@ class TransactionSyncService {
    * Process and update modified transactions
    * @private
    */
-  async _processModifiedTransactions(transactions, user, processedAt, cursor) {
+  async _processModifiedTransactions(transactions, user, cursor) {
     if (!transactions || !transactions.length) {
       return 0;
     }
@@ -218,7 +217,6 @@ class TransactionSyncService {
         delete updates._id;
         
         // Add metadata
-        updates.processedAt = processedAt;
         updates.cursor = cursor;
         updates.batchTime = batchTime; // Add batchTime to ensure unique syncId generation
         

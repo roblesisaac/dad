@@ -67,8 +67,6 @@ const transactionSchema = {
       return `${itemId}_${batchTime || Date.now()}`;
     }
   },
-  batchNumber: Number,
-  processedAt: String,
   cursor: String,
   transaction_id: {
     type: String,

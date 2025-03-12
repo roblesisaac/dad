@@ -124,8 +124,12 @@ class TransactionRecoveryService extends PlaidBaseService {
     // Format base values without prefix
     const baseSyncId = `${itemId}`;
     
-    // Start from the reference batch time
-    const startValue = `${baseSyncId}_${referenceBatchTime}`;
+    // Increment the batch time by 1 to exclude the reference transaction
+    // and any transactions exactly at the same time
+    const incrementedBatchTime = parseInt(referenceBatchTime) + 1;
+    
+    // Start from the incremented reference batch time
+    const startValue = `${baseSyncId}_${incrementedBatchTime}`;
     
     // End at a very high timestamp value (effectively "infinity")
     const endValue = `${baseSyncId}_999999999999`;
@@ -135,45 +139,7 @@ class TransactionRecoveryService extends PlaidBaseService {
     // startValue|labelName_endValue
     const betweenQuery = `${startValue}|syncId_${endValue}`;
     
-    return betweenQuery
-  }
-
-  /**
-   * Filters transactions to determine which ones should be reverted
-   * @private
-   */
-  _filterTransactionsToRevert(newerTransactions, referenceTx) {    
-    // Filter and log detailed information about why transactions are included/excluded
-    return newerTransactions.filter(tx => {
-      
-      // Exclude the reference transaction itself
-      if (tx._id === referenceTx._id) {
-        return false;
-      }
-      
-      // If batch numbers don't exist, use syncId timestamps for comparison
-      if (!tx.batchNumber || !referenceTx.batchNumber) {
-        // Extract timestamps from syncIds for comparison
-        const txSyncIdParts = (tx.syncId || '').split('_');
-        const refSyncIdParts = (referenceTx.syncId || '').split('_');
-        
-        const txTimestamp = txSyncIdParts[txSyncIdParts.length - 1];
-        const refTimestamp = refSyncIdParts[refSyncIdParts.length - 1];
-        
-        const shouldRevert = txTimestamp > refTimestamp;
-        return shouldRevert;
-      }
-      
-      // Handle transactions in the same batch
-      if (tx.batchNumber === referenceTx.batchNumber) {
-        const shouldRevert = tx.processedAt > referenceTx.processedAt;
-        return shouldRevert;
-      }
-      
-      // Include all transactions with higher batch numbers
-      const shouldRevert = tx.batchNumber > referenceTx.batchNumber;
-      return shouldRevert;
-    });
+    return betweenQuery;
   }
 
   /**
@@ -198,17 +164,13 @@ class TransactionRecoveryService extends PlaidBaseService {
         };
       }
       
-      const referenceTx = referenceResult.transaction;
       const referenceBatchTime = referenceResult.batchTime;
       
-      // Build syncId range query
+      // Build syncId range query that will only return transactions newer than the reference
       const syncIdRange = this._buildSyncIdRangeQuery(itemId, referenceBatchTime);
 
-      // This leverages the label4 defined in the plaidTransactions model
-      const newerTransactions = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
-
-      // Filter transactions that should be reverted
-      const transactionsToRevert = this._filterTransactionsToRevert(newerTransactions, referenceTx);
+      // This will only return transactions after the reference
+      const transactionsToRevert = await transactionsCrudService.fetchTransactionsBySyncId(syncIdRange, userId);
       
       // Get transaction IDs to remove
       const txIdsToRemove = transactionsToRevert.map(tx => tx.transaction_id);
@@ -236,8 +198,7 @@ class TransactionRecoveryService extends PlaidBaseService {
       return {
         reverted: true,
         removedCount,
-        revertedTo: cursorToRevertTo,
-        referenceTime: referenceTx.processedAt
+        revertedTo: cursorToRevertTo
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { 
