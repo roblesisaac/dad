@@ -27,8 +27,63 @@ class TransactionSyncService {
       // 1. Sync initialization - Acquire sync lock on plaid item
       const itemData = await this._getAndLockItem(item, user);
       
-      // 2. Previous sync session handling - Fetch using item.cursor
-      const prevSyncSession = await syncSessionService.getSyncSession(itemData, user);
+      // 2. Previous sync session handling
+      let prevSyncSession = null;
+      
+      // Check for legacy syncData stored directly on the item
+      if (itemData.syncData && itemData.syncData.cursor) {        
+        // Convert legacy syncData format to syncSession format
+        prevSyncSession = {
+          userId: user._id,
+          itemId: itemData.itemId,
+          status: itemData.syncData.status === 'completed' ? 'complete' : itemData.syncData.status,
+          cursor: itemData.syncData.cursor,
+          nextCursor: itemData.syncData.cursor, // In legacy format, there was only one cursor field
+          syncTime: itemData.syncData.lastSyncTime,
+          batchNumber: 1, // Default for legacy data
+          syncCounts: {
+            expected: {
+              added: itemData.syncData.result?.itemsAddedCount || 0,
+              modified: itemData.syncData.result?.itemsModifiedCount || 0,
+              removed: itemData.syncData.result?.itemsRemovedCount || 0
+            },
+            actual: {
+              added: itemData.syncData.result?.itemsAddedCount || 0,
+              modified: itemData.syncData.result?.itemsModifiedCount || 0,
+              removed: itemData.syncData.result?.itemsRemovedCount || 0
+            }
+          },
+          error: itemData.syncData.result?.errorMessage || null
+        };
+        
+        // Save this as a proper syncSession in the database
+        // This ensures future syncs will use the new format
+        try {
+          const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
+            prevSyncSession,
+            user,
+            itemData
+          );
+          
+          if (migratedSession && migratedSession._id) {
+            prevSyncSession = migratedSession;
+            
+            // Remove legacy syncData from item now that we've migrated it
+            await plaidItems.update(
+              { itemId: itemData.itemId, userId: user._id },
+              { $unset: { syncData: "" } }
+            );
+            
+            console.log(`Successfully migrated legacy syncData for item ${itemData.itemId}`);
+          }
+        } catch (migrationError) {
+          console.error(`Error migrating legacy syncData: ${migrationError.message}`);
+          // Continue with in-memory conversion even if database save failed
+        }
+      } else {
+        // No legacy data, use the current method to get sync session
+        prevSyncSession = await syncSessionService.getSyncSession(itemData, user);
+      }
       
       // ------
       // 3. Determine if recovery is needed and perform if necessary

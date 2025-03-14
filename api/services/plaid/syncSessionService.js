@@ -300,6 +300,63 @@ class SyncSessionService {
       }
     );
   }
+
+  /**
+   * Creates a sync session from legacy sync data stored directly on the item
+   * Used for migration from old sync format to new sync session format
+   * @param {Object} legacyData - Converted legacy sync data
+   * @param {Object} user - User object
+   * @param {Object} item - Item data
+   * @returns {Promise<Object>} The created sync session
+   */
+  async createSyncSessionFromLegacy(legacyData, user, item) {
+    if (!legacyData || !legacyData.cursor) {
+      throw new Error('Invalid legacy sync data provided for migration');
+    }
+
+    const syncTime = legacyData.syncTime || Date.now();
+    
+    const syncSession = {
+      userId: user._id,
+      item_id: item._id,
+      itemId: item.itemId,
+      status: legacyData.status || 'complete',
+      cursor: legacyData.cursor,
+      previousCursor: null, // No previous cursor in legacy format
+      nextCursor: legacyData.nextCursor || legacyData.cursor, // Use nextCursor if available, otherwise use cursor
+      prevSuccessfulCursor: legacyData.status === 'complete' ? legacyData.cursor : null,
+      syncTime,
+      batchNumber: legacyData.batchNumber || 1,
+      syncId: `legacy-${randomString(8)}-${syncTime}`,
+      hasMore: false, // Default for migrated data
+      syncCounts: legacyData.syncCounts || {
+        expected: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        },
+        actual: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        }
+      },
+      recoveryAttempts: 0,
+      recoveryStatus: null,
+      migrationDetails: {
+        migratedAt: new Date().toISOString(),
+        fromLegacyFormat: true,
+        originalData: {
+          cursor: legacyData.cursor,
+          syncTime: legacyData.syncTime,
+          status: legacyData.status
+        }
+      }
+    };
+    
+    // Save the migrated sync session
+    return await SyncSessions.save(syncSession);
+  }
 }
 
 export default new SyncSessionService(); 
