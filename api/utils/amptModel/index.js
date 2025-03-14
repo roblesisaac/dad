@@ -77,7 +77,7 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
 
       for (const propName of props) {
         if(!context.hasOwnProperty(propName)) {
-          throw new Error(`Error building _id: Property '${propName}' does not exist in context..`);
+          throw new Error(`Error building _id: Property '${propName}' does not exist in context: ${JSON.stringify(context)}`);
         }
 
         const propValue = String(context[propName]).replaceAll(':', '-');

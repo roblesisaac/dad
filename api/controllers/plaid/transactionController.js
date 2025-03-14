@@ -1,6 +1,6 @@
 import itemService from '../../services/plaid/itemService.js';
 import transactionQueryService from '../../services/plaid/transactionsCrudService.js';
-import transactionSyncService from '../../services/plaid/transactionSyncService.js';
+import transactionSyncService from '../../services/plaid/syncTransactionsService.js';
 
 export default {
   /**

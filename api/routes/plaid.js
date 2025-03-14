@@ -1,7 +1,6 @@
 import linkController from '../controllers/plaid/linkController.js';
 import itemController from '../controllers/plaid/itemController.js';
 import transactionController from '../controllers/plaid/transactionController.js';
-import maintenanceController from '../controllers/plaid/maintenanceController.js';
 import Protect from '../middlewares/protect';
 
 export default function(api, baseUrl) {
@@ -22,6 +21,4 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
   
   // Maintenance
-  member.get('/plaid/get/duplicates', maintenanceController.getDuplicates);
-  member.post('/plaid/remove/duplicates', maintenanceController.removeDuplicates);
 }

@@ -20,33 +20,9 @@ const itemSchema = {
   },
   institutionId: String,
   institutionName: String,
+  sync_id: String,
   
-  syncData: {
-    type: Object,
-    default: () => ({
-      status: 'pending',
-      cursor: null,
-      lastSuccessfulCursor: null,
-      lastSyncTime: null,
-      error: null,
-      recoveryAttempts: 0,
-      // Track counts from the last sync operation for validation
-      lastSyncCounts: {
-        expected: { added: 0, modified: 0, removed: 0 },
-        actual: { added: 0, modified: 0, removed: 0 },
-        countsMatch: true
-      },
-      stats: {
-        added: 0,
-        modified: 0,
-        removed: 0,
-        lastTransactionDate: null
-      }
-    })
-  },
-  
-  label1: 'itemId',
-  label2: 'cursor'
+  label1: 'itemId'
 };
 
 export default AmptModel(['plaiditems', 'userId'], itemSchema);

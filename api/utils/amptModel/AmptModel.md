@@ -57,7 +57,7 @@ const UserModel = AmptModel('users', { /* schema */ });
 
 ```javascript
 const UserPostModel = AmptModel(
-  ['users', 'userId'], // Will create collection names like 'users-123' - requires a userId prop to be included in all find, update, removes
+  ['users', 'userId'], // Will create collection names like 'users-123' - requires a userId prop to be included in all find, findAll update or remove methods
   { /* schema */ }
 );
 ```

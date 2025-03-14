@@ -18,6 +18,7 @@ export function usePlaidSync() {
   const currentBankIndex = ref(0);
   const syncedBanks = ref([]);
   const MAX_RETRIES = 0; // Max retries per sync operation
+  const consecutiveRecoveries = ref({}); // Track consecutive recoveries by itemId
 
   /**
    * Sync latest transactions for a single bank/item
@@ -38,6 +39,11 @@ export function usePlaidSync() {
       let retryCount = 0;
       let totalStats = { added: 0, modified: 0, removed: 0 };
       
+      // Initialize consecutive recoveries tracker for this item if it doesn't exist
+      if (!consecutiveRecoveries.value[itemId]) {
+        consecutiveRecoveries.value[itemId] = 0;
+      }
+      
       // Continue syncing batches until complete
       while (hasMore) {
         try {
@@ -45,15 +51,57 @@ export function usePlaidSync() {
           
           // Call the backend API to process a single batch
           const result = await api.get(`plaid/sync/latest/transactions/${itemId}`);
+
+          console.log('result', result);
           
           if (!result) {
             throw new Error('No response received from sync endpoint');
           }
           
+          // Check if a recovery was performed
+          if (result?.recovery?.performed) {
+            // Increment the consecutive recovery counter
+            consecutiveRecoveries.value[itemId]++;
+            
+            // Check if we've hit the limit of consecutive recoveries
+            if (consecutiveRecoveries.value[itemId] >= 3) {
+              throw new Error(`Transaction recovery has been attempted 3 times in a row. Manual intervention may be required.`);
+            }
+            
+            // Update UI with recovery information
+            updateStatusBar(
+              `Recovery performed: ${result.recovery.removedTransactions || result.recovery.removedCount || 0} transactions removed. Resyncing...`,
+              true
+            );
+            
+            // Update progress state for recovery
+            updateSyncProgress({
+              status: 'recovery',
+              recoveryPerformed: true,
+              recoveryRemovedCount: result.recovery.removedTransactions || result.recovery.removedCount || 0,
+              itemId,
+              message: result.message || 'Recovery performed successfully'
+            });
+            
+            // Wait a moment before continuing with the sync
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Since we've performed a recovery, we need to start a new sync
+            // The next API call will restart the sync with the reset cursor
+            continue;
+          }
+          
+          // If we got here, it means we had a successful sync batch without recovery
+          // Reset the consecutive recovery counter
+          consecutiveRecoveries.value[itemId] = 0;
+
+          // Check if batchResults exists before accessing its properties
+          const batchResults = result.batchResults || { added: 0, modified: 0, removed: 0 };
+          
           // Update stats with the latest batch results
-          totalStats.added += result.batchResults?.added || 0;
-          totalStats.modified += result.batchResults?.modified || 0;
-          totalStats.removed += result.batchResults?.removed || 0;
+          totalStats.added += batchResults.added || 0;
+          totalStats.modified += batchResults.modified || 0;
+          totalStats.removed += batchResults.removed || 0;
           
           // Update UI with progress
           updateStatusBar(
@@ -134,6 +182,16 @@ export function usePlaidSync() {
         itemId,
         error: error.message
       };
+    }
+  };
+  
+  /**
+   * Resets the consecutive recovery counter for an item
+   * @param {string} itemId - Item ID to reset counter for
+   */
+  const resetRecoveryCounter = (itemId) => {
+    if (itemId && consecutiveRecoveries.value) {
+      consecutiveRecoveries.value[itemId] = 0;
     }
   };
   
@@ -233,7 +291,11 @@ export function usePlaidSync() {
         lastSync: progress.lastSync,
         nextSync: progress.nextSync,
         cursor: progress.cursor,
-        batchNumber: progress.batchNumber || 0
+        batchNumber: progress.batchNumber || 0,
+        // Add recovery information if present
+        recoveryPerformed: progress.recoveryPerformed || false,
+        recoveryRemovedCount: progress.recoveryRemovedCount || 0,
+        message: progress.message
       };
     }
     
@@ -281,10 +343,12 @@ export function usePlaidSync() {
     allSyncsComplete,
     syncedBanks,
     currentBankIndex,
+    consecutiveRecoveries,
     
     // Core sync methods
     syncLatestTransactionsForBank,
     syncLatestTransactionsForBanks,
+    resetRecoveryCounter,
     
     // Status methods
     updateStatusBar

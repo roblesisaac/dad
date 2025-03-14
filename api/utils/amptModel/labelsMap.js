@@ -52,8 +52,26 @@ export default function(collectionName, config) {
   }
 
   function createLabelValue(_id, labelName, labelValue) {
-    if(!labelValue.includes('*')) labelValue += '*';
-
+    // Check if the value includes any comparison operators
+    const comparisonOperators = ['>=', '>', '<=', '<'];
+    let hasComparisonOperator = false;
+    let comparisonOperator = '';
+    
+    for (const operator of comparisonOperators) {
+      if (labelValue.includes(operator)) {
+        hasComparisonOperator = true;
+        comparisonOperator = operator;
+        labelValue = labelValue.replace(operator,'');
+        break;
+      }
+    }
+    
+    if (hasComparisonOperator) {
+      return `${_id}:${comparisonOperator}${labelName}_${labelValue}`;
+    }
+    
+    // Original behavior for non-comparison values
+    if (!labelValue.includes('*')) labelValue += '*';
     return `${_id}:${labelName}_${labelValue}`;
   }
 
