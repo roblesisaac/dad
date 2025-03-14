@@ -30,7 +30,7 @@ export function useInit() {
 
   async function init() {
     try {
-      // Start syncing transactions for all connected banks
+      state.isInitialized = false;
       syncLatestTransactionsForAllBanks();
       state.blueBar.message = 'Beginning sync';
       state.blueBar.loading = true;
@@ -59,6 +59,7 @@ export function useInit() {
         state.allUserGroups = groups;
 
         await handleGroupChange();
+        state.isInitialized = true;
       } catch (error) {
         const errorData = error.response?.data;
         state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';

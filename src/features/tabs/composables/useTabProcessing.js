@@ -349,6 +349,38 @@ export function useTabProcessing() {
   }
 
   /**
+   * Waits until the application is fully initialized before proceeding
+   * @param {number} maxWaitTimeMs - Maximum time to wait in milliseconds
+   * @param {number} checkIntervalMs - Interval between checks in milliseconds
+   * @returns {Promise<boolean>} - Resolves to true when initialized, or false if timeout exceeded
+   */
+  async function waitUntilAppIsInitialized(maxWaitTimeMs = 10000, checkIntervalMs = 100) {
+    if (state.isInitialized) {
+      return true;
+    }
+    
+    return new Promise((resolve) => {
+      const startTime = Date.now();
+      
+      const checkInterval = setInterval(() => {
+        // Check if app is initialized
+        if (state.isInitialized) {
+          clearInterval(checkInterval);
+          resolve(true);
+          return;
+        }
+        
+        // Check if we've exceeded the maximum wait time
+        if (Date.now() - startTime > maxWaitTimeMs) {
+          clearInterval(checkInterval);
+          console.warn('Timed out waiting for app to initialize');
+          resolve(false);
+        }
+      }, checkIntervalMs);
+    });
+  }
+
+  /**
   * Process data for all tabs in the selected group
   */
   async function processAllTabsForSelectedGroup() {
@@ -386,6 +418,12 @@ export function useTabProcessing() {
    */
   async function concatAndProcessTransactions(addedTransactions) {
     try {
+      // Wait for app to be initialized before processing transactions
+      const isInitialized = await waitUntilAppIsInitialized();
+      if (!isInitialized) {
+        console.warn('App initialization timeout reached, proceeding with caution');
+      }
+      
       // Only proceed if we have state, a selected group, and transactions
       if (!state || !state.selected || !state.selected.group || !addedTransactions || !addedTransactions.length) {
         return 0;
