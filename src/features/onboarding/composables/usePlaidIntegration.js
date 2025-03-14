@@ -40,7 +40,7 @@ export function usePlaidIntegration() {
   });
 
   // Use our unified composable directly
-  const { syncLatestTransactionsForBank, syncLatestTransactionsForBanks } = usePlaidSync(api, state);
+  const { syncLatestTransactionsForBank, syncLatestTransactionsForAllBanks } = usePlaidSync(api, state);
 
   // Initialize Plaid on component mount
   onMounted(async () => {
@@ -65,7 +65,7 @@ export function usePlaidIntegration() {
       // Otherwise, sync all banks
       const result = itemId 
         ? await syncLatestTransactionsForBank(itemId)
-        : await syncLatestTransactionsForBanks();
+        : await syncLatestTransactionsForAllBanks();
       
       return result;
     } catch (error) {

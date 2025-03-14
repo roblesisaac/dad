@@ -210,7 +210,7 @@ export function usePlaidSync() {
    * 
    * @returns {Promise<Object>} Overall sync results
    */
-  const syncLatestTransactionsForBanks = async () => {
+  const syncLatestTransactionsForAllBanks = async () => {
     try {
       // Reset sync state
       isSyncing.value = true;
@@ -365,7 +365,7 @@ export function usePlaidSync() {
     
     // Core sync methods
     syncLatestTransactionsForBank,
-    syncLatestTransactionsForBanks,
+    syncLatestTransactionsForAllBanks,
     resetRecoveryCounter,
     
     // Status methods

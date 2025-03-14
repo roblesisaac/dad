@@ -21,7 +21,7 @@ export function useInit() {
   const { fetchTransactionsForGroup } = useTransactions();
   const { processAllTabsForSelectedGroup } = useTabProcessing();
   const { state } = useDashboardState();
-  const { syncLatestTransactionsForBanks } = usePlaidSync();
+  const { syncLatestTransactionsForAllBanks } = usePlaidSync();
   
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
@@ -31,7 +31,7 @@ export function useInit() {
   async function init() {
     try {
       // Start syncing transactions for all connected banks
-      syncLatestTransactionsForBanks();
+      syncLatestTransactionsForAllBanks();
       state.blueBar.message = 'Beginning sync';
       state.blueBar.loading = true;
 
