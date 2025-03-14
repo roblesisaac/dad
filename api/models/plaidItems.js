@@ -21,6 +21,40 @@ const itemSchema = {
   institutionId: String,
   institutionName: String,
   sync_id: String,
+
+  syncData: {
+    cursor: {
+      type: String,
+      default: ''
+    },
+    lastSyncId: String,
+    lastSyncTime: Number,
+    result: {
+      sectionedOff: Boolean,
+      itemsAddedCount: {
+        type: Number,
+        default: 0
+      },
+      itemsMergedCount: {
+        type: Number,
+        default: 0
+      },
+      itemsModifiedCount: {
+        type: Number,
+        default: 0
+      },
+      itemsRemovedCount: {
+        type: Number,
+        default: 0
+      },
+      errorMessage: String
+    },
+    status: {
+      type: String,
+      default: '',
+      enum: ['', 'queued', 'in_progress', 'completed', 'failed']
+    }
+  },
   
   label1: 'itemId'
 };

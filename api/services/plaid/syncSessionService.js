@@ -12,11 +12,19 @@ class SyncSessionService {
    * @param {Object} user - User object
    * @param {Object} item - The item data
    * @param {Object} options - Additional options for sync session
+   * @param {Object} plaidData - Data fetched from Plaid containing transaction changes
    * @returns {Promise<Object>} The created sync session and its ID
    */
-  async createNewSyncSession(previousSync, user, item, options = {}) {
+  async createNewSyncSession(previousSync, user, item, options = {}, plaidData = null) {
     const syncTime = Date.now();
     const { batchNumber = 1, syncId = null } = options;
+
+    // Initialize expected counts based on plaidData if available
+    const expectedCounts = {
+      added: plaidData?.added?.length || 0,
+      modified: plaidData?.modified?.length || 0,
+      removed: plaidData?.removed?.length || 0
+    };
 
     const initialSyncSession = {
       userId: previousSync?.userId || user._id,
@@ -36,6 +44,16 @@ class SyncSessionService {
 
       // Initialize hasMore to false - will be set during processing
       hasMore: false,
+      
+      // Initialize syncCounts with expected values from plaidData
+      syncCounts: {
+        expected: expectedCounts,
+        actual: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        }
+      },
       
       recoveryAttempts: 0,
       recoveryStatus: null
@@ -105,17 +123,24 @@ class SyncSessionService {
    * @returns {Promise<void>}
    */
   async updateSyncSessionAfterProcessing(syncSession, syncResult, previousSync, status) {
-    const countsMatch = this.countsMatch({
-      expected: syncResult.expectedCounts,
+    // Get the existing expected counts to preserve them
+    const existingSyncCounts = syncSession.syncCounts || {};
+    const expectedCounts = existingSyncCounts.expected || syncResult.expectedCounts;
+    
+    // Create the updated syncCounts with preserved expected counts
+    const syncCounts = {
+      expected: expectedCounts,
       actual: syncResult.actualCounts
-    });
+    };
+    
+    const countsMatch = this.countsMatch(syncCounts);
     let error = null;
     
     // Check if counts match
     if (!countsMatch) {
       error = {
         code: 'COUNT_MISMATCH',
-        message: `Transaction count mismatch: Expected (${syncResult.expectedCounts.added} added, ${syncResult.expectedCounts.modified} modified, ${syncResult.expectedCounts.removed} removed) vs Actual (${syncResult.actualCounts.added} added, ${syncResult.actualCounts.modified} modified, ${syncResult.actualCounts.removed} removed)`,
+        message: `Transaction count mismatch: Expected (${expectedCounts.added} added, ${expectedCounts.modified} modified, ${expectedCounts.removed} removed) vs Actual (${syncResult.actualCounts.added} added, ${syncResult.actualCounts.modified} modified, ${syncResult.actualCounts.removed} removed)`,
         timestamp: new Date().toISOString()
       };
       console.error(`[TransactionSync] Count mismatch for item ${syncSession.itemId}: ${error.message}`);
@@ -139,10 +164,7 @@ class SyncSessionService {
           syncSession.prevSuccessfulCursor, // Keep existing value
         
         error,
-        syncCounts: {
-          expected: syncResult.expectedCounts,
-          actual: syncResult.actualCounts
-        }
+        syncCounts
       }
     );
     

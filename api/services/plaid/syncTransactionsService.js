@@ -109,7 +109,7 @@ class TransactionSyncService {
       }
       
       // 5. Create a new sync session for normal sync flow
-      const { syncSession, syncTime } = await this._createSyncSession(prevSyncSession, user, itemData);
+      const { syncSession, syncTime } = await this._createSyncSession(prevSyncSession, user, itemData, plaidData);
       const batchNumber = syncSession.batchNumber || 1;
 
       if (!syncSession) {
@@ -215,7 +215,6 @@ class TransactionSyncService {
    * @param {String} cursor - Transaction cursor
    * @param {Number} syncTime - Current sync timestamp
    * @param {Object} plaidData - Pre-fetched data from Plaid
-   * @param {Boolean} hasChanges - Whether changes exist in plaidData
    * @returns {Promise<Object>} Processing results
    * @private
    */
@@ -225,7 +224,7 @@ class TransactionSyncService {
       throw new CustomError('INVALID_PARAMS', 'Missing plaidData for transaction processing');
     }
     
-    // Track expected counts from Plaid
+    // Use the expected counts directly from plaidData
     const expectedCounts = {
       added: plaidData.added?.length || 0,
       modified: plaidData.modified?.length || 0,
@@ -281,10 +280,11 @@ class TransactionSyncService {
    * @param {Object} prevSyncSession - Previous sync session if any
    * @param {Object} user - User object
    * @param {Object} itemData - Item data
+   * @param {Object} plaidData - Plaid data
    * @returns {Promise<Object>} New or updated sync session and syncTime
    * @private
    */
-  async _createSyncSession(prevSyncSession, user, itemData) {
+  async _createSyncSession(prevSyncSession, user, itemData, plaidData) {
     // Check if this is a continuation of a multi-batch sync
     let batchNumber = 1;
     let syncId = null;
@@ -305,7 +305,8 @@ class TransactionSyncService {
       {
         batchNumber, 
         syncId
-      }
+      },
+      plaidData
     );
 
     return syncData;
