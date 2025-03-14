@@ -21,7 +21,7 @@ export function usePlaidSync() {
   const MAX_RETRIES = 0; // Max retries per sync operation
   const consecutiveRecoveries = ref({}); // Track consecutive recoveries by itemId
   const statusBarTimeout = ref(null); // Add ref to track the timeout ID
-  const { processAllTabsForSelectedGroup } = useTabProcessing();
+  const { concatAndProcessTransactions } = useTabProcessing();
 
   /**
    * Sync latest transactions for a single bank/item
@@ -106,7 +106,10 @@ export function usePlaidSync() {
           
           // If there are added transactions in the response and we're in a dashboard view, update visible transactions
           if (result.addedTransactions && result.addedTransactions.length > 0) {
-            await updateVisibleTransactions(result.addedTransactions);
+            const addedCount = await concatAndProcessTransactions(result.addedTransactions);
+            if (addedCount > 0) {
+              updateStatusBar(`Added ${addedCount} new transactions to your current view`, false);
+            }
           }
           
           // Update UI with progress
@@ -350,86 +353,6 @@ export function usePlaidSync() {
     // Cleanup if needed
     isSyncing.value = false;
   });
-  
-  /**
-   * Fetches and updates visible transactions after a sync
-   * @param {Array} addedTransactions - Newly added transactions from the sync response
-   */
-  const updateVisibleTransactions = async (addedTransactions) => {
-    try {
-      // Only proceed if we have state, a selected group, and transactions
-      if (!state || !state.selected || !state.selected.group || !addedTransactions || !addedTransactions.length) {
-        return;
-      }
-      
-      const selectedGroup = state.selected.group;
-      
-      // Get date range from state
-      let startDate, endDate;
-      
-      // Convert date range strings to actual dates
-      if (state.date.start === 'firstOfMonth') {
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else if (state.date.start === 'firstOfYear') {
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), 0, 1);
-      } else {
-        startDate = new Date(state.date.start);
-      }
-      
-      if (state.date.end === 'today') {
-        endDate = new Date();
-      } else {
-        endDate = new Date(state.date.end);
-      }
-      
-      // Filter transactions by date range
-      const dateFilteredTransactions = addedTransactions.filter(transaction => {
-        const txDate = new Date(transaction.date);
-        return txDate >= startDate && txDate <= endDate;
-      });
-      
-      if (dateFilteredTransactions.length === 0) {
-        return;
-      }
-      
-      // Filter transactions for the selected group
-      // Groups have accounts associated with them
-      const groupAccounts = selectedGroup.accounts || [];
-      const groupAccountIds = groupAccounts.map(account => account.account_id);
-      
-      const matchingTransactions = dateFilteredTransactions.filter(transaction => {
-        // Check if transaction's account is in the selected group
-        return groupAccountIds.includes(transaction.account_id);
-      });
-      
-      if (matchingTransactions.length === 0) {
-        return;
-      }
-      
-      // Add matching transactions to the allGroupTransactions array
-      if (!state.selected.allGroupTransactions) {
-        state.selected.allGroupTransactions = [];
-      }
-      
-      // Add new transactions to the array (avoid duplicates by checking transaction_id)
-      const existingIds = new Set(state.selected.allGroupTransactions.map(t => t.transaction_id));
-      const newTransactions = matchingTransactions.filter(t => !existingIds.has(t.transaction_id));
-      
-      if (newTransactions.length === 0) {
-        return;
-      }
-
-      state.selected.allGroupTransactions = [...state.selected.allGroupTransactions, ...newTransactions];
-      
-      processAllTabsForSelectedGroup();
-
-      updateStatusBar(`Added ${newTransactions.length} new transactions to your current view`, false);
-    } catch (error) {
-      console.error('Error updating visible transactions:', error);
-    }
-  };
   
   return {
     // State

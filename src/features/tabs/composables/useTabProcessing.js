@@ -379,8 +379,112 @@ export function useTabProcessing() {
     state.isLoading = false;
   }
 
+  /**
+   * Efficiently adds new transactions to the current view and processes only affected tabs
+   * @param {Array} addedTransactions - New transactions to add
+   * @returns {Number} Count of transactions added to view
+   */
+  async function concatAndProcessTransactions(addedTransactions) {
+    try {
+      // Only proceed if we have state, a selected group, and transactions
+      if (!state || !state.selected || !state.selected.group || !addedTransactions || !addedTransactions.length) {
+        return 0;
+      }
+      
+      const selectedGroup = state.selected.group;
+      
+      // Get date range from state
+      let startDate, endDate;
+      
+      // Convert date range strings to actual dates
+      if (state.date.start === 'firstOfMonth') {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      } else if (state.date.start === 'firstOfYear') {
+        const now = new Date();
+        startDate = new Date(now.getFullYear(), 0, 1);
+      } else {
+        startDate = new Date(state.date.start);
+      }
+      
+      if (state.date.end === 'today') {
+        endDate = new Date();
+      } else {
+        endDate = new Date(state.date.end);
+      }
+      
+      // Filter transactions by date range
+      const dateFilteredTransactions = addedTransactions.filter(transaction => {
+        const txDate = new Date(transaction.date || transaction.authorized_date);
+        return txDate >= startDate && txDate <= endDate;
+      });
+      
+      if (dateFilteredTransactions.length === 0) {
+        return 0;
+      }
+      
+      // Filter transactions for the selected group
+      // Groups have accounts associated with them
+      const groupAccounts = selectedGroup.accounts || [];
+      const groupAccountIds = Array.isArray(groupAccounts) ? 
+        (groupAccounts[0] && typeof groupAccounts[0] === 'object' ? 
+          groupAccounts.map(account => account.account_id) : 
+          groupAccounts) : 
+        [];
+      
+      const matchingTransactions = dateFilteredTransactions.filter(transaction => {
+        // Check if transaction's account is in the selected group
+        return groupAccountIds.includes(transaction.account_id);
+      });
+      
+      if (matchingTransactions.length === 0) {
+        return 0;
+      }
+      
+      // Initialize allGroupTransactions if it doesn't exist
+      if (!state.selected.allGroupTransactions) {
+        state.selected.allGroupTransactions = [];
+      }
+      
+      // Add new transactions to the array (avoid duplicates by checking transaction_id)
+      const existingIds = new Set(state.selected.allGroupTransactions.map(t => t.transaction_id));
+      const newTransactions = matchingTransactions.filter(t => !existingIds.has(t.transaction_id));
+      
+      if (newTransactions.length === 0) {
+        return 0;
+      }
+      
+      // Add new transactions to state
+      state.selected.allGroupTransactions = [...state.selected.allGroupTransactions, ...newTransactions];
+      
+      // Process only tabs in the current group rather than all tabs
+      const tabsForGroup = state.selected.tabsForGroup;
+      if (!tabsForGroup?.length) {
+        return newTransactions.length;
+      }
+      
+      // Only process tabs that are currently visible/selected
+      for (const tab of tabsForGroup) {
+        if (tab.isSelected) {
+          const processed = processTabData(tab);
+          if (processed) {
+            tab.total = processed.tabTotal;
+            tab.categorizedItems = processed.categorizedItems;
+          }
+        }
+      }
+      
+      await nextTick();
+      return newTransactions.length;
+    } catch (error) {
+      console.error('Error concatenating and processing transactions:', error);
+      return 0;
+    }
+  }
+
   return {
     processTabData,
-    processAllTabsForSelectedGroup
+    processAllTabsForSelectedGroup,
+    concatAndProcessTransactions
   };
 }
