@@ -33,7 +33,6 @@ import SelectedItems from './SelectedItems.vue';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useAppStore } from '@/stores/state';
 
-const { stickify } = useAppStore();
 const { fontColor, formatPrice } = useUtils();
 
 const { state, categoryName, categoryItems, categoryTotal } = defineProps({
@@ -87,7 +86,6 @@ function scrollToElement(id) {
 
 onBeforeUnmount(() => {
   selectedTab.categoryName = null;
-  stickify.deregister(id);
 });
 
 </script>

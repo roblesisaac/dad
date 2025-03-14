@@ -46,19 +46,10 @@ import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
 import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';
 
-const { stickify } = useAppStore();
 const { state } = useDashboardState();
 const { init } = useInit();
 
 onMounted(async () => {
-  // Register with a short timeout to ensure DOM is ready
-  setTimeout(() => {
-    try {
-      stickify.register('.sticky-tabs-row');
-    } catch (e) {
-      console.error('Stickify error:', e);
-    }
-  }, 100);
   
   await init();
 });

@@ -3,7 +3,7 @@
     
     <!-- logo -->
     <div class="col-auto text-left font-bold pl-5">
-      <button @click="app.reload" class="h-8 w-8 border-2 border-black rounded text-center font-bold text-black hover:bg-black hover:text-white transition-colors duration-400 cursor-pointer my-[15px] mx-0 p-0">T</button>
+      <button @click="reload" class="h-8 w-8 border-2 border-black rounded text-center font-bold text-black hover:bg-black hover:text-white transition-colors duration-400 cursor-pointer my-[15px] mx-0 p-0">T</button>
       <span class="ml-2">TrackTabs</span>
     </div>
 
@@ -37,22 +37,13 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
 import { Menu } from 'lucide-vue-next';
 import { useNavigation } from '@/shared/composables/useNavigation';
 import { useAppStore } from '@/stores/state';
 
-const { State, stickify } = useAppStore();
+const { State } = useAppStore();
 const { regularLinks, authLink } = useNavigation();
 
-const app = {
-  init() {
-    onMounted(() => {
-      // stickify.register('.topNav');
-    });
-  },
-  reload: () => window.location.reload()
-};
+const reload = () => window.location.reload();
 
-app.init();
 </script>
