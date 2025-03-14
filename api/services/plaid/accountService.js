@@ -132,10 +132,10 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  async updateExistingGroups(existingGroups, updatedAccounts) {
+  async updateExistingGroups(existingGroups=[], updatedAccounts=[]) {
     const updatedGroups = [];
     for (const group of existingGroups) {
-      const accounts = group.accounts.map(account => {
+      const accounts = group.accounts?.map(account => {
         const updatedAccount = updatedAccounts.find(itm => itm.account_id === account.account_id);
         if (!updatedAccount) return account;
 
