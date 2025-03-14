@@ -5,6 +5,7 @@ import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import { useTransactions } from './useTransactions.js';
 import loadScript from '@/shared/utils/loadScript.js';
 
@@ -20,6 +21,7 @@ export function useInit() {
   const { fetchTransactionsForGroup } = useTransactions();
   const { processAllTabsForSelectedGroup } = useTabProcessing();
   const { state } = useDashboardState();
+  const { syncLatestTransactionsForBanks } = usePlaidSync();
   
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
@@ -28,6 +30,8 @@ export function useInit() {
 
   async function init() {
     try {
+      // Start syncing transactions for all connected banks
+      syncLatestTransactionsForBanks();
       state.blueBar.message = 'Beginning sync';
       state.blueBar.loading = true;
 
@@ -99,7 +103,6 @@ export function useInit() {
     }
     
     state.isLoading = false;
-    state.blueBar.message = false;
   }
 
   return {

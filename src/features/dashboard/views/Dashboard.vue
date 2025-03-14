@@ -36,7 +36,6 @@
 import { onMounted } from 'vue';
 import { useAppStore } from '@/stores/state';
 import { useDashboardState } from '../composables/useDashboardState.js';
-import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import { useInit } from '../composables/useInit.js';
 
 // Core Components
@@ -50,7 +49,6 @@ import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';
 const { stickify } = useAppStore();
 const { state } = useDashboardState();
 const { init } = useInit();
-const { syncLatestTransactionsForBanks } = usePlaidSync();
 
 onMounted(async () => {
   // Register with a short timeout to ensure DOM is ready
@@ -63,8 +61,5 @@ onMounted(async () => {
   }, 100);
   
   await init();
-  
-  // Start syncing transactions for all connected banks
-  syncLatestTransactionsForBanks();
 });
 </script>

@@ -19,6 +19,7 @@ export function usePlaidSync() {
   const syncedBanks = ref([]);
   const MAX_RETRIES = 0; // Max retries per sync operation
   const consecutiveRecoveries = ref({}); // Track consecutive recoveries by itemId
+  const statusBarTimeout = ref(null); // Add ref to track the timeout ID
 
   /**
    * Sync latest transactions for a single bank/item
@@ -312,12 +313,21 @@ export function usePlaidSync() {
    */
   const updateStatusBar = (message, loading = false) => {
     if (state && state.blueBar) {
+      // Clear previous timeout if exists
+      if (statusBarTimeout.value) {
+        clearTimeout(statusBarTimeout.value);
+      }
+      
+      // Update status bar message and loading state
       state.blueBar.message = message;
       state.blueBar.loading = loading;
-      setTimeout(() => {
+      
+      // Set new timeout to clear message after 3 seconds
+      statusBarTimeout.value = setTimeout(() => {
         state.blueBar.message = null;
         state.blueBar.loading = false;
-      }, 1000);
+        statusBarTimeout.value = null;
+      }, 3000);
     }
   };
 
