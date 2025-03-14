@@ -2,11 +2,13 @@ import { nextTick } from 'vue';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useRules } from '@/features/rule-manager/composables/useRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
+import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 
 export function useTabProcessing() {
   const { state } = useDashboardState();
   const { ruleMethods, combineRulesForTab } = useRules();
   const { getDayOfWeekPST } = useUtils();
+  const tabsAPI = useTabsAPI();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
   
   /**

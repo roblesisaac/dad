@@ -207,6 +207,9 @@ class TransactionSyncService {
     
     return {
       addedCount: actualCounts.added,
+      addedTransactions: addedCount === expectedCounts.added ?
+        plaidData.added 
+        : [],
       modifiedCount: actualCounts.modified,
       removedCount: actualCounts.removed,
       hasMore: plaidData.has_more,
@@ -547,6 +550,7 @@ class TransactionSyncService {
   _buildSyncResponse(syncResult, syncTime, batchNumber) {
     const response = {
       added: syncResult.addedCount,
+      addedTransactions: syncResult.addedTransactions,
       modified: syncResult.modifiedCount,
       removed: syncResult.removedCount,
       hasMore: syncResult.hasMore,

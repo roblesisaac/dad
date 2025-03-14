@@ -67,6 +67,7 @@ export default {
         hasMore: syncResult.hasMore,
         cursor: syncResult.cursor,
         batchResults,
+        addedTransactions: syncResult.addedTransactions
       };
       
       if (syncResult.recoveryPerformed) {
