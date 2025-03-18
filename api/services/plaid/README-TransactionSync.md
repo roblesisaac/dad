@@ -2,114 +2,219 @@
 
 ## Overview
 
-This document describes the implementation of the Plaid transaction sync services.
+The Transaction Sync Service implements a robust, fault-tolerant system for synchronizing financial transaction data from Plaid to the application database. This document details the architecture, workflow, and implementation considerations.
 
-## Architecture
+## Key Features
 
-The transaction sync process follows this updated workflow:
+- **Idempotent Processing**: Safely handles multiple sync attempts without duplicating data
+- **Recovery Mechanism**: Automatically detects and recovers from sync failures
+- **Multi-batch Support**: Handles large transaction sets across multiple sync operations
+- **Cursor Management**: Maintains sync state with Plaid's cursor-based pagination
+- **Change Detection**: Optimizes performance by skipping processing when no changes exist
 
-1. **Sync Initialization**
-   - Validate user data
-   - Acquire sync lock on Plaid item
-   - Find most recent sync session for the item
+## Technical Architecture
 
-2. **Recovery Assessment & Processing**
-   - Determine if recovery is needed based on:
-     - Item error status
-     - Previous sync session error status
-     - Count mismatch in previous sync
-   - If recovery is needed:
-     - Remove transactions with syncTime equal to or newer than the problematic sync
-     - Update item with previous successful cursor and set status to "complete"
-     - Create a recovery sync session
-     - Return a recovery-specific response to the client
-     - **END PROCESSING** - Next sync will use reset cursor from recovery sync session
+The transaction sync process follows this workflow:
 
-3. **Transaction Fetching** (if no recovery needed)
-   - Fetch latest transactions from Plaid using current cursor
-   - Check for changes (any added, modified, or removed transactions)
-   - If no changes, update lastNoChangesTime and return early
+### 1. Sync Initialization
 
-4. **Sync Session Creation**
-   - Create a new sync session with proper cursor tracking:
-     - `cursor`: Current cursor being used
-     - `previousCursor`: Previous cursor value (if any)
-     - `nextCursor`: Will be set after processing
-     - `prevSuccessfulCursor`: Last known stable cursor point
-   - Set status to "in_progress"
+- **User Validation**: Validates user credentials and permissions
+- **Lock Acquisition**: Implements a soft lock mechanism on the Plaid item to prevent concurrent syncs
+- **Session Retrieval**: Locates the most recent sync session for the item
+- **Legacy Migration**: Detects and migrates legacy syncData stored directly on items to the new session-based model
 
-5. **Transaction Processing**
-   - Process transactions in parallel:
-     - Add new transactions (with syncTime for potential future recovery)
-     - Update modified transactions
-     - Remove deleted transactions
-   - Track expected vs actual counts for validation
+### 2. Recovery Assessment
 
-6. **Sync Session Update**
-   - Update sync session with processing results
-   - Set status to "complete" if successful (no errors and counts match)
-   - Set status to "error" if counts don't match
-   - Update prevSuccessfulCursor if sync was successful
-   - Update nextCursor to the cursor returned by Plaid
-   - Link to previous sync session
+- **Failure Detection**: Identifies potential sync failures through:
+  - Item error status flags
+  - Previous sync session error status
+  - Transaction count mismatches from previous sync
+- **Recovery Process**:
+  - Identifies the last successful sync session to revert to
+  - Removes transactions with syncTime timestamps equal to or newer than the reference sync
+  - Sets item status to "complete" to release the lock
+  - Creates a recovery-specific sync session for audit tracking
+  - Updates the item to reference the recovery sync session
+  - Returns a specialized recovery response object
+  - **Process Termination**: Ends current processing to allow next sync operation to use reset cursor
 
-7. **Item Update**
-   - Only update item with new cursor if no errors
-   - Set status based on processing resultsp
-   - Release the sync lock
+### 3. Change Detection Optimization
 
-8. **Post-processing**
-   - Build and return response with sync results
-   - Handle any errors during the process
+- **Transaction Fetching**: Retrieves latest transactions from Plaid using appropriate cursor
+- **Change Analysis**: Determines if any transactions were added, modified, or removed
+- **Fast Path**: If no changes detected:
+  - Updates lastNoChangesTime timestamp
+  - Releases item lock
+  - Returns a no-changes response with previous sync metadata
+  - Skips remaining processing steps for improved performance
+
+### 4. Sync Session Management
+
+- **Session Creation**: Establishes a new sync session with complete cursor tracking:
+  - `cursor`: Current cursor value being used for this operation
+  - `previousCursor`: Cursor value from previous sync operation
+  - `nextCursor`: Next cursor value for future operations (populated after Plaid API response)
+  - `prevSuccessfulCursor`: Last known good cursor value for recovery operations
+- **Batch Tracking**: Tracks multi-batch syncs with sequence numbers
+- **Status Management**: Sets initial status to "in_progress"
+- **Transaction Boundaries**: Records the sync timestamp for transaction boundary tracking
+
+### 5. Transaction Processing
+
+- **Parallel Execution**: Processes transaction operations concurrently:
+  - Creates new transactions with proper metadata (including syncTime for recovery)
+  - Updates modified transactions with current cursor and syncTime
+  - Removes deleted transactions while maintaining referential integrity
+- **Count Validation**: Maintains separate expected and actual count records for each operation type
+- **Transactional Safety**: Ensures database consistency across bulk operations
+
+### 6. Session Finalization
+
+- **Status Update**: Sets session status based on processing results:
+  - "complete" when successful and counts match
+  - "error" when counts don't match or other errors occur
+- **Cursor Management**: Updates session with next cursor value from Plaid
+- **History Linking**: Creates a linked list of sync sessions for audit trailing
+- **Success Recording**: Updates prevSuccessfulCursor when operation completes without errors
+
+### 7. Item State Management
+
+- **Conditional Updates**: Only updates item cursor if no errors occurred
+- **Status Transitions**:
+  - "error" if transaction counts don't match expected values
+  - "in_progress" if more transactions remain to be synced (has_more=true)
+  - "complete" when sync operations conclude successfully
+- **Lock Release**: Returns item to available state for future operations
+
+### 8. Response Generation
+
+- **Result Compilation**: Builds comprehensive response with operation counts and metadata
+- **Validation Information**: Includes expected vs. actual counts for verification
+- **Error Handling**: Incorporates error information for failed operations
+- **Multi-batch Support**: Provides continuation data for multi-batch sync operations
 
 ## Frontend Integration
 
-The frontend integration has been enhanced to handle the new recovery workflow:
+The frontend application interacts with the sync service through these mechanisms:
 
-1. **Recovery Detection**
-   - Frontend code detects when a sync returns a recovery response
-   - Tracks consecutive recoveries per item
-   - Provides visual feedback when recovery is performed
+### 1. Recovery Handling
 
-2. **Recovery Limit Enforcement**
-   - After 3 consecutive recoveries for the same item, an error is thrown
-   - This prevents infinite recovery loops
-   - Requires manual intervention for persistent issues
+- **Detection Logic**: Identifies recovery responses through response payload structure
+- **Recovery Tracking**: Maintains a counter of consecutive recovery operations per item
+- **User Feedback**: Provides appropriate visual indicators during recovery operations
 
-3. **Sync Continuation**
-   - After recovery, a new sync operation is automatically initiated
-   - This ensures transactions removed during recovery are properly re-synced
+### 2. Safety Mechanisms
 
-## Data Structure
+- **Recovery Limits**: Enforces a maximum of 3 consecutive recovery attempts before requiring manual intervention
+- **Error Escalation**: Surfaces persistent recovery failures to application administrators
+- **Circuit Breaking**: Prevents excessive API calls during problematic sync states
 
-The implementation leverages existing fields with these semantics:
+### 3. Sync Orchestration
 
-- `cursor`: The cursor value used in this sync session
-- `previousCursor`: The cursor used in the previous sync session
-- `nextCursor`: The next_cursor returned from plaid to use in the next sync session
-- `prevSuccessfulCursor`: The last known successful sync
-- `syncTime`: Timestamp for recovery operations and ordering sessions
-- `recoveryAttempts`: Number of recovery attempts
-- `recoveryStatus`: Status of the last recovery attempt
+- **Session Continuation**: Automatically initiates follow-up sync after recovery operations
+- **Batch Management**: Tracks and continues multi-batch sync operations until completion
+- **Polling Strategy**: Implements exponential backoff for repeated sync operations
+- **State Persistence**: Maintains sync state across page refreshes and application restarts
 
-## Testing Considerations
+## Data Models
 
-When testing the implementation, consider the following scenarios:
+The system uses these key data structures with specific semantics:
 
-1. **Normal Sync**: Verify that transactions are synced correctly without errors
-2. **Multi-batch Sync**: Test with large transaction sets that require multiple batches
-3. **Recovery**: Force a count mismatch and verify the two-phase recovery works:
-   - First operation should perform recovery and return
-   - Second operation should sync with the reset cursor
-4. **Consecutive Recoveries**: Verify that after 3 consecutive recoveries, an error is thrown
-5. **Cursor Tracking**: Verify that all cursor values are properly tracked and updated
+### Sync Session
 
-## Monitoring
+- `cursor` (String): Current cursor value used in this sync session
+- `previousCursor` (String): Cursor value from previous sync session
+- `nextCursor` (String): Cursor value returned by Plaid for next operation
+- `prevSuccessfulCursor` (String): Last known good cursor for recovery operations
+- `syncTime` (Number): Unix timestamp of sync operation start
+- `batchNumber` (Number): Sequence number for multi-batch operations
+- `status` (String): Current session status ("in_progress", "complete", "error")
+- `expectedCounts` (Object): Expected transaction counts from Plaid
+- `actualCounts` (Object): Actual transaction counts processed
+- `recoveryAttempts` (Number): Number of recovery attempts
+- `recoveryStatus` (String): Status of recovery operations
+- `lastNoChangesTime` (Number): Timestamp of last no-changes sync
 
-Monitor these metrics:
+### Transaction Metadata
 
-1. **Recovery Rate**: How often recovery is needed
-2. **Sync Success Rate**: Percentage of syncs completing without errors
-3. **Transaction Counts**: Expected vs. actual counts for added/modified/removed transactions
-4. **Sync Duration**: Time taken for complete sync process
-5. **Consecutive Recoveries**: Track items requiring multiple consecutive recoveries 
+- `cursor` (String): Cursor value when transaction was created/modified
+- `syncTime` (Number): Timestamp of sync operation that created/modified the transaction
+- `itemId` (String): Associated Plaid item identifier
+- `transaction_id` (String): Plaid's unique transaction identifier
+
+## Testing Strategies
+
+Comprehensive testing should cover these scenarios:
+
+### 1. Normal Operation Path
+
+- Verify complete transaction synchronization without errors
+- Ensure proper cursor management across sync operations
+- Validate transaction data integrity after sync
+
+### 2. Multi-batch Processing
+
+- Test with large transaction sets requiring multiple sync operations
+- Verify batch number sequencing and continuation logic
+- Ensure complete data capture across batch boundaries
+
+### 3. Optimization Paths
+
+- Test when Plaid returns no transaction changes
+- Verify fast-path execution and performance optimization
+- Validate lastNoChangesTime tracking
+
+### 4. Data Migration
+
+- Test migration of legacy syncData stored directly on item objects
+- Verify creation of appropriate sync sessions during migration
+- Validate cursor preservation during migration process
+
+### 5. Recovery Scenarios
+
+- Force count mismatches to trigger recovery mechanisms
+- Verify two-phase recovery workflow:
+  - First operation performs recovery and returns
+  - Second operation resyncs with reset cursor
+- Test full transaction recovery after intentional corruption
+
+### 6. Edge Cases
+
+- Test consecutive recovery attempts with limit enforcement
+- Verify cursor tracking across complex failure scenarios
+- Test concurrent sync attempts and lock mechanisms
+
+## Operational Monitoring
+
+Monitor these key metrics for system health:
+
+### 1. System Health Indicators
+
+- **Recovery Rate**: Percentage of sync operations requiring recovery
+- **Sync Success Rate**: Percentage of syncs completing without errors
+- **No Changes Rate**: Frequency of syncs resulting in no transaction changes
+
+### 2. Performance Metrics
+
+- **Sync Duration**: Time taken for complete sync process
+- **Transaction Processing Rate**: Transactions processed per second
+- **API Latency**: Response time for Plaid API requests
+
+### 3. Data Quality Metrics
+
+- **Transaction Counts**: Expected vs. actual counts for each operation type
+- **Consecutive Recoveries**: Items requiring multiple recovery attempts
+- **Orphaned Transactions**: Transactions without proper parent references
+
+### 4. Resource Utilization
+
+- **Database Operations**: Volume of database operations during sync
+- **API Rate Limits**: Plaid API usage relative to rate limits
+- **Memory Usage**: Memory consumption during large transaction syncs
+
+## Implementation Notes
+
+- Use database transactions when possible to ensure data consistency
+- Implement appropriate timeout handling for long-running operations
+- Consider rate limiting strategies for high-volume accounts
+- Use exponential backoff for retrying failed operations 
