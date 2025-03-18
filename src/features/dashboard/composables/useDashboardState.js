@@ -19,7 +19,7 @@ const state = reactive({
   // reordering: false,
   selected: {
     allGroupTransactions: [],
-    group: computed(() => state.allUserGroups.find(group => group.isSelected)),
+    group: computed(() => state.allUserGroups.find(g => g.isSelected)),
     tabsForGroup: computed({
       get: () => {
         const selectedGroup = state.selected.group;

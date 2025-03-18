@@ -34,7 +34,6 @@
 
 <script setup>
 import { onMounted } from 'vue';
-import { useAppStore } from '@/stores/state';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
 

@@ -146,10 +146,10 @@ import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import { useInit } from '@/features/dashboard/composables/useInit';
+import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 
 const { state } = useDashboardState();
-const { handleGroupChange } = useInit();
+const { handleGroupChange } = useSelectGroup();
 const showDatePicker = ref(false);
 const tempDate = reactive({
   start: null,
@@ -279,7 +279,6 @@ const quickSelect = (period) => {
 };
 
 const applyDates = () => {
-  // Only update the actual state dates when Apply is clicked
   state.date.start = tempDate.start;
   state.date.end = tempDate.end;
   showDatePicker.value = false;

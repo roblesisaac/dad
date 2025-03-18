@@ -1,11 +1,16 @@
 import { useGroupsAPI } from './useGroupsAPI';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
+import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
 import { useUtils } from '@/shared/composables/useUtils';
 
 export function useSelectGroup() {
   const { state } = useDashboardState();
   const groupsAPI = useGroupsAPI();
   const { sortBy,waitUntilTypingStops } = useUtils();
+
+  const { fetchTransactionsForGroup } = useTransactions();
+  const { processAllTabsForSelectedGroup } = useTabProcessing();
 
   /**
    * Fetch groups and accounts data
@@ -105,6 +110,7 @@ export function useSelectGroup() {
    * Select a group and deselect others
    */
   async function selectGroup(groupToSelect) {
+    state.isLoading = true;
     const allGroups = state.allUserGroups;
     // First deselect all groups
     for (const group of allGroups) {
@@ -117,6 +123,8 @@ export function useSelectGroup() {
     // Select the target group
     groupToSelect.isSelected = true;
     await groupsAPI.updateGroupSelection(groupToSelect._id, true);
+
+    await handleGroupChange();
     
     return groupToSelect;
   }
@@ -137,10 +145,42 @@ export function useSelectGroup() {
     await groupsAPI.updateGroupSort(groupId, sort);
   }
 
+  /**
+   * Handle group selection change
+   */
+  async function handleGroupChange() {
+    let selectedGroup = state.selected.group;
+    const tabsForGroup = state.selected.tabsForGroup;
+
+    if(state.date.start > state.date.end) return;
+
+    if(!selectedGroup) {
+      if(!state.allUserGroups.length) {
+        alert('No groups found. Please create a group first.');
+        return;
+      }
+      // selectedGroup = await selectFirstGroup(state.allUserGroups);
+    }
+    state.isLoading = true;
+    
+    // Fetch transactions for all accounts in the selected group
+    state.selected.allGroupTransactions = await fetchTransactionsForGroup(
+      selectedGroup, 
+      state.date
+    );
+
+    if(tabsForGroup.length) {
+      return await processAllTabsForSelectedGroup();
+    }
+    
+    state.isLoading = false;
+  }
+
   return {
     createNewGroup,
     deleteGroup,
     fetchGroupsAndAccounts,
+    handleGroupChange,
     selectGroup,
     selectFirstGroup,
     updateGroupName,
