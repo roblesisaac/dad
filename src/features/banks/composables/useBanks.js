@@ -103,11 +103,12 @@ export function useBanks() {
       
       // Perform the sync
       const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
-      
+      console.log(result);
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {
         await fetchBanks();
         await fetchSyncSessions(selectedBank.value.itemId);
+        isSyncing.value = false;
       } else if (result.error) {
         error.value.sync = result.error;
       }

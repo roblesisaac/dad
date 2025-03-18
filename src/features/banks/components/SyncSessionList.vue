@@ -77,8 +77,11 @@
             
             <!-- Session info -->
             <div>
-              <div class="font-medium">
+              <div class="font-medium flex items-center gap-1.5">
                 {{ getSessionTitle(session) }}
+                <span v-if="session.syncTag" class="text-xs px-1.5 py-0.5 bg-blue-100 rounded text-blue-700 font-normal">
+                  {{ session.syncTag }}
+                </span>
               </div>
               <div class="text-xs text-gray-500">
                 {{ formatSyncDate(session.syncTime) }} - Batch #{{ session.batchNumber || 1 }}
@@ -111,6 +114,22 @@
             <div class="text-center p-2 bg-white rounded shadow-sm">
               <div class="font-medium">Removed</div>
               <div class="text-lg">{{ session.syncCounts?.actual?.removed || 0 }}</div>
+            </div>
+          </div>
+          
+          <!-- Sync metadata -->
+          <div class="mb-3 flex flex-wrap gap-2">
+            <!-- Session ID -->
+            <div v-if="session._id" class="text-xs inline-flex items-center px-2 py-1 bg-gray-50 text-gray-700 border border-gray-200 rounded">
+              <span class="font-medium mr-1">ID:</span> {{ session._id }}
+            </div>
+          </div>
+          
+          <!-- Last No Changes Time -->
+          <div v-if="session.lastNoChangesTime && session.lastNoChangesTime > 0" class="mb-3 bg-gray-50 border border-gray-200 rounded p-2">
+            <div class="text-xs">
+              <span class="font-medium">Last No Changes:</span> 
+              {{ formatDateFromTimestamp(session.lastNoChangesTime) }}
             </div>
           </div>
           
@@ -396,6 +415,20 @@ const formatDate = (timestamp) => {
     }
   } catch (err) {
     return timestamp;
+  }
+};
+
+// Format date from timestamp (milliseconds)
+const formatDateFromTimestamp = (timestamp) => {
+  if (!timestamp) return 'Unknown';
+  
+  try {
+    // Check if timestamp is in milliseconds (typical JS format)
+    // or seconds (Unix timestamp)
+    const date = new Date(timestamp > 9999999999 ? timestamp : timestamp * 1000);
+    return date.toLocaleString();
+  } catch (err) {
+    return 'Invalid date';
   }
 };
 
