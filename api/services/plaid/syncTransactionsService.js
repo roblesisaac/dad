@@ -385,7 +385,7 @@ class TransactionSyncService {
       );
     } catch (error) {
       console.error('Error processing modified transactions:', error);
-      throw new CustomError('TRANSACTION_UPDATE_ERROR', 
+      console.error('TRANSACTION_UPDATE_ERROR', 
         `Failed to update ${transactions?.length} transactions: ${error.message}`);
     }
   }
@@ -397,8 +397,9 @@ class TransactionSyncService {
    * @returns {Promise<Number>} Count of removed transactions
    * @private
    */
-  async _processRemovedTransactions(transactionIds, userId) {
+  async _processRemovedTransactions(transactionsToRemove, userId) {
     try {
+      const transactionIds = transactionsToRemove.map(tx => tx.transaction_id);
       return await transactionsCrudService.batchRemoveTransactions(
         transactionIds,
         userId,
