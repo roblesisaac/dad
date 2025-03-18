@@ -69,7 +69,7 @@ class TransactionSyncService {
       // 4. Check for changes from Plaid before creating a new sync session
       const cursor = prevSyncSession?.nextCursor || null;
       const plaidData = await this._fetchTransactionsFromPlaid(itemData, user, cursor);
-      const hasChanges = this._checkForChanges(plaidData);
+      const hasChanges = this._checkForChanges(plaidData);ππ
       
       // If no changes and we have a previous session, update lastNoChangesTime and return early
       if (!hasChanges && prevSyncSession) {
@@ -326,10 +326,7 @@ class TransactionSyncService {
     }
     
     // Set status to in_progress to acquire lock
-    await plaidItems.update(
-      { itemId: itemData.itemId, userId: user._id },
-      { status: 'in_progress' }
-    );
+    await plaidItems.update(itemData._id, { status: 'in_progress' });
     
     return itemData;
   }
@@ -420,22 +417,19 @@ class TransactionSyncService {
    * @private
    */
   async _updateItemAfterSync(item, syncResult, sync_id) {
-    // Only update cursor if no errors (counts match)
     const countsMatch = syncSessionService.countsMatch(syncResult.syncCounts);
     
     // Determine item status based on sync result
     const status = !countsMatch ?
-      'error' :
-      syncResult.hasMore ?
-        'in_progress'
+      'error' 
       :'complete';
     
     // Create update object
     const updateData = { 
-      status,
+      status
     };
     
-    // Only update cursor if counts match
+    // Only session_id if counts match
     if (countsMatch) {
       updateData.sync_id = sync_id;
     }

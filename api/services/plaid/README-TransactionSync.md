@@ -4,6 +4,8 @@
 
 The Transaction Sync Service implements a robust, fault-tolerant system for synchronizing financial transaction data from Plaid to the application database. This document details the architecture, workflow, and implementation considerations.
 
+............................................................................................
+
 ## Key Features
 
 - **Idempotent Processing**: Safely handles multiple sync attempts without duplicating data
@@ -11,6 +13,8 @@ The Transaction Sync Service implements a robust, fault-tolerant system for sync
 - **Multi-batch Support**: Handles large transaction sets across multiple sync operations
 - **Cursor Management**: Maintains sync state with Plaid's cursor-based pagination
 - **Change Detection**: Optimizes performance by skipping processing when no changes exist
+
+............................................................................................
 
 ## Technical Architecture
 
@@ -31,7 +35,7 @@ The transaction sync process follows this workflow:
   - Transaction count mismatches from previous sync
 - **Recovery Process**:
   - Identifies the last successful sync session to revert to
-  - Removes transactions with syncTime timestamps equal to or newer than the reference sync
+  - Removes transactions with syncTime timestamps newer than the reference sync
   - Sets item status to "complete" to release the lock
   - Creates a recovery-specific sync session for audit tracking
   - Updates the item to reference the recovery sync session
@@ -79,10 +83,8 @@ The transaction sync process follows this workflow:
 
 ### 7. Item State Management
 
-- **Conditional Updates**: Only updates item cursor if no errors occurred
 - **Status Transitions**:
   - "error" if transaction counts don't match expected values
-  - "in_progress" if more transactions remain to be synced (has_more=true)
   - "complete" when sync operations conclude successfully
 - **Lock Release**: Returns item to available state for future operations
 
