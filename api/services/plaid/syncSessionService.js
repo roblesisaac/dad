@@ -1,4 +1,5 @@
 import SyncSessions from '../../models/syncSession.js';
+import plaidItems from '../../models/plaidItems.js';
 import randomString from '../../utils/randomString.js';
 
 /**
@@ -37,8 +38,10 @@ class SyncSessionService {
       prevSuccessfulSession_id: previousSync?.status === 'complete' ? 
         previousSync?._id 
         : previousSync?.prevSuccessfulSession_id || null,
+
       syncTime,
       syncNumber: previousSync?.syncNumber ? Math.trunc(previousSync.syncNumber) + 1 : 1,
+      syncTag: item.syncTag || previousSync?.syncTag || null,
       batchNumber,
 
       // If we're continuing a multi-batch sync, use the previous syncId
@@ -337,6 +340,11 @@ class SyncSessionService {
    */
   async createSyncSessionFromLegacy(user, item) {
     const legacySyncData = item.syncData;
+    const syncTag = this.generateRandomLetters();
+
+    await plaidItems.update(item._id, {
+      syncTag
+    });
     
     if (!legacySyncData || !legacySyncData.cursor) {
       throw new Error('Invalid legacy sync data provided for migration');
@@ -355,6 +363,8 @@ class SyncSessionService {
       prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? 
         legacySyncData.cursor : null,
       syncTime,
+      syncNumber: 1,
+      syncTag,
       batchNumber: 1, // Default for legacy data
       syncId: `legacy-${randomString(8)}-${syncTime}`,
       hasMore: false, // Default for migrated data
@@ -387,6 +397,18 @@ class SyncSessionService {
     
     // Save the migrated sync session
     return await SyncSessions.save(syncSession);
+  }
+
+  generateRandomLetters(length=4) {
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+  
+    for (let i = 0; i < length; i++) {
+        const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+        result += randomLetter;
+    }
+  
+    return result;
   }
 }
 

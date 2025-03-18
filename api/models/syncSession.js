@@ -19,6 +19,14 @@ const syncSchema = {
     syncTime: Number,
     syncId: String,
     syncNumber: Number,
+    syncTag: (syncTag, { syncNumber }) => {
+        if(!syncNumber && syncTag) {
+            return syncTag;
+        }
+
+        const [prefix, number] = syncTag.split('_');
+        return `${prefix}_${syncNumber}`;
+    },
     
     syncCounts: {
         type: Object,

@@ -21,6 +21,7 @@ const itemSchema = {
   institutionId: String,
   institutionName: String,
   sync_id: String,
+  syncTag: String,
 
   syncData: {
     cursor: {
