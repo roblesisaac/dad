@@ -41,6 +41,16 @@ const syncSchema = {
         default: null
     },
 
+    // New field for tracking failed transactions with detailed error information
+    failedTransactions: {
+        type: Object,
+        default: {
+            added: [], // Failed add operations with transaction data and errors
+            modified: [], // Failed modify operations with transaction data and errors
+            removed: []  // Failed remove operations with transaction IDs and errors
+        }
+    },
+
     isLegacy: Boolean,
     isRecovery: Boolean,
 

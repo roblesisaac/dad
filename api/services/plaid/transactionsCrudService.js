@@ -147,132 +147,268 @@ class TransactionQueryService extends PlaidBaseService {
   }
 
   /**
-   * Batch creates multiple transactions
-   * @param {Array} transactions - Array of transaction objects to create
-   * @param {Object} user - User object with _id
-   * @param {Object} options - Additional options (syncTime, cursor, etc.)
-   * @returns {Promise<number>} Count of transactions created
+   * Process and save added transactions 
+   * @param {Array} transactions - Transactions to add
+   * @param {Object} item - Item data
+   * @param {Object} user - User object
+   * @param {String} cursor - Current cursor
+   * @param {Number} syncTime - Current sync syncTime timestamp
+   * @returns {Promise<Object>} Result with success count and failed transactions
    */
-  async batchCreateTransactions(transactions, user, options = {}) {
-    if (!transactions || !transactions.length) {
-      return 0;
-    }
-    
+  async processAddedTransactions(transactions, item, user, cursor, syncTime) {
     try {
-      const { itemId, cursor, syncTime } = options;
+      // Initialize result tracking
+      const result = {
+        successCount: 0,
+        failedTransactions: []
+      };
       
-      const formattedTransactions = transactions.map(transaction => ({
-        ...transaction,
-        userId: user._id,
-        itemId: itemId || transaction.itemId,
-        cursor: cursor || transaction.cursor,
-        user: { _id: user._id },
-        syncTime
-      }));
-      
-      // Use insertMany for batch inserts
-      const results = await plaidTransactions.insertMany(formattedTransactions);
-      
-      return results.length;
-    } catch (error) {
-      console.error('Error creating transactions:', error);
-      throw new CustomError('TRANSACTION_SAVE_ERROR', 
-        `Failed to save ${transactions.length} transactions: ${error.message}`);
-    }
-  }
-
-  /**
-   * Batch updates multiple transactions
-   * @param {Array} transactions - Array of transaction objects to update
-   * @param {Object} user - User object with _id
-   * @param {Object} options - Additional options (syncTime, cursor, etc.)
-   * @returns {Promise<number>} Count of transactions updated
-   */
-  async batchUpdateTransactions(transactions, user, options = {}) {
-    if (!transactions || !transactions.length) {
-      return 0;
-    }
-    
-    try {
-      const { syncTime, cursor } = options;
-      
-      const updatePromises = transactions.map(transaction => {
-        // Build update object
-        const updates = { ...transaction };
-        
-        // Skip _id field if present as it shouldn't be modified
-        delete updates._id;
-        
-        // Add metadata if provided in options
-        if (cursor) updates.cursor = cursor;
-        if (syncTime) updates.syncTime = syncTime;
-        
-        // Use update method with filter including userId for security
-        return plaidTransactions.update(
-          { 
-            transaction_id: transaction.transaction_id, 
-            userId: user._id 
-          }, 
-          updates
-        );
-      });
-      
-      // Execute updates in parallel
-      const results = await Promise.all(updatePromises);
-      return results.filter(result => result !== null).length;
-    } catch (error) {
-      console.error('Error updating transactions:', error);
-      throw new CustomError('TRANSACTION_UPDATE_ERROR', 
-        `Failed to update ${transactions.length} transactions: ${error.message}`);
-    }
-  }
-
-  /**
-   * Batch removes transactions by their transaction_ids
-   * @param {Array<string>} transactionIds - Array of transaction IDs to remove
-   * @param {string} userId - User ID
-   * @returns {Promise<number>} Count of transactions removed
-   */
-  async batchRemoveTransactions(transactionIds, userId) {
-    if (!transactionIds || !transactionIds.length) {
-      return 0;
-    }
-    
-    try {
-      let deletedCount = 0;
-      
-      // Process deletions in batches to avoid too many concurrent operations
-      const batchSize = 25;
-      
-      for (let i = 0; i < transactionIds.length; i += batchSize) {
-        const batch = transactionIds.slice(i, i + batchSize);
-        
-        // Process this batch of deletions in parallel
-        const deletePromises = batch.map(async (id) => {
-          try {
-            // Use the correct erase method for deletion
-            const result = await plaidTransactions.erase({
-              transaction_id: id,
-              userId // Include userId to ensure we only delete user's transactions
-            });
-            
-            return result.removed ? 1 : 0;
-          } catch (err) {
-            console.warn(`Failed to delete transaction ${id}: ${err.message}`);
-            return 0;
-          }
-        });
-        
-        // Wait for all deletions in this batch
-        const results = await Promise.all(deletePromises);
-        deletedCount += results.reduce((sum, count) => sum + count, 0);
+      if (!transactions || transactions.length === 0) {
+        return result;
       }
       
-      return deletedCount;
+      // Process transactions individually to track failures
+      for (const transaction of transactions) {
+        try {
+          // Prepare transaction metadata
+          const enrichedTransaction = {
+            ...transaction,
+            userId: user._id,
+            itemId: item.itemId,
+            cursor,
+            syncTime
+          };
+          
+          // Attempt to create the transaction
+          await this.createTransaction(enrichedTransaction);
+          
+          // Increment success count
+          result.successCount++;
+        } catch (err) {
+          // Record failed transaction with error details
+          result.failedTransactions.push({
+            transaction_id: transaction.transaction_id,
+            error: {
+              message: err.message,
+              code: err.code || 'TRANSACTION_SAVE_ERROR',
+              timestamp: new Date().toISOString()
+            },
+            transaction: { ...transaction } // Store original transaction data for retry
+          });
+          
+          console.error(`Error saving transaction ${transaction.transaction_id}:`, err.message);
+        }
+      }
+      
+      return result;
     } catch (error) {
-      console.error('Error removing transactions:', error);
-      throw new CustomError('TRANSACTION_REMOVE_ERROR', 
-        `Failed to remove transactions: ${error.message}`);
+      console.error('Error in batch processing added transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactions?.length} transactions: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create a single transaction
+   * @param {Object} transaction - Transaction data to create
+   * @returns {Promise<Object>} Created transaction
+   */
+  async createTransaction(transaction) {
+    try {
+      if (!transaction) {
+        throw new CustomError('INVALID_PARAMS', 'Missing transaction data');
+      }
+      
+      const result = await plaidTransactions.save(transaction);
+      return result;
+    } catch (error) {
+      console.error('Error creating transaction:', error);
+      throw new CustomError('TRANSACTION_SAVE_ERROR', 
+        `Failed to save transaction: ${error.message}`);
+    }
+  }
+
+  /**
+   * Update a single transaction
+   * @param {String} transactionId - Transaction ID to update
+   * @param {String} userId - User ID for security
+   * @param {Object} updateData - Data to update
+   * @returns {Promise<Object>} Updated transaction
+   */
+  async updateTransaction(transactionId, userId, updateData) {
+    try {
+      if (!transactionId || !userId || !updateData) {
+        throw new CustomError('INVALID_PARAMS', 'Missing required parameters');
+      }
+      
+      // Skip _id field if present as it shouldn't be modified
+      const updates = { ...updateData };
+      delete updates._id;
+      
+      const result = await plaidTransactions.update(
+        { transaction_id: transactionId, userId }, 
+        updates
+      );
+      
+      if (!result) {
+        throw new CustomError('NOT_FOUND', 'Transaction not found or not updated');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      throw CustomError.createFormattedError(error, {
+        transactionId,
+        userId,
+        operation: 'update_transaction'
+      });
+    }
+  }
+
+  /**
+   * Process and update modified transactions
+   * @param {Array} transactions - Transactions to modify
+   * @param {Object} user - User object
+   * @param {String} cursor - Current cursor
+   * @param {Number} syncTime - Current sync syncTime timestamp
+   * @returns {Promise<Object>} Result with success count and failed transactions
+   */
+  async processModifiedTransactions(transactions, user, cursor, syncTime) {
+    try {
+      // Initialize result tracking
+      const result = {
+        successCount: 0,
+        failedTransactions: []
+      };
+      
+      if (!transactions || transactions.length === 0) {
+        return result;
+      }
+      
+      // Process transactions individually to track failures
+      for (const transaction of transactions) {
+        try {
+          // Prepare transaction metadata
+          const updateData = {
+            ...transaction,
+            cursor,
+            syncTime
+          };
+          
+          // Attempt to update the transaction
+          await this.updateTransaction(
+            transaction.transaction_id,
+            user._id,
+            updateData
+          );
+          
+          // Increment success count
+          result.successCount++;
+        } catch (err) {
+          // Record failed transaction with error details
+          result.failedTransactions.push({
+            transaction_id: transaction.transaction_id,
+            error: {
+              message: err.message,
+              code: err.code || 'TRANSACTION_UPDATE_ERROR',
+              timestamp: new Date().toISOString()
+            },
+            transaction: { ...transaction } // Store original transaction data for retry
+          });
+          
+          console.error(`Error updating transaction ${transaction.transaction_id}:`, err.message);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error in batch processing modified transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactions?.length} modifications: ${error.message}`);
+    }
+  }
+
+  /**
+   * Remove a single transaction
+   * @param {String} transactionId - Transaction ID to remove
+   * @param {String} userId - User ID for security
+   * @returns {Promise<Object>} Result with removed status
+   */
+  async removeTransaction(transactionId, userId) {
+    try {
+      if (!transactionId || !userId) {
+        throw new CustomError('INVALID_PARAMS', 'Missing required parameters');
+      }
+      
+      const result = await plaidTransactions.erase({
+        transaction_id: transactionId,
+        userId
+      });
+      
+      if (!result || !result.removed) {
+        throw new CustomError('NOT_FOUND', 'Transaction not found or not removed');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error removing transaction:', error);
+      throw CustomError.createFormattedError(error, {
+        transactionId,
+        userId,
+        operation: 'remove_transaction'
+      });
+    }
+  }
+
+  /**
+   * Process and remove deleted transactions
+   * @param {Array} transactionsToRemove - IDs of transactions to remove
+   * @param {String} userId - User ID
+   * @returns {Promise<Object>} Result with success count and failed transactions
+   */
+  async processRemovedTransactions(transactionsToRemove, userId) {
+    try {
+      // Initialize result tracking
+      const result = {
+        successCount: 0,
+        failedTransactions: []
+      };
+      
+      if (!transactionsToRemove || transactionsToRemove.length === 0) {
+        return result;
+      }
+      
+      // Extract transaction IDs
+      const transactionIds = transactionsToRemove.map(tx => tx.transaction_id);
+      
+      // Process transactions individually to track failures
+      for (const transactionId of transactionIds) {
+        try {
+          // Attempt to remove the transaction
+          await this.removeTransaction(transactionId, userId);
+          
+          // Increment success count
+          result.successCount++;
+        } catch (err) {
+          // Record failed transaction with error details
+          result.failedTransactions.push({
+            transaction_id: transactionId,
+            error: {
+              message: err.message,
+              code: err.code || 'TRANSACTION_REMOVE_ERROR',
+              timestamp: new Date().toISOString()
+            }
+          });
+          
+          console.error(`Error removing transaction ${transactionId}:`, err.message);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error in batch processing removed transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactionsToRemove?.length} removals: ${error.message}`);
     }
   }
 }

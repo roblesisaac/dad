@@ -132,23 +132,24 @@ class TransactionRecoveryService extends PlaidBaseService {
         };
       }
       
-      // Get transaction IDs to remove
-      const txIdsToRemove = transactionsToRevert.map(tx => tx.transaction_id);
-
-      console.log('txIdsToRemove', txIdsToRemove.length);
+      console.log('Transactions to remove:', transactionsToRevert.length);
       
-      // Remove the transactions
-      let removedCount = await transactionsCrudService.batchRemoveTransactions(txIdsToRemove, userId);
+      // Use processRemovedTransactions instead of batchRemoveTransactions
+      const result = await transactionsCrudService.processRemovedTransactions(
+        transactionsToRevert,
+        userId
+      );
 
-      console.log('removedCount', removedCount);
+      console.log('Removed transactions result:', result);
       
       return {
         isReverted: true,
-        removedCount
+        removedCount: result.successCount,
+        failureCount: result.failedTransactions?.length || 0
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { 
-        operation: 'revert_transactions' 
+        operation: 'remove_transactions_after_sync_time' 
       });
     }
   }

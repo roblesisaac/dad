@@ -52,6 +52,14 @@
           <RefreshCw class="w-4 h-4 mr-2" />
           Update Existing Institutions
         </button>
+        
+        <button 
+          @click="showBanksModal = true" 
+          class="flex items-center justify-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+        >
+          <Building class="w-4 h-4 mr-2" />
+          Manage Banks
+        </button>
       </div>
     </div>
 
@@ -67,6 +75,19 @@
       </div>
       <EditGroup @close="editingGroup = null" :group="editingGroup" />
     </div>
+    
+    <!-- Banks Modal -->
+    <BaseModal
+      v-if="showBanksModal"
+      :is-open="showBanksModal"
+      title="Manage Connected Banks"
+      size="xl"
+      @close="showBanksModal = false"
+    >
+      <template #content>
+        <BanksView @connect-bank-complete="handleBankConnected" />
+      </template>
+    </BaseModal>
   </div>
 </template>
 
@@ -79,7 +100,9 @@ import NetWorth from '../components/NetWorth.vue';
 import EditGroup from '../components/EditGroup.vue';
 import { useSelectGroup } from '../composables/useSelectGroup.js';
 import { useDraggable } from '@/shared/composables/useDraggable';
-import { PlusCircle, RefreshCw, ChevronLeft } from 'lucide-vue-next';
+import { PlusCircle, RefreshCw, ChevronLeft, Building } from 'lucide-vue-next';
+import BaseModal from '@/shared/components/BaseModal.vue';
+import BanksView from '@/features/banks/views/BanksView.vue';
 
 const props = defineProps({
   isOpen: {
@@ -96,6 +119,9 @@ const editingGroup = ref(null);
 const { Draggable, dragOptions } = useDraggable();
 const { createNewGroup, selectGroup } = useSelectGroup();
 
+// Banks modal state
+const showBanksModal = ref(false);
+
 // Edit a specific group
 const editGroup = (group) => {
   editingGroup.value = group;
@@ -109,6 +135,23 @@ const goToOnboarding = () => {
 const handleSelectGroup = (group) => {
   emit('close');
   selectGroup(group);
+};
+
+// Handle bank connection completion
+const handleBankConnected = async () => {
+  // Refresh data if needed
+  // This would be a good place to refresh accounts or groups
+  try {
+    // You could add API calls here to refresh accounts or other data
+    // that might be affected by connecting a new bank
+    // For example:
+    // await fetchUserAccounts();
+    // await fetchUserGroups();
+    
+    showBanksModal.value = false;
+  } catch (error) {
+    console.error('Error refreshing data after bank connection:', error);
+  }
 };
 
 watch(() => state.allUserGroups, (groups) => {

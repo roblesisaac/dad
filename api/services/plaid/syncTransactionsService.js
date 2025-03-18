@@ -69,7 +69,7 @@ class TransactionSyncService {
       // 4. Check for changes from Plaid before creating a new sync session
       const cursor = prevSyncSession?.nextCursor || null;
       const plaidData = await this._fetchTransactionsFromPlaid(itemData, user, cursor);
-      const hasChanges = this._checkForChanges(plaidData);ππ
+      const hasChanges = this._checkForChanges(plaidData);
       
       // If no changes and we have a previous session, update lastNoChangesTime and return early
       if (!hasChanges && prevSyncSession) {
@@ -210,26 +210,49 @@ class TransactionSyncService {
       removed: 0
     };
     
+    // Initialize failed transactions tracking
+    const failedTransactions = {
+      added: [],
+      modified: [],
+      removed: []
+    };
+    
     // Process transactions in parallel with transaction safety
-    const [addedCount, modifiedCount, removedCount] = await Promise.all([
+    const [addedResults, modifiedResults, removedResults] = await Promise.all([
       this._processAddedTransactions(plaidData.added, item, user, currentCursor, syncTime),
       this._processModifiedTransactions(plaidData.modified, user, currentCursor, syncTime),
       this._processRemovedTransactions(plaidData.removed, user._id)
     ]);
     
-    // Update actual counts
-    actualCounts.added = addedCount || 0;
-    actualCounts.modified = modifiedCount || 0;
-    actualCounts.removed = removedCount || 0;
+    // Update actual counts and collect failed transactions
+    actualCounts.added = addedResults.successCount || 0;
+    if (addedResults.failedTransactions && addedResults.failedTransactions.length > 0) {
+      failedTransactions.added = addedResults.failedTransactions;
+    }
+    
+    actualCounts.modified = modifiedResults.successCount || 0;
+    if (modifiedResults.failedTransactions && modifiedResults.failedTransactions.length > 0) {
+      failedTransactions.modified = modifiedResults.failedTransactions;
+    }
+    
+    actualCounts.removed = removedResults.successCount || 0;
+    if (removedResults.failedTransactions && removedResults.failedTransactions.length > 0) {
+      failedTransactions.removed = removedResults.failedTransactions;
+    }
     
     const syncCounts = {
       expected: expectedCounts,
       actual: actualCounts
     };
     
+    // Determine if there were any failures
+    const hasFailures = Object.values(failedTransactions).some(
+      failures => failures && failures.length > 0
+    );
+    
     return {
       addedCount: actualCounts.added,
-      addedTransactions: addedCount === expectedCounts.added ?
+      addedTransactions: actualCounts.added === expectedCounts.added ?
         plaidData.added 
         : [],
       modifiedCount: actualCounts.modified,
@@ -239,7 +262,9 @@ class TransactionSyncService {
       nextCursor: plaidData.next_cursor,
       expectedCounts,
       actualCounts,
-      syncCounts
+      syncCounts,
+      failedTransactions: hasFailures ? failedTransactions : null,
+      hasFailures
     };
   }
 
@@ -292,8 +317,8 @@ class TransactionSyncService {
     // Determine status based on results
     let status = 'complete';
     
-    // If counts don't match, mark as error regardless of hasMore
-    if (!syncSessionService.countsMatch(syncResult.syncCounts)) {
+    // If counts don't match or we have failures, mark as error regardless of hasMore
+    if (!syncSessionService.countsMatch(syncResult.syncCounts) || syncResult.hasFailures) {
       status = 'error';
     }
     
@@ -338,26 +363,17 @@ class TransactionSyncService {
    * @param {Object} user - User object
    * @param {String} cursor - Current cursor
    * @param {Number} syncTime - Current sync syncTime timestamp
-   * @returns {Promise<Number>} Count of added transactions
+   * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
   async _processAddedTransactions(transactions, item, user, cursor, syncTime) {
     try {
-      const addedCount = await transactionsCrudService.batchCreateTransactions(
-        transactions,
-        user,
-        {
-          itemId: item.itemId,
-          cursor: cursor,
-          syncTime
-        }
-      );
-      
-      return addedCount;
+      // Use the dedicated service method for processing added transactions
+      return await transactionsCrudService.processAddedTransactions(transactions, item, user, cursor, syncTime);
     } catch (error) {
-      console.error('Error processing added transactions:', error);
-      throw new CustomError('TRANSACTION_SAVE_ERROR', 
-        `Failed to save ${transactions?.length} transactions: ${error.message}`);
+      console.error('Error in batch processing added transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactions?.length} transactions: ${error.message}`);
     }
   }
 
@@ -367,44 +383,35 @@ class TransactionSyncService {
    * @param {Object} user - User object
    * @param {String} cursor - Current cursor
    * @param {Number} syncTime - Current sync syncTime timestamp
-   * @returns {Promise<Number>} Count of modified transactions
+   * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
   async _processModifiedTransactions(transactions, user, cursor, syncTime) {
     try {
-      return await transactionsCrudService.batchUpdateTransactions(
-        transactions,
-        user,
-        {
-          cursor: cursor,
-          syncTime
-        }
-      );
+      // Use the dedicated service method for processing modified transactions
+      return await transactionsCrudService.processModifiedTransactions(transactions, user, cursor, syncTime);
     } catch (error) {
-      console.error('Error processing modified transactions:', error);
-      console.error('TRANSACTION_UPDATE_ERROR', 
-        `Failed to update ${transactions?.length} transactions: ${error.message}`);
+      console.error('Error in batch processing modified transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactions?.length} modifications: ${error.message}`);
     }
   }
 
   /**
    * Process and remove deleted transactions
-   * @param {Array} transactionIds - IDs of transactions to remove
+   * @param {Array} transactionsToRemove - IDs of transactions to remove
    * @param {String} userId - User ID
-   * @returns {Promise<Number>} Count of removed transactions
+   * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
   async _processRemovedTransactions(transactionsToRemove, userId) {
     try {
-      const transactionIds = transactionsToRemove.map(tx => tx.transaction_id);
-      return await transactionsCrudService.batchRemoveTransactions(
-        transactionIds,
-        userId,
-      );
+      // Use the dedicated service method for processing removed transactions
+      return await transactionsCrudService.processRemovedTransactions(transactionsToRemove, userId);
     } catch (error) {
-      console.error('Error processing removed transactions:', error);
-      throw new CustomError('TRANSACTION_REMOVE_ERROR', 
-        `Failed to remove ${transactionIds?.length} transactions: ${error.message}`);
+      console.error('Error in batch processing removed transactions:', error);
+      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+        `Failed to process batch of ${transactionsToRemove?.length} removals: ${error.message}`);
     }
   }
 
@@ -418,9 +425,10 @@ class TransactionSyncService {
    */
   async _updateItemAfterSync(item, syncResult, sync_id) {
     const countsMatch = syncSessionService.countsMatch(syncResult.syncCounts);
+    const hasFailures = syncResult.hasFailures || false;
     
     // Determine item status based on sync result
-    const status = !countsMatch ?
+    const status = !countsMatch || hasFailures ?
       'error' 
       :'complete';
     
@@ -429,8 +437,8 @@ class TransactionSyncService {
       status
     };
     
-    // Only session_id if counts match
-    if (countsMatch) {
+    // Only update sync_id if there were no errors
+    if (countsMatch && !hasFailures) {
       updateData.sync_id = sync_id;
     }
     
@@ -584,6 +592,17 @@ class TransactionSyncService {
         countsMatch: syncSessionService.countsMatch(syncResult.syncCounts)
       }
     };
+    
+    // Add failure information if any transactions failed
+    if (syncResult.hasFailures) {
+      response.hasFailures = true;
+      response.failureDetails = {
+        addedFailures: syncResult.failedTransactions?.added?.length || 0,
+        modifiedFailures: syncResult.failedTransactions?.modified?.length || 0,
+        removedFailures: syncResult.failedTransactions?.removed?.length || 0,
+        message: 'Some transactions failed to process. See sync session for details.'
+      };
+    }
     
     // Add error information if counts don't match
     if (!syncSessionService.countsMatch(syncResult.syncCounts)) {

@@ -1,6 +1,7 @@
 import SyncSessions from '../../models/syncSession.js';
 import plaidItems from '../../models/plaidItems.js';
 import randomString from '../../utils/randomString.js';
+import transactionRecoveryService from './transactionRecoveryService.js';
 
 /**
  * Service responsible for managing sync sessions
@@ -59,6 +60,13 @@ class SyncSessionService {
           modified: 0,
           removed: 0
         }
+      },
+      
+      // Initialize failedTransactions tracking
+      failedTransactions: {
+        added: [],
+        modified: [],
+        removed: []
       },
       
       recoveryAttempts: 0,
@@ -156,26 +164,49 @@ class SyncSessionService {
       console.error(`[TransactionSync] Count mismatch for item ${syncSession.itemId}: ${error.message}`);
     }
     
+    // Check for transaction failures
+    if (syncResult.hasFailures) {
+      if (!error) {
+        error = {
+          code: 'TRANSACTION_FAILURES',
+          message: `Transaction processing failures: ${syncResult.failedTransactions.added.length} add failures, ${syncResult.failedTransactions.modified.length} modify failures, ${syncResult.failedTransactions.removed.length} remove failures`,
+          timestamp: new Date().toISOString()
+        };
+      } else {
+        // Append to existing error message
+        error.message += `. Additionally, transaction processing failures occurred.`;
+      }
+      console.error(`[TransactionSync] Transaction failures for item ${syncSession.itemId}: ${error.message}`);
+    }
+    
     // Determine if this sync was successful (counts match and status is complete or in_progress)
-    const isSuccessful = countsMatch && (status === 'complete' || status === 'in_progress');
+    const isSuccessful = countsMatch && !syncResult.hasFailures && (status === 'complete' || status === 'in_progress');
+    
+    // Build the update data
+    const updateData = {
+      status,
+      userId: syncSession.userId,
+      nextCursor: syncResult.nextCursor, // The next cursor to use
+      hasMore: syncResult.hasMore,
+      
+      // Only update prevSuccessfulSession_id if this sync was successful and we don't already have one
+      prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ? 
+        syncSession._id : // Use current session ID as the successful one
+        syncSession.prevSuccessfulSession_id, // Keep existing value
+      
+      error,
+      syncCounts
+    };
+    
+    // Add failed transactions to the update if present
+    if (syncResult.hasFailures && syncResult.failedTransactions) {
+      updateData.failedTransactions = syncResult.failedTransactions;
+    }
     
     // Update the sync session
     await SyncSessions.update(
       syncSession._id,
-      {
-        status,
-        userId: syncSession.userId,
-        nextCursor: syncResult.nextCursor, // The next cursor to use
-        hasMore: syncResult.hasMore,
-        
-        // Only update prevSuccessfulSession_id if this sync was successful and we don't already have one
-        prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ? 
-          syncSession.cursor : // Use current cursor as the successful one
-          syncSession.prevSuccessfulSession_id, // Keep existing value
-        
-        error,
-        syncCounts
-      }
+      updateData
     );
     
     // If there was a previous sync, update its nextCursor field
@@ -217,6 +248,35 @@ class SyncSessionService {
     } catch (error) {
       console.warn(`Error fetching sync session '${sync_id}': ${error.message}`);
       return null;
+    }
+  }
+  
+  /**
+   * Gets all sync sessions for an item
+   * @param {String} itemId - The Plaid item ID
+   * @param {String} userId - The user ID
+   * @param {Object} options - Query options (limit, cursor)
+   * @returns {Promise<Array>} Sync sessions sorted by recency
+   */
+  async getSyncSessionsForItem(itemId, userId, options = {}) {
+    try {
+      if (!itemId || !userId) {
+        return [];
+      }
+      
+      const { limit = 20 } = options;
+      
+      // Query sessions by itemId and userId
+
+      const sessions = await SyncSessions.find(
+        { itemIdTime: `${itemId}:*`, userId },
+        { limit, reverse: true } // Most recent first
+      );
+      
+      return sessions.items || [];
+    } catch (error) {
+      console.warn(`Error fetching sync sessions for item ${itemId}: ${error.message}`);
+      return [];
     }
   }
   
@@ -381,6 +441,11 @@ class SyncSessionService {
         }
       },
       error: legacySyncData.result?.errorMessage || null,
+      failedTransactions: {
+        added: [],
+        modified: [],
+        removed: []
+      },
       recoveryAttempts: 0,
       recoveryStatus: null,
       isLegacy: true,
@@ -397,6 +462,58 @@ class SyncSessionService {
     
     // Save the migrated sync session
     return await SyncSessions.save(syncSession);
+  }
+
+  /**
+   * Reverts to a specific sync session
+   * @param {Object} targetSession - The sync session to revert to
+   * @param {Object} item - The Plaid item
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Result of the reversion
+   */
+  async revertToSyncSession(targetSession, item, user) {
+    if (!targetSession || !targetSession._id || !item || !user) {
+      throw new Error('Invalid parameters for reversion');
+    }
+    
+    try {
+      // Use recovery service to revert transactions
+      const revertResult = await transactionRecoveryService.removeTransactionsAfterSyncTime(
+        item.itemId,
+        user._id,
+        targetSession.syncTime
+      );
+      
+      if (!revertResult.isReverted) {
+        throw new Error(`Failed to revert: ${revertResult.message}`);
+      }
+      
+      // Create a recovery sync session
+      const recoverySyncSession = await this.createRecoverySyncSession(
+        targetSession,
+        { _id: item.sync_id, syncNumber: targetSession.syncNumber },
+        revertResult
+      );
+      
+      // Update the item to point to the recovery session
+      await plaidItems.update(item._id, {
+        status: 'complete',
+        sync_id: recoverySyncSession._id
+      });
+      
+      return {
+        success: true,
+        revertedTo: targetSession._id,
+        removedCount: revertResult.removedCount,
+        recoverySession: recoverySyncSession._id
+      };
+    } catch (error) {
+      console.error(`Error reverting to sync session ${targetSession._id}:`, error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 
   generateRandomLetters(length=4) {

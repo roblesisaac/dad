@@ -20,5 +20,9 @@ export default function(api, baseUrl) {
   member.get('/plaid/transactions/:_id?', transactionController.getTransactions);
   member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
   
+  // Sync Sessions
+  member.get('/plaid/items/:itemId/sync-sessions', transactionController.getSyncSessionsForItem);
+  member.post('/plaid/items/:itemId/revert/:sessionId', transactionController.revertToSyncSession);
+  
   // Maintenance
 }
