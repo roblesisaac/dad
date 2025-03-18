@@ -31,11 +31,14 @@ class SyncSessionService {
       item_id: previousSync?.item_id || item._id,
       itemId: previousSync?.itemId || item.itemId,
       status: 'in_progress',
-      cursor: item.cursor || '', // The cursor used for this sync (empty string for initial sync)
-      previousCursor: previousSync?.cursor || null, // The cursor used in the previous sync session
+      cursor: previousSync.nextCursor || '', // The cursor used for this sync (empty string for initial sync)
       nextCursor: null, // Will be set after processing when we know the next cursor
-      prevSuccessfulCursor: previousSync?.status === 'complete' ? previousSync?.cursor : previousSync?.prevSuccessfulCursor || null,
+      prevSession_id: previousSync?._id,
+      prevSuccessfulSession_id: previousSync?.status === 'complete' ? 
+        previousSync?._id 
+        : previousSync?.prevSuccessfulSession_id || null,
       syncTime,
+      syncNumber: previousSync?.syncNumber ? Math.trunc(previousSync.syncNumber) + 1 : 1,
       batchNumber,
 
       // If we're continuing a multi-batch sync, use the previous syncId
@@ -70,56 +73,60 @@ class SyncSessionService {
   
   /**
    * Creates a recovery sync session
-   * @param {Object} item - Item data
    * @param {Object} previousSync - Previous sync data
-   * @param {Object} user - User object
+   * @param {Object} failedSyncSession - Failed sync session data
    * @param {Object} revertResult - Results from the reversion
    * @returns {Promise<Object>} Created recovery sync session
    */
-  async createRecoverySyncSession(previousSync, user, item, revertResult) {
+  async createRecoverySyncSession(sessionToRetry, failedSyncSession, revertResult) {
     const syncTime = Date.now();
+    const { _id, syncCounts, ...sessionToRetryData } = sessionToRetry;
     
-    const recoverySync = {
-      userId: user._id,
-      item_id: item._id,
-      itemId: item.itemId,
+    const recoverySyncData = {
+      ...sessionToRetryData,
+      prevSession_id: failedSyncSession._id,
       status: 'recovery',
-      
-      // The cursor used for this recovery (the last successful cursor we reverted to)
-      cursor: revertResult.revertedTo,
-      
-      // Keep track of the previous cursor that had issues
-      previousCursor: previousSync.cursor,
-      
-      // Will be populated on next sync
-      nextCursor: null,
-      
-      // Maintain the prevSuccessfulCursor reference
-      prevSuccessfulCursor: revertResult.revertedTo,
-      
+      isRecovery: true,
       syncTime,
       syncId: `${randomString(10)}-${syncTime}`,
-      recoveryAttempts: (previousSync.recoveryAttempts || 0) + 1,
+      recoveryAttempts: (failedSyncSession.recoveryAttempts || 0) + 1,
       recoveryStatus: 'success',
-      recoveryDetails: {
-        revertedTo: revertResult.revertedTo,
+      syncNumber: this.addAndRound(failedSyncSession.syncNumber, 0.1)
+    };
+
+    if(revertResult) {
+      recoverySyncData.recoveryDetails = {
         transactionsRemoved: revertResult.removedCount,
-        previousBatchNumber: previousSync.batchNumber,
-        previousSyncId: previousSync.syncId,
+        previousBatchNumber: failedSyncSession.batchNumber,
+        previousSyncId: failedSyncSession.syncId,
         recoveryTimestamp: syncTime
       }
-    };
+    }
+
+    const recoverySync = await SyncSessions.save(recoverySyncData);
+
+    if(failedSyncSession?._id && recoverySync._id) {
+      await SyncSessions.update(failedSyncSession._id, {
+        nextSession_id: recoverySync._id
+      });
+    }
     
     // Save recovery sync session
-    return await SyncSessions.save(recoverySync);
+    return recoverySync;
   }
+
+  addAndRound(value, addValue) {
+    let result = value + addValue;
+    let multiplier = Math.pow(10, 1);
+    return Math.round(result * multiplier) / multiplier;
+}
   
   /**
    * Updates the sync session after transaction processing
    * @param {Object} syncSession - The sync session to update
    * @param {Object} syncResult - Results from processing transactions
    * @param {Object} previousSync - Previous sync data, if any
-   * @param {String} status - Status to set ('complete', 'in_progress', 'error')
+   * @param {String} status - complete|in_progress|error
    * @returns {Promise<void>}
    */
   async updateSyncSessionAfterProcessing(syncSession, syncResult, previousSync, status) {
@@ -158,10 +165,10 @@ class SyncSessionService {
         nextCursor: syncResult.nextCursor, // The next cursor to use
         hasMore: syncResult.hasMore,
         
-        // Only update prevSuccessfulCursor if this sync was successful and we don't already have one
-        prevSuccessfulCursor: isSuccessful && !syncSession.prevSuccessfulCursor ? 
+        // Only update prevSuccessfulSession_id if this sync was successful and we don't already have one
+        prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ? 
           syncSession.cursor : // Use current cursor as the successful one
-          syncSession.prevSuccessfulCursor, // Keep existing value
+          syncSession.prevSuccessfulSession_id, // Keep existing value
         
         error,
         syncCounts
@@ -172,7 +179,10 @@ class SyncSessionService {
     if (previousSync && previousSync._id) {
       await SyncSessions.update(
         previousSync._id,
-        { nextCursor: syncSession.cursor, userId: previousSync.userId }
+        { 
+          nextSession_id: syncSession._id,
+          userId: previousSync.userId
+        }
       );
     }
   }
@@ -180,29 +190,29 @@ class SyncSessionService {
   /**
    * Gets the sync data for an item
    * Returns the most recent sync session for the item
-   * @param {Object} item - Item data
+   * @param {String} session_id - session._id
    * @returns {Promise<Object|null>} Sync data session or null if not found
    */
-  async getSyncSession(item, user) {
+  async getSyncSession(sync_id, user) {
     try {
-      if (!item.itemId || !item.userId) {
+      if (!sync_id) {
         return null;
       }
       
-      const syncSession = await SyncSessions.findOne(item.sync_id);
+      const syncSession = await SyncSessions.findOne(sync_id);
 
       if(!syncSession) {
         return null;
       }
 
       if(syncSession.userId !== user._id) {
-        console.warn(`Sync session found for item ${item.itemId} but user ${user._id} does not match`);
+        console.warn(`Sync session '${sync_id}' found but user ${user._id} does not match`);
         return null;
       }
       
       return syncSession;
     } catch (error) {
-      console.warn(`Error fetching sync session for item ${item.itemId}: ${error.message}`);
+      console.warn(`Error fetching sync session '${sync_id}': ${error.message}`);
       return null;
     }
   }
@@ -214,7 +224,7 @@ class SyncSessionService {
    */
   async isSyncRecent(item) {
     // Find the most recent sync
-    const syncSession = await this.getSyncSession(item);
+    const syncSession = await this.getSyncSession(item.sync_id);
     
     if (!syncSession || !syncSession.syncTime) {
       return false;
@@ -264,14 +274,9 @@ class SyncSessionService {
    */
   isRecoveryNeeded(item, syncSession) {
     // If no sync data, no recovery needed
-    if (!syncSession) {
+    if (!syncSession || syncSession.isRecovery) {
       return false;
     }
-    
-    // No recovery possible without a last successful cursor
-    // if (!syncSession.prevSuccessfulCursor) {
-    //   return false;
-    // }
     
     // Recovery is needed if:
     // 1. The item is in error state
@@ -280,7 +285,7 @@ class SyncSessionService {
     }
     
     // 2. The last sync had count mismatches
-    if (syncSession.status !== 'recovery' && !this.countsMatch(syncSession.syncCounts)) {
+    if (!this.countsMatch(syncSession.syncCounts)) {
       console.warn(`Recovery needed for item ${item.itemId} due to count mismatch in previous sync`);
       return true;
     }
@@ -326,52 +331,56 @@ class SyncSessionService {
   /**
    * Creates a sync session from legacy sync data stored directly on the item
    * Used for migration from old sync format to new sync session format
-   * @param {Object} legacyData - Converted legacy sync data
    * @param {Object} user - User object
-   * @param {Object} item - Item data
+   * @param {Object} item - Item data containing legacy syncCounts
    * @returns {Promise<Object>} The created sync session
    */
-  async createSyncSessionFromLegacy(legacyData, user, item) {
-    if (!legacyData || !legacyData.cursor) {
+  async createSyncSessionFromLegacy(user, item) {
+    const legacySyncData = item.syncData;
+    
+    if (!legacySyncData || !legacySyncData.cursor) {
       throw new Error('Invalid legacy sync data provided for migration');
     }
 
-    const syncTime = legacyData.syncTime || Date.now();
+    // Convert legacy syncData format to syncSession format
+    const syncTime = legacySyncData.lastSyncTime || Date.now();
     
     const syncSession = {
       userId: user._id,
       item_id: item._id,
       itemId: item.itemId,
-      status: legacyData.status || 'complete',
-      cursor: legacyData.cursor,
-      previousCursor: null, // No previous cursor in legacy format
-      nextCursor: legacyData.nextCursor || legacyData.cursor, // Use nextCursor if available, otherwise use cursor
-      prevSuccessfulCursor: legacyData.status === 'complete' ? legacyData.cursor : null,
+      status: legacySyncData.status === 'completed' ? 'complete' : legacySyncData.status,
+      cursor: legacySyncData.cursor,
+      nextCursor: legacySyncData.cursor, // In legacy format, there was only one cursor field
+      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? 
+        legacySyncData.cursor : null,
       syncTime,
-      batchNumber: legacyData.batchNumber || 1,
+      batchNumber: 1, // Default for legacy data
       syncId: `legacy-${randomString(8)}-${syncTime}`,
       hasMore: false, // Default for migrated data
-      syncCounts: legacyData.syncCounts || {
+      syncCounts: {
         expected: {
-          added: 0,
-          modified: 0,
-          removed: 0
+          added: legacySyncData.result?.itemsAddedCount || 0,
+          modified: legacySyncData.result?.itemsModifiedCount || 0,
+          removed: legacySyncData.result?.itemsRemovedCount || 0
         },
         actual: {
-          added: 0,
-          modified: 0,
-          removed: 0
+          added: legacySyncData.result?.itemsAddedCount || 0,
+          modified: legacySyncData.result?.itemsModifiedCount || 0,
+          removed: legacySyncData.result?.itemsRemovedCount || 0
         }
       },
+      error: legacySyncData.result?.errorMessage || null,
       recoveryAttempts: 0,
       recoveryStatus: null,
+      isLegacy: true,
       migrationDetails: {
         migratedAt: new Date().toISOString(),
         fromLegacyFormat: true,
         originalData: {
-          cursor: legacyData.cursor,
-          syncTime: legacyData.syncTime,
-          status: legacyData.status
+          cursor: legacySyncData.cursor,
+          syncTime: legacySyncData.lastSyncTime,
+          status: legacySyncData.status
         }
       }
     };

@@ -28,39 +28,17 @@ class TransactionSyncService {
       const itemData = await this._getAndLockItem(item, user);
       
       // 2. Previous sync session handling
-      let prevSyncSession = null;
+      let prevSyncSession = await syncSessionService.getSyncSession(itemData?.sync_id, user);
+
+      const hasLegacySyncData = !prevSyncSession && itemData.syncData && itemData.syncData.cursor;
       
       // Check for legacy syncData stored directly on the item
-      if (itemData.syncData && itemData.syncData.cursor) {        
-        // Convert legacy syncData format to syncSession format
-        prevSyncSession = {
-          userId: user._id,
-          itemId: itemData.itemId,
-          status: itemData.syncData.status === 'completed' ? 'complete' : itemData.syncData.status,
-          cursor: itemData.syncData.cursor,
-          nextCursor: itemData.syncData.cursor, // In legacy format, there was only one cursor field
-          syncTime: itemData.syncData.lastSyncTime,
-          batchNumber: 1, // Default for legacy data
-          syncCounts: {
-            expected: {
-              added: itemData.syncData.result?.itemsAddedCount || 0,
-              modified: itemData.syncData.result?.itemsModifiedCount || 0,
-              removed: itemData.syncData.result?.itemsRemovedCount || 0
-            },
-            actual: {
-              added: itemData.syncData.result?.itemsAddedCount || 0,
-              modified: itemData.syncData.result?.itemsModifiedCount || 0,
-              removed: itemData.syncData.result?.itemsRemovedCount || 0
-            }
-          },
-          error: itemData.syncData.result?.errorMessage || null
-        };
-        
-        // Save this as a proper syncSession in the database
-        // This ensures future syncs will use the new format
+      if (hasLegacySyncData) {        
         try {
+          console.log(`Legacy syncData found for item ${itemData.itemId}, migrating...`);
+          
+          // Create a sync session from the legacy data
           const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
-            prevSyncSession,
             user,
             itemData
           );
@@ -68,21 +46,12 @@ class TransactionSyncService {
           if (migratedSession && migratedSession._id) {
             prevSyncSession = migratedSession;
             
-            // Remove legacy syncData from item now that we've migrated it
-            await plaidItems.update(
-              { itemId: itemData.itemId, userId: user._id },
-              { $unset: { syncData: "" } }
-            );
-            
             console.log(`Successfully migrated legacy syncData for item ${itemData.itemId}`);
           }
         } catch (migrationError) {
           console.error(`Error migrating legacy syncData: ${migrationError.message}`);
-          // Continue with in-memory conversion even if database save failed
+          // Continue without the migrated session
         }
-      } else {
-        // No legacy data, use the current method to get sync session
-        prevSyncSession = await syncSessionService.getSyncSession(itemData, user);
       }
       
       // ------
@@ -100,7 +69,6 @@ class TransactionSyncService {
       // 4. Check for changes from Plaid before creating a new sync session
       const cursor = prevSyncSession?.nextCursor || null;
       const plaidData = await this._fetchTransactionsFromPlaid(itemData, user, cursor);
-
       const hasChanges = this._checkForChanges(plaidData);
       
       // If no changes and we have a previous session, update lastNoChangesTime and return early
@@ -485,31 +453,31 @@ class TransactionSyncService {
    * @returns {Promise<Object>} Recovery results
    * @private
    */
-  async _recoverFromFailedSync(item, syncSession, user) {
+  async _recoverFromFailedSync(item, failedSyncSession, user) {
     try {
       console.log(`Starting recovery for item ${item.itemId}, user ${user._id}`);
       
       // Use the recovery service to handle the reversion
       const recoveryResult = await transactionRecoveryService.recoverFailedSync(
         item, 
-        syncSession, 
+        failedSyncSession, 
         user
       );
       
-      if (!recoveryResult.recovered) {
+      if (!recoveryResult.isRecovered) {
         console.warn(`Recovery failed for item ${item.itemId}: ${recoveryResult.message}`);
         throw new CustomError('RECOVERY_FAILED', 
           `Unable to recover from previous sync error: ${recoveryResult.message}`);
       }
       
       // Update the recovery stats in the sync session
-      await syncSessionService.updateSyncRecoveryStats(syncSession, 'success');
+      await syncSessionService.updateSyncRecoveryStats(failedSyncSession, 'success');
       
       return recoveryResult;
     } catch (error) {
       // Update the recovery status in the sync session if possible
       await syncSessionService.updateSyncRecoveryStats(
-        syncSession,
+        failedSyncSession,
         'failed',
         error.message || 'Unknown error during recovery'
       );

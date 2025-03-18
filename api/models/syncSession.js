@@ -6,21 +6,19 @@ const syncSchema = {
     itemId: String, // item.itemId
     status: String,
 
-    cursor: String,
-    previousCursor: String,
-    nextCursor: String,
-    prevSuccessfulCursor: String,
-    hasMore: Boolean,
+    prevSession_id: String,
+    nextSession_id: String,
+    prevSuccessfulSession_id: String,
 
+    cursor: String,
+    nextCursor: String,
+
+    hasMore: Boolean,
     lastNoChangesTime: Number,
     batchNumber: Number,
     syncTime: Number,
     syncId: String,
-
-    error: {
-        type: Object,
-        default: null
-    },
+    syncNumber: Number,
     
     syncCounts: {
         type: Object,
@@ -30,8 +28,20 @@ const syncSchema = {
         }
     },
 
+    error: {
+        type: Object,
+        default: null
+    },
+
+    isLegacy: Boolean,
+    isRecovery: Boolean,
+
     recoveryAttempts: Number,
     recoveryStatus: String,
+    recoveryDetails: {
+        type: Object,
+        default: null,
+    },
 
     label1: {
         name: 'nextCursor',

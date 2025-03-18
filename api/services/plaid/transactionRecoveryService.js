@@ -17,7 +17,7 @@ class TransactionRecoveryService extends PlaidBaseService {
    * @param {Object} user - User object
    * @returns {Object} Recovery result
    */
-  async recoverFailedSync(item, syncSession, user) {
+  async recoverFailedSync(item, failedSyncSession, user) {
     try {
       // Get item data
       const validatedItem = await itemService.validateAndGetItem(item, user);
@@ -27,34 +27,36 @@ class TransactionRecoveryService extends PlaidBaseService {
       }
       
       // Check if recovery is needed
-      if (validatedItem.status !== 'error' && syncSession?.status !== 'error' && syncSessionService.countsMatch(syncSession?.syncCounts)) {
+      if (validatedItem.status !== 'error' && failedSyncSession?.status !== 'error' && syncSessionService.countsMatch(failedSyncSession?.syncCounts)) {
         return {
-          recovered: false,
+          isRecovered: false,
           message: 'Item not in error state, recovery not needed'
         };
       }
-      
-      // We will use the syncTime from the sync session to revert
-      const syncTime = syncSession.syncTime;
+
+      const sessionToRetry = await syncSessionService.getSyncSession(failedSyncSession.prevSession_id, user);
+
+      if(!sessionToRetry) {
+        throw new CustomError('SYNC_SESSION_NOT_FOUND', 'Sync session not found');
+      }
       
       // Revert transactions to the last successful cursor
-      const revertResult = await this.revertTransactionsToSyncTimeCursor(
+      const revertResult = await this.removeTransactionsAfterSyncTime(
         validatedItem.itemId,
         user._id,
-        syncSession.prevSuccessfulCursor,
-        syncTime
+        sessionToRetry.syncTime
       );
       
       // If reversion failed, return failure
-      if (!revertResult.reverted) {
+      if (!revertResult.isReverted) {
         return {
-          recovered: false,
+          isRecovered: false,
           message: revertResult.message || 'Unknown error during reversion'
         };
       }
       
       // Create a recovery sync syncSession
-      const recoverySyncSession = await syncSessionService.createRecoverySyncSession(syncSession, user, validatedItem, revertResult);
+      const recoverySyncSession = await syncSessionService.createRecoverySyncSession(sessionToRetry, failedSyncSession, revertResult);
       
       // Update item status
       await plaidItems.update(validatedItem._id,
@@ -65,8 +67,7 @@ class TransactionRecoveryService extends PlaidBaseService {
       );
       
       return {
-        recovered: true,
-        revertedTo: revertResult.revertedTo,
+        isRecovered: true,
         removedCount: revertResult.removedCount
       };
     } catch (error) {
@@ -74,24 +75,6 @@ class TransactionRecoveryService extends PlaidBaseService {
         operation: 'recover_failed_sync' 
       });
     }
-  }
-
-  /**
-   * Validates parameters for transaction reversion
-   * @param {String} itemId - Item ID
-   * @param {String} userId - User ID
-   * @param {String} cursorToRevertTo - Target cursor to revert to
-   * @param {Number} syncTime - Sync time to revert to
-   * @returns {Boolean} True if validation passes
-   * @throws {Error} If validation fails
-   * @private
-   */
-  _validateRevertParameters(itemId, userId, syncTime) {
-    if (!itemId || !userId || !syncTime) {
-      throw new CustomError('INVALID_PARAMS', 
-        'Missing required parameters for transaction reversion');
-    }
-    return true;
   }
 
   /**
@@ -104,7 +87,7 @@ class TransactionRecoveryService extends PlaidBaseService {
    */
   async _fetchTransactionsAfterSyncTime(itemId, userId, referenceSyncTime) {
     try {
-      const syncTime = `>=${itemId}:${referenceSyncTime}`;
+      const syncTime = `>${itemId}:${referenceSyncTime}`;
       const transactions = await transactionsCrudService.fetchTransactionsBySyncTime(syncTime, userId);
       
       return transactions;
@@ -120,14 +103,16 @@ class TransactionRecoveryService extends PlaidBaseService {
    * Uses the label4 (itemId+syncTime) to find transactions to remove
    * @param {String} itemId - The Plaid item ID
    * @param {String} userId - The user ID
-   * @param {String} cursorToRevertTo - Target cursor to revert to
-   * @param {Number} syncTime - Sync time to revert to
+   * @param {String} syncTime - Timestamp
    * @returns {Object} Result of the reversion operation
    */
-  async revertTransactionsToSyncTimeCursor(itemId, userId, cursorToRevertTo, syncTime) {
+  async removeTransactionsAfterSyncTime(itemId, userId, syncTime) {
     try {
       // Validate input parameters
-      this._validateRevertParameters(itemId, userId, syncTime);
+      if (!itemId || !userId || !syncTime) {
+        throw new CustomError('INVALID_PARAMS', 
+          'Missing required parameters for transaction reversion');
+      }
       
       // Find all transactions with syncTime greater than or equal to referenceSyncTime
       const transactionsResult = await this._fetchTransactionsAfterSyncTime(
@@ -141,9 +126,8 @@ class TransactionRecoveryService extends PlaidBaseService {
       // Nothing to remove
       if (transactionsToRevert.length === 0) {
         return { 
-          reverted: true,
+          isReverted: true,
           message: 'No transactions needed to be reverted',
-          revertedTo: cursorToRevertTo,
           removedCount: 0
         };
       }
@@ -159,9 +143,8 @@ class TransactionRecoveryService extends PlaidBaseService {
       console.log('removedCount', removedCount);
       
       return {
-        reverted: true,
-        removedCount,
-        revertedTo: cursorToRevertTo
+        isReverted: true,
+        removedCount
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { 
