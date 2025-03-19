@@ -40,10 +40,9 @@
     <div v-else class="space-y-4">
       <div v-for="bank in banks" :key="bank.itemId" 
            :class="[
-             'border-2 border-black rounded-md p-4 hover:bg-gray-50 transition-colors cursor-pointer',
+             'border-2 border-black rounded-md p-4 hover:bg-gray-50 transition-colors',
              { 'border-blue-500 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)]': isSelected(bank) }
            ]"
-           @click="$emit('select-bank', bank)"
       >
         <div class="flex justify-between items-center">
           <div class="flex items-center space-x-3">
@@ -57,7 +56,7 @@
             <h3 class="font-medium">{{ bank.institutionName || 'Connected Bank' }}</h3>
           </div>
           
-          <!-- Sync button -->
+          <!-- Action buttons -->
           <div class="flex space-x-2">
             <button 
               @click.stop="$emit('edit-bank-name', bank)"
@@ -66,16 +65,11 @@
               Edit
             </button>
             <button 
-              @click.stop="$emit('sync-bank', bank)"
-              :disabled="isSyncing && selectedBankId === bank.itemId"
-              class="inline-flex items-center px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+              @click.stop="$emit('select-bank', bank)"
+              class="inline-flex items-center space-x-1 px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none"
             >
-              <span v-if="isSyncing && selectedBankId === bank.itemId">
-                Syncing...
-              </span>
-              <span v-else>
-                Sync
-              </span>
+              <History class="h-4 w-4" />
+              <span>Sync History</span>
             </button>
           </div>
         </div>
@@ -107,7 +101,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { RefreshCw, AlertTriangle, CreditCard } from 'lucide-vue-next';
+import { RefreshCw, AlertTriangle, CreditCard, History } from 'lucide-vue-next';
 
 const props = defineProps({
   banks: {
