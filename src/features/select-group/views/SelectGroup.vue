@@ -329,4 +329,9 @@ watch(() => banks.value.length, (newCount) => {
     selectBank(banks.value[0]);
   }
 });
+
+watch(() => state.allUserGroups, (groups) => {
+  customGroups.value = groups.filter(group => group.accounts.length > 1);
+  bankAccounts.value = groups.filter(group => group.accounts.length < 2);
+}, { deep: true });
 </script> 
