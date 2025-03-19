@@ -17,7 +17,7 @@
                 class="p-1.5 rounded-full text-blue-500 hover:text-blue-700 hover:bg-blue-50"
                 aria-label="Edit group"
             >
-                <Edit size="16" />
+                <EllipsisVertical size="16" />
             </button>
         </div>
         
@@ -95,7 +95,7 @@ import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
 import NetBalance from './NetBalance.vue';
-import { Edit, GripVertical, ChevronRight } from 'lucide-vue-next';
+import { EllipsisVertical, GripVertical, ChevronRight } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 
 // Define emits
