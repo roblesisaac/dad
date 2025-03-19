@@ -194,6 +194,59 @@ class ItemService extends PlaidBaseService {
     
     throw new CustomError('INVALID_ITEM', 'Invalid item data type');
   }
+  
+  /**
+   * Updates an item's properties
+   * @param {string} itemId - Item ID
+   * @param {string} userId - User ID
+   * @param {Object} updateData - Data to update (e.g., institutionName)
+   * @returns {Promise<Object>} Updated item
+   */
+  async updateItem(itemId, userId, updateData) {
+    try {
+      if (!itemId || !userId) {
+        throw new Error('INVALID_PARAMS: Missing itemId or userId');
+      }
+      
+      // Get the current item first to verify it exists
+      const currentItem = await this.getItem(itemId, userId);
+      
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item to update');
+      }
+      
+      // Validate update data - only allow specific fields to be updated
+      const validUpdateFields = ['institutionName', 'institutionId'];
+      const sanitizedUpdateData = {};
+      
+      Object.keys(updateData).forEach(key => {
+        if (validUpdateFields.includes(key)) {
+          sanitizedUpdateData[key] = updateData[key];
+        }
+      });
+      
+      if (Object.keys(sanitizedUpdateData).length === 0) {
+        throw new Error('INVALID_UPDATE: No valid fields to update');
+      }
+      
+      // Update the item
+      const result = await plaidItems.update(
+        { itemId, userId },
+        sanitizedUpdateData
+      );
+      
+      if (result.modifiedCount === 0) {
+        throw new Error('ITEM_UPDATE_ERROR: Failed to update item');
+      }
+      
+      // Return the updated item
+      const updatedItem = await this.getItem(itemId, userId);
+      return updatedItem;
+    } catch (error) {
+      console.error('Error updating item:', error);
+      throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
+    }
+  }
 }
 
 export default new ItemService(); 

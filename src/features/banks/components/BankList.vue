@@ -58,18 +58,26 @@
           </div>
           
           <!-- Sync button -->
-          <button 
-            @click.stop="$emit('sync-bank', bank)"
-            :disabled="isSyncing && selectedBankId === bank.itemId"
-            class="inline-flex items-center px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span v-if="isSyncing && selectedBankId === bank.itemId">
-              Syncing...
-            </span>
-            <span v-else>
-              Sync
-            </span>
-          </button>
+          <div class="flex space-x-2">
+            <button 
+              @click.stop="$emit('edit-bank-name', bank)"
+              class="inline-flex items-center px-3 py-1 text-sm rounded-md text-gray-600 border border-gray-600 hover:bg-gray-50 focus:outline-none"
+            >
+              Edit
+            </button>
+            <button 
+              @click.stop="$emit('sync-bank', bank)"
+              :disabled="isSyncing && selectedBankId === bank.itemId"
+              class="inline-flex items-center px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <span v-if="isSyncing && selectedBankId === bank.itemId">
+                Syncing...
+              </span>
+              <span v-else>
+                Sync
+              </span>
+            </button>
+          </div>
         </div>
         
         <!-- Last sync time & status -->
@@ -132,7 +140,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['select-bank', 'sync-bank', 'refresh', 'connect-bank']);
+const emit = defineEmits(['select-bank', 'sync-bank', 'refresh', 'connect-bank', 'edit-bank-name']);
 
 // Computed
 const selectedBankId = computed(() => props.selectedBank?.itemId);

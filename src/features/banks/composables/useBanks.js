@@ -21,13 +21,15 @@ export function useBanks() {
   const syncSessions = ref([]);
   const loading = ref({
     banks: false,
-    syncSessions: false
+    syncSessions: false,
+    editBankName: false
   });
   const error = ref({
     banks: null,
     syncSessions: null,
     sync: null,
-    revert: null
+    revert: null,
+    editBankName: null
   });
   
   /**
@@ -209,6 +211,46 @@ export function useBanks() {
     }
   };
   
+  /**
+   * Update bank name (institutionName)
+   * @param {Object} bank - Bank object with updated institutionName
+   * @returns {Object} Updated bank
+   */
+  const updateBankName = async (bank) => {
+    if (!bank?.itemId) {
+      error.value.editBankName = 'Invalid bank';
+      return null;
+    }
+    
+    loading.value.editBankName = true;
+    error.value.editBankName = null;
+    
+    try {
+      const response = await api.put(`plaid/items/${bank.itemId}`, {
+        institutionName: bank.institutionName
+      });
+      
+      // Update the bank in the banks array
+      const index = banks.value.findIndex(b => b.itemId === bank.itemId);
+      if (index !== -1) {
+        banks.value[index] = { ...banks.value[index], ...response };
+      }
+      
+      // If this is the selected bank, update it as well
+      if (selectedBank.value?.itemId === bank.itemId) {
+        selectedBank.value = { ...selectedBank.value, ...response };
+      }
+      
+      return response;
+    } catch (err) {
+      console.error('Error updating bank name:', err);
+      error.value.editBankName = err.message || 'Failed to update bank name';
+      return null;
+    } finally {
+      loading.value.editBankName = false;
+    }
+  };
+  
   // Computed properties
   const isLoading = computed(() => 
     loading.value.banks || loading.value.syncSessions || isSyncing.value
@@ -245,6 +287,7 @@ export function useBanks() {
     // Utilities
     formatSyncDate,
     getBankStatusClass,
-    getBankStatusText
+    getBankStatusText,
+    updateBankName
   };
 } 

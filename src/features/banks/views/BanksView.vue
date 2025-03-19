@@ -25,6 +25,7 @@
           @sync-bank="handleSyncBank"
           @refresh="fetchBanks"
           @connect-bank="handleConnectBank"
+          @edit-bank-name="handleEditBankName"
         />
       </div>
     </div>
@@ -42,6 +43,15 @@
       @sync="handleSyncSelectedBank"
       @refresh="handleRefreshSyncSessions"
       @revert-to-session="handleRevertToSession"
+    />
+    
+    <!-- Edit Bank Name Modal -->
+    <EditBankNameModal
+      :is-open="isEditBankNameModalOpen"
+      :bank="bankToEdit"
+      :is-saving="loading.editBankName"
+      @close="closeEditBankNameModal"
+      @save="saveBankName"
     />
     
     <!-- Success notification -->
@@ -72,6 +82,7 @@ import { ref, onMounted, watch } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import BankList from '../components/BankList.vue';
 import SyncSessionsModal from '../components/SyncSessionsModal.vue';
+import EditBankNameModal from '../components/EditBankNameModal.vue';
 import { CheckCircle, AlertCircle } from 'lucide-vue-next';
 
 const emit = defineEmits(['connect-bank-complete']);
@@ -91,7 +102,8 @@ const {
   revertToSession,
   formatSyncDate,
   getBankStatusClass,
-  getBankStatusText
+  getBankStatusText,
+  updateBankName
 } = useBanks();
 
 // Local state
@@ -103,6 +115,8 @@ const notification = ref({
 });
 
 const isSyncSessionsModalOpen = ref(false);
+const isEditBankNameModalOpen = ref(false);
+const bankToEdit = ref(null);
 
 // Initialize data
 onMounted(async () => {
@@ -173,6 +187,33 @@ const handleRevertToSession = async (session) => {
     showNotification(`Successfully reverted to previous sync. ${result.removedCount} transactions removed.`);
   } else if (result && result.error) {
     showNotification(`Reversion failed: ${result.error}`, 'error');
+  }
+};
+
+const handleEditBankName = (bank) => {
+  bankToEdit.value = bank;
+  isEditBankNameModalOpen.value = true;
+};
+
+const closeEditBankNameModal = () => {
+  isEditBankNameModalOpen.value = false;
+};
+
+const saveBankName = async (bank) => {
+  if (!bank) return;
+  
+  try {
+    const result = await updateBankName(bank);
+    
+    if (result) {
+      showNotification(`Bank name updated to "${bank.institutionName}"`);
+      closeEditBankNameModal();
+    } else if (error.value.editBankName) {
+      showNotification(`Failed to update bank name: ${error.value.editBankName}`, 'error');
+    }
+  } catch (err) {
+    console.error('Error saving bank name:', err);
+    showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
   }
 };
 
