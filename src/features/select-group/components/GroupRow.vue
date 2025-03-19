@@ -1,18 +1,33 @@
 <template>
     <div :class="[
-        'flex items-center rounded-md bg-white transition-all duration-200',
-        'border shadow-sm hover:shadow p-3 space-x-2',
-        isSelected ? 'border-indigo-300 bg-indigo-50 shadow-indigo-100' : 'border-gray-200 hover:border-gray-300'
+        'flex items-center bg-white transition-all duration-200',
+        'border p-3 space-x-2',
+        isSelected ? 'border-indigo-300 bg-indigo-50 shadow-indigo-100' : 'border-gray-200 hover:border-gray-300',
+        editMode ? 'edit-mode-row' : ''
     ]">
-        <!-- Drag Handle -->
-        <div class="flex-shrink-0 handler-group">
-            <GripVertical class="w-4 h-4 text-gray-400 cursor-grab active:cursor-grabbing" />
+        <!-- Drag Handle (only visible in edit mode) -->
+        <div v-if="editMode" class="flex-shrink-0 handler-group text-blue-400">
+            <GripVertical class="w-4 h-4 cursor-grab active:cursor-grabbing" />
+        </div>
+        
+        <!-- Actions Menu (only visible when not in edit mode) -->
+        <div v-if="!editMode" class="flex-shrink-0">
+            <button 
+                @click="emit('edit-group', element)" 
+                class="p-1.5 rounded-full text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                aria-label="Edit group"
+            >
+                <Edit size="16" />
+            </button>
         </div>
         
         <!-- Content Area (clickable for selection) -->
         <div 
             @click="handleSelectGroup(element)" 
-            class="flex-1 min-w-0 flex items-center cursor-pointer"
+            :class="[
+                'flex-1 min-w-0 flex items-center',
+                !editMode ? 'cursor-pointer' : ''
+            ]"
         >
             <!-- Left side: Name and details -->
             <div class="flex-1 min-w-0">
@@ -68,15 +83,9 @@
             </div>
         </div>
         
-        <!-- Actions Menu -->
-        <div class="flex-shrink-0">
-            <button 
-                @click="emit('edit-group', element)" 
-                class="p-1 rounded-full text-gray-400 hover:text-indigo-600 hover:bg-gray-100"
-                aria-label="Edit group"
-            >
-                <Edit size="16" />
-            </button>
+        <!-- Selection Chevron (only visible in normal mode) -->
+        <div v-if="!editMode" class="flex-shrink-0">
+            <ChevronRight class="w-4 h-4 text-gray-400" />
         </div>
     </div>
 </template>
@@ -86,7 +95,7 @@ import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
 import NetBalance from './NetBalance.vue';
-import { Edit, GripVertical } from 'lucide-vue-next';
+import { Edit, GripVertical, ChevronRight } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 
 // Define emits
@@ -94,7 +103,11 @@ const emit = defineEmits(['edit-group', 'select-group']);
 
 const { fontColor, formatPrice } = useUtils();
 const props = defineProps({
-    element: Object
+    element: Object,
+    editMode: {
+        type: Boolean,
+        default: false
+    }
 });
 
 const { state } = useDashboardState();
@@ -115,7 +128,8 @@ const isDefaultName = computed(() => props.element.name === props.element.accoun
 const { updateGroupSort } = useSelectGroup();
 
 const handleSelectGroup = (group) => {
-  // Call the original selectGroup function
+  if (props.editMode) return;
+  
   // Emit the select-group event for the modal
   emit('select-group', group);
 };
@@ -124,3 +138,10 @@ watch(props.element, (newVal) => {
     updateGroupSort(newVal._id, newVal.sort);
 });
 </script>
+
+<style scoped>
+.edit-mode-row:hover {
+  border-color: #93c5fd; /* Light blue border for edit mode rows on hover */
+  background-color: #f0f7ff; /* Very light blue background */
+}
+</style>

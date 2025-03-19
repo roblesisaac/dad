@@ -1,7 +1,7 @@
 <template>
-  <div class="px-4 py-5">
+  <div class="container mx-auto max-w-screen-lg bg-white border border-gray-200 shadow-sm">
     <!-- Net-worth Card -->
-    <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-indigo-100 shadow-sm">
+    <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-indigo-100">
       <div class="flex items-center justify-between">
         <h4 class="text-sm font-medium text-gray-500">Net Balance</h4>
         <div class="text-lg font-bold text-indigo-700">
@@ -10,97 +10,107 @@
       </div>
     </div>
 
-    <div class="space-y-6">
-      <!-- Custom Groups Section -->
-      <div class="border border-gray-200 rounded-lg shadow-sm">
-        <div 
-          class="flex items-center justify-between p-4 cursor-pointer border-b border-gray-200"
-          @click="toggleCustomGroups"
+    <!-- Custom Groups Section -->
+    <div class="border-b border-gray-200">
+      <div 
+        class="flex items-center justify-between px-4 py-3 bg-blue-50 cursor-pointer"
+        @click="toggleCustomGroups"
+      >
+        <div class="flex items-center">
+          <h2 class="font-medium text-blue-800">Custom Groups</h2>
+          <span class="ml-2 text-xs text-gray-500">{{ customGroups.length }} groups</span>
+        </div>
+        <div class="text-gray-500">
+          <ChevronDown v-if="showCustomGroups" class="w-5 h-5" />
+          <ChevronRight v-else class="w-5 h-5" />
+        </div>
+      </div>
+      
+      <div v-if="showCustomGroups">
+        <Draggable 
+          v-model="customGroups" 
+          v-bind="dragOptions(100)" 
+          handle=".handler-group" 
+          @end="updateGroupSorting"
+          :disabled="!editMode"
+          :class="{'edit-mode-container': editMode}"
         >
-          <div class="flex items-center">
-            <h4 class="font-medium text-gray-700">Custom Groups</h4>
-            <span class="ml-2 text-xs text-gray-500">{{ customGroups.length }} groups</span>
-          </div>
-          <ChevronDown v-if="showCustomGroups" class="w-5 h-5 text-gray-500" />
-          <ChevronRight v-else class="w-5 h-5 text-gray-500" />
+          <template #item="{element}">
+            <GroupRow 
+              :key="element._id" 
+              :element="element" 
+              :editMode="editMode"
+              @edit-group="openEditGroupModal(element)" 
+              @select-group="handleSelectGroup(element)"
+            />
+          </template>
+        </Draggable>
+        
+        <div v-if="customGroups.length === 0" class="px-4 py-6 text-center text-gray-500 italic">
+          No custom groups yet
         </div>
         
-        <div v-if="showCustomGroups" class="p-4">
-          <Draggable 
-            v-model="customGroups" 
-            v-bind="dragOptions(100)" 
-            handle=".handler-group" 
-            class="space-y-3"
-            @end="updateGroupSorting"
-          >
-            <template #item="{element}">
-              <GroupRow 
-                :key="element._id" 
-                :element="element" 
-                @edit-group="openEditGroupModal(element)" 
-                @select-group="handleSelectGroup(element)"
-              />
-            </template>
-          </Draggable>
-          
-          <div v-if="customGroups.length === 0" class="text-center py-4 text-gray-500 text-sm">
-            No custom groups yet
-          </div>
-          
-          <!-- Create New Group Button (moved here) -->
+        <!-- Create New Group Button -->
+        <div class="p-4 border-t border-gray-200">
           <button 
             @click="handleCreateNewGroup" 
-            class="flex items-center justify-center w-full px-4 py-2.5 mt-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-md hover:from-blue-600 hover:to-indigo-700 transition-colors shadow-sm"
+            class="flex items-center justify-center w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors border border-blue-800 shadow-sm"
           >
             <PlusCircle class="w-4 h-4 mr-2" />
             Create New Group
           </button>
         </div>
       </div>
-      
-      <!-- Bank Accounts Section -->
-      <div class="border border-gray-200 rounded-lg shadow-sm">
-        <div 
-          class="flex items-center justify-between p-4 cursor-pointer border-b border-gray-200"
-          @click="toggleBankAccounts"
-        >
-          <div class="flex items-center">
-            <h4 class="font-medium text-gray-700">Bank Accounts</h4>
-            <span class="ml-2 text-xs text-gray-500">{{ bankAccounts.length }} accounts</span>
-          </div>
-          <ChevronDown v-if="showBankAccounts" class="w-5 h-5 text-gray-500" />
-          <ChevronRight v-else class="w-5 h-5 text-gray-500" />
+    </div>
+    
+    <!-- Bank Accounts Section -->
+    <div class="border-b border-gray-200">
+      <div 
+        class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+        @click="toggleBankAccounts"
+      >
+        <div class="flex items-center">
+          <h2 class="font-medium text-gray-700">Accounts & Cards</h2>
+          <span class="ml-2 text-xs text-gray-500">{{ bankAccounts.length }} accounts</span>
         </div>
-        
-        <div v-if="showBankAccounts" class="p-4">
-          <Draggable 
-            v-model="bankAccounts" 
-            v-bind="dragOptions(100)" 
-            handle=".handler-group" 
-            class="space-y-3"
-            @end="updateGroupSorting"
-          >
-            <template #item="{element}">
-              <GroupRow 
-                :key="element._id" 
-                :element="element" 
-                @edit-group="openEditGroupModal(element)" 
-                @select-group="handleSelectGroup(element)"
-              />
-            </template>
-          </Draggable>
-          
-          <div v-if="bankAccounts.length === 0" class="text-center py-4 text-gray-500 text-sm">
-            No bank accounts found
-          </div>
+        <div class="text-gray-500">
+          <ChevronDown v-if="showBankAccounts" class="w-5 h-5" />
+          <ChevronRight v-else class="w-5 h-5" />
         </div>
       </div>
+      
+      <div v-if="showBankAccounts">
+        <Draggable 
+          v-model="bankAccounts" 
+          v-bind="dragOptions(100)" 
+          handle=".handler-group" 
+          @end="updateGroupSorting"
+          :disabled="!editMode"
+          :class="{'edit-mode-container': editMode}"
+        >
+          <template #item="{element}">
+            <GroupRow 
+              :key="element._id" 
+              :element="element" 
+              :editMode="editMode"
+              @edit-group="openEditGroupModal(element)" 
+              @select-group="handleSelectGroup(element)"
+            />
+          </template>
+        </Draggable>
+        
+        <div v-if="bankAccounts.length === 0" class="px-4 py-6 text-center text-gray-500 italic">
+          No bank accounts found
+        </div>
+      </div>
+    </div>
 
-      <!-- Action Buttons -->
-      <div class="grid grid-cols-1 gap-3 mt-6">
+    <!-- Action Buttons -->
+    <div v-if="!editMode" class="p-4 border-t border-gray-200">
+      <div class="grid grid-cols-1 gap-3">
         <button 
           @click="goToOnboarding" 
-          class="flex items-center justify-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+          class="w-full py-3 flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
         >
           <RefreshCw class="w-4 h-4 mr-2" />
           Update Existing Institutions
@@ -108,7 +118,7 @@
         
         <button 
           @click="handleManageBanks" 
-          class="flex items-center justify-center px-4 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition-colors shadow-sm"
+          class="w-full py-3 flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
         >
           <Building class="w-4 h-4 mr-2" />
           Manage Banks
@@ -143,7 +153,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useBanks } from '@/features/banks/composables/useBanks.js';
@@ -163,6 +173,10 @@ const props = defineProps({
   isOpen: {
     type: Boolean,
     required: true
+  },
+  editMode: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -198,6 +212,8 @@ const toggleBankAccounts = () => {
 
 // Update sorting when groups are reordered
 const updateGroupSorting = () => {
+  if (!props.editMode) return;
+  
   const allGroups = [...customGroups.value, ...bankAccounts.value];
   allGroups.forEach((group, index) => {
     group.sort = index;
@@ -245,12 +261,16 @@ const handleDeleteGroup = (group) => {
 }
 
 const handleCreateNewGroup = async () => {
+  if (!props.editMode) return;
+  
   const newGroup = await createNewGroup();
   setGroupsAndAccounts();
   openEditGroupModal(newGroup);
 }
 
 const handleSelectGroup = (group) => {
+  if (props.editMode) return;
+  
   emit('close');
   selectGroup(group);
 };
@@ -305,4 +325,10 @@ watch(() => banks.value.length, (newCount) => {
     selectBank(banks.value[0]);
   }
 });
-</script> 
+</script>
+
+<style scoped>
+.edit-mode-container {
+  background-color: rgba(219, 234, 254, 0.1); /* Very light blue */
+}
+</style> 

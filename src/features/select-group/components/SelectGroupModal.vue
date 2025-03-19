@@ -3,22 +3,24 @@
     :is-open="isOpen" 
     title="Select Group"
     @close="closeModal"
+    :content-padding="false"
   >
     <template #header>
       <div class="flex items-center justify-between flex-1">
         <h3 class="text-lg font-semibold text-gray-800">Select Account</h3>
         <button 
           @click="toggleEditMode" 
-          class="p-1.5 rounded-md transition-colors"
-          :class="editingGroup ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-200 text-gray-600'"
+          class="p-1.5 rounded-md transition-colors flex items-center gap-1.5 text-sm"
+          :class="isEditMode ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-200 text-gray-600'"
         >
-          <Settings size="18" />
+          <Settings size="18" /> 
+          <span>{{ isEditMode ? 'Finished Reordering' : 'Reorder' }}</span>
         </button>
       </div>
     </template>
     
     <template #content>
-      <SelectGroup @close="closeModal" />
+      <SelectGroup @close="closeModal" :editMode="isEditMode" />
     </template>
   </BaseModal>
 </template>
@@ -40,18 +42,18 @@ const props = defineProps({
 const emit = defineEmits(['close']);
 
 const { state } = useDashboardState();
-const editingGroup = ref(null);
+const isEditMode = ref(false);
 
 // Close modal handler
 const closeModal = () => {
   // Reset edit mode when closing
-  editingGroup.value = null;
+  isEditMode.value = false;
   emit('close');
 };
 
 // Toggle edit mode through the settings button
 const toggleEditMode = () => {
-  editingGroup.value = editingGroup.value ? null : { isEmptyState: true };
+  isEditMode.value = !isEditMode.value;
 };
 
 watch(() => state.allUserGroups, (groups) => {

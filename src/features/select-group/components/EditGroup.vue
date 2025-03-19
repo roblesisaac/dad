@@ -4,7 +4,7 @@
     <div class="space-y-6">
       <!-- Group Name -->
       <div>
-        <label for="group-name" class="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+        <label for="group-name" class="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
         <input 
           type="text" 
           id="group-name"
