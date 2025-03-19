@@ -10,7 +10,7 @@
       <Draggable 
         v-if="isEditMode"
         v-model="state.selected.tabsForGroup" 
-        v-bind="dragOptions()" 
+        v-bind="dragOptions" 
         handle=".handler-tab"
         @end="handleDragEnd"
         item-key="_id"

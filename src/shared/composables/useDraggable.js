@@ -1,11 +1,11 @@
 import Draggable from 'vuedraggable';
 
 export function useDraggable() {
-  const dragOptions = (delayMs=100) => ({
+  const dragOptions = {
     animation: 200,
-    delay: delayMs,
+    delay: 100,
     touchStartThreshold: 100
-  });
+  };
 
   return { dragOptions, Draggable };
 }

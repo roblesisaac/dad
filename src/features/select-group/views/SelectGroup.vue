@@ -29,7 +29,7 @@
       <div v-if="showCustomGroups">
         <Draggable 
           v-model="customGroups" 
-          v-bind="dragOptions(100)" 
+          v-bind="dragOptions" 
           handle=".handler-group" 
           @end="updateGroupSorting"
           :disabled="!editMode"
@@ -82,7 +82,7 @@
       <div v-if="showBankAccounts">
         <Draggable 
           v-model="bankAccounts" 
-          v-bind="dragOptions(100)" 
+          v-bind="dragOptions" 
           handle=".handler-group" 
           @end="updateGroupSorting"
           :disabled="!editMode"
