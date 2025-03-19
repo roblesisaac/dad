@@ -324,14 +324,9 @@ const handleRevertToSession = async (session) => {
 
 // Watch for changes in banks count
 watch(() => banks.value.length, (newCount) => {
-  // No need for tracking modal close status anymore
-  // Just keep the bank selected if there's only one
+  // Keep the bank selected if there's only one
   if (newCount === 1) {
     selectBank(banks.value[0]);
   }
-});
-
-watch(() => state.allUserGroups, (groups) => {
-  groups.forEach((group, groupIndex) => group.sort = groupIndex);
 });
 </script> 

@@ -26,67 +26,61 @@
         ></textarea>
       </div>
       
-      <!-- Accounts In Group -->
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <label class="block text-sm font-medium text-gray-700">Accounts In Group</label>
-          <span class="text-xs text-gray-500">{{ props.group.accounts.length }} accounts</span>
+      <!-- Accounts In Group Section -->
+      <div class="border border-gray-200 rounded-md shadow-sm">
+        <div class="border-b border-gray-200 px-4 py-3 bg-indigo-50">
+          <h2 class="font-medium text-indigo-800">Accounts In Group ({{ props.group.accounts.length }})</h2>
         </div>
         
-        <div 
-          class="min-h-[100px] border border-gray-300 rounded-md p-3 bg-gray-50 transition-colors"
-          :class="{'border-indigo-300 bg-indigo-50': props.group.accounts.length > 0}"
-        >
-          <div v-if="!props.group.accounts.length" class="flex items-center justify-center h-full text-gray-500 text-sm">
-            <PlusCircle class="w-4 h-4 mr-2 text-gray-400" />
-            Drag accounts here
+        <div v-if="props.group.accounts.length > 0" class="p-4">
+          <div v-for="account in props.group.accounts" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
+            <div class="flex items-center">
+              <HashIcon class="w-4 h-4 mr-2 text-indigo-500" />
+              <span class="text-sm font-medium">{{ account.mask }}</span>
+            </div>
+            <Switch 
+              :model-value="true" 
+              @update:model-value="toggleAccountInGroup(account)" 
+            />
           </div>
-          
-          <Draggable 
-            class="flex flex-wrap gap-2" 
-            group="accountDragger" 
-            v-model="props.group.accounts" 
-            v-bind="dragOptions(1)"
-          >
-            <template #item="{element}">
-              <div class="px-3 py-1.5 bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-md text-sm font-medium flex items-center">
-                <HashIcon class="w-3 h-3 mr-1 text-indigo-500" />
-                {{ element.mask }}
-              </div>
-            </template>
-          </Draggable>
+        </div>
+        
+        <div v-else class="px-4 py-6 text-center text-gray-500 italic">
+          No accounts in this group
         </div>
       </div>
       
-      <!-- Accounts Not In Group -->
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <label class="block text-sm font-medium text-gray-700">Available Accounts</label>
-          <span class="text-xs text-gray-500">{{ accountsNotInGroup.length }} accounts</span>
+      <!-- Available Accounts Section -->
+      <div class="border border-gray-200 rounded-md shadow-sm">
+        <div 
+          @click="toggleAvailableAccounts" 
+          class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+        >
+          <h2 class="font-medium text-gray-700">Available Accounts ({{ accountsNotInGroup.length }})</h2>
+          <div class="text-gray-500">
+            <ChevronDown v-if="showAvailableAccounts" class="w-5 h-5" />
+            <ChevronRight v-else class="w-5 h-5" />
+          </div>
         </div>
         
-        <div 
-          class="min-h-[100px] border border-gray-300 rounded-md p-3 bg-gray-50"
-          :class="{'border-gray-200': accountsNotInGroup.length > 0}"
-        >
-          <div v-if="!accountsNotInGroup.length" class="flex items-center justify-center h-full text-gray-500 text-sm">
-            <CheckCircle class="w-4 h-4 mr-2 text-green-500" />
-            All accounts assigned
+        <div v-if="showAvailableAccounts">
+          <div v-if="accountsNotInGroup.length > 0" class="p-4">
+            <div v-for="account in accountsNotInGroup" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
+              <div class="flex items-center">
+                <HashIcon class="w-4 h-4 mr-2 text-gray-500" />
+                <span class="text-sm font-medium">{{ account.mask }}</span>
+              </div>
+              <Switch 
+                :model-value="false" 
+                @update:model-value="toggleAccountInGroup(account)" 
+              />
+            </div>
           </div>
           
-          <Draggable 
-            class="flex flex-wrap gap-2" 
-            group="accountDragger" 
-            v-model="accountsNotInGroup" 
-            v-bind="dragOptions(1)"
-          >
-            <template #item="{element}">
-              <div class="px-3 py-1.5 bg-gray-100 text-gray-700 border border-gray-200 rounded-md text-sm font-medium flex items-center">
-                <HashIcon class="w-3 h-3 mr-1 text-gray-500" />
-                {{ element.mask }}
-              </div>
-            </template>
-          </Draggable>
+          <div v-else class="px-4 py-6 text-center text-gray-500 italic">
+            <CheckCircle class="w-4 h-4 mx-auto mb-2 text-green-500" />
+            All accounts assigned
+          </div>
         </div>
       </div>
       
@@ -112,13 +106,12 @@
 </template>
     
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, watch, ref } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup.js';
-import { useDraggable } from '@/shared/composables/useDraggable';
-import { HashIcon, Trash2, PlusCircle, CheckCircle } from 'lucide-vue-next';
+import { HashIcon, Trash2, CheckCircle, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import Switch from '@/shared/components/Switch.vue';
 
-const { Draggable, dragOptions } = useDraggable();    
 const { state } = useDashboardState();
 const emit = defineEmits(['close']);
 
@@ -128,6 +121,9 @@ const props = defineProps({
 
 const { deleteGroup, updateGroup } = useSelectGroup();
 
+// State for the available accounts section
+const showAvailableAccounts = ref(false);
+
 const accountsNotInGroup = computed(() => {
   const accountsInGroup = props.group.accounts.map(account => account._id);
 
@@ -135,6 +131,23 @@ const accountsNotInGroup = computed(() => {
     return !accountsInGroup.includes(account._id);
   });
 });
+
+function toggleAvailableAccounts() {
+  showAvailableAccounts.value = !showAvailableAccounts.value;
+}
+
+function toggleAccountInGroup(account) {
+  // Find if the account is already in the group
+  const isInGroup = props.group.accounts.some(groupAccount => groupAccount._id === account._id);
+  
+  if (isInGroup) {
+    // Remove account from group
+    props.group.accounts = props.group.accounts.filter(groupAccount => groupAccount._id !== account._id);
+  } else {
+    // Add account to group
+    props.group.accounts.push(account);
+  }
+}
 
 function handleDeleteGroup() {
   deleteGroup(props.group);
