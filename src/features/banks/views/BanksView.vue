@@ -12,67 +12,37 @@
       </div>
       
       <!-- Main content -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <!-- Bank list section -->
-        <div class="md:col-span-1">
-          <div class="bg-white rounded-md shadow-md border border-gray-200 p-4">
-            <BankList
-              :banks="banks"
-              :selected-bank="selectedBank"
-              :loading="loading.banks"
-              :error="error.banks"
-              :is-syncing="isSyncing"
-              :get-bank-status-class="getBankStatusClass"
-              :get-bank-status-text="getBankStatusText"
-              @select-bank="handleSelectBank"
-              @sync-bank="handleSyncBank"
-              @refresh="fetchBanks"
-              @connect-bank="handleConnectBank"
-            />
-          </div>
-        </div>
-        
-        <!-- Sync sessions section -->
-        <div class="md:col-span-2">
-          <div class="bg-white rounded-md shadow-md border border-gray-200 p-4">
-            <div v-if="!selectedBank" class="py-16 text-center text-gray-500">
-              <ArrowLeftRight class="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p class="text-lg">Select a bank to view sync history</p>
-            </div>
-            
-            <div v-else>
-              <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold">{{ selectedBank.institutionName || 'Bank Details' }}</h2>
-                <button 
-                  @click="handleSyncSelectedBank"
-                  :disabled="isSyncing"
-                  :class="[
-                    'inline-flex items-center px-4 py-2 border rounded-md font-medium focus:outline-none',
-                    isSyncing ? 
-                      'border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed' : 
-                      'border-blue-500 text-white bg-blue-500 hover:bg-blue-600'
-                  ]"
-                >
-                  <span v-if="isSyncing">Syncing...</span>
-                  <span v-else>Sync Now</span>
-                </button>
-              </div>
-              
-              <SyncSessionList
-                :sync-sessions="syncSessions"
-                :current-sync-id="selectedBank.sync_id"
-                :loading="loading.syncSessions"
-                :error="error.syncSessions"
-                :format-sync-date="formatSyncDate"
-                @refresh="handleRefreshSyncSessions"
-                @sync="handleSyncSelectedBank"
-                @revert-to-session="handleRevertToSession"
-              />
-            </div>
-          </div>
-        </div>
+      <div class="bg-white rounded-md shadow-md border border-gray-200 p-4">
+        <BankList
+          :banks="banks"
+          :selected-bank="selectedBank"
+          :loading="loading.banks"
+          :error="error.banks"
+          :is-syncing="isSyncing"
+          :get-bank-status-class="getBankStatusClass"
+          :get-bank-status-text="getBankStatusText"
+          @select-bank="handleSelectBank"
+          @sync-bank="handleSyncBank"
+          @refresh="fetchBanks"
+          @connect-bank="handleConnectBank"
+        />
       </div>
     </div>
+    
+    <!-- Sync Sessions Modal -->
+    <SyncSessionsModal
+      :is-open="isSyncSessionsModalOpen"
+      :bank="selectedBank"
+      :sync-sessions="syncSessions"
+      :loading="loading.syncSessions"
+      :error="error.syncSessions"
+      :is-syncing="isSyncing"
+      :format-sync-date="formatSyncDate"
+      @close="closeSyncSessionsModal"
+      @sync="handleSyncSelectedBank"
+      @refresh="handleRefreshSyncSessions"
+      @revert-to-session="handleRevertToSession"
+    />
     
     <!-- Success notification -->
     <div 
@@ -101,8 +71,8 @@
 import { ref, onMounted, watch } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import BankList from '../components/BankList.vue';
-import SyncSessionList from '../components/SyncSessionList.vue';
-import { ArrowLeftRight, CheckCircle, AlertCircle } from 'lucide-vue-next';
+import SyncSessionsModal from '../components/SyncSessionsModal.vue';
+import { CheckCircle, AlertCircle } from 'lucide-vue-next';
 
 const emit = defineEmits(['connect-bank-complete']);
 
@@ -132,6 +102,8 @@ const notification = ref({
   timeout: null
 });
 
+const isSyncSessionsModalOpen = ref(false);
+
 // Initialize data
 onMounted(async () => {
   await fetchBanks();
@@ -158,6 +130,11 @@ const showNotification = (message, type = 'success') => {
 // Event handlers
 const handleSelectBank = async (bank) => {
   await selectBank(bank);
+  isSyncSessionsModalOpen.value = true;
+};
+
+const closeSyncSessionsModal = () => {
+  isSyncSessionsModalOpen.value = false;
 };
 
 const handleConnectBank = () => {
@@ -169,6 +146,7 @@ const handleConnectBank = () => {
 
 const handleSyncBank = async (bank) => {
   await selectBank(bank);
+  isSyncSessionsModalOpen.value = true;
   await handleSyncSelectedBank();
 };
 
