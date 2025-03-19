@@ -28,8 +28,8 @@
       <SyncSessionList
         :sync-sessions="syncSessions"
         :current-sync-id="bank.sync_id"
-        :loading="loading"
-        :error="error"
+        :loading="loading.syncSessions"
+        :error="error.syncSessions"
         :format-sync-date="formatSyncDate"
         @refresh="handleRefresh"
         @sync="handleSync"
@@ -40,7 +40,8 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { watch } from 'vue';
+import { useBanks } from '../composables/useBanks.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import SyncSessionList from './SyncSessionList.vue';
 
@@ -52,44 +53,56 @@ const props = defineProps({
   bank: {
     type: Object,
     default: () => ({})
-  },
-  syncSessions: {
-    type: Array,
-    default: () => []
-  },
-  loading: {
-    type: Boolean,
-    default: false
-  },
-  error: {
-    type: String,
-    default: null
-  },
-  isSyncing: {
-    type: Boolean,
-    default: false
-  },
-  formatSyncDate: {
-    type: Function,
-    required: true
   }
 });
 
-const emit = defineEmits(['close', 'sync', 'refresh', 'revert-to-session']);
+const emit = defineEmits(['close']);
+
+// Use the banks composable for all functionality
+const {
+  syncSessions,
+  loading,
+  error,
+  isSyncing,
+  fetchSyncSessions,
+  syncSelectedBank,
+  revertToSession,
+  formatSyncDate,
+  selectBank
+} = useBanks();
+
+// Watch for bank changes or modal opening to fetch sessions
+watch(() => [props.isOpen, props.bank], async ([isOpen, bank]) => {
+  if (isOpen && bank?.itemId) {
+    // Set the selected bank in the useBanks composable
+    await selectBank(bank);
+  }
+}, { immediate: true });
 
 const closeModal = () => {
   emit('close');
 };
 
-const handleSync = () => {
-  emit('sync');
+/**
+ * Handle sync action
+ */
+const handleSync = async () => {
+  await syncSelectedBank();
 };
 
-const handleRefresh = () => {
-  emit('refresh');
+/**
+ * Handle refresh action
+ */
+const handleRefresh = async () => {
+  if (props.bank?.itemId) {
+    await fetchSyncSessions(props.bank.itemId);
+  }
 };
 
-const handleRevertToSession = (session) => {
-  emit('revert-to-session', session);
+/**
+ * Handle revert to session action
+ */
+const handleRevertToSession = async (session) => {
+  await revertToSession(session);
 };
 </script> 

@@ -53,7 +53,7 @@
                 <!-- Available Balance -->
                 <div class="flex flex-col">
                     <span class="font-medium text-gray-900">
-                        <NetWorth :accounts="element.accounts" :state="state" />
+                        <NetBalance :accounts="element.accounts" :state="state" />
                     </span>
                     <span class="text-xs text-gray-500 mt-0.5">Available</span>
                 </div>
@@ -85,7 +85,7 @@
 import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
-import NetWorth from './NetWorth.vue';
+import NetBalance from './NetBalance.vue';
 import { Edit, GripVertical } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 

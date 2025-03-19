@@ -10,7 +10,7 @@
     
     <div class="flex items-center">
       <div class="font-medium text-indigo-600">
-        <NetWorth 
+        <NetBalance 
           :accounts="state.selected?.group?.accounts" 
           :state="state" 
           :digits="0" 
@@ -30,7 +30,7 @@
 <script setup>
 import { computed, ref } from 'vue';
 import { useDashboardState } from '../composables/useDashboardState';
-import NetWorth from '@/features/select-group/components/NetWorth.vue';
+import NetBalance from '@/features/select-group/components/NetBalance.vue';
 import SelectGroupModal from '@/features/select-group/components/SelectGroupModal.vue';
 import { Users, ChevronDown } from 'lucide-vue-next';
 

@@ -1,11 +1,11 @@
 <template>
   <span 
     :class="[
-      fontColor(netWorth), 
+      fontColor(netBalance), 
       'font-bold'
     ]"
   >
-    {{ formattedNetWorth }}
+    {{ formattedNetBalance }}
   </span>
 </template>
 
@@ -29,7 +29,7 @@ const props = defineProps({
 
 const { state } = useDashboardState();
 
-const netWorth = computed(() => {
+const netBalance = computed(() => {
   return props.accounts.reduce((acc, account) => {
     account = account.type ? account : getAccount(account._id);
 
@@ -42,8 +42,8 @@ const netWorth = computed(() => {
   }, 0);
 });
 
-const formattedNetWorth = computed(() => {
-  const amount = formatPrice(netWorth.value, { toFixed: props.digits });
+const formattedNetBalance = computed(() => {
+  const amount = formatPrice(netBalance.value, { toFixed: props.digits });
   return amount;
 });
 

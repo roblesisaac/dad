@@ -32,15 +32,7 @@
     <SyncSessionsModal
       :is-open="isSyncSessionsModalOpen"
       :bank="selectedBank"
-      :sync-sessions="syncSessions"
-      :loading="loading.syncSessions"
-      :error="error.syncSessions"
-      :is-syncing="isSyncing"
-      :format-sync-date="formatSyncDate"
       @close="closeSyncSessionsModal"
-      @sync="handleSyncSelectedBank"
-      @refresh="handleRefreshSyncSessions"
-      @revert-to-session="handleRevertToSession"
     />
     
     <!-- Edit Bank Name Modal -->
@@ -93,16 +85,11 @@ const api = useApi();
 const {
   banks,
   selectedBank,
-  syncSessions,
   loading,
   error,
   isSyncing,
   fetchBanks,
-  fetchSyncSessions,
   selectBank,
-  syncSelectedBank,
-  revertToSession,
-  formatSyncDate,
   getBankStatusClass,
   getBankStatusText,
   updateBankName
@@ -174,33 +161,6 @@ const handleConnectBank = () => {
 
 const handleSyncBank = async () => {
   isSyncSessionsModalOpen.value = true;
-  await handleSyncSelectedBank();
-};
-
-const handleSyncSelectedBank = async () => {
-  const result = await syncSelectedBank();
-  
-  if (result && result.completed) {
-    showNotification(`Sync completed successfully. Added ${result.stats.added} transactions.`);
-  } else if (result && result.error) {
-    showNotification(`Sync failed: ${result.error}`, 'error');
-  }
-};
-
-const handleRefreshSyncSessions = async () => {
-  if (selectedBank.value && selectedBank.value.itemId) {
-    await fetchSyncSessions(selectedBank.value.itemId);
-  }
-};
-
-const handleRevertToSession = async (session) => {
-  const result = await revertToSession(session);
-  
-  if (result && result.success) {
-    showNotification(`Successfully reverted to previous sync. ${result.removedCount} transactions removed.`);
-  } else if (result && result.error) {
-    showNotification(`Reversion failed: ${result.error}`, 'error');
-  }
 };
 
 const handleEditBankName = (bank) => {

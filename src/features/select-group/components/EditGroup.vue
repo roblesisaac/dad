@@ -150,8 +150,11 @@ function toggleAccountInGroup(account) {
 }
 
 function handleDeleteGroup() {
-  deleteGroup(props.group);
-  emit('close');
+  const deletedGroup = deleteGroup(props.group);
+
+  if(deletedGroup) {
+    emit('delete-group');
+  }
 }
 
 watch(() => props.group, updateGroup, { deep: true });

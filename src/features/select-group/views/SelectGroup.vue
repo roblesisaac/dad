@@ -3,9 +3,9 @@
     <!-- Net-worth Card -->
     <div class="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-indigo-100 shadow-sm">
       <div class="flex items-center justify-between">
-        <h4 class="text-sm font-medium text-gray-500">Total Net Worth</h4>
+        <h4 class="text-sm font-medium text-gray-500">Net Balance</h4>
         <div class="text-lg font-bold text-indigo-700">
-          <NetWorth :accounts="state.allUserAccounts" :digits="0" />
+          <NetBalance :accounts="state.allUserAccounts" :digits="0" />
         </div>
       </div>
     </div>
@@ -49,7 +49,7 @@
           
           <!-- Create New Group Button (moved here) -->
           <button 
-            @click="createNewGroup" 
+            @click="handleCreateNewGroup" 
             class="flex items-center justify-center w-full px-4 py-2.5 mt-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium rounded-md hover:from-blue-600 hover:to-indigo-700 transition-colors shadow-sm"
           >
             <PlusCircle class="w-4 h-4 mr-2" />
@@ -117,47 +117,27 @@
     </div>
 
     <!-- Edit Group Modal -->
-    <BaseModal
+    <EditGroupModal
       v-if="showEditGroupModal"
       :is-open="showEditGroupModal"
-      title="Edit Group"
-      size="lg"
+      :group="editingGroup"
       @close="closeEditGroupModal"
-    >
-      <template #content>
-        <EditGroup 
-          :group="editingGroup" 
-          @close="closeEditGroupModal" 
-        />
-      </template>
-    </BaseModal>
+      @delete-group="handleDeleteGroup"
+    />
     
     <!-- Banks Modal -->
-    <BaseModal
+    <BanksModal
       v-if="showBanksModal"
       :is-open="showBanksModal"
-      title="Manage Connected Banks"
-      size="xl"
       @close="showBanksModal = false"
-    >
-      <template #content>
-        <BanksView @connect-bank-complete="handleBankConnected" />
-      </template>
-    </BaseModal>
+      @connect-bank-complete="handleBankConnected"
+    />
     
     <!-- Sync Sessions Modal for direct bank sync when only one bank exists -->
     <SyncSessionsModal
       :is-open="isSyncSessionsModalOpen"
       :bank="selectedBank"
-      :sync-sessions="syncSessions"
-      :loading="loading.syncSessions"
-      :error="error.syncSessions"
-      :is-syncing="isSyncing"
-      :format-sync-date="formatSyncDate"
       @close="closeSyncSessionsModal"
-      @sync="handleSyncSelectedBank"
-      @refresh="handleRefreshSyncSessions"
-      @revert-to-session="handleRevertToSession"
     />
   </div>
 </template>
@@ -167,14 +147,16 @@ import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useBanks } from '@/features/banks/composables/useBanks.js';
-import GroupRow from '../components/GroupRow.vue';
-import NetWorth from '../components/NetWorth.vue';
-import EditGroup from '../components/EditGroup.vue';
 import { useSelectGroup } from '../composables/useSelectGroup.js';
 import { useDraggable } from '@/shared/composables/useDraggable';
+
+import GroupRow from '../components/GroupRow.vue';
+import NetBalance from '../components/NetBalance.vue';
 import { PlusCircle, RefreshCw, ChevronDown, ChevronRight, Building } from 'lucide-vue-next';
-import BaseModal from '@/shared/components/BaseModal.vue';
-import BanksView from '@/features/banks/views/BanksView.vue';
+
+// Modals
+import EditGroupModal from '../components/EditGroupModal.vue';
+import BanksModal from '@/features/banks/components/BanksModal.vue';
 import SyncSessionsModal from '@/features/banks/components/SyncSessionsModal.vue';
 
 const props = defineProps({
@@ -197,9 +179,13 @@ const showCustomGroups = ref(true);
 const showBankAccounts = ref(true);
 
 // Computed properties to split groups into two categories
-const customGroups = ref(state.allUserGroups.filter(group => group.accounts.length > 1));
+const customGroups = ref([]);
+const bankAccounts = ref([]);
 
-const bankAccounts = ref(state.allUserGroups.filter(group => group.accounts.length < 2));
+const setGroupsAndAccounts = () => {
+  customGroups.value = state.allUserGroups.filter(group => group.accounts.length > 1);
+  bankAccounts.value = state.allUserGroups.filter(group => group.accounts.length < 2);
+}
 
 // Toggle section visibility
 const toggleCustomGroups = () => {
@@ -212,7 +198,6 @@ const toggleBankAccounts = () => {
 
 // Update sorting when groups are reordered
 const updateGroupSorting = () => {
-  // Combine both arrays and update sort property
   const allGroups = [...customGroups.value, ...bankAccounts.value];
   allGroups.forEach((group, index) => {
     group.sort = index;
@@ -230,6 +215,7 @@ const openEditGroupModal = (group) => {
 
 // Close the edit group modal
 const closeEditGroupModal = () => {
+  setGroupsAndAccounts();
   showEditGroupModal.value = false;
   editingGroup.value = null;
 };
@@ -241,36 +227,28 @@ const showBanksModal = ref(false);
 const {
   banks,
   selectedBank,
-  syncSessions,
-  loading,
-  error,
-  isSyncing,
   fetchBanks,
-  fetchSyncSessions,
-  selectBank,
-  syncSelectedBank,
-  revertToSession,
-  formatSyncDate
+  selectBank
 } = useBanks();
 
 // Sync sessions modal state
 const isSyncSessionsModalOpen = ref(false);
 
-// Initialize data on mount
-onMounted(async () => {
-  // Fetch banks to determine how many are connected
-  await fetchBanks();
-  
-  // If there's exactly one bank, preselect it for direct sync
-  if (banks.value.length === 1) {
-    await selectBank(banks.value[0]);
-  }
-});
-
 const goToOnboarding = () => {
   emit('close');
   router.push({ name: 'onboarding' });
 };
+
+const handleDeleteGroup = (group) => {
+  setGroupsAndAccounts();
+  closeEditGroupModal();
+}
+
+const handleCreateNewGroup = async () => {
+  const newGroup = await createNewGroup();
+  setGroupsAndAccounts();
+  openEditGroupModal(newGroup);
+}
 
 const handleSelectGroup = (group) => {
   emit('close');
@@ -308,19 +286,17 @@ const closeSyncSessionsModal = () => {
   isSyncSessionsModalOpen.value = false;
 };
 
-const handleSyncSelectedBank = async () => {
-  await syncSelectedBank();
-};
-
-const handleRefreshSyncSessions = async () => {
-  if (selectedBank.value && selectedBank.value.itemId) {
-    await fetchSyncSessions(selectedBank.value.itemId);
+// Initialize data on mount
+onMounted(async () => {
+  setGroupsAndAccounts();
+  // Fetch banks to determine how many are connected
+  await fetchBanks();
+  
+  // If there's exactly one bank, preselect it for direct sync
+  if (banks.value.length === 1) {
+    await selectBank(banks.value[0]);
   }
-};
-
-const handleRevertToSession = async (session) => {
-  await revertToSession(session);
-};
+});
 
 // Watch for changes in banks count
 watch(() => banks.value.length, (newCount) => {
@@ -329,9 +305,4 @@ watch(() => banks.value.length, (newCount) => {
     selectBank(banks.value[0]);
   }
 });
-
-watch(() => state.allUserGroups, (groups) => {
-  customGroups.value = groups.filter(group => group.accounts.length > 1);
-  bankAccounts.value = groups.filter(group => group.accounts.length < 2);
-}, { deep: true });
 </script> 

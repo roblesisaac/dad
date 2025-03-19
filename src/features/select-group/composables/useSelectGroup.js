@@ -62,6 +62,8 @@ export function useSelectGroup() {
     const idToRemove = groupToDelete._id;
     state.allUserGroups = state.allUserGroups.filter(group => group._id !== idToRemove);
     await groupsAPI.deleteGroup(idToRemove);
+
+    return idToRemove;
   }
   
   async function createNewGroup() {
@@ -77,6 +79,8 @@ export function useSelectGroup() {
 
     const savedNewGroup = await groupsAPI.createGroup(newGroupData);
     state.allUserGroups.push(savedNewGroup);
+
+    return savedNewGroup;
   }
 
   async function updateGroupName(updatedGroup) {
