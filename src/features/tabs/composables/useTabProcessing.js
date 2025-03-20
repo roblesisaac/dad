@@ -285,34 +285,38 @@ export function useTabProcessing() {
   * Build a method to group transactions
   */
   function buildGroupByMethod(propToGroupBy) {
-    console.log('propToGroupBy', propToGroupBy);
-    return (item) => {
-      return {
-        category: () => item.personal_finance_category.primary,
-        year: () => {
-          const [year] = item.authorized_date.split('-');
-          return year;
-        },
-        month: () => {
-          const [_, month] = item.authorized_date.split('-');
-          return months[Number(month-1)];
-        },
-        year_month: () => {
-          const [year, month] = item.authorized_date.split('-');
-          return `${year} ${months[Number(month-1)]}`;
-        },
-        day: () => {
-          const [_, month, day] = item.authorized_date.split('-');
-          return `${months[Number(month-1)]}, ${day}`;
-        },
-        date: () => {
-          console.log('grouping by date')
-          const [_, month, day] = item.authorized_date.split('-');
-          return `${months[Number(month-1)]}, ${day}`;
-        },
-        weekday: () => getDayOfWeekPST(item.authorized_date)
-      }[propToGroupBy[0] || 'category']();
+    
+    const groupByMethods = {
+      category: (item) => item.personal_finance_category.primary,
+      year: (item) => {
+        const [year] = item.authorized_date.split('-');
+        return year;
+      },
+      month: (item) => {
+        const [_, month] = item.authorized_date.split('-');
+        return months[Number(month-1)];
+      },
+      year_month: (item) => {
+        const [year, month] = item.authorized_date.split('-');
+        return `${year} ${months[Number(month-1)]}`;
+      },
+      day: (item) => {
+        const [_, month, day] = item.authorized_date.split('-');
+        return `${months[Number(month-1)]}, ${day}`;
+      },
+      date: (item) => {
+        const [_, month, day] = item.authorized_date.split('-');
+        return `${months[Number(month-1)]}, ${day}`;
+      },
+      weekday: (item) => getDayOfWeekPST(item.authorized_date)
     };
+
+    const propToGroupBy = propToGroupBy[0];
+    const groupByMethod = groupByMethods[propToGroupBy];
+
+    return (item) => groupByMethod ? 
+      groupByMethod(item) 
+      : groupByMethods.category(item);
   }
 
   /**
