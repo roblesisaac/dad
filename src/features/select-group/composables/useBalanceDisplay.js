@@ -8,7 +8,14 @@ export function useBalanceDisplay(elementRef) {
    * Check if current balance differs from available balance
    */
   const shouldShowCurrentBalance = computed(() => {
-    return elementRef.value?.totalAvailableBalance !== elementRef.value?.totalCurrentBalance;
+    const available = elementRef.value?.totalAvailableBalance;
+    const current = elementRef.value?.totalCurrentBalance;
+
+    // convert both to positve integers
+    const availableInt = Math.abs(available);
+    const currentInt = Math.abs(current); 
+
+    return availableInt !== currentInt;
   });
   
   /**

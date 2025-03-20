@@ -68,7 +68,9 @@
                 <!-- Available Balance -->
                 <div class="flex flex-col">
                     <span :class="['font-medium text-gray-900', {'mb-0.5': !shouldShowCurrentBalance}]">
-                        <NetBalance :accounts="element.accounts" :state="state" />
+                        <span :class="['text-sm', availableBalanceDisplay.color]">
+                            {{ availableBalanceDisplay.value }}
+                        </span>
                     </span>
                     <span class="text-xs text-gray-500">Available</span>
                 </div>
@@ -91,18 +93,16 @@
 </template>
     
 <script setup>
-import { computed, watch, ref, toRef } from 'vue';
+import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
 import { useBalanceDisplay } from '../composables/useBalanceDisplay';
 import NetBalance from './NetBalance.vue';
 import { EllipsisVertical, GripVertical, ChevronRight } from 'lucide-vue-next';
-import { useUtils } from '@/shared/composables/useUtils';
 
 // Define emits
 const emit = defineEmits(['edit-group', 'select-group']);
 
-const { fontColor, formatPrice } = useUtils();
 const props = defineProps({
     element: Object,
     editMode: {
@@ -133,7 +133,6 @@ const { updateGroupSort } = useSelectGroup();
 const handleSelectGroup = (group) => {
   if (props.editMode) return;
   
-  // Emit the select-group event for the modal
   emit('select-group', group);
 };
 
