@@ -285,6 +285,7 @@ export function useTabProcessing() {
   * Build a method to group transactions
   */
   function buildGroupByMethod(propToGroupBy) {
+    console.log('propToGroupBy', propToGroupBy);
     return (item) => {
       return {
         category: () => item.personal_finance_category.primary,
