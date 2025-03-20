@@ -278,14 +278,15 @@ const handleSelectGroup = (group) => {
 // Handle the Manage Banks button click
 const handleManageBanks = async () => {  
   // If we have exactly one bank connected, show the sync sessions modal directly
-  if (banks.value.length === 1) {
-    // Make sure the bank is selected and sync sessions are loaded
-    selectBank(banks.value[0]);
-    isSyncSessionsModalOpen.value = true;
-  } else {
-    // Otherwise show the regular banks modal
-    showBanksModal.value = true;
-  }
+  // if (banks.value.length === 1) {
+  //   // Make sure the bank is selected and sync sessions are loaded
+  //   selectBank(banks.value[0]);
+  //   isSyncSessionsModalOpen.value = true;
+  //   return;
+  // }
+  
+  // Otherwise show the regular banks modal
+  showBanksModal.value = true;
 };
 
 // Handle bank connection completion
