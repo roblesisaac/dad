@@ -36,6 +36,14 @@
             <span v-if="session.syncTag" class="text-xs px-1.5 py-0.5 bg-blue-100 rounded text-blue-700 font-normal">
               {{ session.syncTag }}
             </span>
+            <span 
+              v-if="hasSyncCountsMismatch" 
+              class="text-xs px-1.5 py-0.5 bg-amber-100 rounded text-amber-700 font-normal flex items-center gap-0.5"
+              title="Transaction count mismatch"
+            >
+              <AlertTriangle class="h-3 w-3" />
+              Mismatch
+            </span>
           </div>
           <div class="text-xs text-gray-500">
             {{ formatSyncDate(session.syncTime) }} - Batch #{{ session.batchNumber || 1 }}
@@ -57,17 +65,68 @@
     >
       <!-- Transaction counts -->
       <div class="grid grid-cols-3 gap-4 mb-3">
-        <div class="text-center p-2 bg-white rounded shadow-sm">
+        <div 
+          class="text-center p-2 bg-white rounded shadow-sm" 
+          :class="{'border border-amber-400': hasMismatch('added')}"
+        >
           <div class="font-medium">Added</div>
           <div class="text-lg">{{ session.syncCounts?.actual?.added || 0 }}</div>
+          <div 
+            v-if="hasMismatch('added')" 
+            class="text-xs text-amber-600 font-medium"
+          >
+            Expected: {{ session.syncCounts?.expected?.added || 0 }}
+          </div>
         </div>
-        <div class="text-center p-2 bg-white rounded shadow-sm">
+        <div 
+          class="text-center p-2 bg-white rounded shadow-sm"
+          :class="{'border border-amber-400': hasMismatch('modified')}"
+        >
           <div class="font-medium">Modified</div>
           <div class="text-lg">{{ session.syncCounts?.actual?.modified || 0 }}</div>
+          <div 
+            v-if="hasMismatch('modified')" 
+            class="text-xs text-amber-600 font-medium"
+          >
+            Expected: {{ session.syncCounts?.expected?.modified || 0 }}
+          </div>
         </div>
-        <div class="text-center p-2 bg-white rounded shadow-sm">
+        <div 
+          class="text-center p-2 bg-white rounded shadow-sm"
+          :class="{'border border-amber-400': hasMismatch('removed')}"
+        >
           <div class="font-medium">Removed</div>
           <div class="text-lg">{{ session.syncCounts?.actual?.removed || 0 }}</div>
+          <div 
+            v-if="hasMismatch('removed')" 
+            class="text-xs text-amber-600 font-medium"
+          >
+            Expected: {{ session.syncCounts?.expected?.removed || 0 }}
+          </div>
+        </div>
+      </div>
+      
+      <!-- Counts mismatch alert -->
+      <div 
+        v-if="hasSyncCountsMismatch" 
+        class="mb-3 p-2 bg-amber-50 border border-amber-300 rounded text-amber-700 text-sm"
+      >
+        <div class="font-medium mb-1 flex items-center gap-1.5">
+          <AlertTriangle class="h-4 w-4" />
+          Sync Counts Mismatch
+        </div>
+        <p class="text-xs">
+          There is a discrepancy between expected and actual transaction counts, which may indicate incomplete synchronization or data processing issues.
+        </p>
+        <div class="mt-1.5 text-xs grid grid-cols-2 gap-1">
+          <div>
+            <span class="font-medium">Total Expected:</span> 
+            {{ getTotalExpected }}
+          </div>
+          <div>
+            <span class="font-medium">Total Actual:</span> 
+            {{ getTotalActual }}
+          </div>
         </div>
       </div>
       
@@ -238,6 +297,17 @@ const hasFailedTransactions = computed(() => {
   );
 });
 
+// Check if there is a mismatch for a specific type
+const hasMismatch = (type) => {
+  if (!props.session.syncCounts || !props.session.syncCounts.actual || !props.session.syncCounts.expected) return false;
+  return props.session.syncCounts.actual[type] !== props.session.syncCounts.expected[type];
+};
+
+// Check if there are any count mismatches
+const hasSyncCountsMismatch = computed(() => {
+  return hasMismatch('added') || hasMismatch('modified') || hasMismatch('removed');
+});
+
 // Request to revert to this session
 const requestRevert = () => {
   emit('revert', props.session);
@@ -256,4 +326,15 @@ const formatDateTime = (timestamp) => {
     return 'Invalid date';
   }
 };
+
+// Calculate total expected and actual counts
+const getTotalExpected = computed(() => {
+  if (!props.session.syncCounts || !props.session.syncCounts.expected) return 'N/A';
+  return Object.values(props.session.syncCounts.expected).reduce((total, count) => total + count, 0);
+});
+
+const getTotalActual = computed(() => {
+  if (!props.session.syncCounts || !props.session.syncCounts.actual) return 'N/A';
+  return Object.values(props.session.syncCounts.actual).reduce((total, count) => total + count, 0);
+});
 </script> 
