@@ -305,6 +305,11 @@ export function useTabProcessing() {
           const [_, month, day] = item.authorized_date.split('-');
           return `${months[Number(month-1)]}, ${day}`;
         },
+        date: () => {
+          console.log('grouping by date')
+          const [_, month, day] = item.authorized_date.split('-');
+          return `${months[Number(month-1)]}, ${day}`;
+        },
         weekday: () => getDayOfWeekPST(item.authorized_date)
       }[propToGroupBy[0] || 'category']();
     };
