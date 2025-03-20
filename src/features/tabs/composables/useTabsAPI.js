@@ -58,6 +58,7 @@ export function useTabsAPI() {
     updateTabSort,
     createTab,
     deleteTab,
-    updateTab
+    updateTab,
+    updateTabName
   };
 } 

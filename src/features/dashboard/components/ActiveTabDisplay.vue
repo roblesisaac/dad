@@ -13,8 +13,7 @@
     
     <!-- Active Tab Display -->
     <div 
-      class="flex-grow flex items-center justify-between overflow-hidden min-w-0 cursor-pointer hover:bg-gray-200 transition-colors"
-      @click="showAllTabsModal = true"
+      class="flex-grow flex items-center justify-between overflow-hidden min-w-0 transition-colors"
     >
       <div class="flex items-center px-4 py-2.5 overflow-hidden min-w-0">
         <div class="flex items-center overflow-hidden min-w-0">
@@ -23,6 +22,18 @@
               Loading<LoadingDots />
             </span>
           </Transition>
+
+          <!-- Menu Button -->
+          <button 
+            v-if="!state.isLoading && state.selected.tab"
+            @click="showRuleManagerModal = true" 
+            class="mr-2 p-1 hover:bg-gray-200 rounded transition-colors text-gray-600 hover:text-blue-600 flex-shrink-0"
+            title="Manage tab rules"
+          >
+            <EllipsisVertical size="16" />
+          </button>
+          
+          <!-- Tab Name -->
           <span v-if="!state.isLoading" class="font-semibold text-gray-800 truncate leading-tight max-w-full">
             {{ state.selected.tab?.tabName || 'No tab selected' }}
           </span>
@@ -51,11 +62,11 @@
     <!-- Rules Manager Button -->
     <div class="w-12 flex-shrink-0">
       <button 
-        @click="showRuleManagerModal = true" 
+        @click="showAllTabsModal = true"
         class="h-full w-full bg-gray-300 border-l-2 border-black flex items-center justify-center hover:bg-gray-500 transition-colors"
         title="Manage tab rules"
       >
-        <Filter size="16" />
+        <Folders size="16" />
       </button>
     </div>
   </div>
@@ -77,7 +88,7 @@
 <script setup>
 import { useDashboardState } from '../composables/useDashboardState';
 import { useTabs } from '@/features/tabs/composables/useTabs';
-import { ChevronLeft, ChevronRight, Filter } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, EllipsisVertical, Folders } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { computed, ref, nextTick } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
