@@ -6,25 +6,17 @@ import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 
 export function useTabProcessing() {
   const { state } = useDashboardState();
-  const { ruleMethods, combineRulesForTab } = useRules();
+  const { ruleMethods, combinedRulesForTab } = useRules();
   const { getDayOfWeekPST } = useUtils();
   const tabsAPI = useTabsAPI();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
   
-  /**
-  * Process transaction data for a tab based on rules
-  * @param {Array} data - Transaction data
-  * @param {Object} tab - Tab configuration
-  * @param {Array} allRules - All available rules
-  * @returns {Object} Processed tab data with total and categorized items
-  */
+
   function processTabData(tab) {
     const data = state.selected.allGroupTransactions;
     if (!data || !tab) return null;
     
-    // Get rules for this tab by combining tab-specific and global rules
-    const allRules = state.allUserRules;
-    const tabRules = combineRulesForTab(allRules, tab._id);
+    const tabRules = combinedRulesForTab(tab._id);
     
     // Build rule methods based on tab rules
     const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules);
@@ -109,7 +101,7 @@ export function useTabProcessing() {
   /**
   * Extract and organize rules by type
   */
-  function extractAndSortRuleTypes(tabRules) {
+  function extractRules(tabRules) {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
     
     for(const ruleConfig of tabRules) {
@@ -182,7 +174,7 @@ export function useTabProcessing() {
   * Build rule methods for processing tab data
   */
   function buildRuleMethods(tabRules) {
-    const [sorters, categorizers, filters, propToGroupBy] = extractAndSortRuleTypes(tabRules);
+    const [sorters, categorizers, filters, propToGroupBy] = extractRules(tabRules);
     
     return {
       sort: buildSortMethod(sorters),

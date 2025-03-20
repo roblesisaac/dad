@@ -1,8 +1,9 @@
 import { useUtils } from '@/shared/composables/useUtils.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
 export function useRules() {
   const { lowercase, makeArray } = useUtils();
-
+  const { state } = useDashboardState();
   const ruleMethods = {
     '>=': (itemValue, valueToCheck) => parseFloat(itemValue) >= parseFloat(valueToCheck),
     '>': (itemValue, valueToCheck) => parseFloat(itemValue) > parseFloat(valueToCheck),
@@ -30,13 +31,17 @@ export function useRules() {
     );
   }
 
-  function filterGlobalRules(allRules) {
+  function filterGlobalRules() {
+    const allRules = state.allUserRules;
+
     return allRules.filter(ruleItem => {
       return ruleItem.applyForTabs.includes('_GLOBAL');
     });
   }
 
-  function filterRulesForTab(allRules, tabId) {
+  function filterRulesForTab(tabId) {
+    const allRules = state.allUserRules;
+
     return allRules.filter(ruleItem => {
       const applyForTabsIsGlobal = ruleItem.applyForTabs.includes('_GLOBAL');
       const applyForTabMatchesTabId = ruleItem.applyForTabs.includes(tabId);
@@ -45,10 +50,10 @@ export function useRules() {
     });
   }
 
-  function combineRulesForTab(allRules, tabId) {
+  function combinedRulesForTab(tabId) {
     return [
-      ...filterRulesForTab(allRules, tabId),
-      ...filterGlobalRules(allRules)
+      ...filterRulesForTab(tabId),
+      ...filterGlobalRules()
     ];
   }
 
@@ -56,6 +61,6 @@ export function useRules() {
     ruleMethods,
     filterGlobalRules,
     filterRulesForTab,
-    combineRulesForTab
+    combinedRulesForTab
   };
 } 
