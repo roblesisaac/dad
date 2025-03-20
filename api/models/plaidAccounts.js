@@ -20,7 +20,7 @@ const encryptedValue = {
 
 const accountSchema = {
   userId: {
-    set: (_, { req }) => req.user._id
+    set: (_, { user }) => user._id
   },
   account_id: String,
   balances: {

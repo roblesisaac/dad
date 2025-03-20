@@ -17,9 +17,10 @@ const { State } = useAppStore();
 </script>
 
 <style>
-@import "css/palette.css";
+@import "css/tailwind.css";
+/* @import "css/palette.css"; */
 @import "css/grid.css";
-@import "css/utils.css";
-@import "css/colors.css";
-@import "css/style.css";
+/* @import "css/utils.css"; */
+/* @import "css/colors.css"; */
+/* @import "css/style.css"; */
 </style>

@@ -1,0 +1,384 @@
+# AmptModel Documentation
+
+## Overview
+
+AmptModel is a lightweight ODM (Object-Document Mapper) utility built on top of the Ampt data interface. It simplifies working with DynamoDB through Ampt by providing a schema-based model layer with validation, relationships, and convenient data access methods.
+
+## Core Features
+
+- **Schema Validation**: Enforce data structure and type validation
+- **Collection Management**: Organize data into logical collections
+- **Unique Constraints**: Prevent duplicate entries based on specified fields
+- **Label Mappings**: Utilize Ampt's label system for efficient data access patterns
+- **Relationship Support**: Handle references between different models
+- **Consistent Interface**: Standardized methods for CRUD operations
+
+## Initialization
+
+```javascript
+import AmptModel from './utils/amptModel/index.js';
+
+// Initialize a model with a collection name and schema
+const UserModel = AmptModel(
+  'users', // Collection name or dynamic collection builder
+  {
+    // Schema definition
+    name: { type: 'string', required: true },
+    email: { type: 'string', required: true, unique: true },
+    age: { type: 'number' },
+    createdAt: { type: 'date', default: () => new Date() },
+    
+    // Label definitions - CRITICAL for querying by properties
+    label1: 'email',     // Enable queries by email
+    label2: 'age',       // Enable queries by age
+    label3: 'createdAt'  // Enable queries by createdAt
+  },
+  { /* Optional global configuration */ }
+);
+```
+
+The AmptModel factory function takes three parameters:
+
+1. **collectionNameConfig**: String or array defining the collection name pattern
+2. **schemaConfig**: Object defining the data schema with validation rules
+3. **globalConfig**: Optional configuration that applies to all models
+
+## Collection Name Configuration
+
+The collection name can be defined in two ways:
+
+### Static Collection Name
+
+```javascript
+const UserModel = AmptModel('users', { /* schema */ });
+```
+
+### Dynamic Collection Name
+
+```javascript
+const UserPostModel = AmptModel(
+  ['users', 'userId'], // Will create collection names like 'users-123' - requires a userId prop to be included in all find, findAll update or remove methods
+  { /* schema */ }
+);
+```
+
+With dynamic collections, the ID is built from the collection base name plus the values of the properties listed in the array.
+
+## Schema Labels for Querying
+
+### Important: Label Definition for Querying
+
+**Any field you want to query by must be defined as a label in the schema.** AmptModel can use up to 5 labels (`label1` through `label5`).
+
+```javascript
+const PostModel = AmptModel(
+  'posts',
+  {
+    title: { type: 'string', required: true },
+    content: { type: 'string' },
+    status: { type: 'string', enum: ['draft', 'published', 'archived'] },
+    createdAt: { type: 'date', default: () => new Date() },
+    
+    // These labels enable property-based querying
+    label1: 'status',    // Now you can query by status
+    label2: 'createdAt', // Now you can query by createdAt
+    label3: 'title'      // Now you can query by title
+  }
+);
+```
+
+Without these label definitions, you would not be able to query by these properties using object-based queries. For example, `PostModel.find({ status: 'published' })` would only work because `label1: 'status'` is defined.
+
+### Label Types
+
+In addition to simple field mapping, labels can be more complex:
+
+```javascript
+// Simple field mapping
+label1: 'status',
+
+// Computed label
+label2: (item) => `${item.firstName}_${item.lastName}`,
+
+// Object configuration
+label3: {
+  name: 'creationDate',
+  computed: (item) => item.createdAt.split('T')[0]
+},
+
+// Concatenated fields
+label4: {
+  concat: ['category', 'subcategory']
+}
+```
+
+## Data Operations
+
+### Save
+
+Stores a new document in the database:
+
+```javascript
+const newUser = await UserModel.save({
+  name: 'John Doe',
+  email: 'john@example.com',
+  age: 30
+});
+```
+
+The saved document will receive a generated `_id` following the pattern: `collectionName:YYYY-MM-DDThh-mm-ssZ_randomString`
+
+### Find
+
+Retrieves documents from a collection using various query patterns:
+
+```javascript
+// Find all users (returns { items: [...], lastKey: '...', next: Function })
+const allUsers = await UserModel.find('users:*');
+
+// Find by specific property (requires label definition for 'email')
+const johnDoe = await UserModel.find({ email: 'john@example.com' });
+
+// Find with options (pagination, metadata)
+const paginatedUsers = await UserModel.find('users:*', { limit: 10, reverse: true });
+```
+
+### Using Comparison Operators
+
+The find method supports comparison operators for numeric and lexicographically-ordered string properties. These operators work on both keys and labeled fields:
+
+```javascript
+// Find users with age greater than 30 (requires label2: 'age')
+const adultUsers = await UserModel.find({ age: '>30' });
+
+// Find users with age greater than or equal to 30
+const thirtyPlusUsers = await UserModel.find({ age: '>=30' });
+
+// Find users with age less than 30
+const youngUsers = await UserModel.find({ age: '<30' });
+
+// Find users with age less than or equal to 30
+const thirtyOrLessUsers = await UserModel.find({ age: '<=30' });
+
+// Find users with name between 'A' and 'M' (alphabetically)
+const aToMUsers = await UserModel.find({ name: 'A|M' });
+
+// Find dates by range (requires label3: 'createdAt')
+const recentPosts = await UserModel.find({ createdAt: '2023-01-01|2023-12-31' });
+```
+
+For date queries, make sure to use a consistent date format (ISO strings work well).
+
+### Advanced Querying with Concatenated Labels
+
+For more complex scenarios, especially when using concatenated labels, you need to construct queries that match the label's format. This is particularly useful for querying by multiple criteria simultaneously, such as finding records for a specific account within a date range.
+
+#### Example: Querying Date Ranges with Concatenated Account IDs
+
+Consider a model with a concatenated label that combines account ID and date:
+
+```javascript
+const TransactionModel = AmptModel(
+  'transactions',
+  {
+    // Schema fields
+    account_id: String,
+    amount: Number,
+    date: String,
+    authorized_date: (value, item) => value || item.date,
+    description: String,
+    
+    // Define a concatenated label for account + date queries
+    label3: {
+      name: 'accountdate',
+      concat: ['account_id', 'authorized_date']
+    }
+  }
+);
+```
+
+To query transactions for a specific account between two dates, you need to construct the query format that matches how the concatenated label is stored:
+
+```javascript
+// Query transactions for account between two dates
+const accountId = '4zjb97mp1JSQE3zRVyRwHbobWg7JjzfDx5Pxo';
+const startDate = '2025-02-08';
+const endDate = '2025-03-10';
+
+const transactions = await TransactionModel.find({
+  accountdate: `${accountId}:${startDate}|accountdate_${accountId}:${endDate}`
+});
+
+// The query looks like:
+// {
+//   accountdate: '4zjb97mp1JSQE3zRVyRwHbobWg7JjzfDx5Pxo:2025-02-08|accountdate_4zjb97mp1JSQE3zRVyRwHbobWg7JjzfDx5Pxo:2025-03-10'
+// }
+```
+
+This query format follows a specific pattern for concatenated labels with ranges:
+1. The first part before the pipe (`|`) is the lower bound: `accountId:startDate`
+2. The second part is the upper bound: `accountdate_accountId:endDate`
+3. The `accountdate_` prefix in the second part matches the label name
+
+Understanding how labels are stored internally helps construct these more complex queries correctly.
+
+### Querying Collections Directly with Operators
+
+You can also query collections directly using comparison operators after the collection name and colon:
+
+```javascript
+// All items created after a specific date
+const recentItems = await UserModel.find('users:>2023-06-01');
+
+// Items within a specific date range
+const junePosts = await PostModel.find('posts:2023-06-01|2023-06-30');
+```
+
+### FindAll
+
+Similar to `find` but automatically handles pagination to return all matching documents:
+
+```javascript
+// Retrieve all users, handling pagination automatically
+const allUsers = await UserModel.findAll('users:*');
+
+// Find by specific property (requires label definition)
+const activeUsers = await UserModel.findAll({ status: 'active' });
+```
+
+### FindOne
+
+Returns a single document matching the query:
+
+```javascript
+// Find by property (requires label definition for 'email')
+const user = await UserModel.findOne({ email: 'john@example.com' });
+```
+
+### Update
+
+Updates an existing document:
+
+```javascript
+// Find and update (requires label definition for 'email')
+const updatedUser = await UserModel.update(
+  { email: 'john@example.com' }, // find filter
+  { name: 'John Smith', age: 31 } // update values
+);
+```
+
+### Erase
+
+Removes a document from the database:
+
+```javascript
+// Delete by ID
+await UserModel.erase('users:2023-07-01T10-30-15Z_abc123');
+
+// Delete by property (requires label definition for 'email')
+await UserModel.erase({ email: 'john@example.com' });
+```
+
+## Validation
+
+The model performs validation during save and update operations:
+
+```javascript
+// This will throw an error if email is missing
+const newUser = await UserModel.save({
+  name: 'John Doe',
+  // email is required but missing
+  age: 30
+});
+```
+
+The validation engine supports:
+- Type checking
+- Required fields
+- Custom validation functions
+- Default values
+- Unique constraints
+
+## Internal Utility Functions
+
+### ID Generation
+
+- `buildId()`: Generates a unique ID with timestamp and random string
+- `buildSchema_Id()`: Creates an ID that includes the collection name and relevant properties
+
+### Data Helpers
+
+- `checkForDuplicate()`: Verifies that unique fields don't have duplicate values
+- `extractCollectionFromId()`: Parses a full ID to retrieve the collection name
+- `extractSchema()`: Processes the schema configuration to separate labels and validators
+- `fetchRef()`: Retrieves referenced documents
+- `isObject()`: Type checking utility
+- `makeArray()`: Ensures a value is always treated as an array
+
+### Date Handling
+
+- `generateDate()`: Creates standardized date strings
+- `format()`: Pads numbers for consistent date formatting
+- `generateRandomTime()`: Creates random time components for IDs
+- `isMissingTime()`: Checks if a date string needs time components
+- `pacificTimezoneOffset()`: Calculates timezone offset for Pacific time
+- `validDate()`: Parses and validates date strings
+
+## Label Mapping
+
+The AmptModel leverages Ampt's label system to enable efficient data access patterns:
+
+```javascript
+// The labelsMap utility handles creating and managing label keys
+const createdLabels = await labelsMap.createLabelKeys(collectionId, validatedData);
+```
+
+Labels are a critical part of the AmptModel system:
+
+1. **Labels enable object-based queries**: Without labels, you can only query by exact ID or collection pattern
+2. **Up to 5 labels per model**: Choose your most important query fields wisely
+3. **Labels are mapped to Ampt's label system**: This provides efficient access patterns under the hood
+4. **Labels can be computed or concatenated**: For more complex access patterns
+
+## Error Handling
+
+Most methods throw descriptive errors when operations fail, including:
+- Validation errors
+- Duplicate key errors
+- Item not found errors
+- Batch insert errors
+
+## Batch Operations
+
+### InsertMany
+
+Inserts multiple documents in a single operation:
+
+```javascript
+const users = [
+  { name: 'John', email: 'john@example.com' },
+  { name: 'Jane', email: 'jane@example.com' }
+];
+
+const savedUsers = await UserModel.insertMany(users);
+```
+
+If any document fails validation, an error is thrown with details about which items succeeded and which failed.
+
+## Best Practices
+
+1. **Define Schemas Carefully**: Include all expected fields with appropriate validation
+2. **Use Dynamic Collections for Related Data**: Helps with organization and querying
+3. **Label Important Fields**: Any field you'll query by must be defined in the labels configuration
+4. **Choose Your Labels Wisely**: There's a limit of 5 labels per model
+5. **Handle Errors**: Always use try/catch blocks when performing database operations
+6. **Use Pagination for Large Results**: Avoid loading too many items at once
+7. **Use Consistent Formats for Comparable Fields**: Especially for dates and numeric string values
+8. **Understand Label Storage Format**: For complex queries with concatenated labels, understand how the data is stored internally
+
+## Limitations
+
+- Batch operations process items sequentially, not in parallel
+- Filtering is primarily done through labels defined in the schema
+- Complex queries beyond what Ampt's data interface supports require client-side filtering
+- Object-based filtering requires label definitions (up to 5 fields) 

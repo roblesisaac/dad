@@ -1,36 +1,39 @@
 <template>
-  <div :id="id" class="x-grid dottedRow proper">
-    
-    <div @click="selectCategory()" :id="id+'title'" class="cell-1 p20 categoryTitle">
-      <div class="x-grid">
-        <div class="cell auto">
-          <b class="count">{{ categoryItems.length }}</b> {{ categoryName }} <b :class="fontColor(categoryTotal)">{{ catTotal }}</b>
-        </div>
-        <div class="cell shrink categoryExpand">
-          <span class="bold colorJet icon">
-            <Minus v-if="isSelected" />
-            <Plus v-else />
-          </span>
-        </div>
+  <div :id="id" class="overflow-hidden bg-white border-b border-gray-200">
+    <div 
+      @click="selectCategory()" 
+      :id="id+'title'" 
+      class="flex items-center justify-between w-full px-5 py-5 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+    >
+      <div class="flex items-center space-x-3">
+        <span class="px-2 py-0.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md">
+          {{ categoryItems.length }}
+        </span>
+        <span class="font-medium text-gray-800 first-letter:uppercase">{{ categoryName }}</span>
+        <span :class="[fontColor(categoryTotal), 'text-sm font-medium']">{{ catTotal }}</span>
+      </div>
+      <div class="text-gray-500">
+        <span class="flex items-center justify-center w-5 h-5">
+          <ChevronDown v-if="isSelected" class="w-4 h-4" />
+          <ChevronRight v-else class="w-4 h-4" />
+        </span>
       </div>
     </div>
     
-    <div v-if="state.isSmallScreen() && isSelected" class="cell-1">
-      <SelectedItems :state="state" :categoryName="categoryName" />
+    <div v-if="isSelected" class="border-t border-gray-200">
+      <SelectedItems :state="state" :categoryName="categoryName" class="p-4" />
     </div>
-    
   </div>
 </template>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, watch } from 'vue';
-import { Plus, Minus } from 'lucide-vue-next';
+import { computed, nextTick, onBeforeUnmount } from 'vue';
+import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import SelectedItems from './SelectedItems.vue';
-
-import { fontColor, formatPrice } from '@/utils';
+import { useUtils } from '@/shared/composables/useUtils';
 import { useAppStore } from '@/stores/state';
 
-const { stickify } = useAppStore();
+const { fontColor, formatPrice } = useUtils();
 
 const { state, categoryName, categoryItems, categoryTotal } = defineProps({
   state: Object,
@@ -63,49 +66,6 @@ async function selectCategory() {
   scrollToElement(id);
 }
 
-function makeSelectedCategorySticky() {
-  const selector = state.isSmallScreen() ? id+'title' : id;
-  
-  if(isSelected.value) {
-    stickify.register(selector);
-  } else {
-    stickify.deregister(selector);  
-  }
-  
-  if(state.isSmallScreen()) {
-    return;
-  }
-  
-  const el = document.getElementById(id);
-  const leftPanel = document.getElementById('leftPanel');
-  const rightPanel = document.getElementById('rightPanel');
-  
-  if(isSelected.value) {
-    hideRightBorder(el);
-  } else {
-    showRightBorder(el);  
-  }
-  
-  setPanelHeight(leftPanel, rightPanel);
-}
-
-function hideRightBorder(el) {
-  el.style.width = getInnerWidth(el) + 2 + 'px';
-}
-
-function setPanelHeight(leftPanel, rightPanel) {
-  const leftHeight = leftPanel.getBoundingClientRect().height;
-  const leftHeightScroll = leftPanel.scrollHeight;
-  const rightHeight = rightPanel.scrollHeight;
-  
-  leftPanel.style.height = Math.max(leftHeight, leftHeightScroll, rightHeight) + 'px';
-}
-
-function showRightBorder(el) {
-  el.style.width = '';
-  el.style.background = '';
-}
-
 function scrollToElement(id) {
   const element = document.getElementById(id);
   
@@ -124,40 +84,8 @@ function scrollToElement(id) {
   });
 }
 
-function getInnerWidth(el) {
-  if (!(el instanceof HTMLElement)) {
-    console.error('Invalid element provided.');
-    return null;
-  }
-  
-  const computedStyles = window.getComputedStyle(el);
-  const paddingLeft = parseFloat(computedStyles.paddingLeft);
-  const paddingRight = parseFloat(computedStyles.paddingRight);
-  const borderLeft = parseFloat(computedStyles.borderLeftWidth);
-  const borderRight = parseFloat(computedStyles.borderRightWidth);
-  
-  const innerWidth = el.clientWidth - (paddingLeft + paddingRight + borderLeft + borderRight);
-  
-  return innerWidth;
-}
-
-watch(isSelected, makeSelectedCategorySticky);
-onMounted(makeSelectedCategorySticky);
 onBeforeUnmount(() => {
   selectedTab.categoryName = null;
-  stickify.deregister(id);
 });
 
 </script>
-
-<style>
-.categoryTitle {
-  line-height: 2;
-  cursor: pointer;
-}
-
-.expandedCat {
-  position: absolute;
-}
-
-</style>

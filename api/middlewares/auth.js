@@ -1,6 +1,7 @@
 import { params } from '@ampt/sdk';
 import { auth } from 'express-oauth2-jwt-bearer';
 import rateLimit from 'express-rate-limit';
+import userService from '../services/userService.js';
 
 const { VITE_ZERO_DOMAIN, VITE_ZERO_AUDIENCE } = params().list();
 
@@ -22,32 +23,35 @@ export const rateLimiter = rateLimit({
 });
 
 // Enhanced middleware to check if user is authenticated and add user info
-export function checkLoggedIn(req, res, next) {
-  if (!req.auth) {
-    return res.status(401).json({ 
-      error: 'Authentication required',
-      message: 'No valid authentication token provided' 
-    });
+export async function checkLoggedIn(req, res, next) {
+  try {
+    if (!req.auth) {
+      return res.status(401).json({ 
+        error: 'Authentication required',
+        message: 'No valid authentication token provided' 
+      });
+    }
+
+    // Extract user information from the JWT token
+    const { payload } = req.auth;
+    const metadata = payload[`${audience}/user_metadata`] || {};
+    const email = payload[`${audience}/email`]
+    
+    // Create user object
+    req.user = {
+      _id: metadata.legacyId || email,
+      sub: payload.sub,
+      email,
+      roles: payload[`${audience}/roles`],
+      metadata,
+      appMetadata: payload[`${audience}/app_metadata`] || {}
+    };
+
+    // Ensure user has an encryption key
+    req.user.encryptedKey = await userService.ensureUserEncryptionKey(req.user);
+    next();
+  } catch (error) {
+    console.error('Error ensuring user encryption key:', error);
+    next();
   }
-
-  // Extract user information from the JWT token
-  const { payload } = req.auth;
-  const metadata = payload[`${audience}/user_metadata`] || {};
-  
-  // Add user information to req.user
-  req.user = {
-    _id: metadata.legacyId,
-    encryptionKey: metadata.encryptionKey,
-    sub: payload.sub,
-    email: payload.email || 
-           payload[`${audience}/email`] || 
-           payload['https://my-app.com/email'] ||
-           payload['https://my-app.com/user_email'] ||
-           undefined,
-    roles: payload[`${audience}/roles`],
-    metadata,
-    appMetadata: payload[`${audience}/app_metadata`] || {}
-  };
-
-  next();
 }

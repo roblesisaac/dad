@@ -20,7 +20,6 @@ export function useAuth() {
     
     const roles = user.value[`${import.meta.env.VITE_ZERO_AUDIENCE}/roles`] || [];
     const metadata = user.value[`${import.meta.env.VITE_ZERO_AUDIENCE}/user_metadata`] || {};
-    
     return {
       ...user.value,
       roles,
@@ -66,7 +65,11 @@ export function useAuth() {
   const getToken = async () => {
     try {
       await waitUntilInitialized();
-      return isAuthenticated.value ? await getAccessTokenSilently() : null;
+      return isAuthenticated.value ? await getAccessTokenSilently({
+        authorizationParams: {
+          scope: 'openid profile email manage:users update:user_roles',
+        }
+      }) : null;
     } catch (e) {
       console.error('Error getting token:', e);
       error.value = e;

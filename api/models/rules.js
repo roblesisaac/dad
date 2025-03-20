@@ -1,14 +1,11 @@
 import AmptModel from '../utils/amptModel';
 
 const ruleSchema = {
-  userId: {
-    set: (_, { user }) => user._Id
-  },
+  userId: String,
   applyForTabs: [String],
   rule: [String],
   _isImportant: Boolean,
   orderOfExecution: Number,
-  // orderOfExecution: [{ tabId: Number }],
   label1: 'userId'
 };
 

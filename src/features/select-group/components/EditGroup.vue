@@ -1,95 +1,161 @@
 <template>
-    <div class="x-grid p20 text-left">
-    
-      <!-- Back button -->
-      <div class="cell-1 p10b">
-        <button @click="$emit('close')" class="button">← Back</button>
-      </div>
-    
+  <div class="text-left">
+    <!-- Group Form -->
+    <div class="space-y-6">
       <!-- Group Name -->
-      <div class="cell-1 p20b">
-    
-        <div class="x-grid middle">
-          <div class="cell-1-5 bold">
-            Name:
+      <div>
+        <label for="group-name" class="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
+        <input 
+          type="text" 
+          id="group-name"
+          v-model="props.group.name" 
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Enter group name" 
+        />
+      </div>
+      
+      <!-- Group Info (Description) -->
+      <div>
+        <label for="group-info" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+        <textarea 
+          id="group-info"
+          v-model="props.group.info" 
+          rows="2"
+          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          placeholder="Add optional description"
+        ></textarea>
+      </div>
+      
+      <!-- Accounts In Group Section -->
+      <div class="border border-gray-200 rounded-md shadow-sm">
+        <div class="border-b border-gray-200 px-4 py-3 bg-indigo-50">
+          <h2 class="font-medium text-indigo-800">Accounts In Group ({{ props.group.accounts.length }})</h2>
+        </div>
+        
+        <div v-if="props.group.accounts.length > 0" class="p-4">
+          <div v-for="account in props.group.accounts" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
+            <div class="flex items-center">
+              <HashIcon class="w-4 h-4 mr-2 text-indigo-500" />
+              <span class="text-sm font-medium">{{ account.mask }}</span>
+            </div>
+            <Switch 
+              :model-value="true" 
+              @update:model-value="toggleAccountInGroup(account)" 
+            />
           </div>
-          <div class="cell-4-5">
-            <input type="text" v-model="props.state.editingGroup.name" class="transparent bold colorBlue" />
+        </div>
+        
+        <div v-else class="px-4 py-6 text-center text-gray-500 italic">
+          No accounts in this group
+        </div>
+      </div>
+      
+      <!-- Available Accounts Section -->
+      <div class="border border-gray-200 rounded-md shadow-sm">
+        <div 
+          @click="toggleAvailableAccounts" 
+          class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+        >
+          <h2 class="font-medium text-gray-700">Available Accounts ({{ accountsNotInGroup.length }})</h2>
+          <div class="text-gray-500">
+            <ChevronDown v-if="showAvailableAccounts" class="w-5 h-5" />
+            <ChevronRight v-else class="w-5 h-5" />
           </div>
         </div>
-    
-        <div class="x-grid">
-          <div class="cell-1 bold ">Info:</div>
-          <div class="cell-1">
-            <textarea v-model="props.state.editingGroup.info" class="edit-info" ></textarea>
+        
+        <div v-if="showAvailableAccounts">
+          <div v-if="accountsNotInGroup.length > 0" class="p-4">
+            <div v-for="account in accountsNotInGroup" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
+              <div class="flex items-center">
+                <HashIcon class="w-4 h-4 mr-2 text-gray-500" />
+                <span class="text-sm font-medium">{{ account.mask }}</span>
+              </div>
+              <Switch 
+                :model-value="false" 
+                @update:model-value="toggleAccountInGroup(account)" 
+              />
+            </div>
+          </div>
+          
+          <div v-else class="px-4 py-6 text-center text-gray-500 italic">
+            <CheckCircle class="w-4 h-4 mx-auto mb-2 text-green-500" />
+            All accounts assigned
           </div>
         </div>
-    
       </div>
-    
-      <!-- Accounts In Group -->
-      <div class="cell-1">
-        <b>Accounts In Group:</b>
-        <div class="dropHere">
-          <span v-if="!props.state.editingGroup.accounts.length">Drag and drop groups here.</span>
-          <Draggable class="draggable" group="accountDragger" v-model="props.state.editingGroup.accounts" v-bind="props.state.dragOptions()">
-            <template #item="{element}">
-              <button class="sharedWith">{{ element.mask }}</button>
-            </template>
-          </Draggable>
-        </div>
+      
+      <!-- Action Buttons -->
+      <div class="pt-4 flex justify-between">
+        <button 
+          @click="emit('close')" 
+          class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Cancel
+        </button>
+        
+        <button 
+          @click="handleDeleteGroup" 
+          class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+        >
+          <Trash2 class="w-4 h-4 mr-1 inline-block" />
+          Delete Group
+        </button>
       </div>
-    
-      <!-- Accounts Not In Group -->
-      <div class="cell-1 p30y">
-        <b>Accounts Not In Group:</b>
-        <div class="dropHere">
-          <Draggable class="draggable" group="accountDragger" v-model="accountsNotInGroup" v-bind="props.state.dragOptions()">
-            <template #item="{element}">
-              <button class="button sharedWith">{{ element.mask }}</button>
-            </template>
-        </Draggable>
-        </div>
-      </div>
-    
-      <div class="cell-1">
-        <button @click="deleteGroup" class="transparent expanded colorRed">Remove Group</button>
-      </div>
-    
     </div>
-    </template>
+  </div>
+</template>
     
-    <script setup>
-    import { computed, watch } from 'vue';
-    import Draggable from 'vuedraggable';
-    import { useEditGroup } from '../composables/useEditGroup.js';
-    
-    const props = defineProps({
-      state: Object
-    });
-    
-    defineEmits(['close']);
-    
-    const { deleteGroup, updateGroupName, updateGroup } = useEditGroup(props.state);
-    
-    const accountsNotInGroup = computed(() => {
-      const accountsInGroup = props.state.editingGroup.accounts.map(account => account._id);
-    
-      return props.state.allUserAccounts.filter(account => {
-        return !accountsInGroup.includes(account._id);
-      });
-    });
-    
-    watch(() => props.state.editingGroup.name, updateGroupName);
-    watch(() => props.state.editingGroup.info, updateGroup);
-    watch(() => props.state.editingGroup.accounts.length, updateGroup);
-    
-    </script>
-    
-    <style>
-    .edit-info {
-      width: 100%;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-    }
-    </style>
+<script setup>
+import { computed, watch, ref } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useSelectGroup } from '../composables/useSelectGroup.js';
+import { HashIcon, Trash2, CheckCircle, ChevronDown, ChevronRight } from 'lucide-vue-next';
+import Switch from '@/shared/components/Switch.vue';
+
+const { state } = useDashboardState();
+const emit = defineEmits(['close']);
+
+const props = defineProps({
+  group: Object
+});
+
+const { deleteGroup, updateGroup } = useSelectGroup();
+
+// State for the available accounts section
+const showAvailableAccounts = ref(false);
+
+const accountsNotInGroup = computed(() => {
+  const accountsInGroup = props.group.accounts.map(account => account._id);
+
+  return state.allUserAccounts.filter(account => {
+    return !accountsInGroup.includes(account._id);
+  });
+});
+
+function toggleAvailableAccounts() {
+  showAvailableAccounts.value = !showAvailableAccounts.value;
+}
+
+function toggleAccountInGroup(account) {
+  // Find if the account is already in the group
+  const isInGroup = props.group.accounts.some(groupAccount => groupAccount._id === account._id);
+  
+  if (isInGroup) {
+    // Remove account from group
+    props.group.accounts = props.group.accounts.filter(groupAccount => groupAccount._id !== account._id);
+  } else {
+    // Add account to group
+    props.group.accounts.push(account);
+  }
+}
+
+function handleDeleteGroup() {
+  const deletedGroup = deleteGroup(props.group);
+
+  if(deletedGroup) {
+    emit('delete-group');
+  }
+}
+
+watch(() => props.group, updateGroup, { deep: true });
+</script>

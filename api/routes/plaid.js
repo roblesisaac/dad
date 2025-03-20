@@ -1,21 +1,29 @@
-import app from '../controllers/plaid';
+import linkController from '../controllers/plaid/linkController.js';
+import itemController from '../controllers/plaid/itemController.js';
+import transactionController from '../controllers/plaid/transactionController.js';
 import Protect from '../middlewares/protect';
 
 export default function(api, baseUrl) {
   const protect = Protect.route(api, 'plaiditems', baseUrl);
   const member = protect('member');
 
-  member.post('/plaid/connect/link/:itemId?', app.connectLink);
-  member.post('/plaid/exchange/token', app.exchangeTokenAndSavePlaidItem);
-  member.get('/plaid/get/duplicates', app.getDuplicates);
-  member.get('/plaid/get/transaction/count', app.getAllTransactionCount);
-  member.get('/plaid/items/:_id?', app.getPlaidItems);
-  member.get('/plaid/sync/items', app.retreivePlaidItems);
-  member.get('/plaid/remove/all/transactions', app.removeAllTransactionsFromDatabase);
-  member.post('/plaid/remove/duplicates', app.removeFromDb);
-  member.get('/plaid/sync/accounts/and/groups', app.syncAccountsAndGroups);
-  member.get('/plaid/sync/all/transactions', app.syncAllUserTransactions);
-  member.get('/plaid/transactions/:_id?', app.getTransactions);
-  member.get('/plaid/update/dates', app.updateDates);
-  member.get('/plaid/test/task', app.test);
+  // Link and Authentication
+  member.post('/plaid/connect/link/:itemId?', linkController.createLink);
+  member.post('/plaid/exchange/token', linkController.exchangeTokenAndSavePlaidItem);
+
+  // Items and Accounts
+  member.get('/plaid/items/:_id?', itemController.getUserItems);
+  member.put('/plaid/items/:_id', itemController.updateItem);
+  member.get('/plaid/sync/items', itemController.syncItems);
+  member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
+
+  // Transactions
+  member.get('/plaid/transactions/:_id?', transactionController.getTransactions);
+  member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
+  
+  // Sync Sessions
+  member.get('/plaid/items/:itemId/sync-sessions', transactionController.getSyncSessionsForItem);
+  member.post('/plaid/items/:itemId/revert/:sessionId', transactionController.revertToSyncSession);
+  
+  // Maintenance
 }

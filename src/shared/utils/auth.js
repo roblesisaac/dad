@@ -6,7 +6,8 @@ const auth0 = createAuth0({
   authorizationParams: {
     redirect_uri: `${window.location.origin}/callback`,
     audience: import.meta.env.VITE_ZERO_AUDIENCE,
-    scope: 'openid profile email manage:users update:user_roles'
+    scope: 'openid profile email manage:users update:user_roles',
+    response_type: 'token id_token'
   },
   useRefreshTokens: true,
   useRefreshTokensFallback: true

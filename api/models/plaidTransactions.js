@@ -62,7 +62,6 @@ const transactionSchema = {
     detailed: String,
   },
   account_owner: String,
-  syncId: String,
   transaction_id: {
     type: String,
     unique: true
@@ -72,7 +71,13 @@ const transactionSchema = {
   website: String,
   notes: String,
   recategorizeAs: String,
+
+  syncTime: String,
+  itemId: String,
+  cursor: String,
   tags: [String],
+  // sync_id: String,
+
   label1: 'transaction_id',
   label2: {
     name: 'date',
@@ -82,17 +87,11 @@ const transactionSchema = {
     name: 'accountdate',
     concat: ['account_id', 'authorized_date']
   },
-  label4: 'syncId',
-  label5: {
-    name: 'category',
-    computed: item => {
-      const cat = item.personal_finance_category;
-      const details = cat.primary+cat.detailed+cat.confidence_level;
-      const response = details || '';
-
-      return response.toLowerCase();
-    }
-  }
+  label4: {
+    name: 'syncTime',
+    concat: ['itemId', 'syncTime']
+  },
+  label5: 'cursor'
 }
 
 export default AmptModel(['plaidtransactions', 'userId'], transactionSchema);

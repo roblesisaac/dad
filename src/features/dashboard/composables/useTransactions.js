@@ -1,7 +1,16 @@
-export function useTransactions(api) {
+import { useUtils } from '../../../shared/composables/useUtils.js';
+import { useApi } from '@/shared/composables/useApi.js';
+
+export function useTransactions() {
+  const api = useApi();
+  const { extractDateRange } = useUtils();
+
+  /**
+   * Fetch transactions for a specific account and date range
+   */
   async function fetchTransactions(account_id, dateRange) {
     if(!account_id || !dateRange) {
-      return;
+      return [];
     }
 
     const baseUrl = 'plaid/transactions';
@@ -10,17 +19,29 @@ export function useTransactions(api) {
     return await api.get(baseUrl+query);
   }
 
-  async function fetchUserTabs() {
-    return await api.get('tabs');
-  }
+  /**
+   * Fetch all transactions for all accounts in a group
+   */
+  async function fetchTransactionsForGroup(group, dateRangeState) {
+    if (!group || !group.accounts || !group.accounts.length) {
+      return [];
+    }
+    
+    const dateRange = extractDateRange(dateRangeState);
+    let allTransactions = [];
 
-  async function fetchUserRules() {
-    return await api.get('rules');
+    for (const account of group.accounts) {
+      const transactions = await fetchTransactions(account.account_id, dateRange);
+      if (transactions && transactions.length) {
+        allTransactions = [...allTransactions, ...transactions];
+      }
+    }
+
+    return allTransactions;
   }
 
   return {
     fetchTransactions,
-    fetchUserTabs,
-    fetchUserRules
+    fetchTransactionsForGroup
   };
 } 
