@@ -56,7 +56,7 @@ export function useUtils() {
       : 'text-red-500'
   }
 
-  function formatPrice(amt, { toFixed = 2 } = {}) {
+  function formatPrice(amt=0, { toFixed = 2 } = {}) {
     return amt.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: toFixed, maximumFractionDigits: toFixed });
   }
 
