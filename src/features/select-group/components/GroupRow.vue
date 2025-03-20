@@ -67,18 +67,18 @@
             <div class="flex-shrink-0 text-right ml-4">
                 <!-- Available Balance -->
                 <div class="flex flex-col">
-                    <span class="font-medium text-gray-900">
+                    <span :class="['font-medium text-gray-900', {'mb-0.5': !shouldShowCurrentBalance}]">
                         <NetBalance :accounts="element.accounts" :state="state" />
                     </span>
-                    <span class="text-xs text-gray-500 mt-0.5">Available</span>
+                    <span class="text-xs text-gray-500">Available</span>
                 </div>
                 
-                <!-- Current Balance -->
-                <div v-if="element.totalAvailableBalance !== element.totalCurrentBalance" class="mt-1.5">
-                    <span :class="['text-sm', fontColor(element.totalAvailableBalance)]">
-                        {{ formatPrice(element.totalAvailableBalance) }}
+                <!-- Current Balance - only shown if different from Available -->
+                <div v-if="shouldShowCurrentBalance" class="mt-1.5">
+                    <span :class="['text-sm', currentBalanceDisplay.color]">
+                        {{ currentBalanceDisplay.value }}
                     </span>
-                    <div class="text-xs text-gray-500 mt-0.5">Current</div>
+                    <div class="text-xs text-gray-500">Current</div>
                 </div>
             </div>
         </div>
@@ -91,9 +91,10 @@
 </template>
     
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, watch, ref, toRef } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
+import { useBalanceDisplay } from '../composables/useBalanceDisplay';
 import NetBalance from './NetBalance.vue';
 import { EllipsisVertical, GripVertical, ChevronRight } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
@@ -111,6 +112,8 @@ const props = defineProps({
 });
 
 const { state } = useDashboardState();
+const elementRef = computed(() => props.element);
+const { shouldShowCurrentBalance, availableBalanceDisplay, currentBalanceDisplay } = useBalanceDisplay(elementRef);
 
 const accountInfo = computed(() => {
     const account = state.allUserAccounts.find(

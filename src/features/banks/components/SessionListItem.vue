@@ -19,14 +19,14 @@
           <!-- Error icon -->
           <AlertTriangle v-if="session.status === 'error'" class="h-5 w-5 text-red-500" />
           
+          <!-- Recovery icon -->
+          <RefreshCw v-else-if="session.isRecovery" class="h-5 w-5 text-blue-500" />
+          
           <!-- Success icon -->
           <Check v-else-if="session.status === 'complete'" class="h-5 w-5 text-green-500" />
           
           <!-- In progress icon -->
           <RefreshCw v-else-if="session.status === 'in_progress'" class="h-5 w-5 text-yellow-500 animate-spin" />
-          
-          <!-- Recovery icon -->
-          <RefreshCw v-else-if="session.isRecovery" class="h-5 w-5 text-blue-500" />
         </div>
         
         <!-- Session info -->

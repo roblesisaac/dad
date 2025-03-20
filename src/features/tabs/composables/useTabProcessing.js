@@ -1,12 +1,13 @@
 import { nextTick } from 'vue';
 import { useUtils } from '@/shared/composables/useUtils.js';
-import { useRules } from '@/features/rule-manager/composables/useRules.js';
+import { useTabRules } from '@/features/tabs/composables/useTabRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
+import { useDate } from '@/features/select-date/composables/useDate.js';
 
 export function useTabProcessing() {
   const { state } = useDashboardState();
-  const { ruleMethods, combinedRulesForTab } = useRules();
+  const { ruleMethods, combinedRulesForTab } = useTabRules();
   const { getDayOfWeekPST } = useUtils();
   const tabsAPI = useTabsAPI();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
@@ -79,9 +80,6 @@ export function useTabProcessing() {
   return { tabTotal, categorizedItems };
   }
 
-  /**
-  * Sort function for date-based groupings
-  */
   function groupByDate(a, b) {
     const months = {
       jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
@@ -98,9 +96,6 @@ export function useTabProcessing() {
     }
   }
 
-  /**
-  * Extract and organize rules by type
-  */
   function extractRules(tabRules) {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
     
@@ -150,18 +145,12 @@ export function useTabProcessing() {
     ];
   }
 
-  /**
-  * Safely get a property value from an item
-  */
   function getItemValue(item, propName) {
     return propName === 'category'
     ? item.personal_finance_category.primary
     : item[propName];
   }
 
-  /**
-  * Format the personal finance category for consistency
-  */
   function formatPersonalFinanceCategory(item) {
     const { primary } = item.personal_finance_category;
     if(!primary) return 'misc';
@@ -170,9 +159,6 @@ export function useTabProcessing() {
     item.personal_finance_category.primary = lower.split('_').join(' ');
   }
 
-  /**
-  * Build rule methods for processing tab data
-  */
   function buildRuleMethods(tabRules) {
     const [sorters, categorizers, filters, propToGroupBy] = extractRules(tabRules);
     
@@ -185,9 +171,6 @@ export function useTabProcessing() {
     };
   }
 
-  /**
-  * Build a method to sort transaction data
-  */
   function buildSortMethod(sorters) {
     return (arrayToSort) => {
       const arrayCopy = arrayToSort.map(item => (JSON.parse(JSON.stringify(item))));
@@ -210,9 +193,6 @@ export function useTabProcessing() {
     };
   }
 
-  /**
-  * Build a method to categorize transactions
-  */
   function buildCategorizeMethod(categorizers) {
     return (item) => {
       // Handle manual recategorization first
@@ -261,9 +241,6 @@ export function useTabProcessing() {
     };
   }
 
-  /**
-  * Build a method to filter transactions
-  */
   function buildFilterMethod(filters) {
     return (item) => {
       if(!filters.length) return true;
@@ -281,11 +258,8 @@ export function useTabProcessing() {
     };
   }
 
-  /**
-  * Build a method to group transactions
-  */
-  function buildGroupByMethod(propToGroupBy) {
-    
+  function buildGroupByMethod(propToGroupByArray) {
+
     const groupByMethods = {
       category: (item) => item.personal_finance_category.primary,
       year: (item) => {
@@ -311,24 +285,20 @@ export function useTabProcessing() {
       weekday: (item) => getDayOfWeekPST(item.authorized_date)
     };
 
-    const propToGroupBy = propToGroupBy[0];
+    const propToGroupBy = propToGroupByArray[0];
     const groupByMethod = groupByMethods[propToGroupBy];
 
-    return (item) => groupByMethod ? 
-      groupByMethod(item) 
-      : groupByMethods.category(item);
+    if(!groupByMethod) {
+      return (item) => groupByMethods.category(item);
+    }
+
+    return (item) => groupByMethod(item);
   }
 
-  /**
-  * Find selected tabs in a group
-  */
   function selectedTabsInGroup(tabsForGroup) {
     return tabsForGroup?.filter(tab => tab.isSelected) || [];
   }
 
-  /**
-  * Select the first tab in a group
-  */
   async function selectFirstTab(tabsForGroup) {
     const firstTab = tabsForGroup[0];
     if (!firstTab) return;
@@ -338,9 +308,6 @@ export function useTabProcessing() {
     return firstTab;
   }
 
-  /**
-  * Deselect all tabs except the first one
-  */
   async function deselectOtherTabs(selectedTabs) {
     if (!selectedTabs?.length) return;
     
@@ -382,9 +349,6 @@ export function useTabProcessing() {
     });
   }
 
-  /**
-  * Process data for all tabs in the selected group
-  */
   async function processAllTabsForSelectedGroup() {
     state.isLoading = true;
     const tabsForGroup = state.selected.tabsForGroup;
@@ -433,25 +397,12 @@ export function useTabProcessing() {
       
       const selectedGroup = state.selected.group;
       
-      // Get date range from state
-      let startDate, endDate;
+      // Use the date composable for date conversion
+      const { convertToDate } = useDate();
       
-      // Convert date range strings to actual dates
-      if (state.date.start === 'firstOfMonth') {
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
-      } else if (state.date.start === 'firstOfYear') {
-        const now = new Date();
-        startDate = new Date(now.getFullYear(), 0, 1);
-      } else {
-        startDate = new Date(state.date.start);
-      }
-      
-      if (state.date.end === 'today') {
-        endDate = new Date();
-      } else {
-        endDate = new Date(state.date.end);
-      }
+      // Get date range from state and convert to Date objects
+      const startDate = convertToDate(state.date.start);
+      const endDate = convertToDate(state.date.end);
       
       // Filter transactions by date range
       const dateFilteredTransactions = addedTransactions.filter(transaction => {
@@ -464,7 +415,6 @@ export function useTabProcessing() {
       }
       
       // Filter transactions for the selected group
-      // Groups have accounts associated with them
       const groupAccounts = selectedGroup.accounts || [];
       const groupAccountIds = Array.isArray(groupAccounts) ? 
         (groupAccounts[0] && typeof groupAccounts[0] === 'object' ? 
@@ -473,21 +423,21 @@ export function useTabProcessing() {
         [];
       
       const matchingTransactions = dateFilteredTransactions.filter(transaction => {
-        // Check if transaction's account is in the selected group
         return groupAccountIds.includes(transaction.account_id);
       });
       
       if (matchingTransactions.length === 0) {
         return 0;
       }
+
+      const allGroupTransactions = state.selected.allGroupTransactions;
       
-      // Initialize allGroupTransactions if it doesn't exist
-      if (!state.selected.allGroupTransactions) {
+      if (!allGroupTransactions) {
         state.selected.allGroupTransactions = [];
       }
       
       // Add new transactions to the array (avoid duplicates by checking transaction_id)
-      const existingIds = new Set(state.selected.allGroupTransactions.map(t => t.transaction_id));
+      const existingIds = new Set(allGroupTransactions.map(t => t.transaction_id));
       const newTransactions = matchingTransactions.filter(t => !existingIds.has(t.transaction_id));
       
       if (newTransactions.length === 0) {
@@ -495,26 +445,13 @@ export function useTabProcessing() {
       }
       
       // Add new transactions to state
-      state.selected.allGroupTransactions = [...state.selected.allGroupTransactions, ...newTransactions];
+      state.selected.allGroupTransactions = [
+        ...allGroupTransactions, 
+        ...newTransactions
+      ];
       
-      // Process only tabs in the current group rather than all tabs
-      const tabsForGroup = state.selected.tabsForGroup;
-      if (!tabsForGroup?.length) {
-        return newTransactions.length;
-      }
+      await processAllTabsForSelectedGroup();
       
-      // Only process tabs that are currently visible/selected
-      for (const tab of tabsForGroup) {
-        if (tab.isSelected) {
-          const processed = processTabData(tab);
-          if (processed) {
-            tab.total = processed.tabTotal;
-            tab.categorizedItems = processed.categorizedItems;
-          }
-        }
-      }
-      
-      await nextTick();
       return newTransactions.length;
     } catch (error) {
       console.error('Error concatenating and processing transactions:', error);

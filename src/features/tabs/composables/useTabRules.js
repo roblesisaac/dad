@@ -1,7 +1,7 @@
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
-export function useRules() {
+export function useTabRules() {
   const { lowercase, makeArray } = useUtils();
   const { state } = useDashboardState();
   const ruleMethods = {
