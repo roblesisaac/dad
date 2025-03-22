@@ -5,6 +5,7 @@
     @close="$emit('close')"
     :show-close-button="true"
     :hide-header="true"
+    :content-padding="false"
   >
     <template #content>
       <div>
@@ -34,21 +35,7 @@
         <!-- Modal body -->
         <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
           <form @submit.prevent="saveRule">
-            <!-- Rule Type -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Rule Type</label>
-              <select 
-                v-model="ruleData.rule[0]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                @change="updateRuleType"
-              >
-                <option value="categorize">Categorize</option>
-                <option value="sort">Sort</option>
-                <option value="filter">Filter</option>
-                <option value="groupBy">Group By</option>
-              </select>
-            </div>
-            
+            <!-- Rule Type (now hidden since users select it in the RuleManagerModal) -->
             <!-- Dynamic fields based on rule type and field order -->
             <template v-for="(fieldType, index) in currentRuleConfig.fieldOrder" :key="index">
               <!-- Property field -->
@@ -389,6 +376,12 @@ function updateRuleType() {
     // Default sort direction to ascending
     ruleData.value.rule[2] = 'asc';
   }
+}
+
+// Initialize the rule when component is created
+// (now that the type selector is hidden)
+if (props.isNew) {
+  updateRuleType();
 }
 
 // Save the rule

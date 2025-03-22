@@ -143,7 +143,7 @@
       </div>
       
       <!-- Action Buttons -->
-      <div class="px-4 py-4 border-t border-gray-200">
+      <div class="px-4 py-4">
         <div class="flex justify-end">
           <button
             @click="$emit('close')"

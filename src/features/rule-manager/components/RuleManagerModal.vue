@@ -4,6 +4,7 @@
     size="xl"
     :title="`Manage rules for ${state.selected.tab?.tabName || 'Tab'}`"
     @close="closeModal"
+    :content-padding="false"
   >
     <template #content>
       <RuleManager @close="closeModal" />
