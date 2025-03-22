@@ -80,23 +80,21 @@
         
         <!-- Info tooltip -->
         <div class="flex items-center">
-          <div 
-            class="relative inline-block cursor-pointer tooltip-container"
-            :class="getTooltipTextColorClass()"
-          >
-            <Info class="w-4 h-4" />
-            <div class="tooltip absolute z-10 invisible opacity-0 bg-gray-800 text-white text-xs rounded py-1 px-2 right-0 bottom-full mb-1 w-48 transition-opacity duration-150">
-              {{ getRuleDescription() }}
-              <div class="tooltip-arrow"></div>
-            </div>
-          </div>
+          <Tooltip :position="'left'" :width="'12rem'">
+            <template #trigger>
+              <div :class="getTooltipTextColorClass()">
+                <Info class="w-4 h-4" />
+              </div>
+            </template>
+            {{ getRuleDescription() }}
+          </Tooltip>
         </div>
       </div>
       
       <!-- Rule Criteria (simplified) -->
       <div 
         v-if="rule.rule.length > 1 && shouldShowCriteria()"
-        :class="['text-sm border-l-2 pl-2 mb-0 py-1', getBorderColorClass()]"
+        class="text-sm pl-2 mb-0 py-1"
       >
         <!-- Filter Rule -->
         <div v-if="ruleType.id === 'filter'" class="flex flex-col">
@@ -122,7 +120,7 @@
             <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[2]) }}</span>
           </div>
           <!-- Category Keywords as Tags -->
-          <div class="mt-1.5 pl-4">
+          <div class="mt-1.5">
             <TagList 
               :tag-string="rule.rule[3]" 
               color="teal"
@@ -182,6 +180,7 @@ import {
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import Switch from '@/shared/components/Switch.vue';
 import TagList from '@/shared/components/TagList.vue';
+import Tooltip from '@/shared/components/Tooltip.vue';
 
 const { state } = useDashboardState();
 
@@ -332,21 +331,5 @@ function shouldShowCriteria() {
 .rule-card {
   display: flex;
   flex-direction: column;
-}
-
-.tooltip-container:hover .tooltip {
-  visibility: visible;
-  opacity: 1;
-}
-
-.tooltip-arrow {
-  position: absolute;
-  width: 0;
-  height: 0;
-  border-style: solid;
-  border-width: 5px 5px 0 5px;
-  border-color: #1f2937 transparent transparent transparent;
-  bottom: -5px;
-  right: 5px;
 }
 </style> 

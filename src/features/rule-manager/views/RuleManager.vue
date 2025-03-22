@@ -28,14 +28,14 @@
       </div>
       
       <!-- Main Content Area -->
-      <div class="max-h-[65vh] overflow-auto">
+      <div class="max-h-[65vh] overflow-y-auto overflow-x-hidden">
         <!-- Enabled Rules -->
         <div class="pb-2">
           <!-- Rule Type Collapsible Sections -->
           <div v-for="ruleType in ruleTypes" :key="ruleType.id" class="border-b border-gray-200">
             <div 
               @click="toggleRuleTypeCollapse(ruleType.id)"
-              class="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              class="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 relative"
             >
               <div class="flex items-center space-x-2">
                 <component :is="ruleType.icon" :class="`text-${ruleType.color}-600 w-5 h-5`" />
@@ -46,9 +46,21 @@
                 >
                   {{ getRuleCountByType(ruleType.id, true) }}
                 </span>
+                <!-- Rule type tooltip -->
+                <Tooltip position="bottom" width="12rem">
+                  <template #trigger>
+                    <div 
+                      class="ml-2 cursor-help"
+                      :class="`text-${ruleType.color}-600`"
+                    >
+                      <Info class="w-4 h-4" />
+                    </div>
+                  </template>
+                  {{ ruleType.description }}
+                </Tooltip>
               </div>
               <ChevronDown 
-            :class="[
+                :class="[
                   'w-5 h-5 transition-transform', 
                   collapsedSections[ruleType.id] ? '' : 'transform rotate-180'
                 ]" 
@@ -131,7 +143,7 @@
       </div>
       
       <!-- Action Buttons -->
-      <div class="bg-gray-50 px-4 py-4 border-t border-gray-200">
+      <div class="px-4 py-4 border-t border-gray-200">
         <div class="flex justify-end">
           <button
             @click="$emit('close')"
@@ -165,7 +177,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
 import { 
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, Info
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRuleManager } from '../composables/useRuleManager';
@@ -175,6 +187,7 @@ import draggable from 'vuedraggable';
 import RuleCard from '../components/RuleCard.vue';
 import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
+import Tooltip from '@/shared/components/Tooltip.vue';
 
 const { state } = useDashboardState();
 const { updateTabName } = useTabsAPI();
@@ -444,4 +457,57 @@ function getButtonClasses(ruleType) {
     buttonClasses[ruleType.id] || 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
   ];
 }
-</script> 
+</script>
+
+<style scoped>
+/* Remove all the old tooltip CSS */
+/* .tooltip-container:hover .tooltip,
+.relative:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.tooltip-arrow {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 5px 5px 0 5px;
+  border-color: #1f2937 transparent transparent transparent;
+  bottom: -5px;
+  left: 5px;
+  z-index: 500;
+}
+
+.tooltip-arrow-up {
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 5px 5px 5px;
+  border-color: transparent transparent #1f2937 transparent;
+  top: -5px;
+  left: 5px;
+  z-index: 500;
+} */
+
+/* Ensure tooltip container is positioned correctly */
+/* .tooltip-container {
+  position: relative;
+} */
+
+/* Fixed positioning for tooltips to prevent cutoff */
+/* .tooltip {
+  box-sizing: border-box;
+  overflow-wrap: break-word;
+  z-index: 500;
+  position: fixed;
+  max-width: 12rem;
+} */
+
+/* Ensure main content doesn't create horizontal overflow */
+.max-h-\[65vh\] {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+</style> 
