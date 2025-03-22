@@ -46,6 +46,14 @@
       >
         <div class="flex justify-between items-center">
           <div class="flex items-center space-x-3">
+            <!-- Edit button (moved to the left) -->
+            <button 
+              @click.stop="$emit('edit-bank-name', bank)"
+              class="inline-flex items-center p-1 text-sm rounded-md text-gray-600 hover:bg-gray-100 focus:outline-none"
+            >
+              <EllipsisVertical class="h-4 w-4" />
+            </button>
+            
             <!-- Status indicator -->
             <div 
               :class="[getBankStatusClass(bank), 'w-3 h-3 rounded-full flex-shrink-0']" 
@@ -58,12 +66,6 @@
           
           <!-- Action buttons -->
           <div class="flex space-x-2">
-            <button 
-              @click.stop="$emit('edit-bank-name', bank)"
-              class="inline-flex items-center px-3 py-1 text-sm rounded-md text-gray-600 border border-gray-600 hover:bg-gray-50 focus:outline-none"
-            >
-              Edit
-            </button>
             <button 
               @click.stop="$emit('select-bank', bank)"
               class="inline-flex items-center space-x-1 px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none"
@@ -101,7 +103,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { RefreshCw, AlertTriangle, CreditCard, History } from 'lucide-vue-next';
+import { RefreshCw, AlertTriangle, CreditCard, History, EllipsisVertical } from 'lucide-vue-next';
 
 const props = defineProps({
   banks: {

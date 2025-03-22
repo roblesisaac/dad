@@ -31,7 +31,7 @@ export function usePlaidIntegration() {
       lastSync: null,
       nextSync: null,
       cursor: null,
-      batchNumber: 0
+      branchNumber: 0
     },
     blueBar: {
       message: null,

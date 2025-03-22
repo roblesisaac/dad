@@ -2,7 +2,7 @@ import plaidService from './plaidService.js';
 import itemService from './itemService.js';
 import plaidItems from '../../models/plaidItems.js';
 import { CustomError } from './customError.js';
-import transactionRecoveryService from './transactionRecoveryService.js';
+import recoveryService from './recoveryService.js';
 import syncSessionService from './syncSessionService.js';
 import transactionsCrudService from './transactionsCrudService.js';
 
@@ -18,6 +18,10 @@ class TransactionSyncService {
    * @returns {Promise<Object>} Sync results
    */
   async syncTransactions(item, user) {
+    // Track sync start time for performance measurement
+    const syncStartTime = Date.now();
+    let transactionsSkipped = [];
+    
     // 1. Sync initialization - Validate user data
     if (!user || !user._id) {
       throw new CustomError('INVALID_USER', 'Missing required user data');
@@ -25,41 +29,71 @@ class TransactionSyncService {
 
     try {
       // 1. Sync initialization - Acquire sync lock on plaid item
-      const itemData = await this._getAndLockItem(item, user);
+      const lockedItem = await this._getAndLockItem(item, user);
       
-      // 2. Previous sync session handling
-      let prevSyncSession = await syncSessionService.getSyncSession(itemData?.sync_id, user);
+      // 2. Previous sync session handling - Get the latest sync session
+      let currentSyncSession = await syncSessionService.getSyncSession(lockedItem?.sync_id, user);
 
-      const hasLegacySyncData = !prevSyncSession && itemData.syncData && itemData.syncData.cursor;
-      
-      // Check for legacy syncData stored directly on the item
-      if (hasLegacySyncData) {        
-        try {
-          console.log(`Legacy syncData found for item ${itemData.itemId}, migrating...`);
-          
-          // Create a sync session from the legacy data
-          const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
-            user,
-            itemData
-          );
-          
-          if (migratedSession && migratedSession._id) {
-            prevSyncSession = migratedSession;
+      // If no current sync session, create a new one
+      if(!currentSyncSession) {
+        const hasLegacySyncData = lockedItem.syncData && lockedItem.syncData.cursor;
+        if (hasLegacySyncData) { 
+          try {
+            console.log(`Legacy syncData found for item ${lockedItem.itemId}, migrating...`);
             
-            console.log(`Successfully migrated legacy syncData for item ${itemData.itemId}`);
+            // Create a sync session from the legacy data
+            const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
+              user,
+              lockedItem
+            );
+            
+            if (migratedSession && migratedSession._id) {
+              currentSyncSession = migratedSession;
+              
+              console.log(`Successfully migrated legacy syncData for item ${lockedItem.itemId}`);
+            }
+          } catch (migrationError) {
+            console.error(`Error migrating legacy syncData: ${migrationError.message}`);
+            // Continue without the migrated session
           }
-        } catch (migrationError) {
-          console.error(`Error migrating legacy syncData: ${migrationError.message}`);
-          // Continue without the migrated session
+          return;
         }
+
+        currentSyncSession = await syncSessionService.createNewSyncSession(null, user, lockedItem);
+      }
+
+      if(!currentSyncSession) {
+        throw new CustomError('SYNC_SESSION_NOT_FOUND', 'Sync session not found');
       }
       
       // ------
       // 3. Determine if recovery is needed and perform if necessary
       // ------
-      if (syncSessionService.isRecoveryNeeded(itemData, prevSyncSession)) {
+      if (syncSessionService.isRecoveryNeeded(lockedItem, currentSyncSession)) {
         // 3. Recovery process - Handle recovery using previous sync session
-        const recoveryInfo = await this._recoverFromFailedSync(itemData, prevSyncSession, user);
+        const recoveryInfo = await this._recoverFromFailedSync(lockedItem, currentSyncSession, user);
+        
+        // Create a recovery session to record the recovery operation
+        // This will be used on the next sync attempt
+        await syncSessionService.createEndSyncSession(
+          currentSyncSession,
+          user,
+          lockedItem,
+          {
+            hasFailures: false,
+            cursor: currentSyncSession.cursor,
+            nextCursor: currentSyncSession.nextCursor,
+            expectedCounts: { added: 0, modified: 0, removed: 0 },
+            actualCounts: { added: 0, modified: 0, removed: 0 },
+            syncCounts: {
+              expected: { added: 0, modified: 0, removed: 0 },
+              actual: { added: 0, modified: 0, removed: 0 }
+            },
+            hasMore: true,
+            isRecovery: true
+          },
+          syncStartTime
+        );
         
         // Always build and return a recovery response, regardless of recovery success
         const recoveryResponse = this._buildRecoveryResponse(recoveryInfo);
@@ -67,34 +101,47 @@ class TransactionSyncService {
       }
       
       // 4. Check for changes from Plaid before creating a new sync session
-      const cursor = prevSyncSession?.nextCursor || null;
-      const plaidData = await this._fetchTransactionsFromPlaid(itemData, user, cursor);
+      const cursor = currentSyncSession?.cursor || null;      
+      const plaidData = await this._fetchTransactionsFromPlaid(lockedItem, user, cursor);      
       const hasChanges = this._checkForChanges(plaidData);
       
       // If no changes and we have a previous session, update lastNoChangesTime and return early
-      if (!hasChanges && prevSyncSession) {
-        return await this._handleNoChangesCase(prevSyncSession, itemData, user, plaidData);
+      if (!hasChanges) {
+        return await this._handleNoChangesCase(currentSyncSession, lockedItem, user, plaidData);
       }
       
-      // 5. Create a new sync session for normal sync flow
-      const { syncSession, syncTime } = await this._createSyncSession(prevSyncSession, user, itemData, plaidData);
-      const batchNumber = syncSession.batchNumber || 1;
-
-      if (!syncSession) {
-        throw new CustomError('SYNC_SESSION_CREATION_FAILED', 'Failed to create sync session');
-      }
-
-      // 6. Process transaction data
-      const syncResult = await this._processSyncData(itemData, user, cursor, syncTime, plaidData);
+      // 5. Process transaction data without creating an initial sync session
+      const syncTime = Date.now();
+      const syncResult = await this._processSyncData(
+        lockedItem, 
+        user, 
+        cursor,
+        syncTime, 
+        plaidData,
+        transactionsSkipped
+      );
       
-      // 7. Sync session update
-      await this._updateSyncSession(syncSession, syncResult, prevSyncSession);
+      // 6. Create end sync session with results for next sync
+      const newSyncSession = await syncSessionService.createEndSyncSession(
+        currentSyncSession,
+        user,
+        lockedItem,
+        syncResult,
+        syncStartTime,
+        plaidData.request_id || null,
+        transactionsSkipped
+      );
       
-      // 8. Item update
-      await this._updateItemAfterSync(itemData, syncResult, syncSession._id);
+      // 7. Item update - Only update if there were no errors
+      await this._updateItemAfterSync(lockedItem, syncResult, newSyncSession._id);
       
-      // 9. Post-processing - Build response
-      const response = this._buildSyncResponse(syncResult, syncTime, batchNumber);
+      // 8. Post-processing - Build response
+      const response = this._buildSyncResponse(
+        syncResult,
+        syncTime,
+        1, // No more branching in the new workflow
+        transactionsSkipped
+      );
       
       return response;
     } catch (error) {
@@ -141,19 +188,19 @@ class TransactionSyncService {
 
   /**
    * Handle the case when no changes are detected from Plaid
-   * @param {Object} prevSyncSession - Previous sync session
+   * @param {Object} currentSyncSession - Previous sync session
    * @param {Object} item - Item data
    * @param {Object} user - User object 
    * @param {Object} plaidData - Data retrieved from Plaid
    * @returns {Promise<Object>} Response object
    * @private
    */
-  async _handleNoChangesCase(prevSyncSession, item, user, plaidData) {
+  async _handleNoChangesCase(currentSyncSession, item, user, plaidData) {
     const now = Date.now();
     
     // Update the previous session with lastNoChangesTime
     await syncSessionService.updateSyncSessionLastNoChangesTime(
-      prevSyncSession._id,
+      currentSyncSession._id,
       now
     );
     
@@ -171,7 +218,7 @@ class TransactionSyncService {
       hasMore: plaidData.has_more,
       cursor: plaidData.next_cursor,
       noChanges: true,
-      lastSyncTime: prevSyncSession.syncTime,
+      lastSyncTime: currentSyncSession.syncTime,
       lastNoChangesTime: now
     };
   }
@@ -183,10 +230,11 @@ class TransactionSyncService {
    * @param {String} cursor - Transaction cursor
    * @param {Number} syncTime - Current sync timestamp
    * @param {Object} plaidData - Pre-fetched data from Plaid
+   * @param {Array} transactionsSkipped - Array to collect skipped transactions
    * @returns {Promise<Object>} Processing results
    * @private
    */
-  async _processSyncData(item, user, cursor, syncTime, plaidData) {    
+  async _processSyncData(item, user, cursor, syncTime, plaidData, transactionsSkipped = []) {    
     // Validate plaidData was provided
     if (!plaidData) {
       throw new CustomError('INVALID_PARAMS', 'Missing plaidData for transaction processing');
@@ -219,7 +267,7 @@ class TransactionSyncService {
     
     // Process transactions in parallel with transaction safety
     const [addedResults, modifiedResults, removedResults] = await Promise.all([
-      this._processAddedTransactions(plaidData.added, item, user, currentCursor, syncTime),
+      this._processAddedTransactions(plaidData.added, item, user, currentCursor, syncTime, transactionsSkipped),
       this._processModifiedTransactions(plaidData.modified, user, currentCursor, syncTime),
       this._processRemovedTransactions(plaidData.removed, user._id)
     ]);
@@ -240,12 +288,18 @@ class TransactionSyncService {
       failedTransactions.removed = removedResults.failedTransactions;
     }
     
+    // Update expected counts for added if we skipped any duplicates
+    // This ensures we don't trigger a recovery for duplicates
+    if (transactionsSkipped.length > 0) {
+      expectedCounts.added -= transactionsSkipped.length;
+    }
+    
     const syncCounts = {
       expected: expectedCounts,
       actual: actualCounts
     };
     
-    // Determine if there were any failures
+    // Determine if there were any failures (excluding duplicate transactions)
     const hasFailures = Object.values(failedTransactions).some(
       failures => failures && failures.length > 0
     );
@@ -253,7 +307,7 @@ class TransactionSyncService {
     return {
       addedCount: actualCounts.added,
       addedTransactions: actualCounts.added === expectedCounts.added ?
-        plaidData.added 
+        plaidData.added.filter(tx => !transactionsSkipped.some(skipped => skipped.transaction_id === tx.transaction_id))
         : [],
       modifiedCount: actualCounts.modified,
       removedCount: actualCounts.removed,
@@ -264,96 +318,9 @@ class TransactionSyncService {
       actualCounts,
       syncCounts,
       failedTransactions: hasFailures ? failedTransactions : null,
-      hasFailures
+      hasFailures,
+      transactionsSkipped
     };
-  }
-
-  /**
-   * Creates a new sync session or updates existing one if mid-sync
-   * @param {Object} prevSyncSession - Previous sync session if any
-   * @param {Object} user - User object
-   * @param {Object} itemData - Item data
-   * @param {Object} plaidData - Plaid data
-   * @returns {Promise<Object>} New or updated sync session and syncTime
-   * @private
-   */
-  async _createSyncSession(prevSyncSession, user, itemData, plaidData) {
-    // Check if this is a continuation of a multi-batch sync
-    let batchNumber = 1;
-    let syncId = null;
-    
-    if (prevSyncSession) {
-      // If previous sync had more data, increment the batch number
-      if (prevSyncSession.hasMore === true) {
-        batchNumber = (prevSyncSession.batchNumber || 1) + 1;
-        syncId = prevSyncSession.syncId; // Continue with same syncId
-      }
-    }
-
-    // Create initial sync session before processing
-    const syncData = await syncSessionService.createNewSyncSession(
-      prevSyncSession, 
-      user, 
-      itemData, 
-      {
-        batchNumber, 
-        syncId
-      },
-      plaidData
-    );
-
-    return syncData;
-  }
-
-  /**
-   * Updates the sync session with results from processing
-   * @param {Object} syncSession - Current sync session
-   * @param {Object} syncResult - Results from processing
-   * @param {Object} prevSyncSession - Previous sync session if any
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _updateSyncSession(syncSession, syncResult, prevSyncSession) {
-    // Determine status based on results
-    let status = 'complete';
-    
-    // If counts don't match or we have failures, mark as error regardless of hasMore
-    if (!syncSessionService.countsMatch(syncResult.syncCounts) || syncResult.hasFailures) {
-      status = 'error';
-    }
-    
-    // Update the sync session
-    await syncSessionService.updateSyncSessionAfterProcessing(
-      syncSession, 
-      syncResult, 
-      prevSyncSession,
-      status
-    );
-  }
-
-  /**
-   * Gets and locks an item for sync
-   * @param {Object|String} item - Item object or ID
-   * @param {Object} user - User object
-   * @returns {Promise<Object>} Validated item data
-   * @private
-   */
-  async _getAndLockItem(item, user) {
-    const itemData = await itemService.validateAndGetItem(item, user);
-    
-    if (!itemData) {
-      throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
-    }
-    
-    // Check for existing sync in progress by looking at item status
-    if (itemData.status === 'in_progress' && await syncSessionService.isSyncRecent(itemData)) {
-      throw new CustomError('SYNC_IN_PROGRESS', 'A sync is already in progress for this item');
-    }
-    
-    // Set status to in_progress to acquire lock
-    await plaidItems.update(itemData._id, { status: 'in_progress' });
-    
-    return itemData;
   }
 
   /**
@@ -363,13 +330,53 @@ class TransactionSyncService {
    * @param {Object} user - User object
    * @param {String} cursor - Current cursor
    * @param {Number} syncTime - Current sync syncTime timestamp
+   * @param {Array} transactionsSkipped - Array to collect skipped transactions
    * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
-  async _processAddedTransactions(transactions, item, user, cursor, syncTime) {
+  async _processAddedTransactions(transactions, item, user, cursor, syncTime, transactionsSkipped = []) {
     try {
       // Use the dedicated service method for processing added transactions
-      return await transactionsCrudService.processAddedTransactions(transactions, item, user, cursor, syncTime);
+      const result = await transactionsCrudService.processAddedTransactions(
+        transactions, 
+        item, 
+        user, 
+        cursor, 
+        syncTime
+      );
+      
+      // Identify and handle duplicate transactions separately from other errors
+      if (result.failedTransactions && result.failedTransactions.length > 0) {
+        // Filter out duplicate errors from failed transactions
+        const duplicates = result.failedTransactions.filter(
+          failure => failure.error && 
+            typeof failure.error.message === 'string' && 
+            failure.error.message.includes('Duplicate value for \'transaction_id\'')
+        );
+        
+        // Move duplicates to skipped transactions
+        if (duplicates.length > 0) {
+          transactionsSkipped.push(...duplicates.map(dup => ({
+            transaction_id: dup.transaction?.transaction_id,
+            name: dup.transaction?.name,
+            date: dup.transaction?.date,
+            amount: dup.transaction?.amount,
+            error: dup.error
+          })));
+          
+          // Remove duplicates from failedTransactions to prevent recovery
+          result.failedTransactions = result.failedTransactions.filter(
+            failure => !duplicates.some(dup => 
+              dup.transaction?.transaction_id === failure.transaction?.transaction_id
+            )
+          );
+        }
+        
+        // Adjust the success count to account for duplicates as "successful" (they already exist)
+        result.successCount += duplicates.length;
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error in batch processing added transactions:', error);
       throw new CustomError('TRANSACTION_BATCH_ERROR', 
@@ -419,7 +426,7 @@ class TransactionSyncService {
    * Update item status after sync
    * @param {Object} item - Item data
    * @param {Object} syncResult - Results from processing
-   * @param {Object} user - User object
+   * @param {String} sync_id - ID of the sync session
    * @returns {Promise<void>}
    * @private
    */
@@ -449,7 +456,7 @@ class TransactionSyncService {
   }
 
   /**
-   * Recover from a failed sync using transactionRecoveryService
+   * Recover from a failed sync using recoveryService
    * @param {Object} item - Item data
    * @param {Object} syncSession - Sync session data
    * @param {Object} user - User object
@@ -461,7 +468,7 @@ class TransactionSyncService {
       console.log(`Starting recovery for item ${item.itemId}, user ${user._id}`);
       
       // Use the recovery service to handle the reversion
-      const recoveryResult = await transactionRecoveryService.recoverFailedSync(
+      const recoveryResult = await recoveryService.recoverFailedSync(
         item, 
         failedSyncSession, 
         user
@@ -491,6 +498,31 @@ class TransactionSyncService {
   }
 
   /**
+   * Gets and locks an item for sync
+   * @param {Object|String} item - Item object or ID
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Validated item data
+   * @private
+   */
+  async _getAndLockItem(item, user) {
+    const lockedItem = await itemService.validateAndGetItem(item, user);
+    
+    if (!lockedItem) {
+      throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
+    }
+    
+    // Check for existing sync in progress by looking at item status
+    if (lockedItem.status === 'in_progress' && await syncSessionService.isSyncRecent(lockedItem, user)) {
+      throw new CustomError('SYNC_IN_PROGRESS', 'A sync is already in progress for this item');
+    }
+    
+    // Set status to in_progress to acquire lock
+    await plaidItems.update(lockedItem._id, { status: 'in_progress' });
+    
+    return lockedItem;
+  }
+
+  /**
    * Updates item status to error
    * @param {String} itemId - Item ID
    * @param {String} userId - User ID
@@ -498,7 +530,7 @@ class TransactionSyncService {
    * @returns {Promise<void>}
    * @private
    */
-  async _updateItemErrorStatus(itemId, userId, error) {
+  async _updateItemErrorStatus(itemId, userId) {
     // Update the item status to error
     await plaidItems.update(
       { itemId, userId },
@@ -570,11 +602,12 @@ class TransactionSyncService {
    * Builds a response object with sync results
    * @param {Object} syncResult - Results from processing
    * @param {Number} syncTime - Current sync timestamp
-   * @param {Number} batchNumber - Batch number for this sync
+   * @param {Number} branchNumber - Batch number for this sync
+   * @param {Array} transactionsSkipped - Transactions skipped due to duplicates
    * @returns {Object} Formatted response
    * @private
    */
-  _buildSyncResponse(syncResult, syncTime, batchNumber) {
+  _buildSyncResponse(syncResult, syncTime, branchNumber, transactionsSkipped = []) {
     const response = {
       added: syncResult.addedCount,
       addedTransactions: syncResult.addedTransactions,
@@ -584,7 +617,7 @@ class TransactionSyncService {
       cursor: syncResult.cursor,
       nextCursor: syncResult.nextCursor,
       syncTime,
-      batchNumber,
+      branchNumber,
       noChanges: syncResult.addedCount === 0 && syncResult.modifiedCount === 0 && syncResult.removedCount === 0,
       countValidation: {
         expected: syncResult.expectedCounts,
@@ -592,6 +625,14 @@ class TransactionSyncService {
         countsMatch: syncSessionService.countsMatch(syncResult.syncCounts)
       }
     };
+    
+    // Add information about skipped transactions if any
+    if (transactionsSkipped.length > 0) {
+      response.skippedTransactions = {
+        count: transactionsSkipped.length,
+        reason: 'Duplicate transactions were skipped'
+      };
+    }
     
     // Add failure information if any transactions failed
     if (syncResult.hasFailures) {

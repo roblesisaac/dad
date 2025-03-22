@@ -15,6 +15,8 @@ The Transaction Sync Service implements a robust, fault-tolerant system for sync
 - **Change Detection**: Optimizes performance by skipping processing when no changes exist
 - **Detailed Error Tracking**: Captures transaction-level errors for auditing and resolution
 - **Selective Reversion**: Ability to revert to any previous successful sync session
+- **Duplicate Handling**: Identifies and tracks duplicate transactions without triggering failures
+- **Performance Metrics**: Records processing time and request traceability for monitoring
 
 ............................................................................................
 
@@ -33,12 +35,11 @@ The transaction sync process follows this workflow:
 
 - **Failure Detection**: Identifies potential sync failures through:
   - Item error status flags
-     - Previous sync session error status
+  - Previous sync session error status
   - Transaction count mismatches from previous sync
 - **Recovery Process**:
   - Identifies the last successful sync session to revert to
   - Removes transactions with syncTime timestamps newer than the reference sync
-  - Sets item status to "complete" to release the lock
   - Creates a recovery-specific sync session for audit tracking
   - Updates the item to reference the recovery sync session
   - Returns a specialized recovery response object
@@ -54,23 +55,13 @@ The transaction sync process follows this workflow:
   - Returns a no-changes response with previous sync metadata
   - Skips remaining processing steps for improved performance
 
-### 4. Sync Session Management
-
-- **Session Creation**: Establishes a new sync session with complete cursor tracking:
-  - `cursor`: Current cursor value being used for this operation
-  - `previousCursor`: Cursor value from previous sync operation
-  - `nextCursor`: Next cursor value for future operations (populated after Plaid API response)
-  - `prevSuccessfulCursor`: Last known good cursor value for recovery operations
-- **Batch Tracking**: Tracks multi-batch syncs with sequence numbers
-- **Status Management**: Sets initial status to "in_progress"
-- **Transaction Boundaries**: Records the sync timestamp for transaction boundary tracking
-
-### 5. Transaction Processing
+### 4. Transaction Processing
 
 - **Parallel Execution**: Processes transaction operations concurrently:
   - Creates new transactions with proper metadata (including syncTime for recovery)
   - Updates modified transactions with current cursor and syncTime
   - Removes deleted transactions while maintaining referential integrity
+- **Duplicate Detection**: Identifies duplicate transactions and marks them as skipped without triggering errors
 - **Error Handling**: Captures transaction-level errors:
   - Records failed transactions with detailed error information
   - Maintains references to the original transaction data that failed
@@ -78,21 +69,24 @@ The transaction sync process follows this workflow:
   - Surfaces error details in sync session for troubleshooting
 - **Count Validation**: Maintains separate expected and actual count records for each operation type
 - **Transactional Safety**: Ensures database consistency across bulk operations
+- **Performance Tracking**: Records processing time and request IDs for traceability
 
-### 6. Session Finalization
+### 5. End Sync Session Creation
 
-- **Status Update**: Sets session status based on processing results:
+- **Session Creation**: Creates a new sync session at the end of processing for next sync operation:
+  - Records operation results, counts, and any errors
+  - Sets appropriate cursor values based on success/failure status
+  - Stores performance metrics and transaction processing statistics
+  - Links to previous session for history tracking
+- **Status Management**: Sets status based on processing results:
   - "complete" when successful and counts match
   - "error" when counts don't match or other errors occur
-- **Error Storage**: Saves detailed operation errors in the session record:
-  - Failed transaction IDs
-  - Error types and messages
-  - Original transaction data for retries
-- **Cursor Management**: Updates session with next cursor value from Plaid
+  - "recovery" for recovery-specific sessions
+- **Error Storage**: Saves detailed operation errors in the session record
+- **Recovery Preparation**: For error cases, maintains same cursor for retry in next sync
 - **History Linking**: Creates a linked list of sync sessions for audit trailing
-- **Success Recording**: Updates prevSuccessfulCursor when operation completes without errors
 
-### 7. Item State Management
+### 6. Item State Management
 
 - **Conditional Updates**: Only updates item cursor if no errors occurred
 - **Status Transitions**:
@@ -100,11 +94,12 @@ The transaction sync process follows this workflow:
   - "complete" when sync operations conclude successfully
 - **Lock Release**: Returns item to available state for future operations
 
-### 8. Response Generation
+### 7. Response Generation
 
 - **Result Compilation**: Builds comprehensive response with operation counts and metadata
 - **Error Information**: Includes detailed error information and failed transaction references
 - **Validation Information**: Includes expected vs. actual counts for verification
+- **Skipped Transactions**: Reports transactions skipped due to duplicates
 - **Error Handling**: Incorporates error information for failed operations
 - **Multi-batch Support**: Provides continuation data for multi-batch sync operations
 
@@ -164,11 +159,12 @@ The system uses these key data structures with specific semantics:
 ### Sync Session
 
 - `cursor` (String): Current cursor value used in this sync session
-- `previousCursor` (String): Cursor value from previous sync session
 - `nextCursor` (String): Cursor value returned by Plaid for next operation
+- `prevSession_id` (String): ID of the previous sync session in the chain
+- `nextSession_id` (String): ID of the next sync session in the chain
 - `prevSuccessfulSession_id` (String): ID of last known good sync session for recovery
 - `syncTime` (Number): Unix timestamp of sync operation start
-- `batchNumber` (Number): Sequence number for multi-batch operations
+- `branchNumber` (Number): Sequence number for multi-batch operations
 - `status` (String): Current session status ("in_progress", "complete", "error", "recovery")
 - `syncCounts` (Object): Transaction processing counts
   - `expected` (Object): Expected counts from Plaid API
@@ -187,14 +183,19 @@ The system uses these key data structures with specific semantics:
   - `added` (Array): Failed add operations with transaction data and errors
   - `modified` (Array): Failed modify operations with transaction data and errors
   - `removed` (Array): Failed remove operations with transaction IDs and errors
+- `transactionsSkipped` (Array): Transactions not added due to duplicates
 - `recoveryAttempts` (Number): Number of recovery attempts
 - `recoveryStatus` (String): Status of recovery operations
 - `recoveryDetails` (Object): Details about recovery operations
   - `transactionsRemoved` (Number): Number of transactions removed during recovery
-  - `previousBatchNumber` (Number): Batch number of the failed sync
+  - `previousbranchNumber` (Number): Batch number of the failed sync
   - `previousSyncId` (String): Sync ID of the failed sync
   - `recoveryTimestamp` (Number): Timestamp of recovery operation
 - `lastNoChangesTime` (Number): Timestamp of last no-changes sync
+- `startTimestamp` (Date): When the sync operation started
+- `endTimestamp` (Date): When the sync operation completed
+- `syncDuration` (Number): Total time in milliseconds for the sync operation
+- `plaidRequestId` (String): Plaid request ID for traceability with Plaid's logs
 - `isRecovery` (Boolean): Whether this session is a recovery session
 - `isLegacy` (Boolean): Whether this session was migrated from legacy format
 
@@ -247,12 +248,14 @@ Comprehensive testing should cover these scenarios:
 - Validate error storage in sync session
 - Verify frontend error visualization and reporting
 - Test session reversion functionality from the UI
+- Verify duplicate transaction detection and handling
 
 ### 7. Edge Cases
 
 - Test consecutive recovery attempts with limit enforcement
 - Verify cursor tracking across complex failure scenarios
 - Test concurrent sync attempts and lock mechanisms
+- Validate handling of error cases with recovery operations
 
 ## Operational Monitoring
 
@@ -263,12 +266,14 @@ Monitor these key metrics for system health:
 - **Recovery Rate**: Percentage of sync operations requiring recovery
 - **Sync Success Rate**: Percentage of syncs completing without errors
 - **No Changes Rate**: Frequency of syncs resulting in no transaction changes
+- **Duplicate Rate**: Percentage of transactions skipped due to duplicates
 
 ### 2. Performance Metrics
 
-- **Sync Duration**: Time taken for complete sync process
+- **Sync Duration**: Time taken for complete sync process (now tracked directly in sync sessions)
 - **Transaction Processing Rate**: Transactions processed per second
 - **API Latency**: Response time for Plaid API requests
+- **Session Creation Time**: Time required to create end-of-sync sessions
 
 ### 3. Data Quality Metrics
 
@@ -290,4 +295,5 @@ Monitor these key metrics for system health:
 - Consider rate limiting strategies for high-volume accounts
 - Use exponential backoff for retrying failed operations
 - Store detailed error information with failed transactions for diagnostics
-- Implement reversion confirmation to prevent accidental data loss 
+- Implement reversion confirmation to prevent accidental data loss
+- Use unified recovery flow to eliminate code duplication 

@@ -51,7 +51,7 @@ class TransactionQueryService extends PlaidBaseService {
       });
       
       // Execute the query
-      const res = await plaidTransactions.find(formattedQuery);
+      const res = await plaidTransactions.findAll(formattedQuery);
       return Array.isArray(res) ? res : (res.items || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);

@@ -10,12 +10,12 @@ const syncSchema = {
     nextSession_id: String,
     prevSuccessfulSession_id: String,
 
-    cursor: String,
-    nextCursor: String,
+    cursor: String, // Current cursor used for this sync
+    nextCursor: String, // Next cursor provided by Plaid (if successful)
 
     hasMore: Boolean,
     lastNoChangesTime: Number,
-    batchNumber: Number,
+    branchNumber: Number,
     syncTime: Number,
     syncId: String,
     syncNumber: Number,
@@ -50,6 +50,13 @@ const syncSchema = {
             removed: []  // Failed remove operations with transaction IDs and errors
         }
     },
+
+    // New fields as requested
+    startTimestamp: Date,
+    endTimestamp: Date,
+    transactionsSkipped: Array, // items not added due to duplicates
+    plaidRequestId: String, // For traceability with Plaid's logs
+    syncDuration: Number, // Performance tracking
 
     isLegacy: Boolean,
     isRecovery: Boolean,

@@ -2,6 +2,7 @@ import linkController from '../controllers/plaid/linkController.js';
 import itemController from '../controllers/plaid/itemController.js';
 import transactionController from '../controllers/plaid/transactionController.js';
 import Protect from '../middlewares/protect';
+import syncSessionController from '../controllers/plaid/syncSessionController.js';
 
 export default function(api, baseUrl) {
   const protect = Protect.route(api, 'plaiditems', baseUrl);
@@ -22,8 +23,8 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
   
   // Sync Sessions
-  member.get('/plaid/items/:itemId/sync-sessions', transactionController.getSyncSessionsForItem);
-  member.post('/plaid/items/:itemId/revert/:sessionId', transactionController.revertToSyncSession);
+  member.get('/plaid/items/:itemId/sync-sessions', syncSessionController.getSyncSessionsForItem);
+  member.post('/plaid/items/:itemId/revert/:sessionId', syncSessionController.revertToSyncSession);
   
   // Maintenance
 }

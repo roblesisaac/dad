@@ -46,7 +46,7 @@
             </span>
           </div>
           <div class="text-xs text-gray-500">
-            {{ formatSyncDate(session.syncTime) }} - Batch #{{ session.batchNumber || 1 }}
+            {{ formatSyncDate(session.syncTime) }} - Batch #{{ session.branchNumber || 1 }}
           </div>
         </div>
       </div>

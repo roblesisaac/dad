@@ -9,7 +9,7 @@ import syncSessionService from './syncSessionService.js';
  * Service responsible for transaction recovery operations
  * Handles reverting transactions and recovering from failed syncs
  */
-class TransactionRecoveryService extends PlaidBaseService {
+class recoveryService extends PlaidBaseService {
   /**
    * Recover from a failed sync by reverting to last successful cursor
    * @param {Object|String} item - Item object or ID
@@ -34,41 +34,26 @@ class TransactionRecoveryService extends PlaidBaseService {
         };
       }
 
-      const sessionToRetry = await syncSessionService.getSyncSession(failedSyncSession.prevSession_id, user);
+      const sessionToRetry = await syncSessionService.getSyncSession(failedSyncSession._id, user);
 
       if(!sessionToRetry) {
         throw new CustomError('SYNC_SESSION_NOT_FOUND', 'Sync session not found');
       }
       
-      // Revert transactions to the last successful cursor
-      const revertResult = await this.removeTransactionsAfterSyncTime(
-        validatedItem.itemId,
-        user._id,
-        sessionToRetry.syncTime
-      );
+      const revertResult = await this.revertToSyncSession(sessionToRetry, validatedItem, user);
       
-      // If reversion failed, return failure
-      if (!revertResult.isReverted) {
+      // Check if reversion was successful
+      if (!revertResult.success) {
         return {
           isRecovered: false,
-          message: revertResult.message || 'Unknown error during reversion'
+          message: revertResult.error || 'Unknown error during reversion'
         };
       }
       
-      // Create a recovery sync syncSession
-      const recoverySyncSession = await syncSessionService.createRecoverySyncSession(sessionToRetry, failedSyncSession, revertResult);
-      
-      // Update item status
-      await plaidItems.update(validatedItem._id,
-        { 
-          status: 'complete',
-          sync_id: recoverySyncSession._id
-        }
-      );
-      
       return {
         isRecovered: true,
-        removedCount: revertResult.removedCount
+        removedCount: revertResult.removedCount,
+        revertedTo: revertResult.revertedTo
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { 
@@ -153,6 +138,58 @@ class TransactionRecoveryService extends PlaidBaseService {
       });
     }
   }
+
+  /**
+   * Reverts to a specific sync session
+   * @param {Object} targetSession - The sync session to revert to
+   * @param {Object} item - The Plaid item
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Result of the reversion
+   */
+  async revertToSyncSession(targetSession, item, user) {
+    if (!targetSession || !targetSession._id || !item || !user) {
+      throw new Error('Invalid parameters for reversion');
+    }
+    
+    try {
+      // Use recovery service to revert transactions
+      const revertResult = await this.removeTransactionsAfterSyncTime(
+        item.itemId,
+        user._id,
+        targetSession.syncTime - 1
+      );
+      
+      if (!revertResult.isReverted) {
+        throw new Error(`Failed to revert: ${revertResult.message}`);
+      }
+      
+      // Create a recovery sync session
+      const recoverySyncSession = await syncSessionService.createRecoverySyncSession(
+        targetSession,
+        { _id: item.sync_id, syncNumber: targetSession.syncNumber },
+        revertResult
+      );
+      
+      // Update the item to point to the recovery session
+      await plaidItems.update(item._id, {
+        status: 'complete',
+        sync_id: recoverySyncSession._id
+      });
+      
+      return {
+        success: true,
+        revertedTo: targetSession._id,
+        removedCount: revertResult.removedCount,
+        recoverySession: recoverySyncSession._id
+      };
+    } catch (error) {
+      console.error(`Error reverting to sync session ${targetSession._id}:`, error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  }
 }
 
-export default new TransactionRecoveryService(); 
+export default new recoveryService(); 

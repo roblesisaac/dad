@@ -57,6 +57,17 @@
             
             <!-- Rules of this type -->
             <div v-if="!collapsedSections[ruleType.id]" class="px-4 pb-4">
+              <!-- Create rule button -->
+              <div class="mb-4 mt-2 flex justify-end">
+                <button
+                  @click="createNewRule(ruleType.id)"
+                  :class="getButtonClasses(ruleType)"
+                >
+                  <Plus class="w-3.5 h-3.5 mr-1" />
+                  Add {{ ruleType.name.replace(' Rules', '') }} Rule
+                </button>
+              </div>
+              
               <!-- Enabled Rules -->
               <div v-if="getEnabledRulesByType(ruleType.id).length === 0" class="text-center py-8">
                 <p class="text-gray-500">No enabled {{ ruleType.name.toLowerCase() }} for this tab</p>
@@ -123,11 +134,10 @@
       <div class="bg-gray-50 px-4 py-4 border-t border-gray-200">
         <div class="flex justify-end">
           <button
-            @click="createNewRule"
-            class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            @click="$emit('close')"
+            class="inline-flex justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
-            <Plus class="w-4 h-4 mr-2" />
-            Create New Rule
+            Close
           </button>
         </div>
       </div>
@@ -175,6 +185,9 @@ const {
   toggleRuleContext,
   updateRuleOrder
 } = useRuleManager();
+
+// Define emits
+const emit = defineEmits(['close']);
 
 // UI State 
 const showRuleEditModal = ref(false);
@@ -228,6 +241,14 @@ const ruleTypes = [
     description: 'Determine how items are grouped'
   }
 ];
+
+// Button classes for each rule type
+const buttonClasses = {
+  sort: 'bg-cyan-600 hover:bg-cyan-700 focus:ring-cyan-500',
+  categorize: 'bg-teal-600 hover:bg-teal-700 focus:ring-teal-500',
+  filter: 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500',
+  groupBy: 'bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500'
+};
 
 // Toggle functions
 function toggleRuleTypeCollapse(typeId) {
@@ -341,9 +362,9 @@ async function onDragEnd(event) {
 }
 
 // Create a new rule
-function createNewRule() {
-  // Find first non-empty rule type for default
-  const defaultRuleType = ruleTypes.find(type => 
+function createNewRule(ruleType = null) {
+  // If no rule type provided, find first non-empty rule type for default
+  const defaultRuleType = ruleType || ruleTypes.find(type => 
     getRuleCountByType(type.id, true) > 0
   )?.id || 'categorize';
   
@@ -414,5 +435,13 @@ async function deleteRule() {
   } catch (error) {
     console.error('Error deleting rule:', error);
   }
+}
+
+// Helper function to get button classes based on rule type
+function getButtonClasses(ruleType) {
+  return [
+    'inline-flex justify-center px-3 py-1.5 border border-transparent rounded-md shadow-sm text-xs font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2',
+    buttonClasses[ruleType.id] || 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+  ];
 }
 </script> 

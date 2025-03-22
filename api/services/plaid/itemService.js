@@ -75,7 +75,7 @@ class ItemService extends PlaidBaseService {
         lastSyncTime: null,
         cursor: null,
         error: null,
-        batchNumber: 0,
+        branchNumber: 0,
         stats: {
           added: 0,
           modified: 0,

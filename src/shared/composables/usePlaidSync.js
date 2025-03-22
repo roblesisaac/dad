@@ -124,7 +124,7 @@ export function usePlaidSync() {
             modified: totalStats.modified,
             removed: totalStats.removed,
             status: 'in_progress',
-            batchNumber: batchCount,
+            branchNumber: batchCount,
             itemId
           });
           
@@ -159,7 +159,7 @@ export function usePlaidSync() {
         modified: totalStats.modified,
         removed: totalStats.removed,
         status: 'completed',
-        batchNumber: batchCount,
+        branchNumber: batchCount,
         itemId,
         lastSync: new Date().toISOString()
       });
@@ -300,7 +300,7 @@ export function usePlaidSync() {
         lastSync: progress.lastSync,
         nextSync: progress.nextSync,
         cursor: progress.cursor,
-        batchNumber: progress.batchNumber || 0,
+        branchNumber: progress.branchNumber || 0,
         // Add recovery information if present
         recoveryPerformed: progress.recoveryPerformed || false,
         recoveryRemovedCount: progress.recoveryRemovedCount || 0,

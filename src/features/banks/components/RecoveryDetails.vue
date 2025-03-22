@@ -6,9 +6,9 @@
         <span class="font-medium">Transactions Removed:</span> 
         {{ details.transactionsRemoved }}
       </div>
-      <div v-if="details?.previousBatchNumber">
+      <div v-if="details?.previousbranchNumber">
         <span class="font-medium">From Batch:</span> 
-        {{ details.previousBatchNumber }}
+        {{ details.previousbranchNumber }}
       </div>
       <div v-if="details?.recoveryTimestamp">
         <span class="font-medium">Recovery Time:</span> 

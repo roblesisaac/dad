@@ -6,7 +6,7 @@
     @close="closeModal"
   >
     <template #content>
-      <RuleManager />
+      <RuleManager @close="closeModal" />
     </template>
   </BaseModal>
 </template>
