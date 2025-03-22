@@ -12,19 +12,13 @@
         <div 
           class="px-4 py-3 border-b flex justify-between items-center"
           :class="{
-            'bg-teal-100 border-teal-200': ruleData.rule[0] === 'categorize',
-            'bg-cyan-100 border-cyan-200': ruleData.rule[0] === 'sort',
-            'bg-amber-100 border-amber-200': ruleData.rule[0] === 'filter',
-            'bg-indigo-100 border-indigo-200': ruleData.rule[0] === 'groupBy'
+            [`bg-${currentRuleConfig.color}-100 border-${currentRuleConfig.color}-200`]: true
           }"
         >
           <h3 
             class="text-lg font-medium"
             :class="{
-              'text-teal-800': ruleData.rule[0] === 'categorize',
-              'text-cyan-800': ruleData.rule[0] === 'sort',
-              'text-amber-800': ruleData.rule[0] === 'filter',
-              'text-indigo-800': ruleData.rule[0] === 'groupBy'
+              [`text-${currentRuleConfig.color}-800`]: true
             }"
           >
             {{ isNew ? 'Create New' : 'Edit' }} {{ capitalizeFirstLetter(ruleData.rule[0]) }} Rule
@@ -55,70 +49,66 @@
               </select>
             </div>
             
-            <!-- Property to check/sort/group by -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getPropertyLabel() }}
-              </label>
-              <select 
-                v-model="ruleData.rule[1]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="amount">Amount</option>
-                <option value="date">Date</option>
-                <option value="name">Name</option>
-                <option value="category">Category</option>
-              </select>
-            </div>
-            
-            <!-- Method (except for GroupBy where it might be optional) -->
-            <div v-if="ruleData.rule[0] !== 'groupBy'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getMethodLabel() }}
-              </label>
-              <select 
-                v-model="ruleData.rule[2]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option v-if="isNumericProperty(ruleData.rule[1])" value=">">is greater than</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value=">=">is greater than or equal to</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value="<">is less than</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value="<=">is less than or equal to</option>
-                <option value="=">equals</option>
-                <option value="is not">is not</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="contains">contains</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="startsWith">starts with</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="endsWith">ends with</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="includes">includes</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="excludes">excludes</option>
-              </select>
-            </div>
-            
-            <!-- Criterion/Value -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getCriterionLabel() }}
-              </label>
-              <input 
-                v-model="ruleData.rule[3]" 
-                type="text" 
-                class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                :placeholder="getCriterionPlaceholder()"
-              />
-            </div>
-            
-            <!-- Category Name (only for categorize rules) -->
-            <div v-if="ruleData.rule[0] === 'categorize'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Category Name
-              </label>
-              <input 
-                v-model="ruleData.rule[4]" 
-                type="text" 
-                class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter category name"
-              />
-            </div>
+            <!-- Dynamic fields based on rule type and field order -->
+            <template v-for="(fieldType, index) in currentRuleConfig.fieldOrder" :key="index">
+              <!-- Property field -->
+              <div v-if="fieldType === 'property'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  {{ currentRuleConfig.propertyLabel }}
+                </label>
+                <select 
+                  v-model="ruleData.rule[1]" 
+                  class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option v-for="option in propertyOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              
+              <!-- Method field -->
+              <div v-if="fieldType === 'method' && currentRuleConfig.requiresMethod" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  {{ currentRuleConfig.methodLabel }}
+                </label>
+                <select 
+                  v-model="ruleData.rule[2]" 
+                  class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                >
+                  <option v-for="option in methodOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </option>
+                </select>
+              </div>
+              
+              <!-- Criterion field -->
+              <div v-if="fieldType === 'criterion'" class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">
+                  {{ currentRuleConfig.criterionLabel }}
+                </label>
+                <textarea 
+                  v-model="ruleData.rule[3]" 
+                  rows="2"
+                  class="form-textarea w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  :placeholder="criterionPlaceholder"
+                ></textarea>
+              </div>
+              
+              <!-- Additional fields -->
+              <template v-if="fieldType === 'additional'">
+                <div v-for="field in currentRuleConfig.additionalFields" :key="field.name" class="mb-4">
+                  <label class="block text-sm font-medium text-gray-700 mb-1">
+                    {{ field.label }}
+                  </label>
+                  <input 
+                    v-model="ruleData.rule[field.index]" 
+                    type="text" 
+                    class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    :placeholder="field.placeholder"
+                  />
+                </div>
+              </template>
+            </template>
             
             <!-- Rule scope -->
             <div class="mb-4">
@@ -154,15 +144,6 @@
                 </div>
               </div>
             </div>
-            
-            <!-- Rule is important -->
-            <div class="mb-4">
-              <ToggleSwitch 
-                v-model="ruleData._isImportant"
-                label="Mark as important"
-                description="Important rules take precedence over non-important rules"
-              />
-            </div>
           </form>
         </div>
         
@@ -187,7 +168,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { X } from 'lucide-vue-next';
 import ToggleSwitch from '@/shared/components/ToggleSwitch.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
@@ -201,7 +182,6 @@ const props = defineProps({
     default: () => ({
       rule: ['categorize', '', '', '', ''],
       applyForTabs: ['_GLOBAL'],
-      _isImportant: false,
       orderOfExecution: 0
     })
   },
@@ -215,6 +195,13 @@ const emit = defineEmits(['close', 'save']);
 
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
+
+// Initialize global setting based on rule type for new rules
+if (props.isNew && ruleData.value.rule[0] === 'categorize') {
+  if (!ruleData.value.applyForTabs.includes('_GLOBAL')) {
+    ruleData.value.applyForTabs.push('_GLOBAL');
+  }
+}
 
 // Track whether this is a global or tab-specific rule
 const isGlobalRule = computed({
@@ -238,106 +225,170 @@ const isGlobalRule = computed({
   }
 });
 
-// Set default values when creating a new rule
-if (props.isNew) {
-  // Nothing to do here now
-}
-
-// Helper function to capitalize the first letter of a string
-function capitalizeFirstLetter(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
-
-// Handle rule type changes
-function updateRuleType() {
-  // Reset other rule properties when type changes
-  ruleData.value.rule[1] = '';
-  ruleData.value.rule[2] = '';
-  ruleData.value.rule[3] = '';
-  
-  if (ruleData.value.rule[0] === 'categorize') {
-    ruleData.value.rule[4] = '';
+// Set global to true when rule type changes to categorize
+watch(() => ruleData.value.rule[0], (newRuleType) => {
+  if (newRuleType === 'categorize' && props.isNew) {
+    if (!ruleData.value.applyForTabs.includes('_GLOBAL')) {
+      ruleData.value.applyForTabs.push('_GLOBAL');
+    }
   }
-}
+});
 
-// Get appropriate property label based on rule type
-function getPropertyLabel() {
-  const ruleType = ruleData.value.rule[0];
-  
-  switch(ruleType) {
-    case 'sort':
-      return 'Sort by Property';
-    case 'filter':
-      return 'Filter by Property';
-    case 'categorize':
-      return 'Property to Check';
-    case 'groupBy':
-      return 'Group by Property';
-    default:
-      return 'Property';
+// Define rule type configurations for dynamic UI
+const ruleTypeConfigs = {
+  categorize: {
+    color: 'teal',
+    propertyLabel: 'When',
+    methodLabel: 'is',
+    criterionLabel: 'this value',
+    requiresMethod: true,
+    requiresCriterion: true,
+    additionalFields: [{
+      name: 'categoryName',
+      label: 'Categorize as',
+      placeholder: 'Enter category name',
+      index: 4
+    }],
+    fieldOrder: ['additional', 'property', 'method', 'criterion']
+  },
+  sort: {
+    color: 'cyan',
+    propertyLabel: 'Sort by',
+    methodLabel: 'Direction',
+    criterionLabel: 'Custom Value (Optional)',
+    requiresMethod: true,
+    requiresCriterion: false,
+    additionalFields: [],
+    fieldOrder: ['property', 'method']
+  },
+  filter: {
+    color: 'amber',
+    propertyLabel: 'Keep items where',
+    methodLabel: 'is',
+    criterionLabel: 'this value',
+    requiresMethod: true,
+    requiresCriterion: true,
+    additionalFields: [],
+    fieldOrder: ['property', 'method', 'criterion']
+  },
+  groupBy: {
+    color: 'indigo',
+    propertyLabel: 'Group items by',
+    methodLabel: '',
+    criterionLabel: '',
+    requiresMethod: false,
+    requiresCriterion: false,
+    additionalFields: [],
+    fieldOrder: ['property']
   }
-}
+};
 
-// Get appropriate method label based on rule type
-function getMethodLabel() {
+// Get current rule type configuration
+const currentRuleConfig = computed(() => {
+  return ruleTypeConfigs[ruleData.value.rule[0]];
+});
+
+// Property options mapping
+const propertyOptions = [
+  { value: 'amount', label: 'Amount', type: 'numeric' },
+  { value: 'date', label: 'Date', type: 'date' },
+  { value: 'name', label: 'Name', type: 'text' },
+  { value: 'category', label: 'Category', type: 'text' }
+];
+
+// Method options computed based on property type and rule type
+const methodOptions = computed(() => {
   const ruleType = ruleData.value.rule[0];
+  const propType = propertyOptions.find(p => p.value === ruleData.value.rule[1])?.type || 'text';
   
-  switch(ruleType) {
-    case 'sort':
-      return 'Sort Direction';
-    case 'filter':
-      return 'Condition';
-    case 'categorize':
-      return 'Comparison';
-    default:
-      return 'Method';
+  // Special case for sort rule - only show ascending/descending
+  if (ruleType === 'sort') {
+    return [
+      { value: 'asc', label: 'Ascending (A-Z, 0-9)' },
+      { value: 'desc', label: 'Descending (Z-A, 9-0)' }
+    ];
   }
-}
-
-// Get appropriate criterion label based on rule type
-function getCriterionLabel() {
-  const ruleType = ruleData.value.rule[0];
   
-  switch(ruleType) {
-    case 'sort':
-      return 'Custom Value (Optional)';
-    case 'filter':
-      return 'Value to Compare';
-    case 'categorize':
-      return 'Value to Compare';
-    case 'groupBy':
-      return 'Group Format (Optional)';
-    default:
-      return 'Value';
+  const options = [];
+  
+  if (propType === 'numeric' || propType === 'date') {
+    options.push(
+      { value: '>', label: 'greater than' },
+      { value: '>=', label: 'greater than or equal to' },
+      { value: '<', label: 'less than' },
+      { value: '<=', label: 'less than or equal to' }
+    );
   }
-}
+  
+  // Common options for all types
+  options.push(
+    { value: '=', label: 'equals' },
+    { value: 'is not', label: 'not equals' }
+  );
+  
+  if (propType === 'text') {
+    options.push(
+      { value: 'contains', label: 'contains' },
+      { value: 'startsWith', label: 'starts with' },
+      { value: 'endsWith', label: 'ends with' },
+      { value: 'includes', label: 'includes' },
+      { value: 'excludes', label: 'excludes' }
+    );
+  }
+  
+  return options;
+});
 
-// Get placeholder text for criterion field
-function getCriterionPlaceholder() {
+// Criterion visibility computed based on rule type
+const showCriterionField = computed(() => {
+  return currentRuleConfig.value.fieldOrder.includes('criterion');
+});
+
+// Criterion placeholder based on property type
+const criterionPlaceholder = computed(() => {
   const ruleType = ruleData.value.rule[0];
-  const propType = ruleData.value.rule[1];
+  const propValue = ruleData.value.rule[1];
+  const propType = propertyOptions.find(p => p.value === propValue)?.type || 'text';
   
   if (ruleType === 'sort') {
     return 'Leave empty for default';
   }
   
-  if (propType === 'amount') {
+  if (propType === 'numeric') {
     return 'Enter numeric value';
   } else if (propType === 'date') {
     return 'YYYY-MM-DD or relative date';
   } else {
     return 'Enter text value';
   }
+});
+
+// Helper function to capitalize the first letter of a string
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-// Check if property is numeric
-function isNumericProperty(propName) {
-  return propName === 'amount';
-}
-
-// Check if property is text-based
-function isTextProperty(propName) {
-  return propName === 'name' || propName === 'category';
+// Handle rule type changes with proper initialization
+function updateRuleType() {
+  const newRuleType = ruleData.value.rule[0];
+  
+  // Reset rule properties when type changes
+  ruleData.value.rule[1] = '';
+  ruleData.value.rule[2] = '';
+  ruleData.value.rule[3] = '';
+  
+  // Initialize appropriate defaults based on rule type
+  if (newRuleType === 'categorize') {
+    ruleData.value.rule[4] = '';
+    
+    // Set global by default for categorize rules if it's a new rule
+    if (props.isNew && !ruleData.value.applyForTabs.includes('_GLOBAL')) {
+      ruleData.value.applyForTabs.push('_GLOBAL');
+    }
+  } else if (newRuleType === 'sort') {
+    // Default sort direction to ascending
+    ruleData.value.rule[2] = 'asc';
+  }
 }
 
 // Save the rule
@@ -361,6 +412,7 @@ function saveRule() {
 // Validate the rule before saving
 function validateRule() {
   const rule = ruleData.value.rule;
+  const config = currentRuleConfig.value;
   
   // Basic validation for all rule types
   if (!rule[0] || !rule[1]) {
@@ -368,16 +420,24 @@ function validateRule() {
     return false;
   }
   
-  // Specific validation for categorize rules
-  if (rule[0] === 'categorize' && !rule[4]) {
-    alert('Please provide a category name');
+  // Validate method if required
+  if (config.requiresMethod && !rule[2]) {
+    alert('Please select a comparison method');
     return false;
   }
   
-  // Make sure the rule has a method (except for groupBy)
-  if (rule[0] !== 'groupBy' && !rule[2]) {
-    alert('Please select a comparison method');
+  // Validate criterion if required
+  if (config.requiresCriterion && !rule[3]) {
+    alert('Please provide a value to compare');
     return false;
+  }
+  
+  // Validate additional fields
+  for (const field of config.additionalFields) {
+    if (!rule[field.index]) {
+      alert(`Please provide a ${field.label.toLowerCase()}`);
+      return false;
+    }
   }
   
   return true;
