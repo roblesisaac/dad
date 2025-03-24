@@ -15,20 +15,27 @@
             />
           </div>
           <div v-else class="flex items-center">
-          <h1 class="text-xl font-semibold">Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"</h1>
-            <button 
-              @click="startTabNameEdit" 
-              class="ml-2 p-1 text-blue-200 hover:text-white rounded-full focus:outline-none"
-              title="Edit tab name"
+            <h1 
+              class="text-xl font-semibold cursor-pointer hover:underline" 
+              @click="startTabNameEdit"
             >
-              <Edit class="w-4 h-4" />
-            </button>
+              Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"
+            </h1>
           </div>
+        </div>
+        
+        <!-- View Toggle Button -->
+        <div class="flex items-center">
+          <Switch 
+            v-model="isCommandView"
+            class="mr-2"
+          />
+          <SquareTerminal class="w-5 h-5 text-white" />
         </div>
       </div>
       
       <!-- Main Content Area -->
-      <div class="max-h-[65vh] overflow-y-auto overflow-x-hidden">
+      <div v-if="!isCommandView" class="max-h-[65vh] overflow-y-auto overflow-x-hidden">
         <!-- Enabled Rules -->
         <div class="pb-2">
           <!-- Rule Type Collapsible Sections -->
@@ -142,6 +149,11 @@
         </div>
       </div>
       
+      <!-- Command-line View -->
+      <div v-if="isCommandView" class="max-h-[65vh] overflow-y-auto overflow-x-hidden">
+        <RuleCommandEditor @close="isCommandView = false" />
+      </div>
+      
       <!-- Action Buttons -->
       <div class="px-4 py-4">
         <div class="flex justify-end">
@@ -177,7 +189,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
 import { 
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, Info
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, Info, SquareTerminal
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRuleManager } from '../composables/useRuleManager';
@@ -188,6 +200,8 @@ import RuleCard from '../components/RuleCard.vue';
 import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
 import Tooltip from '@/shared/components/Tooltip.vue';
+import RuleCommandEditor from '@/features/rule-editor-cmd/views/RuleCommandEditor.vue';
+import Switch from '@/shared/components/Switch.vue';
 
 const { state } = useDashboardState();
 const { updateTabName } = useTabsAPI();
@@ -209,6 +223,7 @@ const currentRule = ref(null);
 const isNewRule = ref(false);
 const ruleToDelete = ref(null);
 const disabledSectionCollapsed = ref(true);
+const isCommandView = ref(false);
 
 // Tab name editing state
 const isEditingTabName = ref(false);

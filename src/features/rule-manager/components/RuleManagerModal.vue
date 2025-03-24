@@ -7,7 +7,7 @@
     :content-padding="false"
   >
     <template #content>
-      <RuleManager @close="closeModal" />
+      <RuleManager @close="closeModal" v-bind="$attrs" />
     </template>
   </BaseModal>
 </template>
