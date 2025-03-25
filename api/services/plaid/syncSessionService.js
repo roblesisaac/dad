@@ -442,17 +442,31 @@ class SyncSessionService {
       return;
     }
 
-    const recoveryDetails = syncSession.recoveryDetails || {};
-    const removedCount = recoveryDetails.removedCount || {};
+    const { syncCounts } = syncSession;
 
-    removedCount[field] = count;
-    recoveryDetails.removedCount = removedCount;
+    if(field === 'expected') {
+      syncCounts.expected = {
+        added: 0, 
+        modified: 0,
+        removed: count
+      }
+
+      syncCounts.actual = { 
+        added: 0,
+        modified: 0,
+        removed: 0 
+      };
+    }
+
+    if(field === 'actual') {
+      syncCounts.actual.removed = count;
+    }
     
     await SyncSessions.update(
       syncSession._id,
       {
         userId: syncSession.userId,
-        recoveryDetails
+        syncCounts
       }
     );
   }
