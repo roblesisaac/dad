@@ -2,7 +2,7 @@
   <BaseModal 
     :is-open="isOpen" 
     size="xl"
-    :title="`Manage rules for ${state.selected.tab?.tabName || 'Tab'}`"
+    title="Manage rules for Tab"
     @close="closeModal"
     :content-padding="false"
   >
