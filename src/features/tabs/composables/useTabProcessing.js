@@ -177,16 +177,20 @@ export function useTabProcessing() {
       
       // If no sorters, add default sort by date descending using the prefix format
       if(!sorters.length) {
-        sorters = [{ itemPropName: '-date' }];
+        sorters = [{ itemPropName: '-authorized_date' }];
       }
       
       for(const { itemPropName } of sorters) {
         const isInReverse = itemPropName.startsWith('-');
-        const propName = isInReverse ? itemPropName.slice(1) : itemPropName;
+        let propName = isInReverse ? itemPropName.slice(1) : itemPropName;
+
+        if(propName === 'date') {
+          propName = 'authorized_date';
+        }
         
         arrayCopy.sort((a, b) => {
-          const valueA = propName === 'date' ? new Date(a[propName]) : a[propName];
-          const valueB = propName === 'date' ? new Date(b[propName]) : b[propName];
+          const valueA = propName === 'authorized_date' ? new Date(a[propName]) : a[propName];
+          const valueB = propName === 'authorized_date' ? new Date(b[propName]) : b[propName];
           
           return isInReverse ? valueB - valueA : valueA - valueB;
         });

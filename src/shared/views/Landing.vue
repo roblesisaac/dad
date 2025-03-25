@@ -1,17 +1,17 @@
 <template>
-  <main class="landing-container">
-    <div class="content">
-      <LogoIcon class="logo-icon" />
-      <h1>Welcome to TrackTabs</h1>
-      <p>Track Every Penny.</p>
+  <main class="min-h-screen flex items-start justify-center p-4 bg-gradient-to-br from-gray-50 to-blue-100">
+    <div class="text-center max-w-xl mt-24 p-8 bg-white/90 rounded-2xl shadow-lg">
+      <LogoIcon class="w-16 h-16 text-indigo-600 mx-auto mb-6" />
+      <h1 class="text-4xl text-gray-800 mb-4 sm:text-3xl">Welcome to TrackTabs</h1>
+      <p class="text-xl text-gray-600 mb-8">Track Every Penny.</p>
       
       <button 
-        class="cta-button"
+        class="inline-flex items-center justify-center gap-2 px-6 py-3 text-lg font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
         @click="handleNavigation"
       >
         <component 
           :is="isAuthed ? LayoutDashboard : LogIn"
-          class="icon"
+          class="w-5 h-5"
         />
         {{ isAuthed ? 'Go to Dashboard' : 'Login' }}
       </button>
@@ -31,74 +31,3 @@ const handleNavigation = () => {
   router.push('/dashboard');
 };
 </script>
-
-<style scoped>
-.landing-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: start;
-  justify-content: center;
-  padding: 1rem;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-}
-
-.content {
-  text-align: center;
-  max-width: 600px;
-  margin-top: 100px;
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 1rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.logo-icon {
-  width: 64px;
-  height: 64px;
-  color: #4f46e5;
-  margin-bottom: 1.5rem;
-}
-
-h1 {
-  font-size: 2.5rem;
-  color: #1f2937;
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 640px) {
-  h1 {
-    font-size: 2rem;
-  }
-}
-
-p {
-  font-size: 1.25rem;
-  color: #4b5563;
-  margin-bottom: 2rem;
-  line-height: 1.6;
-}
-
-.cta-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 1.125rem;
-  font-weight: 500;
-  color: white;
-  background-color: #4f46e5;
-  border: none;
-  border-radius: 0.5rem;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.cta-button:hover {
-  background-color: #4338ca;
-}
-
-.icon {
-  width: 20px;
-  height: 20px;
-}
-</style>
