@@ -314,7 +314,6 @@ const methodOptions = computed(() => {
   
   if (propType === 'text') {
     options.push(
-      { value: 'contains', label: 'contains' },
       { value: 'startsWith', label: 'starts with' },
       { value: 'endsWith', label: 'ends with' },
       { value: 'includes', label: 'includes' },
