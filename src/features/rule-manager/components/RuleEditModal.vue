@@ -274,12 +274,16 @@ const currentRuleConfig = computed(() => {
   return ruleTypeConfigs[ruleData.value.rule[0]];
 });
 
-// Property options mapping
-const propertyOptions = [
+// Base property options
+const basePropertyOptions = [
   { value: 'amount', label: 'Amount', type: 'numeric' },
   { value: 'date', label: 'Date', type: 'date' },
   { value: 'name', label: 'Name', type: 'text' },
-  { value: 'category', label: 'Category', type: 'text' },
+  { value: 'category', label: 'Category', type: 'text' }
+];
+
+// Additional options for groupBy
+const groupByPropertyOptions = [
   { value: 'year', label: 'Year', type: 'date' },
   { value: 'month', label: 'Month', type: 'date' },
   { value: 'year_month', label: 'Year and Month', type: 'date' },
@@ -287,10 +291,16 @@ const propertyOptions = [
   { value: 'weekday', label: 'Day of Week', type: 'text' }
 ];
 
+// Property options computed based on rule type
+const propertyOptions = computed(() => {
+  const ruleType = ruleData.value.rule[0];
+  return ruleType === 'groupBy' ? [...basePropertyOptions, ...groupByPropertyOptions] : basePropertyOptions;
+});
+
 // Method options computed based on property type and rule type
 const methodOptions = computed(() => {
   const ruleType = ruleData.value.rule[0];
-  const propType = propertyOptions.find(p => p.value === ruleData.value.rule[1])?.type || 'text';
+  const propType = propertyOptions.value.find(p => p.value === ruleData.value.rule[1])?.type || 'text';
   
   // Special case for sort rule - only show ascending/descending
   if (ruleType === 'sort') {
@@ -333,7 +343,7 @@ const methodOptions = computed(() => {
 const criterionPlaceholder = computed(() => {
   const ruleType = ruleData.value.rule[0];
   const propValue = ruleData.value.rule[1];
-  const propType = propertyOptions.find(p => p.value === propValue)?.type || 'text';
+  const propType = propertyOptions.value.find(p => p.value === propValue)?.type || 'text';
   
   if (ruleType === 'sort') {
     return 'Leave empty for default';
