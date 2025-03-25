@@ -157,7 +157,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue';
 import { X } from 'lucide-vue-next';
-import ToggleSwitch from '@/shared/components/ToggleSwitch.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
@@ -326,11 +325,6 @@ const methodOptions = computed(() => {
   return options;
 });
 
-// Criterion visibility computed based on rule type
-const showCriterionField = computed(() => {
-  return currentRuleConfig.value.fieldOrder.includes('criterion');
-});
-
 // Criterion placeholder based on property type
 const criterionPlaceholder = computed(() => {
   const ruleType = ruleData.value.rule[0];
@@ -382,6 +376,15 @@ function updateRuleType() {
 // (now that the type selector is hidden)
 if (props.isNew) {
   updateRuleType();
+} else if (props.rule.rule[0] === 'sort') {
+  // For existing sort rules, convert from prefix format to UI format
+  const propName = props.rule.rule[1];
+  if (propName.startsWith('-')) {
+    ruleData.value.rule[1] = propName.slice(1);
+    ruleData.value.rule[2] = 'desc';
+  } else {
+    ruleData.value.rule[2] = 'asc';
+  }
 }
 
 // Save the rule
@@ -389,6 +392,16 @@ function saveRule() {
   // Ensure all required fields are filled
   if (!validateRule()) {
     return;
+  }
+  
+  // Convert sort rule format if needed
+  if (ruleData.value.rule[0] === 'sort') {
+    const property = ruleData.value.rule[1];
+    const direction = ruleData.value.rule[2];
+    
+    // Convert to prefix format
+    ruleData.value.rule[1] = direction === 'desc' ? `-${property}` : property;
+    ruleData.value.rule[2] = ''; // Clear the direction since it's encoded in the property name
   }
   
   // If not a global rule, ensure current tab ID is in applyForTabs
