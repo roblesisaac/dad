@@ -175,7 +175,10 @@ export function useTabProcessing() {
     return (arrayToSort) => {
       const arrayCopy = arrayToSort.map(item => (JSON.parse(JSON.stringify(item))));
       
-      if(!sorters.length) sorters.push({ itemPropName: '-date' });
+      // If no sorters, add default sort by date descending using the prefix format
+      if(!sorters.length) {
+        sorters = [{ itemPropName: '-date' }];
+      }
       
       for(const { itemPropName } of sorters) {
         const isInReverse = itemPropName.startsWith('-');
