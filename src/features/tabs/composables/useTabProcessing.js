@@ -267,7 +267,14 @@ export function useTabProcessing() {
 
   function buildGroupByMethod(propToGroupByArray) {
 
+    const day = (item) => {
+      const [_, month, day] = item.authorized_date.split('-');
+      return `${months[Number(month-1)]}, ${day}`;
+    }
+
     const groupByMethods = {
+      amount: (item) => String(item.amount),
+      name: (item) => item.name,
       category: (item) => item.personal_finance_category.primary,
       year: (item) => {
         const [year] = item.authorized_date.split('-');
@@ -281,14 +288,8 @@ export function useTabProcessing() {
         const [year, month] = item.authorized_date.split('-');
         return `${year} ${months[Number(month-1)]}`;
       },
-      day: (item) => {
-        const [_, month, day] = item.authorized_date.split('-');
-        return `${months[Number(month-1)]}, ${day}`;
-      },
-      date: (item) => {
-        const [_, month, day] = item.authorized_date.split('-');
-        return `${months[Number(month-1)]}, ${day}`;
-      },
+      day,
+      date: day,
       weekday: (item) => getDayOfWeekPST(item.authorized_date)
     };
 

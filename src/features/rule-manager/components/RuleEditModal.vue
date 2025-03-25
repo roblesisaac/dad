@@ -279,7 +279,12 @@ const propertyOptions = [
   { value: 'amount', label: 'Amount', type: 'numeric' },
   { value: 'date', label: 'Date', type: 'date' },
   { value: 'name', label: 'Name', type: 'text' },
-  { value: 'category', label: 'Category', type: 'text' }
+  { value: 'category', label: 'Category', type: 'text' },
+  { value: 'year', label: 'Year', type: 'date' },
+  { value: 'month', label: 'Month', type: 'date' },
+  { value: 'year_month', label: 'Year and Month', type: 'date' },
+  { value: 'day', label: 'Day', type: 'date' },
+  { value: 'weekday', label: 'Day of Week', type: 'text' }
 ];
 
 // Method options computed based on property type and rule type
