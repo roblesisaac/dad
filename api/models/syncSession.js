@@ -10,11 +10,12 @@ const syncSchema = {
     nextSession_id: String,
     prevSuccessfulSession_id: String,
 
-    cursor: String, // Current cursor used for this sync
+    cursor: String, // Cursor used for this sync
     nextCursor: String, // Next cursor provided by Plaid (if successful)
 
     hasMore: Boolean,
     lastNoChangesTime: Number,
+
     branchNumber: Number,
     syncTime: Number,
     syncId: String,
@@ -52,7 +53,7 @@ const syncSchema = {
     },
 
     // New fields as requested
-    startTimestamp: Date,
+    startTimestamp: Number,
     endTimestamp: Date,
     transactionsSkipped: Array, // items not added due to duplicates
     plaidRequestId: String, // For traceability with Plaid's logs
@@ -62,11 +63,6 @@ const syncSchema = {
     isRecovery: Boolean,
 
     recoveryAttempts: Number,
-    recoveryStatus: String,
-    recoveryDetails: {
-        type: Object,
-        default: null,
-    },
 
     label1: {
         name: 'nextCursor',

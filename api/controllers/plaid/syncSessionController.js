@@ -45,7 +45,7 @@ export default {
   /**
    * Revert to a specific sync session
    */
-  async revertToSyncSession(req, res) {
+  async performReversion(req, res) {
     try {
       const user = req.user;
       const { itemId, sessionId } = req.params;
@@ -86,19 +86,18 @@ export default {
       }
       
       // Perform the reversion
-      const result = await recoveryService.revertToSyncSession(targetSession, item, user);
+      const result = await recoveryService.performReversion(targetSession, item, user);
+      let message = `Successfully reverted to session. ${result.removedCount} transactions removed.`
       
       if (!result.success) {
-        throw new CustomError('REVERT_FAILED', result.error || 'Failed to revert to session');
+        console.error(`Recovery failed: ${result.error}`);
+        message = `Recovery failed: ${result.error}`;
       }
       
       return res.json({
-        success: true,
+        ...result,
         itemId,
-        revertedTo: result.revertedTo,
-        removedCount: result.removedCount,
-        recoverySession: result.recoverySession,
-        message: `Successfully reverted to session. ${result.removedCount} transactions removed.`
+        message
       });
     } catch (error) {
       return res.status(500).json({

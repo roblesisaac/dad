@@ -1,8 +1,6 @@
 import PlaidBaseService from './baseService.js';
-import itemService from './itemService.js';
 import { CustomError } from './customError.js';
 import transactionsCrudService from './transactionsCrudService.js';
-import plaidItems from '../../models/plaidItems.js';
 import syncSessionService from './syncSessionService.js';
 
 /**
@@ -10,58 +8,6 @@ import syncSessionService from './syncSessionService.js';
  * Handles reverting transactions and recovering from failed syncs
  */
 class recoveryService extends PlaidBaseService {
-  /**
-   * Recover from a failed sync by reverting to last successful cursor
-   * @param {Object|String} item - Item object or ID
-   * @param {Object} syncSession - Sync data syncSession
-   * @param {Object} user - User object
-   * @returns {Object} Recovery result
-   */
-  async recoverFailedSync(item, failedSyncSession, user) {
-    try {
-      // Get item data
-      const validatedItem = await itemService.validateAndGetItem(item, user);
-      
-      if (!validatedItem) {
-        throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
-      }
-      
-      // Check if recovery is needed
-      if (validatedItem.status !== 'error' && failedSyncSession?.status !== 'error' && syncSessionService.countsMatch(failedSyncSession?.syncCounts)) {
-        return {
-          isRecovered: false,
-          message: 'Item not in error state, recovery not needed'
-        };
-      }
-
-      const sessionToRetry = await syncSessionService.getSyncSession(failedSyncSession._id, user);
-
-      if(!sessionToRetry) {
-        throw new CustomError('SYNC_SESSION_NOT_FOUND', 'Sync session not found');
-      }
-      
-      const revertResult = await this.revertToSyncSession(sessionToRetry, validatedItem, user);
-      
-      // Check if reversion was successful
-      if (!revertResult.success) {
-        return {
-          isRecovered: false,
-          message: revertResult.error || 'Unknown error during reversion'
-        };
-      }
-      
-      return {
-        isRecovered: true,
-        removedCount: revertResult.removedCount,
-        revertedTo: revertResult.revertedTo
-      };
-    } catch (error) {
-      throw CustomError.createFormattedError(error, { 
-        operation: 'recover_failed_sync' 
-      });
-    }
-  }
-
   /**
    * Find all transactions for an item with cursor or syncTime newer than a reference point
    * @param {String} itemId - The item ID
@@ -75,7 +21,7 @@ class recoveryService extends PlaidBaseService {
       const syncTime = `>${itemId}:${referenceSyncTime}`;
       const transactions = await transactionsCrudService.fetchTransactionsBySyncTime(syncTime, userId);
       
-      return transactions;
+      return transactions || [];
     } catch (error) {
       console.error('Error fetching transactions by syncTime:', error);
       throw new CustomError('FETCH_ERROR', 
@@ -89,48 +35,56 @@ class recoveryService extends PlaidBaseService {
    * @param {String} itemId - The Plaid item ID
    * @param {String} userId - The user ID
    * @param {String} syncTime - Timestamp
+   * @param {Object} syncSession - Optional sync session to update with recovery details
    * @returns {Object} Result of the reversion operation
    */
-  async removeTransactionsAfterSyncTime(itemId, userId, syncTime) {
+  async removeTransactionsAfterSyncTime(itemId, userId, syncTime, syncSession = null) {
     try {
       // Validate input parameters
       if (!itemId || !userId || !syncTime) {
-        throw new CustomError('INVALID_PARAMS', 
-          'Missing required parameters for transaction reversion');
+        throw new CustomError('INVALID_PARAMS', 'Missing required parameters for transaction reversion');
       }
       
       // Find all transactions with syncTime greater than or equal to referenceSyncTime
-      const transactionsResult = await this._fetchTransactionsAfterSyncTime(
-        itemId,
-        userId, 
-        syncTime
-      );
+      const transactionsToRemove = await this._fetchTransactionsAfterSyncTime(itemId, userId, syncTime );
+      const expectedRemovedCount = transactionsToRemove.length;
       
-      const transactionsToRevert = transactionsResult || [];
+      // Update sync session with expected count if provided
+      if (syncSession && syncSession._id) {
+        await syncSessionService.updateRecoveryCountDetails(syncSession, 'expected', expectedRemovedCount);
+      }
       
       // Nothing to remove
-      if (transactionsToRevert.length === 0) {
+      if (expectedRemovedCount === 0) {
+        // If syncSession exists, update actual count to 0
+        if (syncSession && syncSession._id) {
+          await syncSessionService.updateRecoveryCountDetails(syncSession, 'actual', 0);
+        }
+        
         return { 
-          isReverted: true,
+          success: true,
           message: 'No transactions needed to be reverted',
-          removedCount: 0
+          removedCount: { expected: 0, actual: 0 }
         };
       }
       
-      console.log('Transactions to remove:', transactionsToRevert.length);
-      
       // Use processRemovedTransactions instead of batchRemoveTransactions
       const result = await transactionsCrudService.processRemovedTransactions(
-        transactionsToRevert,
+        transactionsToRemove,
         userId
       );
-
-      console.log('Removed transactions result:', result);
       
+      // Update sync session with actual count if provided
+      if (syncSession && syncSession._id) {
+        await syncSessionService.updateRecoveryCountDetails(syncSession, 'actual', result.successCount);
+      }
+
       return {
-        isReverted: true,
-        removedCount: result.successCount,
-        failureCount: result.failedTransactions?.length || 0
+        failureCount: result.failedTransactions?.length || 0,
+        removedCount: {
+          expected: expectedRemovedCount,
+          actual: result.successCount
+        }
       };
     } catch (error) {
       throw CustomError.createFormattedError(error, { 
@@ -146,41 +100,42 @@ class recoveryService extends PlaidBaseService {
    * @param {Object} user - User object
    * @returns {Promise<Object>} Result of the reversion
    */
-  async revertToSyncSession(targetSession, item, user) {
+  async performReversion(targetSession, item, user) {
     if (!targetSession || !targetSession._id || !item || !user) {
       throw new Error('Invalid parameters for reversion');
     }
-    
+
     try {
       // Use recovery service to revert transactions
-      const revertResult = await this.removeTransactionsAfterSyncTime(
+      const removalResults = await this.removeTransactionsAfterSyncTime(
         item.itemId,
         user._id,
-        targetSession.syncTime - 1
+        targetSession.syncTime - 1,
+        targetSession
       );
-      
-      if (!revertResult.isReverted) {
-        throw new Error(`Failed to revert: ${revertResult.message}`);
+
+      const { actual, expected } = removalResults.removedCount;
+
+      if (actual !== expected) {
+        console.error(`Recovery failed: ${actual} (actual) !== ${expected} (expected)`);
+
+        // Create a recovery sync session for retry
+        const nextRecoverySession = await syncSessionService.createRecoverySyncSession(
+          targetSession,
+          removalResults
+        );
+        
+        return {
+          success: false,
+          recoverySession: nextRecoverySession._id,
+          error: removalResults.error
+        };
       }
-      
-      // Create a recovery sync session
-      const recoverySyncSession = await syncSessionService.createRecoverySyncSession(
-        targetSession,
-        { _id: item.sync_id, syncNumber: targetSession.syncNumber },
-        revertResult
-      );
-      
-      // Update the item to point to the recovery session
-      await plaidItems.update(item._id, {
-        status: 'complete',
-        sync_id: recoverySyncSession._id
-      });
       
       return {
         success: true,
         revertedTo: targetSession._id,
-        removedCount: revertResult.removedCount,
-        recoverySession: recoverySyncSession._id
+        removedCount: removalResults.removedCount
       };
     } catch (error) {
       console.error(`Error reverting to sync session ${targetSession._id}:`, error);

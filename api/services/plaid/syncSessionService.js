@@ -16,7 +16,7 @@ class SyncSessionService {
    * @param {Object} plaidData - Data fetched from Plaid containing transaction changes
    * @returns {Promise<Object>} The created sync session and its ID
    */
-  async createNewSyncSession(previousSync, user, item, options = {}, plaidData = null) {
+  async createInitialSyncSession(previousSync, user, item, options = {}, plaidData = null) {
     const syncTime = Date.now();
     const { branchNumber = 1, syncId = null } = options;
 
@@ -69,10 +69,9 @@ class SyncSessionService {
       },
       
       recoveryAttempts: 0,
-      recoveryStatus: null,
       
       // Add tracking for new fields
-      startTimestamp: new Date(),
+      startTimestamp: Date(),
       transactionsSkipped: []
     };
     
@@ -86,190 +85,50 @@ class SyncSessionService {
   }
   
   /**
-   * Creates a sync session at the end of the sync process
-   * @param {Object} previousSync - Previous sync data
-   * @param {Object} user - User object
-   * @param {Object} item - The item data
-   * @param {Object} syncResult - Results from processing
-   * @param {Number} startTime - When the sync process started
-   * @param {String} plaidRequestId - Plaid request ID for traceability
-   * @param {Array} transactionsSkipped - Transactions skipped due to duplicates
-   * @returns {Promise<Object>} The created sync session
-   */
-  async createEndSyncSession(previousSync, user, item, syncResult, startTime, plaidRequestId = null, transactionsSkipped = []) {
-    const syncTime = Date.now();
-    const endTime = new Date();
-    const startDate = new Date(startTime);
-    
-    // Determine if recovery is needed for the next sync
-    const needsRecovery = !this.countsMatch(syncResult.syncCounts) || syncResult.hasFailures;
-    const status = needsRecovery ? 'error' : 'complete';
-    
-    // Create a new session for the next sync operation
-    const newSyncSession = {
-      userId: user._id,
-      item_id: item._id,
-      itemId: item.itemId,
-      status,
-      
-      // If there was an error, we want to retry with the same cursor
-      // Otherwise, use the next cursor for future syncs
-      cursor: needsRecovery ? syncResult.cursor : syncResult.nextCursor,
-      nextCursor: '',
-      
-      prevSession_id: previousSync?._id,
-      prevSuccessfulSession_id: !needsRecovery ? 
-        previousSync?._id // Current session is successful, so it becomes the reference
-        : previousSync?.prevSuccessfulSession_id, // Use previous success reference
-      
-      syncTime,
-      syncNumber: previousSync?.syncNumber ? Math.trunc(previousSync.syncNumber) + 1 : 1,
-      syncTag: item.syncTag || previousSync?.syncTag || null,
-      branchNumber: 1, // Reset branch number for new sync
-      
-      // Generate a new syncId
-      syncId: `${randomString(10)}-${syncTime}`,
-      
-      // Initialize hasMore from result
-      hasMore: syncResult.hasMore,
-      
-      // Copy sync counts from result
-      syncCounts: {
-        expected: syncResult.expectedCounts,
-        actual: syncResult.actualCounts
-      },
-      
-      // Add failed transactions if any
-      failedTransactions: syncResult.hasFailures ? syncResult.failedTransactions : {
-        added: [],
-        modified: [],
-        removed: []
-      },
-      
-      // Set recovery flag if needed
-      isRecovery: needsRecovery,
-      recoveryAttempts: 0,
-      recoveryStatus: null,
-      
-      // Add new tracking fields
-      startTimestamp: startDate,
-      endTimestamp: endTime,
-      syncDuration: syncTime - startTime,
-      plaidRequestId,
-      transactionsSkipped
-    };
-    
-    // If there was an error, add it to the session
-    if (needsRecovery) {
-      let errorMessage = '';
-      
-      if (!this.countsMatch(syncResult.syncCounts)) {
-        errorMessage = `Transaction count mismatch: Expected (${syncResult.expectedCounts.added} added, ${syncResult.expectedCounts.modified} modified, ${syncResult.expectedCounts.removed} removed) vs Actual (${syncResult.actualCounts.added} added, ${syncResult.actualCounts.modified} modified, ${syncResult.actualCounts.removed} removed)`;
-      } else if (syncResult.hasFailures) {
-        errorMessage = `Transaction processing failures: ${syncResult.failedTransactions.added.length} add failures, ${syncResult.failedTransactions.modified.length} modify failures, ${syncResult.failedTransactions.removed.length} remove failures`;
-      }
-      
-      newSyncSession.error = {
-        code: !this.countsMatch(syncResult.syncCounts) ? 'COUNT_MISMATCH' : 'TRANSACTION_FAILURES',
-        message: errorMessage,
-        timestamp: new Date().toISOString()
-      };
-    }
-    
-    // Save the new sync session
-    const savedSync = await SyncSessions.save(newSyncSession);
-    
-    // If there was a previous sync, update its nextSession_id
-    if (previousSync && previousSync._id) {
-      await SyncSessions.update(
-        previousSync._id,
-        { 
-          nextSession_id: savedSync._id,
-          userId: previousSync.userId,
-          // Also update end timestamp and duration for the previous session
-          endTimestamp: endTime,
-          syncDuration: syncTime - startTime
-        }
-      );
-    }
-    
-    return savedSync;
-  }
-  
-  /**
    * Creates a recovery sync session
    * @param {Object} sessionToRetry - The target session to revert to
-   * @param {Object} failedSyncSession - Failed sync session data
    * @param {Object} revertResult - Results from the reversion
    * @returns {Promise<Object>} Created recovery sync session
    */
-  async createRecoverySyncSession(sessionToRetry, failedSyncSession, revertResult) {
-    const syncTime = Date.now();
+  async createRecoverySyncSession(sessionToRetry, revertResult) {
+    // const syncTime = Date.now();
     const { _id, syncCounts, ...sessionToRetryData } = sessionToRetry;
     
-    // Handle case where failedSyncSession is just minimal data (from revertToSyncSession)
-    const syncNumber = failedSyncSession.syncNumber || 
-                      (typeof failedSyncSession === 'object' && failedSyncSession._id ? 
-                        await this._getSyncNumberFromSession(failedSyncSession) : 1);
+    // Handle case where sessionToRetry is just minimal data (from performReversion)
+    const syncNumber = sessionToRetry.syncNumber || 1;
     
     const recoverySyncData = {
       ...sessionToRetryData,
-      prevSession_id: typeof failedSyncSession === 'object' && failedSyncSession._id ? 
-        failedSyncSession._id : sessionToRetry._id,
-      status: 'recovery',
       isRecovery: true,
-      syncTime,
-      syncId: `${randomString(10)}-${syncTime}`,
-      recoveryAttempts: (failedSyncSession.recoveryAttempts || 0) + 1,
-      recoveryStatus: 'success',
-      syncNumber: this.addAndRound(syncNumber, 0.1),
-      startTimestamp: new Date(),
-      endTimestamp: new Date(), // Same timestamp for recovery sessions
-      syncDuration: 0 // Set to 0 for recovery sessions
+      // syncTime,
+      // syncId: `${randomString(10)}-${syncTime}`,
+      recoveryAttempts: (sessionToRetry.recoveryAttempts || 0) + 1,
+      syncNumber: this.addAndRound(syncNumber, 0.1)
     };
 
     if(revertResult) {
       recoverySyncData.recoveryDetails = {
-        transactionsRemoved: revertResult.removedCount || 0,
-        previousbranchNumber: failedSyncSession.branchNumber || 1,
-        previousSyncId: failedSyncSession.syncId || 'unknown',
-        recoveryTimestamp: syncTime
+        transactionsRemoved: revertResult.removedCount?.actual,
+        previousbranchNumber: sessionToRetry.branchNumber,
+        previousSyncId: sessionToRetry.syncId
       }
     }
 
     const recoverySync = await SyncSessions.save(recoverySyncData);
 
     // Only update nextSession_id if failedSyncSession has a proper _id
-    if(typeof failedSyncSession === 'object' && failedSyncSession._id && !failedSyncSession.nextSession_id && recoverySync._id) {
-      await SyncSessions.update(failedSyncSession._id, {
-        nextSession_id: recoverySync._id,
-        endTimestamp: new Date()
+    if(sessionToRetry?._id && !sessionToRetry?.nextSession_id && recoverySync?._id) {
+      await SyncSessions.update(sessionToRetry._id, {
+        nextSession_id: recoverySync._id
       });
     }
     
-    // Save recovery sync session
     return recoverySync;
   }
 
   /**
-   * Helper method to get sync number from a session ID
-   * @param {String} sessionId - The session ID
-   * @returns {Promise<Number>} The sync number or 1 if not found
    * @private
    */
-  async _getSyncNumberFromSession(session) {
-    try {
-      if (typeof session === 'string') {
-        session = await SyncSessions.findOne(session);
-      }
-
-      return session?.syncNumber || 1;
-    } catch (error) {
-      console.warn(`Error fetching sync number from session ${sessionId}: ${error.message}`);
-      return 1;
-    }
-  }
-
   addAndRound(value, addValue) {
     let result = value + addValue;
     let multiplier = Math.pow(10, 1);
@@ -451,63 +310,6 @@ class SyncSessionService {
     
     return (currentTime - lastUpdateTime) < fiveMinutes;
   }
-  
-  /**
-   * Updates the recovery stats in a sync session
-   * @param {Object} syncSession - Sync data session
-   * @param {string} status - Recovery status ('success' or 'failed')
-   * @param {string} [errorMessage] - Optional error message if recovery failed
-   * @returns {Promise<void>}
-   */
-  async updateSyncRecoveryStats(syncSession, status, errorMessage = null) {
-    if (!syncSession || !syncSession._id) {
-      return;
-    }
-    
-    const updateData = {
-      recoveryAttempts: (syncSession.recoveryAttempts || 0) + 1,
-      recoveryStatus: status,
-      lastRecoveryAt: new Date().toISOString(),
-      userId: syncSession.userId,
-      endTimestamp: new Date()
-    };
-    
-    if (status === 'failed' && errorMessage) {
-      updateData.recoveryError = errorMessage;
-    }
-    
-    await SyncSessions.update(
-      syncSession._id,
-      updateData
-    );
-  }
-  
-  /**
-   * Check if recovery is needed based on sync status
-   * @param {Object} item - Item data
-   * @param {Object} syncSession - Sync data session
-   * @returns {boolean} True if recovery is needed
-   */
-  isRecoveryNeeded(item, syncSession) {
-    // If no sync data, no recovery needed
-    if (!syncSession || syncSession.isRecovery) {
-      return false;
-    }
-    
-    // Recovery is needed if:
-    // 1. The item is in error state
-    if (item.status === 'error' || syncSession.status === 'error') {
-      return true;
-    }
-    
-    // 2. The last sync had count mismatches
-    if (!this.countsMatch(syncSession.syncCounts)) {
-      console.warn(`Recovery needed for item ${item.itemId} due to count mismatch in previous sync`);
-      return true;
-    }
-    
-    return false;
-  }
 
   /**
    * Checks if expected and actual transaction counts match
@@ -554,7 +356,7 @@ class SyncSessionService {
    */
   async createSyncSessionFromLegacy(user, item) {
     const legacySyncData = item.syncData;
-    const syncTag = this.generateRandomLetters();
+    const syncTag = randomString(4, { isUppercase: true });
 
     await plaidItems.update(item._id, {
       syncTag
@@ -602,7 +404,6 @@ class SyncSessionService {
         removed: []
       },
       recoveryAttempts: 0,
-      recoveryStatus: null,
       isLegacy: true,
       startTimestamp: now,
       endTimestamp: now,
@@ -623,16 +424,37 @@ class SyncSessionService {
     return await SyncSessions.save(syncSession);
   }
 
-  generateRandomLetters(length=4) {
-    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-    let result = '';
-  
-    for (let i = 0; i < length; i++) {
-        const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-        result += randomLetter;
+  /**
+   * Updates the recovery details in a sync session with transaction removal counts
+   * @param {Object} syncSession - Sync session to update
+   * @param {String} field - Field to update ('expected' or 'actual')
+   * @param {Number} count - Count value to set
+   * @returns {Promise<void>}
+   */
+  async updateRecoveryCountDetails(syncSession, field, count) {
+    if (!syncSession || !syncSession._id) {
+      return;
     }
-  
-    return result;
+    
+    // Make sure field is either 'expected' or 'actual'
+    if (field !== 'expected' && field !== 'actual') {
+      console.warn(`Invalid field '${field}' for recovery details update`);
+      return;
+    }
+
+    const recoveryDetails = syncSession.recoveryDetails || {};
+    const removedCount = recoveryDetails.removedCount || {};
+
+    removedCount[field] = count;
+    recoveryDetails.removedCount = removedCount;
+    
+    await SyncSessions.update(
+      syncSession._id,
+      {
+        userId: syncSession.userId,
+        recoveryDetails
+      }
+    );
   }
 }
 

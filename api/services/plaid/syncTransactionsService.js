@@ -36,67 +36,35 @@ class TransactionSyncService {
 
       // If no current sync session, create a new one
       if(!currentSyncSession) {
-        const hasLegacySyncData = lockedItem.syncData && lockedItem.syncData.cursor;
-        if (hasLegacySyncData) { 
-          try {
-            console.log(`Legacy syncData found for item ${lockedItem.itemId}, migrating...`);
-            
-            // Create a sync session from the legacy data
-            const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
-              user,
-              lockedItem
-            );
-            
-            if (migratedSession && migratedSession._id) {
-              currentSyncSession = migratedSession;
-              
-              console.log(`Successfully migrated legacy syncData for item ${lockedItem.itemId}`);
-            }
-          } catch (migrationError) {
-            console.error(`Error migrating legacy syncData: ${migrationError.message}`);
-            // Continue without the migrated session
-          }
-          return;
-        }
-
-        currentSyncSession = await syncSessionService.createNewSyncSession(null, user, lockedItem);
-      }
-
-      if(!currentSyncSession) {
-        throw new CustomError('SYNC_SESSION_NOT_FOUND', 'Sync session not found');
+        currentSyncSession = await this._createInitialSyncSession(lockedItem, user);
       }
       
-      // ------
       // 3. Determine if recovery is needed and perform if necessary
-      // ------
-      if (syncSessionService.isRecoveryNeeded(lockedItem, currentSyncSession)) {
+      if (currentSyncSession?.isRecovery) {
         // 3. Recovery process - Handle recovery using previous sync session
-        const recoveryInfo = await this._recoverFromFailedSync(lockedItem, currentSyncSession, user);
-        
-        // Create a recovery session to record the recovery operation
-        // This will be used on the next sync attempt
-        await syncSessionService.createEndSyncSession(
+        const recoveryResult = await recoveryService.performReversion( 
           currentSyncSession,
-          user,
-          lockedItem,
-          {
-            hasFailures: false,
-            cursor: currentSyncSession.cursor,
-            nextCursor: currentSyncSession.nextCursor,
-            expectedCounts: { added: 0, modified: 0, removed: 0 },
-            actualCounts: { added: 0, modified: 0, removed: 0 },
-            syncCounts: {
-              expected: { added: 0, modified: 0, removed: 0 },
-              actual: { added: 0, modified: 0, removed: 0 }
-            },
-            hasMore: true,
-            isRecovery: true
-          },
-          syncStartTime
+          lockedItem, 
+          user
         );
+
+        // Unlock item
+        await this._unlockItem(lockedItem.itemId, user._id);
         
         // Always build and return a recovery response, regardless of recovery success
-        const recoveryResponse = this._buildRecoveryResponse(recoveryInfo);
+        const recoveryResponse = {
+          recovery: {
+            performed: true,
+            removedCount: recoveryResult.removedCount,
+            revertedTo: recoveryResult.revertedTo
+          },
+          message: 'Recovery completed successfully. Transactions will be resynced on next sync operation.',
+          batchResults: {
+            added: 0,
+            modified: 0,
+            removed: 0
+          }
+        }
         return recoveryResponse;
       }
       
@@ -113,7 +81,7 @@ class TransactionSyncService {
       // 5. Process transaction data without creating an initial sync session
       const syncTime = Date.now();
       const syncResult = await this._processSyncData(
-        lockedItem, 
+        lockedItem,
         user, 
         cursor,
         syncTime, 
@@ -122,18 +90,9 @@ class TransactionSyncService {
       );
       
       // 6. Create end sync session with results for next sync
-      const newSyncSession = await syncSessionService.createEndSyncSession(
-        currentSyncSession,
-        user,
-        lockedItem,
-        syncResult,
-        syncStartTime,
-        plaidData.request_id || null,
-        transactionsSkipped
-      );
       
       // 7. Item update - Only update if there were no errors
-      await this._updateItemAfterSync(lockedItem, syncResult, newSyncSession._id);
+      // await this._updateItemAfterSync(lockedItem, syncResult, newSyncSession._id);
       
       // 8. Post-processing - Build response
       const response = this._buildSyncResponse(
@@ -149,6 +108,37 @@ class TransactionSyncService {
       await this._handleSyncError(error, item, user);
       throw error; // Re-throw to be handled by the caller
     }
+  }
+
+  /**
+   * Create initial sync session
+   * @param {Object} item - Item data
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Sync session
+   * @private
+   */
+  async _createInitialSyncSession(item, user) {
+    const hasLegacySyncData = item.syncData && item.syncData.cursor;
+    if (hasLegacySyncData) { 
+      try {
+        console.log(`Legacy syncData found for item ${item.itemId}, migrating...`);
+        
+        // Create a sync session from the legacy data
+        const migratedSession = await syncSessionService.createSyncSessionFromLegacy(
+          user,
+          item
+        );
+        
+        if (migratedSession && migratedSession._id) {          
+          return migratedSession;
+        }
+      } catch (migrationError) {
+        console.error(`Error migrating legacy syncData: ${migrationError.message}`);
+      }
+      return;
+    }
+
+    return await syncSessionService.createInitialSyncSession(null, user, item);
   }
 
   /**
@@ -205,10 +195,7 @@ class TransactionSyncService {
     );
     
     // Release the sync lock
-    await plaidItems.update(
-      { itemId: item.itemId, userId: user._id },
-      { status: 'complete' } // Set status back to complete
-    );
+    await this._unlockItem(item.itemId, user._id);
     
     // Return response indicating no changes
     return {
@@ -450,51 +437,9 @@ class TransactionSyncService {
     }
     
     // Update the item with the new status and stats
-    await plaidItems.update(item._id,
+    await plaidItems.update({ itemId: item.itemId, userId: user._id },
       updateData
     );
-  }
-
-  /**
-   * Recover from a failed sync using recoveryService
-   * @param {Object} item - Item data
-   * @param {Object} syncSession - Sync session data
-   * @param {Object} user - User object
-   * @returns {Promise<Object>} Recovery results
-   * @private
-   */
-  async _recoverFromFailedSync(item, failedSyncSession, user) {
-    try {
-      console.log(`Starting recovery for item ${item.itemId}, user ${user._id}`);
-      
-      // Use the recovery service to handle the reversion
-      const recoveryResult = await recoveryService.recoverFailedSync(
-        item, 
-        failedSyncSession, 
-        user
-      );
-      
-      if (!recoveryResult.isRecovered) {
-        console.warn(`Recovery failed for item ${item.itemId}: ${recoveryResult.message}`);
-        throw new CustomError('RECOVERY_FAILED', 
-          `Unable to recover from previous sync error: ${recoveryResult.message}`);
-      }
-      
-      // Update the recovery stats in the sync session
-      await syncSessionService.updateSyncRecoveryStats(failedSyncSession, 'success');
-      
-      return recoveryResult;
-    } catch (error) {
-      // Update the recovery status in the sync session if possible
-      await syncSessionService.updateSyncRecoveryStats(
-        failedSyncSession,
-        'failed',
-        error.message || 'Unknown error during recovery'
-      );
-      
-      console.error(`Recovery error for item ${item.itemId}:`, error);
-      throw error;
-    }
   }
 
   /**
@@ -517,10 +462,25 @@ class TransactionSyncService {
     }
     
     // Set status to in_progress to acquire lock
-    await plaidItems.update(lockedItem._id, { status: 'in_progress' });
+    await plaidItems.update({ itemId: lockedItem.itemId, userId: user._id }, { status: 'in_progress' });
     
     return lockedItem;
   }
+
+  /**
+   * Unlocks an item
+   * @param {Object} item - Item data
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _unlockItem(itemId, userId) {
+    try {
+      await plaidItems.update({ itemId, userId }, { status: 'complete' });
+    } catch (error) {
+      console.error('Error unlocking item:', error);
+      throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');
+    }
+  };
 
   /**
    * Updates item status to error
@@ -572,30 +532,6 @@ class TransactionSyncService {
     }
     
     return formattedError;
-  }
-  
-  /**
-   * Builds a recovery response object
-   * @param {Object} recoveryInfo - Recovery information 
-   * @returns {Object} Formatted recovery response
-   * @private
-   */
-  _buildRecoveryResponse(recoveryInfo) {
-    return {
-      recovery: {
-        performed: true,
-        removedTransactions: recoveryInfo.removedCount,
-        removedCount: recoveryInfo.removedCount,
-        revertedTo: recoveryInfo.revertedTo
-      },
-      hasMore: true,
-      message: 'Recovery completed successfully. Transactions will be resynced on next sync operation.',
-      batchResults: {
-        added: 0,
-        modified: 0,
-        removed: 0
-      }
-    };
   }
 
   /**

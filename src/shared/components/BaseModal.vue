@@ -6,7 +6,7 @@
       class="fixed inset-0 bg-white z-50"
     >
       <!-- This div ensures padding through absolute positioning -->
-      <div class="absolute inset-x-4 inset-y-4 md:inset-x-6 md:inset-y-6 flex items-center justify-center">
+      <div class="absolute inset-x-4 inset-y-4 md:inset-x-6 md:inset-y-6 flex items-center justify-center" @click="closeModal">
         <!-- Modal container with fixed dimensions -->
         <div 
           :class="[
