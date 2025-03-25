@@ -16,10 +16,10 @@
           </div>
           <div v-else class="flex items-center">
             <h1 
-              class="text-xl font-semibold cursor-pointer hover:underline" 
+              class="text-xl font-semibold cursor-pointer underline" 
               @click="startTabNameEdit"
             >
-              Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"
+              {{ state.selected.tab?.tabName || 'Tab' }}
             </h1>
           </div>
         </div>

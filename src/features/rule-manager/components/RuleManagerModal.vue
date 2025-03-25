@@ -2,7 +2,7 @@
   <BaseModal 
     :is-open="isOpen" 
     size="xl"
-    title="Manage rules for Tab"
+    title="Manage tab name & rules"
     @close="closeModal"
     :content-padding="false"
   >
@@ -16,9 +16,6 @@
 import { defineProps, defineEmits } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import RuleManager from '@/features/rule-manager/views/RuleManager.vue';
-import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-
-const { state } = useDashboardState();
 
 const props = defineProps({
   isOpen: {
