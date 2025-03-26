@@ -31,19 +31,40 @@ class TransactionSyncService {
       // 1. Sync initialization - Acquire sync lock on plaid item
       const lockedItem = await this._getAndLockItem(item, user);
       
-      // 2. Previous sync session handling - Get the latest sync session
+      // 1. Get sync session from item
       let currentSyncSession = await syncSessionService.getSyncSession(lockedItem?.sync_id, user);
 
-      // If no current sync session, create a new one
+      // 1. If no current sync session, create a new one (initial sync)
       if(!currentSyncSession) {
         currentSyncSession = await this._createInitialSyncSession(lockedItem, user);
       }
       
-      // 3. Determine if recovery is needed and perform if necessary
-      if (currentSyncSession?.isRecovery) {
-        // 3. Recovery process - Handle recovery using previous sync session
-        const recoveryResult = await recoveryService.performReversion( 
-          currentSyncSession,
+      // 1. Recovery Assessment - Check if recovery is needed
+      const shouldRecover = currentSyncSession?.isRecovery || !syncSessionService.countsMatch(currentSyncSession.syncCounts);
+
+      if (shouldRecover) {
+        let recoverySession = currentSyncSession.isRecovery ?   
+          currentSyncSession
+          : await syncSessionService.createRecoverySyncSession(
+            currentSyncSession,
+            lockedItem,
+            user
+          );
+
+        // Get the original session to revert to
+        const originalSession = await syncSessionService.getSyncSession(
+          recoverySession.prevSession_id, 
+          user
+        );
+        
+        if (!originalSession) {
+          throw new CustomError('RECOVERY_ERROR', 'Original session for recovery not found');
+        }
+        
+        // 3. Recovery Flow - Perform recovery operations on the recovery session
+        const recoveryResult = await recoveryService.performReversion(
+          recoverySession,
+          originalSession,
           lockedItem, 
           user
         );
@@ -51,24 +72,30 @@ class TransactionSyncService {
         // Unlock item
         await this._unlockItem(lockedItem.itemId, user._id);
         
-        // Always build and return a recovery response, regardless of recovery success
+        // Return recovery response
         const recoveryResponse = {
           recovery: {
             performed: true,
             removedCount: recoveryResult.removedCount,
-            revertedTo: recoveryResult.revertedTo
+            revertedTo: recoveryResult.revertedTo,
+            success: recoveryResult.success
           },
-          message: 'Recovery completed successfully. Transactions will be resynced on next sync operation.',
+          message: 'Recovery completed. ' + 
+            (recoveryResult.resolution.success 
+              ? 'A new sync session has been created with the correct cursor.' 
+              : 'Recovery encountered issues. Will retry on next sync operation.'),
+          resolution: recoveryResult.resolution,
           batchResults: {
             added: 0,
             modified: 0,
-            removed: 0
+            removed: recoveryResult.removedCount.actual
           }
-        }
+        };
+        
         return recoveryResponse;
       }
       
-      // 4. Check for changes from Plaid before creating a new sync session
+      // 2. Normal Flow - Check for changes from Plaid
       const cursor = currentSyncSession?.cursor || null;      
       const plaidData = await this._fetchTransactionsFromPlaid(lockedItem, user, cursor);      
       const hasChanges = this._checkForChanges(plaidData);
@@ -78,8 +105,24 @@ class TransactionSyncService {
         return await this._handleNoChangesCase(currentSyncSession, lockedItem, user, plaidData);
       }
       
-      // 5. Process transaction data without creating an initial sync session
+      // 2. Normal Flow - Process transaction data
       const syncTime = Date.now();
+      
+      // Update session with expected counts
+      const expectedCounts = {
+        added: plaidData.added?.length || 0,
+        modified: plaidData.modified?.length || 0,
+        removed: plaidData.removed?.length || 0
+      };
+      
+      // Use the universal updateSessionCounts method
+      let updatedSession = await syncSessionService.updateSessionCounts(
+        currentSyncSession,
+        'expected',
+        expectedCounts
+      );
+      
+      // 2. Normal Flow - Process Plaid data
       const syncResult = await this._processSyncData(
         lockedItem,
         user, 
@@ -89,17 +132,31 @@ class TransactionSyncService {
         transactionsSkipped
       );
       
-      // 6. Create end sync session with results for next sync
+      // Update session with actual counts and get the updated session
+      updatedSession = await syncSessionService.updateSessionCounts(
+        updatedSession,
+        'actual',
+        syncResult.actualCounts
+      );
       
-      // 7. Item update - Only update if there were no errors
-      // await this._updateItemAfterSync(lockedItem, syncResult, newSyncSession._id);
+      // 4. Resolution Phase - Resolve the session based on count comparison
+      const resolutionResult = await syncSessionService.resolveSession(
+        updatedSession,
+        lockedItem,
+        user,
+        { nextCursor: syncResult.nextCursor }
+      );
       
-      // 8. Post-processing - Build response
+      // Unlock item
+      await this._unlockItem(lockedItem.itemId, user._id);
+      
+      // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
         syncResult,
         syncTime,
         1, // No more branching in the new workflow
-        transactionsSkipped
+        transactionsSkipped,
+        resolutionResult
       );
       
       return response;
@@ -142,11 +199,11 @@ class TransactionSyncService {
   }
 
   /**
-   * Check for changes from Plaid before deciding to create a new sync session
+   * Fetch transactions from Plaid
    * @param {Object} item - Item data
    * @param {Object} user - User object
    * @param {String} cursor - Current cursor
-   * @returns {Promise<Object>} Plaid data and whether changes exist
+   * @returns {Promise<Object>} Plaid data
    * @private
    */
   async _fetchTransactionsFromPlaid(item, user, cursor) {
@@ -163,7 +220,7 @@ class TransactionSyncService {
   }
 
   /**
-   * Check for changes from Plaid before deciding to create a new sync session
+   * Check for changes from Plaid
    * @param {Object} plaidData - Plaid data
    * @returns {Boolean} True if changes exist, false otherwise
    */
@@ -410,39 +467,6 @@ class TransactionSyncService {
   }
 
   /**
-   * Update item status after sync
-   * @param {Object} item - Item data
-   * @param {Object} syncResult - Results from processing
-   * @param {String} sync_id - ID of the sync session
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _updateItemAfterSync(item, syncResult, sync_id) {
-    const countsMatch = syncSessionService.countsMatch(syncResult.syncCounts);
-    const hasFailures = syncResult.hasFailures || false;
-    
-    // Determine item status based on sync result
-    const status = !countsMatch || hasFailures ?
-      'error' 
-      :'complete';
-    
-    // Create update object
-    const updateData = { 
-      status
-    };
-    
-    // Only update sync_id if there were no errors
-    if (countsMatch && !hasFailures) {
-      updateData.sync_id = sync_id;
-    }
-    
-    // Update the item with the new status and stats
-    await plaidItems.update({ itemId: item.itemId, userId: user._id },
-      updateData
-    );
-  }
-
-  /**
    * Gets and locks an item for sync
    * @param {Object|String} item - Item object or ID
    * @param {Object} user - User object
@@ -469,7 +493,8 @@ class TransactionSyncService {
 
   /**
    * Unlocks an item
-   * @param {Object} item - Item data
+   * @param {String} itemId - Item ID
+   * @param {String} userId - User ID
    * @returns {Promise<void>}
    * @private
    */
@@ -483,10 +508,29 @@ class TransactionSyncService {
   };
 
   /**
+   * Handles errors in the sync process
+   * @param {Error} error - Original error
+   * @param {Object|String} item - Item data or ID
+   * @param {Object} user - User object
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _handleSyncError(error, item, user) {
+    // Format the error with context
+    const formattedError = this._formatError(error, item, user);
+    
+    // Update item status to error if possible
+    if (typeof item === 'object' && item?.itemId) {
+      await this._updateItemErrorStatus(item.itemId, user._id, formattedError);
+    }
+    
+    return formattedError;
+  }
+
+  /**
    * Updates item status to error
    * @param {String} itemId - Item ID
    * @param {String} userId - User ID
-   * @param {Error} error - Error object
    * @returns {Promise<void>}
    * @private
    */
@@ -515,35 +559,16 @@ class TransactionSyncService {
   }
 
   /**
-   * Handles errors in the sync process
-   * @param {Error} error - Original error
-   * @param {Object|String} item - Item data or ID
-   * @param {Object} user - User object
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _handleSyncError(error, item, user) {
-    // Format the error with context
-    const formattedError = this._formatError(error, item, user);
-    
-    // Update item status to error if possible
-    if (typeof item === 'object' && item?.itemId) {
-      await this._updateItemErrorStatus(item.itemId, user._id, formattedError);
-    }
-    
-    return formattedError;
-  }
-
-  /**
    * Builds a response object with sync results
    * @param {Object} syncResult - Results from processing
    * @param {Number} syncTime - Current sync timestamp
    * @param {Number} branchNumber - Batch number for this sync
    * @param {Array} transactionsSkipped - Transactions skipped due to duplicates
+   * @param {Object} resolutionResult - Result from the resolution phase
    * @returns {Object} Formatted response
    * @private
    */
-  _buildSyncResponse(syncResult, syncTime, branchNumber, transactionsSkipped = []) {
+  _buildSyncResponse(syncResult, syncTime, branchNumber, transactionsSkipped = [], resolutionResult = null) {
     const response = {
       added: syncResult.addedCount,
       addedTransactions: syncResult.addedTransactions,
@@ -581,12 +606,20 @@ class TransactionSyncService {
       };
     }
     
-    // Add error information if counts don't match
-    if (!syncSessionService.countsMatch(syncResult.syncCounts)) {
-      response.error = {
-        code: 'COUNT_MISMATCH',
-        message: `Transaction count mismatch detected. This will trigger recovery on next sync.`
+    // Add resolution result information if available
+    if (resolutionResult) {
+      response.resolution = {
+        success: resolutionResult.success,
+        isRecovery: resolutionResult.isRecovery
       };
+      
+      if (resolutionResult.isRecovery) {
+        response.resolution.recoverySessionId = resolutionResult.recoverySession?._id;
+        response.error = {
+          code: 'COUNT_MISMATCH',
+          message: `Transaction count mismatch detected. Recovery will be triggered on next sync.`
+        };
+      }
     }
     
     return response;

@@ -2,6 +2,7 @@ import PlaidBaseService from './baseService.js';
 import { CustomError } from './customError.js';
 import transactionsCrudService from './transactionsCrudService.js';
 import syncSessionService from './syncSessionService.js';
+import plaidItems from '../../models/plaidItems.js';
 
 /**
  * Service responsible for transaction recovery operations
@@ -35,10 +36,10 @@ class recoveryService extends PlaidBaseService {
    * @param {String} itemId - The Plaid item ID
    * @param {String} userId - The user ID
    * @param {String} syncTime - Timestamp
-   * @param {Object} syncSession - Optional sync session to update with recovery details
+   * @param {Object} recoverySession - Recovery session to update with counts
    * @returns {Object} Result of the reversion operation
    */
-  async removeTransactionsAfterSyncTime(itemId, userId, syncTime, syncSession = null) {
+  async removeTransactionsAfterSyncTime(itemId, userId, syncTime, recoverySession = null) {
     try {
       // Validate input parameters
       if (!itemId || !userId || !syncTime) {
@@ -46,19 +47,27 @@ class recoveryService extends PlaidBaseService {
       }
       
       // Find all transactions with syncTime greater than or equal to referenceSyncTime
-      const transactionsToRemove = await this._fetchTransactionsAfterSyncTime(itemId, userId, syncTime );
+      const transactionsToRemove = await this._fetchTransactionsAfterSyncTime(itemId, userId, syncTime);
       const expectedRemovedCount = transactionsToRemove.length;
       
-      // Update sync session with expected count if provided
-      if (syncSession && syncSession._id) {
-        await syncSessionService.updateRecoveryCountDetails(syncSession, 'expected', expectedRemovedCount);
+      // Update recovery session with expected count if provided
+      if (recoverySession && recoverySession._id) {
+        await syncSessionService.updateSessionCounts(
+          recoverySession, 
+          'expected', 
+          { added: 0, modified: 0, removed: expectedRemovedCount }
+        );
       }
       
       // Nothing to remove
       if (expectedRemovedCount === 0) {
-        // If syncSession exists, update actual count to 0
-        if (syncSession && syncSession._id) {
-          await syncSessionService.updateRecoveryCountDetails(syncSession, 'actual', 0);
+        // If recoverySession exists, update actual count to 0
+        if (recoverySession && recoverySession._id) {
+          await syncSessionService.updateSessionCounts(
+            recoverySession, 
+            'actual', 
+            { added: 0, modified: 0, removed: 0 }
+          );
         }
         
         return { 
@@ -68,15 +77,19 @@ class recoveryService extends PlaidBaseService {
         };
       }
       
-      // Use processRemovedTransactions instead of batchRemoveTransactions
+      // Use processRemovedTransactions to handle the transaction removal
       const result = await transactionsCrudService.processRemovedTransactions(
         transactionsToRemove,
         userId
       );
       
-      // Update sync session with actual count if provided
-      if (syncSession && syncSession._id) {
-        await syncSessionService.updateRecoveryCountDetails(syncSession, 'actual', result.successCount);
+      // Update recovery session with actual count if provided
+      if (recoverySession && recoverySession._id) {
+        await syncSessionService.updateSessionCounts(
+          recoverySession, 
+          'actual', 
+          { added: 0, modified: 0, removed: result.successCount }
+        );
       }
 
       return {
@@ -94,54 +107,55 @@ class recoveryService extends PlaidBaseService {
   }
 
   /**
-   * Reverts to a specific sync session
-   * @param {Object} targetSession - The sync session to revert to
+   * Performs reversion operations on a recovery session
+   * @param {Object} recoverySession - The recovery session (already created with isRecovery=true)
+   * @param {Object} originalSession - The original session to revert to 
    * @param {Object} item - The Plaid item
    * @param {Object} user - User object
    * @returns {Promise<Object>} Result of the reversion
    */
-  async performReversion(targetSession, item, user) {
-    if (!targetSession || !targetSession._id || !item || !user) {
+  async performReversion(recoverySession, originalSession, item, user) {
+    if (!recoverySession || !recoverySession._id || !originalSession || !originalSession._id || !item || !user) {
       throw new Error('Invalid parameters for reversion');
     }
 
     try {
-      // Use recovery service to revert transactions
+      // Find and remove transactions created after the original sync point
       const removalResults = await this.removeTransactionsAfterSyncTime(
         item.itemId,
         user._id,
-        targetSession.syncTime - 1,
-        targetSession
+        originalSession.syncTime - 1,
+        recoverySession
       );
-
-      const { actual, expected } = removalResults.removedCount;
-
-      if (actual !== expected) {
-        console.error(`Recovery failed: ${actual} (actual) !== ${expected} (expected)`);
-
-        // Create a recovery sync session for retry
-        const nextRecoverySession = await syncSessionService.createRecoverySyncSession(
-          targetSession,
-          removalResults
-        );
-        
-        return {
-          success: false,
-          recoverySession: nextRecoverySession._id,
-          error: removalResults.error
-        };
-      }
+      
+      // Call resolveSession to handle the resolution phase
+      const resolutionResult = await syncSessionService.resolveSession(
+        recoverySession,
+        item,
+        user,
+        { nextCursor: originalSession.cursor }
+      );
       
       return {
-        success: true,
-        revertedTo: targetSession._id,
-        removedCount: removalResults.removedCount
+        success: removalResults.removedCount.expected === removalResults.removedCount.actual && resolutionResult.success,
+        revertedTo: originalSession._id,
+        removedCount: removalResults.removedCount,
+        recoverySession,
+        resolution: resolutionResult
       };
     } catch (error) {
-      console.error(`Error reverting to sync session ${targetSession._id}:`, error);
+      console.error(`Error performing reversion for session ${recoverySession._id}:`, error);
+      
+      // Update the item status to error
+      await plaidItems.update(
+        { itemId: item.itemId, userId: user._id },
+        { status: 'error' }
+      );
+      
       return {
         success: false,
-        error: error.message
+        error: error.message,
+        recoverySession
       };
     }
   }

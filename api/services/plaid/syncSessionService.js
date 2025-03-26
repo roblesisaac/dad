@@ -87,10 +87,12 @@ class SyncSessionService {
   /**
    * Creates a recovery sync session
    * @param {Object} sessionToRetry - The target session to revert to
+   * @param {Object} item - The item to update
+   * @param {Object} user - The user object
    * @param {Object} revertResult - Results from the reversion
    * @returns {Promise<Object>} Created recovery sync session
    */
-  async createRecoverySyncSession(sessionToRetry, revertResult) {
+  async createRecoverySyncSession(sessionToRetry, item, user, revertResult = null) {
     // const syncTime = Date.now();
     const { _id, syncCounts, ...sessionToRetryData } = sessionToRetry;
     
@@ -121,6 +123,17 @@ class SyncSessionService {
       await SyncSessions.update(sessionToRetry._id, {
         nextSession_id: recoverySync._id
       });
+    }
+    
+    // Update the item with the new recovery session
+    if (item && user && recoverySync._id) {
+      await plaidItems.update(
+        { itemId: item.itemId, userId: user._id },
+        { 
+          sync_id: recoverySync._id,
+          status: 'in_progress'
+        }
+      );
     }
     
     return recoverySync;
@@ -425,42 +438,31 @@ class SyncSessionService {
   }
 
   /**
-   * Updates the recovery details in a sync session with transaction removal counts
+   * Updates session counts for both normal and recovery flows
    * @param {Object} syncSession - Sync session to update
-   * @param {String} field - Field to update ('expected' or 'actual')
-   * @param {Number} count - Count value to set
+   * @param {String} type - Type of update ('expected' or 'actual')
+   * @param {Object} counts - Count values to set { added, modified, removed }
    * @returns {Promise<void>}
    */
-  async updateRecoveryCountDetails(syncSession, field, count) {
+  async updateSessionCounts(syncSession, type, counts) {
     if (!syncSession || !syncSession._id) {
       return;
     }
     
-    // Make sure field is either 'expected' or 'actual'
-    if (field !== 'expected' && field !== 'actual') {
-      console.warn(`Invalid field '${field}' for recovery details update`);
+    // Make sure type is either 'expected' or 'actual'
+    if (type !== 'expected' && type !== 'actual') {
+      console.warn(`Invalid type '${type}' for session counts update`);
       return;
     }
 
-    const { syncCounts } = syncSession;
-
-    if(field === 'expected') {
-      syncCounts.expected = {
-        added: 0, 
-        modified: 0,
-        removed: count
-      }
-
-      syncCounts.actual = { 
-        added: 0,
-        modified: 0,
-        removed: 0 
-      };
-    }
-
-    if(field === 'actual') {
-      syncCounts.actual.removed = count;
-    }
+    const { syncCounts = { expected: {}, actual: {} } } = syncSession;
+    
+    // Set the counts for the specified type
+    syncCounts[type] = {
+      added: counts.added !== undefined ? counts.added : syncCounts[type].added || 0,
+      modified: counts.modified !== undefined ? counts.modified : syncCounts[type].modified || 0,
+      removed: counts.removed !== undefined ? counts.removed : syncCounts[type].removed || 0
+    };
     
     await SyncSessions.update(
       syncSession._id,
@@ -469,6 +471,107 @@ class SyncSessionService {
         syncCounts
       }
     );
+    
+    return {
+      ...syncSession,
+      syncCounts
+    };
+  }
+
+  /**
+   * Legacy method - use updateSessionCounts instead
+   * @deprecated
+   */
+  async updateRecoveryCountDetails(syncSession, field, count) {
+    if (!syncSession || !syncSession._id) {
+      return;
+    }
+    
+    console.warn('updateRecoveryCountDetails is deprecated, use updateSessionCounts instead');
+    
+    const counts = {
+      added: 0,
+      modified: 0,
+      removed: count
+    };
+    
+    return this.updateSessionCounts(syncSession, field, counts);
+  }
+
+  /**
+   * Resolves a sync session based on count comparison (shared resolution phase)
+   * @param {Object} syncSession - Current sync session with syncCounts
+   * @param {Object} item - The Plaid item
+   * @param {Object} user - User object
+   * @param {Object} options - Additional options (nextCursor)
+   * @returns {Promise<Object>} The resolved session data and next steps
+   */
+  async resolveSession(syncSession, item, user, options = {}) {
+    // Check if counts match using the syncCounts directly from the syncSession
+    const countsMatch = this.countsMatch(syncSession.syncCounts);
+    const { nextCursor = syncSession.nextCursor } = options;
+    
+    if (countsMatch) {
+      // Success case - create a new sync session with cursor set to next_cursor
+      const newSyncSession = await this.createInitialSyncSession(
+        syncSession, 
+        user, 
+        item,
+        { 
+          branchNumber: syncSession.branchNumber || 1,
+          syncId: syncSession.syncId
+        }
+      );
+      
+      // Update the previous session with nextSession_id and status
+      await SyncSessions.update(
+        syncSession._id,
+        { 
+          nextSession_id: newSyncSession.syncSession._id,
+          userId: syncSession.userId,
+          status: 'complete',
+          nextCursor
+        }
+      );
+      
+      // Update item with new sync session reference
+      await plaidItems.update(
+        { itemId: item.itemId, userId: user._id },
+        { 
+          sync_id: newSyncSession.syncSession._id,
+          status: 'complete'
+        }
+      );
+      
+      return {
+        success: true,
+        newSyncSession: newSyncSession.syncSession,
+        countsMatch: true,
+        isRecovery: false
+      };
+    } else {
+      // Failure case - create a recovery session
+      const recoverySyncSession = await this.createRecoverySyncSession(
+        syncSession,
+        item,
+        user,
+        { 
+          error: {
+            code: 'COUNT_MISMATCH',
+            message: `Transaction count mismatch in ${syncSession.isRecovery ? 'recovery' : 'sync'} operation`
+          }
+        }
+      );
+      
+      // Item is already updated inside createRecoverySyncSession
+      
+      return {
+        success: false,
+        recoverySession: recoverySyncSession,
+        countsMatch: false,
+        isRecovery: true
+      };
+    }
   }
 }
 

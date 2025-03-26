@@ -19,9 +19,9 @@ The transaction sync process follows this workflow:
 
 ### 1. Sync Initialization
 
-- **Get Sync Session From Item**: Locates the most recent sync session for the item
+- **Get Sync Session From Item**: Locates the tagert sync session from the item sync_id prop
 - **Create Initial Sync**: If no sync session exists, creates an initial one (using legacy data if available)
-- **Recovery Assessment**: Determines if recovery operations are needed
+- Recovery Assessment: Evaluates whether recovery operations are required, based on either session.isRecovery being set to true or a mismatch in the counts.
 
 ### 2. Normal Flow (No Recovery Needed)
 
@@ -29,8 +29,6 @@ The transaction sync process follows this workflow:
 - **Update Session with Expected Counts**: Records the expected transaction counts from Plaid
 - **Process Plaid Data**: Handles added, modified, and removed transactions
 - **Update Session with Actual Counts**: Records the actual transaction counts processed
-- **Counts Comparison**: Validates that expected and actual counts match
-- **Create New Sync Session**: Creates a session with cursor set to next_cursor if counts match
 
 ### 3. Recovery Flow
 
@@ -38,12 +36,13 @@ The transaction sync process follows this workflow:
 - **Find Transactions**: Identifies transactions created after the referenced sync point
 - **Update Recovery Session**: Sets count of transactions expected to be removed
 - **Remove Transactions**: Deletes transactions created after the reference sync
+- **Update Session with Actual Counts**: Records the actual number of transactions removed
+
+### 4. Resolution Phase (Shared)
+
 - **Counts Comparison**: Validates that expected and actual counts match
-- **Create New Sync Session**: When counts match, creates session with cursor for next sync
-
-### 4. Recovery Failed Flow
-
-- **Create New Recovery Session**: If counts don't match, creates a new recovery session with session data
+- **On Success**: Creates new sync session with cursor set to next_cursor
+- **On Failure**: Creates new recovery session with current session data
 
 ## Data Models
 
@@ -98,4 +97,4 @@ The transaction sync process follows this workflow:
 - Use database transactions to ensure data consistency
 - Store proper metadata with each transaction for recovery support
 - Implement session reversion with clear confirmation workflow
-- Use unified recovery flow to eliminate code duplication 
+- Use unified recovery flow to eliminate code duplication
