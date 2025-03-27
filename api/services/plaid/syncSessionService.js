@@ -8,69 +8,49 @@ import randomString from '../../utils/randomString.js';
  */
 class SyncSessionService {
   /**
-   * Creates a new sync session before processing transactions
-   * @param {Object} previousSync - Previous sync data, if any
+   * Creates the very first sync session for an item with no previous sync history
    * @param {Object} user - User object
    * @param {Object} item - The item data
    * @param {Object} options - Additional options for sync session
-   * @param {Object} plaidData - Data fetched from Plaid containing transaction changes
    * @returns {Promise<Object>} The created sync session and its ID
    */
-  async createInitialSyncSession(previousSync, user, item, options = {}, plaidData = null) {
+  async createInitialSync(user, item, options = {}) {
     const syncTime = Date.now();
     const { branchNumber = 1, syncId = null } = options;
 
-    // Initialize expected counts based on plaidData if available
-    const expectedCounts = {
-      added: plaidData?.added?.length || 0,
-      modified: plaidData?.modified?.length || 0,
-      removed: plaidData?.removed?.length || 0
-    };
-
     const initialSyncSession = {
-      userId: previousSync?.userId || user._id,
-      item_id: previousSync?.item_id || item._id,
-      itemId: previousSync?.itemId || item.itemId,
+      userId: user._id,
+      item_id: item._id,
+      itemId: item.itemId,
       status: 'in_progress',
-      cursor: previousSync?.nextCursor || '', // The cursor used for this sync (empty string for initial sync)
-      nextCursor: null, // Will be set after processing when we know the next cursor
-      prevSession_id: previousSync?._id,
-      prevSuccessfulSession_id: previousSync?.status === 'complete' ? 
-        previousSync?._id 
-        : previousSync?.prevSuccessfulSession_id || null,
-
+      cursor: '', // Empty string for initial sync
+      nextCursor: null, // Will be set after processing
+      prevSession_id: null,
+      prevSuccessfulSession_id: null,
       syncTime,
-      syncTag: item.syncTag || previousSync?.syncTag || null,
-      branchNumber: previousSync?.branchNumber ? previousSync.branchNumber + 1 : branchNumber,
-
-      // If we're continuing a multi-batch sync, use the previous syncId
-      // Otherwise, generate a new one
+      syncTag: item.syncTag || null,
+      branchNumber,
       syncId: syncId || `${randomString(10)}-${syncTime}`,
-
-      // Initialize hasMore to false - will be set during processing
       hasMore: false,
-      
-      // Initialize syncCounts with expected values from plaidData
       syncCounts: {
-        expected: expectedCounts,
+        expected: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        },
         actual: {
           added: 0,
           modified: 0,
           removed: 0
         }
       },
-      
-      // Initialize failedTransactions tracking
       failedTransactions: {
         added: [],
         modified: [],
         removed: []
       },
-      
       recoveryAttempts: 0,
-      
-      // Add tracking for new fields
-      startTimestamp: Date(),
+      startTimestamp: Date.now(),
       transactionsSkipped: []
     };
     
@@ -82,7 +62,120 @@ class SyncSessionService {
       syncSession: savedSync
     };
   }
-  
+
+  /**
+   * Creates the next sync session based on a previous session
+   * @param {Object} previousSync - Previous sync data
+   * @param {Object} user - User object
+   * @param {Object} item - The item data
+   * @param {Object} options - Additional options for sync session
+   * @returns {Promise<Object>} The created sync session and its ID
+   */
+  async createNextSync(previousSync, user, item, options = {}) {
+    if (!previousSync) {
+      throw new Error('Previous sync session is required for createNextSync');
+    }
+
+    const syncTime = Date.now();
+    const { branchNumber = 1, syncId = null } = options;
+
+    const nextSyncSession = {
+      userId: previousSync.userId || user._id,
+      item_id: previousSync.item_id || item._id,
+      itemId: previousSync.itemId || item.itemId,
+      status: 'in_progress',
+      cursor: previousSync.nextCursor || '', 
+      nextCursor: null, // Will be set after processing
+      prevSession_id: previousSync._id,
+      prevSuccessfulSession_id: previousSync.status === 'complete' ? 
+        previousSync._id 
+        : previousSync.prevSuccessfulSession_id || null,
+      syncTime,
+      syncTag: item.syncTag || previousSync.syncTag || null,
+      branchNumber: previousSync.branchNumber ? previousSync.branchNumber + 1 : branchNumber,
+      syncId: syncId || `${randomString(10)}-${syncTime}`,
+      hasMore: false,
+      syncCounts: {
+        expected: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        },
+        actual: {
+          added: 0,
+          modified: 0,
+          removed: 0
+        }
+      },
+      failedTransactions: {
+        added: [],
+        modified: [],
+        removed: []
+      },
+      recoveryAttempts: 0,
+      startTimestamp: Date.now(),
+      transactionsSkipped: []
+    };
+    
+    // Save the next sync session
+    const savedSync = await SyncSessions.save(nextSyncSession);
+    
+    return {
+      syncTime,
+      syncSession: savedSync
+    };
+  }
+
+  /**
+   * Creates a sync session with explicit data
+   * @param {Object} syncSessionData - The data for the sync session
+   * @param {Object} user - User object
+   * @param {Object} item - The item data
+   * @returns {Promise<Object>} The created sync session and its ID
+   */
+  async createSync(syncSessionData, user, item) {
+    const syncTime = Date.now();
+
+    const { _id, syncCounts: oldSyncCounts, ...restSessionData } = syncSessionData;
+
+    // Ensure syncCounts is properly initialized as an object
+    const syncCounts = {
+      expected: { added: 0, modified: 0, removed: 0 },
+      actual: { added: 0, modified: 0, removed: 0 }
+    };
+    
+    // Try to copy values from oldSyncCounts if it's valid
+    if (oldSyncCounts && typeof oldSyncCounts === 'object' && typeof oldSyncCounts !== 'string') {
+      if (oldSyncCounts.expected && typeof oldSyncCounts.expected === 'object') {
+        syncCounts.expected = { ...oldSyncCounts.expected };
+      }
+      if (oldSyncCounts.actual && typeof oldSyncCounts.actual === 'object') {
+        syncCounts.actual = { ...oldSyncCounts.actual };
+      }
+    }
+
+    // Ensure required fields are set
+    const sessionData = {
+      ...restSessionData,
+      userId: user._id,
+      item_id: item._id,
+      itemId: item.itemId,
+      status: 'in_progress',
+      syncTime,
+      startTimestamp: Date.now(),
+      isRecovery: false,
+      syncCounts // Explicitly set the syncCounts as a proper object
+    };
+    
+    // Save the sync session
+    const savedSync = await SyncSessions.save(sessionData);
+    
+    return {
+      syncTime,
+      syncSession: savedSync
+    };
+  }
+
   /**
    * Creates a recovery sync session
    * @param {Object} sessionToRetry - The target session to revert to
@@ -96,19 +189,39 @@ class SyncSessionService {
       throw new Error('Invalid session to revert to');
     }
     
-    const { _id, syncCounts, branchNumber, ...sessionToRetryData } = sessionToRetry;
+    const { _id, syncCounts: oldSyncCounts, branchNumber, ...sessionToRetryData } = sessionToRetry;
+    const syncTime = Date.now();
+    
+    // Initialize syncCounts as a proper object
+    const syncCounts = {
+      expected: { added: 0, modified: 0, removed: 0 },
+      actual: { added: 0, modified: 0, removed: 0 }
+    };
+    
+    // Try to copy values from oldSyncCounts if it's valid
+    if (oldSyncCounts && typeof oldSyncCounts === 'object' && typeof oldSyncCounts !== 'string') {
+      if (oldSyncCounts.expected && typeof oldSyncCounts.expected === 'object') {
+        syncCounts.expected = { ...oldSyncCounts.expected };
+      }
+      if (oldSyncCounts.actual && typeof oldSyncCounts.actual === 'object') {
+        syncCounts.actual = { ...oldSyncCounts.actual };
+      }
+    }
     
     // Ensure branchNumber is a valid number or use default
     const currentBranchNumber = (branchNumber && !isNaN(branchNumber)) ? branchNumber : 1;
+    const { recoveryAttempts = 0 } = sessionToRetry;
     
     const recoverySyncData = {
       ...sessionToRetryData,
+      syncTime,
       isRecovery: true,
-      recoveryAttempts: (sessionToRetry.recoveryAttempts && !isNaN(sessionToRetry.recoveryAttempts)) 
-        ? sessionToRetry.recoveryAttempts + 1 
+      recoveryAttempts: (recoveryAttempts && !isNaN(recoveryAttempts)) 
+        ? recoveryAttempts + 1 
         : 1,
       branchNumber: this.addAndRound(currentBranchNumber, 0.1),
-      recoverySession_id: _id
+      recoverySession_id: _id,
+      syncCounts // Explicitly set the syncCounts as a proper object
     };
 
     if(revertResult) {
@@ -241,7 +354,14 @@ class SyncSessionService {
    * @returns {boolean} - True if counts match, false otherwise
    */
   countsMatch(syncCounts) {
-    if (!syncCounts || !syncCounts.expected || !syncCounts.actual) {
+    // If syncCounts is not an object or is a string, counts don't match
+    if (!syncCounts || typeof syncCounts !== 'object' || typeof syncCounts === 'string') {
+      return true;
+    }
+    
+    // If either expected or actual is missing or not an object, counts don't match
+    if (!syncCounts.expected || !syncCounts.actual || 
+        typeof syncCounts.expected !== 'object' || typeof syncCounts.actual !== 'object') {
       return false;
     }
     
@@ -413,7 +533,21 @@ class SyncSessionService {
       return;
     }
 
-    const { syncCounts = { expected: {}, actual: {} } } = syncSession;
+    // Initialize syncCounts as an object if it's not already one
+    let syncCounts = syncSession.syncCounts;
+    
+    // Check if syncCounts is not an object or is a string
+    if (!syncCounts || typeof syncCounts !== 'object' || typeof syncCounts === 'string') {
+      syncCounts = {
+        expected: { added: 0, modified: 0, removed: 0 },
+        actual: { added: 0, modified: 0, removed: 0 }
+      };
+    }
+    
+    // Ensure the type object exists
+    if (!syncCounts[type] || typeof syncCounts[type] !== 'object') {
+      syncCounts[type] = { added: 0, modified: 0, removed: 0 };
+    }
     
     // Set the counts for the specified type
     syncCounts[type] = {
@@ -449,76 +583,18 @@ class SyncSessionService {
    */
   async resolveSession(syncSession, item, user, options = {}) {
     // Add validation at the beginning
-    if (!syncSession || !syncSession._id) {
-      throw new Error('Invalid or missing syncSession in resolveSession');
-    }
-    if (!item || !item.itemId) {
-       throw new Error('Invalid or missing item in resolveSession');
-    }
-    if (!user || !user._id) { // Explicitly check user and user._id
-       console.error('Invalid or missing user in resolveSession:', user);
-       throw new Error('Invalid or missing user in resolveSession');
+    if (!syncSession?._id || !item?.itemId || !user?._id) {
+      throw new Error('Invalid or missing data in resolveSession');
     }
 
     // Check if counts match using the syncCounts directly from the syncSession
     const countsMatch = this.countsMatch(syncSession.syncCounts);
     const { 
-      nextCursor = syncSession.nextCursor,
       endTimestamp,
       syncDuration
     } = options;
-    
-    if (countsMatch) {
-      // Success case - create a new sync session with cursor set to next_cursor
-      const newSyncSession = await this.createInitialSyncSession(
-        syncSession, 
-        user, 
-        item,
-        { 
-          branchNumber: syncSession.branchNumber || 1,
-          syncId: syncSession.syncId
-        }
-      );
-      
-      // Update data for timestamps
-      const updateData = { 
-        nextSession_id: newSyncSession.syncSession._id,
-        userId: syncSession.userId,
-        status: 'complete',
-        nextCursor
-      };
-      
-      // Only add timestamp data if provided
-      if (endTimestamp) {
-        updateData.endTimestamp = new Date(endTimestamp);
-      }
-      
-      if (syncDuration) {
-        updateData.syncDuration = syncDuration;
-      }
-      
-      // Update the previous session with nextSession_id, status, and timestamps
-      await SyncSessions.update(
-        syncSession._id,
-        updateData
-      );
-      
-      // Update item with new sync session reference
-      await plaidItems.update(
-        { itemId: item.itemId, userId: user._id }, // Safe due to checks
-        {
-          sync_id: newSyncSession.syncSession._id, // Ensure newSyncSession.syncSession is valid
-          status: 'complete'
-        }
-      );
-      
-      return {
-        success: true,
-        newSyncSession: newSyncSession.syncSession,
-        countsMatch: true,
-        isRecovery: false
-      };
-    } else {
+
+    if(!countsMatch) {
       // Failure case - create a recovery session
       const recoverySyncSession = await this.createRecoverySyncSession(
         syncSession,
@@ -542,6 +618,63 @@ class SyncSessionService {
         isRecovery: true
       };
     }
+
+    let newSyncSession;
+
+    if(syncSession.isRecovery) {
+      newSyncSession = await this.createSync({
+        ...syncSession,
+        branchNumber: Math.floor(syncSession.branchNumber)
+      }, user, item);
+    } else {
+      newSyncSession = await this.createNextSync(
+        syncSession, 
+        user, 
+        item,
+        { 
+          branchNumber: syncSession.branchNumber || 1,
+          syncId: syncSession.syncId
+        }
+      );
+    }
+
+    const updateData = { 
+      nextSession_id: newSyncSession.syncSession._id,
+      userId: syncSession.userId,
+      status: 'complete'
+    };
+    
+    // Only add timestamp data if provided
+    if (endTimestamp) {
+      updateData.endTimestamp = new Date(endTimestamp);
+    }
+    
+    if (syncDuration) {
+      updateData.syncDuration = syncDuration;
+    }
+    
+    // Update the previous session with nextSession_id, status, and timestamps
+    await SyncSessions.update(
+      syncSession._id,
+      updateData
+    );
+    
+    // Update item with new sync session reference
+    await plaidItems.update(
+      { itemId: item.itemId, userId: user._id }, // Safe due to checks
+      {
+        sync_id: newSyncSession.syncSession._id, // Ensure newSyncSession.syncSession is valid
+        status: 'complete'
+      }
+    );
+    
+    return {
+      success: true,
+      newSyncSession: newSyncSession.syncSession,
+      countsMatch: true,
+      isRecovery: false
+    };
+
   }
 }
 

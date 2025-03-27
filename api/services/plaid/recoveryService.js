@@ -123,16 +123,19 @@ class recoveryService extends PlaidBaseService {
     }
 
     const startTimestamp = Date.now();
+    const sessionToRecover = await syncSessionService.getSyncSession(recoverySession.recoverySession_id, user);
+    const syncTime = sessionToRecover.syncTime;
+
+    if(isNaN(syncTime)) {
+      throw new CustomError('INVALID_SYNC_TIME', 'Sync time is NaN');
+    }
     
     try {
       // Find and remove transactions created after the original sync point
       const removalResults = await this.removeTransactionsAfterSyncTime(
         item.itemId,
         user._id,
-        // Use a default if syncTime is missing or NaN
-        (recoverySession.syncTime && !isNaN(recoverySession.syncTime)) 
-          ? recoverySession.syncTime - 1 
-          : Date.now() - (24 * 60 * 60 * 1000), // Default to 24 hours ago
+        syncTime-1,
         recoverySession
       );
 
@@ -155,13 +158,11 @@ class recoveryService extends PlaidBaseService {
         }
       );
       
-      // Call resolveSession to handle the resolution phase
       const resolutionResult = await syncSessionService.resolveSession(
         recoverySession,
         item,
         user,
         { 
-          nextCursor: recoverySession.cursor,
           endTimestamp,
           syncDuration
         }

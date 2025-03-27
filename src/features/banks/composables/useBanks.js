@@ -2,6 +2,29 @@ import { ref, computed } from 'vue';
 import { useApi } from '@/shared/composables/useApi.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 
+// --- State moved outside the composable function ---
+const banks = ref([]);
+const selectedBank = ref(null);
+const syncSessions = ref([]);
+const syncMetrics = ref({
+  lastSyncDuration: null,
+  lastSuccessfulSync: null,
+  averageSyncDuration: null
+});
+const loading = ref({
+  banks: false,
+  syncSessions: false,
+  editBankName: false
+});
+const error = ref({
+  banks: null,
+  syncSessions: null,
+  sync: null,
+  revert: null,
+  editBankName: null
+});
+// --- End of moved state ---
+
 /**
  * Composable for managing banks (Plaid items) including fetching, 
  * syncing, and managing sync sessions
@@ -14,28 +37,6 @@ export function useBanks() {
     syncProgress,
     resetRecoveryCounter
   } = usePlaidSync();
-  
-  // State
-  const banks = ref([]);
-  const selectedBank = ref(null);
-  const syncSessions = ref([]);
-  const syncMetrics = ref({
-    lastSyncDuration: null,
-    lastSuccessfulSync: null,
-    averageSyncDuration: null
-  });
-  const loading = ref({
-    banks: false,
-    syncSessions: false,
-    editBankName: false
-  });
-  const error = ref({
-    banks: null,
-    syncSessions: null,
-    sync: null,
-    revert: null,
-    editBankName: null
-  });
   
   /**
    * Fetch all banks (Plaid items) for the current user
