@@ -27,9 +27,11 @@ class TransactionSyncService {
       throw new CustomError('INVALID_USER', 'Missing required user data');
     }
 
+    let lockedItem = null; // Initialize lockedItem to null
+
     try {
       // 1. Sync initialization - Acquire sync lock on plaid item
-      const lockedItem = await this._getAndLockItem(item, user);
+      lockedItem = await this._getAndLockItem(item, user); // Assign to lockedItem
       
       // 1. Get sync session from item
       let currentSyncSession = await syncSessionService.getSyncSession(lockedItem?.sync_id, user);
@@ -40,55 +42,43 @@ class TransactionSyncService {
       }
       
       // 1. Recovery Assessment - Check if recovery is needed
-      const shouldRecover = currentSyncSession?.isRecovery || !syncSessionService.countsMatch(currentSyncSession.syncCounts);
+      const { isRecovery, syncCounts } = currentSyncSession;
+      const shouldRecover = isRecovery || !syncSessionService.countsMatch(syncCounts);
 
       if (shouldRecover) {
-        let recoverySession = currentSyncSession.isRecovery ?   
-          currentSyncSession
-          : await syncSessionService.createRecoverySyncSession(
-            currentSyncSession,
-            lockedItem,
-            user
-          );
+        const recoveryResult = isRecovery
+          ? await recoveryService.performReversion(currentSyncSession, lockedItem, user)
+          : await recoveryService.initiateReversion(currentSyncSession, lockedItem, user);
 
-        // Get the original session to revert to
-        const originalSession = await syncSessionService.getSyncSession(
-          recoverySession.prevSession_id, 
-          user
-        );
-        
-        if (!originalSession) {
-          throw new CustomError('RECOVERY_ERROR', 'Original session for recovery not found');
+        // Unlock item - Set status based on recovery success
+        // If resolution was successful, status becomes 'complete', otherwise 'error'
+        const finalStatus = recoveryResult.resolution?.success ? 'complete' : 'error';
+        try {
+          await plaidItems.update({ itemId: lockedItem.itemId, userId: user._id }, { status: finalStatus });
+        } catch (unlockError) {
+           console.error(`Error setting final item status after recovery for itemId ${lockedItem.itemId}:`, unlockError);
+           // Potentially throw or just log, depending on desired behavior
         }
-        
-        // 3. Recovery Flow - Perform recovery operations on the recovery session
-        const recoveryResult = await recoveryService.performReversion(
-          recoverySession,
-          originalSession,
-          lockedItem, 
-          user
-        );
 
-        // Unlock item
-        await this._unlockItem(lockedItem.itemId, user._id);
-        
         // Return recovery response
         const recoveryResponse = {
           recovery: {
             performed: true,
+            // Use the recoverySession from the result if available, otherwise the original session
             removedCount: recoveryResult.removedCount,
-            revertedTo: recoveryResult.revertedTo,
+            revertedTo: recoveryResult.revertedTo || currentSyncSession._id, // Fallback if revertedTo isn't set
             success: recoveryResult.success
           },
-          message: 'Recovery completed. ' + 
-            (recoveryResult.resolution.success 
-              ? 'A new sync session has been created with the correct cursor.' 
+          message: 'Recovery completed. ' +
+            (recoveryResult.resolution?.success // Check resolution specifically
+              ? 'A new sync session has been created with the correct cursor.'
               : 'Recovery encountered issues. Will retry on next sync operation.'),
           resolution: recoveryResult.resolution,
           batchResults: {
             added: 0,
             modified: 0,
-            removed: recoveryResult.removedCount.actual
+            // Ensure removedCount and actual exist before accessing
+            removed: recoveryResult.removedCount?.actual ?? 0
           }
         };
         
@@ -146,9 +136,14 @@ class TransactionSyncService {
         user,
         { nextCursor: syncResult.nextCursor }
       );
-      
-      // Unlock item
-      await this._unlockItem(lockedItem.itemId, user._id);
+
+      // Unlock item only if resolution was successful and didn't trigger another recovery
+      if (resolutionResult.success && !resolutionResult.isRecovery) {
+         await this._unlockItem(lockedItem.itemId, user._id); // Sets status to 'complete'
+      }
+      // If resolution failed (isRecovery=true), the item status was already set
+      // to 'in_progress' inside createRecoverySyncSession (called by resolveSession).
+      // If resolveSession itself threw an error, the main catch block handles it.
       
       // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
@@ -161,8 +156,13 @@ class TransactionSyncService {
       
       return response;
     } catch (error) {
-      // Handle any errors during the process
-      await this._handleSyncError(error, item, user);
+      // Get itemId and userId if the lock was successful
+      const itemIdToUnlock = typeof item === 'string' ? item : lockedItem?.itemId;
+      const userIdForError = user?._id;
+
+      // Handle any errors during the process, ensuring item status is updated
+      // Pass specific IDs if available
+      await this._handleSyncError(error, itemIdToUnlock, userIdForError);
       throw error; // Re-throw to be handled by the caller
     }
   }
@@ -176,7 +176,7 @@ class TransactionSyncService {
    */
   async _createInitialSyncSession(item, user) {
     const hasLegacySyncData = item.syncData && item.syncData.cursor;
-    if (hasLegacySyncData) { 
+    if (hasLegacySyncData) {
       try {
         console.log(`Legacy syncData found for item ${item.itemId}, migrating...`);
         
@@ -492,7 +492,8 @@ class TransactionSyncService {
   }
 
   /**
-   * Unlocks an item
+   * Unlocks an item by setting its status to 'complete'.
+   * Use this typically after a fully successful sync operation.
    * @param {String} itemId - Item ID
    * @param {String} userId - User ID
    * @returns {Promise<void>}
@@ -500,31 +501,45 @@ class TransactionSyncService {
    */
   async _unlockItem(itemId, userId) {
     try {
+      // Only set to 'complete' on successful unlock
       await plaidItems.update({ itemId, userId }, { status: 'complete' });
     } catch (error) {
-      console.error('Error unlocking item:', error);
-      throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');
+      console.error('Error unlocking item (setting status to complete):', error);
+      // Don't re-throw here, as the main operation might have succeeded.
+      // Log the error, the main catch handles sync failures.
+      // Consider if throwing CustomError('ITEM_UNLOCK_ERROR', ...) is necessary.
+      // For now, just logging.
     }
   };
 
   /**
    * Handles errors in the sync process
    * @param {Error} error - Original error
-   * @param {Object|String} item - Item data or ID
-   * @param {Object} user - User object
+   * @param {String} itemId - Item ID (if available)
+   * @param {String} userId - User ID (if available)
    * @returns {Promise<void>}
    * @private
    */
-  async _handleSyncError(error, item, user) {
+  async _handleSyncError(error, itemId, userId) {
     // Format the error with context
-    const formattedError = this._formatError(error, item, user);
-    
+    const formattedError = this._formatError(error, itemId, userId); // Use passed IDs
+
     // Update item status to error if possible
-    if (typeof item === 'object' && item?.itemId) {
-      await this._updateItemErrorStatus(item.itemId, user._id, formattedError);
+    if (itemId && userId) {
+      try {
+        // Attempt to set status to 'error' to release lock and indicate failure
+        await this._updateItemErrorStatus(itemId, userId);
+      } catch (updateError) {
+        console.error(`Failed to update item status to error for itemId ${itemId}:`, updateError);
+        // Log the original error as well
+        console.error('Original sync error:', formattedError);
+      }
+    } else {
+      // Log error even if item details aren't available for status update
+      console.error('Sync error occurred (item details unavailable for status update):', formattedError);
     }
-    
-    return formattedError;
+
+    // Note: We don't return the formattedError here anymore as the original error is re-thrown
   }
 
   /**
@@ -536,6 +551,7 @@ class TransactionSyncService {
    */
   async _updateItemErrorStatus(itemId, userId) {
     // Update the item status to error
+    // This also implicitly unlocks the item if the lock was based on 'in_progress' status
     await plaidItems.update(
       { itemId, userId },
       { status: 'error' }
@@ -545,16 +561,16 @@ class TransactionSyncService {
   /**
    * Format error with context
    * @param {Error} error - Original error
-   * @param {Object} item - Item data
-   * @param {Object} user - User object
+   * @param {String} itemId - Item ID (if available)
+   * @param {String} userId - User ID (if available)
    * @returns {Error} Formatted error
    * @private
    */
-  _formatError(error, item, user) {
+  _formatError(error, itemId, userId) { // Accept itemId and userId directly
     return CustomError.createFormattedError(error, {
       operation: 'sync_transactions',
-      itemId: item?.itemId || item?._id || item,
-      userId: user?._id
+      itemId: itemId || 'unknown', // Use passed itemId
+      userId: userId || 'unknown'  // Use passed userId
     });
   }
 

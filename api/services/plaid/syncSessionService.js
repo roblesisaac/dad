@@ -40,9 +40,8 @@ class SyncSessionService {
         : previousSync?.prevSuccessfulSession_id || null,
 
       syncTime,
-      syncNumber: previousSync?.syncNumber ? Math.trunc(previousSync.syncNumber) + 1 : 1,
       syncTag: item.syncTag || previousSync?.syncTag || null,
-      branchNumber,
+      branchNumber: previousSync?.branchNumber ? previousSync.branchNumber + 1 : branchNumber,
 
       // If we're continuing a multi-batch sync, use the previous syncId
       // Otherwise, generate a new one
@@ -93,19 +92,14 @@ class SyncSessionService {
    * @returns {Promise<Object>} Created recovery sync session
    */
   async createRecoverySyncSession(sessionToRetry, item, user, revertResult = null) {
-    // const syncTime = Date.now();
-    const { _id, syncCounts, ...sessionToRetryData } = sessionToRetry;
-    
-    // Handle case where sessionToRetry is just minimal data (from performReversion)
-    const syncNumber = sessionToRetry.syncNumber || 1;
+    const { _id, syncCounts, branchNumber, ...sessionToRetryData } = sessionToRetry;
     
     const recoverySyncData = {
       ...sessionToRetryData,
       isRecovery: true,
-      // syncTime,
-      // syncId: `${randomString(10)}-${syncTime}`,
       recoveryAttempts: (sessionToRetry.recoveryAttempts || 0) + 1,
-      syncNumber: this.addAndRound(syncNumber, 0.1)
+      branchNumber: this.addAndRound(branchNumber || 1, 0.1),
+      recoverySession_id: _id
     };
 
     if(revertResult) {
@@ -146,102 +140,6 @@ class SyncSessionService {
     let result = value + addValue;
     let multiplier = Math.pow(10, 1);
     return Math.round(result * multiplier) / multiplier;
-  }
-  
-  /**
-   * Updates the sync session after transaction processing
-   * @param {Object} syncSession - The sync session to update
-   * @param {Object} syncResult - Results from processing transactions
-   * @param {Object} previousSync - Previous sync data, if any
-   * @param {String} status - complete|in_progress|error
-   * @returns {Promise<void>}
-   */
-  async updateSyncSessionAfterProcessing(syncSession, syncResult, previousSync, status) {
-    // Get the existing expected counts to preserve them
-    const existingSyncCounts = syncSession.syncCounts || {};
-    const expectedCounts = existingSyncCounts.expected || syncResult.expectedCounts;
-    
-    // Create the updated syncCounts with preserved expected counts
-    const syncCounts = {
-      expected: expectedCounts,
-      actual: syncResult.actualCounts
-    };
-    
-    const countsMatch = this.countsMatch(syncCounts);
-    let error = null;
-    
-    // Check if counts match
-    if (!countsMatch) {
-      error = {
-        code: 'COUNT_MISMATCH',
-        message: `Transaction count mismatch: Expected (${expectedCounts.added} added, ${expectedCounts.modified} modified, ${expectedCounts.removed} removed) vs Actual (${syncResult.actualCounts.added} added, ${syncResult.actualCounts.modified} modified, ${syncResult.actualCounts.removed} removed)`,
-        timestamp: new Date().toISOString()
-      };
-      console.error(`[TransactionSync] Count mismatch for item ${syncSession.itemId}: ${error.message}`);
-    }
-    
-    // Check for transaction failures
-    if (syncResult.hasFailures) {
-      if (!error) {
-        error = {
-          code: 'TRANSACTION_FAILURES',
-          message: `Transaction processing failures: ${syncResult.failedTransactions.added.length} add failures, ${syncResult.failedTransactions.modified.length} modify failures, ${syncResult.failedTransactions.removed.length} remove failures`,
-          timestamp: new Date().toISOString()
-        };
-      } else {
-        // Append to existing error message
-        error.message += `. Additionally, transaction processing failures occurred.`;
-      }
-      console.error(`[TransactionSync] Transaction failures for item ${syncSession.itemId}: ${error.message}`);
-    }
-    
-    // Determine if this sync was successful (counts match and status is complete or in_progress)
-    const isSuccessful = countsMatch && !syncResult.hasFailures && (status === 'complete' || status === 'in_progress');
-    
-    // Build the update data
-    const updateData = {
-      status,
-      userId: syncSession.userId,
-      nextCursor: syncResult.nextCursor, // The next cursor to use
-      hasMore: syncResult.hasMore,
-      
-      // Only update prevSuccessfulSession_id if this sync was successful and we don't already have one
-      prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ? 
-        syncSession._id : // Use current session ID as the successful one
-        syncSession.prevSuccessfulSession_id, // Keep existing value
-      
-      error,
-      syncCounts,
-      endTimestamp: new Date(),
-      syncDuration: Date.now() - (syncSession.startTimestamp?.getTime() || Date.now())
-    };
-    
-    // Add failed transactions to the update if present
-    if (syncResult.hasFailures && syncResult.failedTransactions) {
-      updateData.failedTransactions = syncResult.failedTransactions;
-    }
-    
-    // Add skipped transactions if any
-    if (syncResult.transactionsSkipped && syncResult.transactionsSkipped.length > 0) {
-      updateData.transactionsSkipped = syncResult.transactionsSkipped;
-    }
-    
-    // Update the sync session
-    await SyncSessions.update(
-      syncSession._id,
-      updateData
-    );
-    
-    // If there was a previous sync, update its nextCursor field
-    if (previousSync && previousSync._id) {
-      await SyncSessions.update(
-        previousSync._id,
-        { 
-          nextSession_id: syncSession._id,
-          userId: previousSync.userId
-        }
-      );
-    }
   }
   
   /**
@@ -371,17 +269,14 @@ class SyncSessionService {
     const legacySyncData = item.syncData;
     const syncTag = randomString(4, { isUppercase: true });
 
-    await plaidItems.update(item._id, {
-      syncTag
-    });
+    await plaidItems.update(item._id, { syncTag });
     
-    if (!legacySyncData || !legacySyncData.cursor) {
+    if (!legacySyncData?.cursor) {
       throw new Error('Invalid legacy sync data provided for migration');
     }
 
     // Convert legacy syncData format to syncSession format
     const syncTime = legacySyncData.lastSyncTime || Date.now();
-    const now = new Date();
     
     const syncSession = {
       userId: user._id,
@@ -390,14 +285,11 @@ class SyncSessionService {
       status: legacySyncData.status === 'completed' ? 'complete' : legacySyncData.status,
       cursor: legacySyncData.cursor,
       nextCursor: legacySyncData.cursor, // In legacy format, there was only one cursor field
-      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? 
-        legacySyncData.cursor : null,
+      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? legacySyncData.cursor : null,
       syncTime,
-      syncNumber: 1,
       syncTag,
       branchNumber: 1, // Default for legacy data
       syncId: `legacy-${randomString(8)}-${syncTime}`,
-      hasMore: false, // Default for migrated data
       syncCounts: {
         expected: {
           added: legacySyncData.result?.itemsAddedCount || 0,
@@ -411,26 +303,7 @@ class SyncSessionService {
         }
       },
       error: legacySyncData.result?.errorMessage || null,
-      failedTransactions: {
-        added: [],
-        modified: [],
-        removed: []
-      },
-      recoveryAttempts: 0,
       isLegacy: true,
-      startTimestamp: now,
-      endTimestamp: now,
-      syncDuration: 0,
-      transactionsSkipped: [],
-      migrationDetails: {
-        migratedAt: now.toISOString(),
-        fromLegacyFormat: true,
-        originalData: {
-          cursor: legacySyncData.cursor,
-          syncTime: legacySyncData.lastSyncTime,
-          status: legacySyncData.status
-        }
-      }
     };
     
     // Save the migrated sync session
@@ -476,26 +349,6 @@ class SyncSessionService {
       ...syncSession,
       syncCounts
     };
-  }
-
-  /**
-   * Legacy method - use updateSessionCounts instead
-   * @deprecated
-   */
-  async updateRecoveryCountDetails(syncSession, field, count) {
-    if (!syncSession || !syncSession._id) {
-      return;
-    }
-    
-    console.warn('updateRecoveryCountDetails is deprecated, use updateSessionCounts instead');
-    
-    const counts = {
-      added: 0,
-      modified: 0,
-      removed: count
-    };
-    
-    return this.updateSessionCounts(syncSession, field, counts);
   }
 
   /**

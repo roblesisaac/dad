@@ -2,16 +2,17 @@
 
 ## Overview
 
-The Transaction Sync Service implements a robust, fault-tolerant system for synchronizing financial transaction data from Plaid to the application database.
+The Transaction Sync Service implements a robust, fault-tolerant system for synchronizing financial transaction data from Plaid to the application database. It uses a sync session model to track progress and ensure data integrity.
 
 ## Key Features
 
-- **Idempotent Processing**: Safely handles multiple sync attempts without duplicating data
-- **Recovery Mechanism**: Automatically detects and recovers from sync failures
-- **Cursor Management**: Maintains sync state with Plaid's cursor-based pagination
-- **Change Detection**: Optimizes performance by skipping processing when no changes exist
-- **Selective Reversion**: Ability to revert to any previous successful sync session
-- **Duplicate Handling**: Identifies and tracks duplicate transactions
+- **Idempotent Processing**: Safely handles multiple sync attempts without duplicating data (via duplicate checks).
+- **Recovery Mechanism**: Automatically detects sync failures (via count mismatches) and initiates a recovery process.
+- **Cursor Management**: Maintains sync state with Plaid's cursor-based pagination via `syncSession` records.
+- **Change Detection**: Optimizes performance by skipping processing when Plaid reports no transaction changes.
+- **Item Locking**: Prevents concurrent sync operations on the same item using the item's `status` field.
+- **Duplicate Handling**: Identifies and tracks duplicate transactions during the 'add' phase.
+- **Legacy Migration**: Supports migrating from older item-based sync data to the new `syncSession` model.
 
 ## Technical Architecture
 
@@ -19,57 +20,93 @@ The transaction sync process follows this workflow:
 
 ### 1. Sync Initialization
 
-- **Get Sync Session From Item**: Locates the tagert sync session from the item sync_id prop
-- **Create Initial Sync**: If no sync session exists, creates an initial one (using legacy data if available)
-- Recovery Assessment: Evaluates whether recovery operations are required, based on either session.isRecovery being set to true or a mismatch in the counts.
+- **Acquire Lock**: Sets the Plaid Item's `status` to `in_progress` to prevent concurrent syncs.
+- **Get Current Sync Session**: Locates the current `syncSession` record using the `sync_id` stored on the Plaid Item.
+- **Create Initial Session**: If no `syncSession` exists (or `sync_id` is missing), creates an initial one. Attempts to migrate legacy sync data from the item if present.
+- **Recovery Assessment**: Checks if the current session's `isRecovery` flag is true, or if the `syncCounts` (expected vs. actual) from the *previous* operation (stored in the current session) do not match.
 
 ### 2. Normal Flow (No Recovery Needed)
 
-- **Fetch Data from Plaid**: Retrieves latest transactions using appropriate cursor
-- **Update Session with Expected Counts**: Records the expected transaction counts from Plaid
-- **Process Plaid Data**: Handles added, modified, and removed transactions
-- **Update Session with Actual Counts**: Records the actual transaction counts processed
+- **Fetch Data from Plaid**: Retrieves latest transactions using the `cursor` from the current `syncSession`.
+- **Check for Changes**: If Plaid reports no added, modified, or removed transactions:
+    - Update the current session's `lastNoChangesTime`.
+    - Set the current session `status` to `complete`.
+    - Unlock the item (set item `status` to `complete`).
+    - Return early.
+- **Update Session with Expected Counts**: Records the transaction counts reported by Plaid (`added`, `modified`, `removed`) into the current session's `syncCounts.expected`.
+- **Process Plaid Data**: Uses `transactionsCrudService` to save added, update modified, and delete removed transactions in the database. Records the `cursor` and `syncTime` on affected transactions.
+- **Update Session with Actual Counts**: Records the actual counts of successfully processed transactions into the current session's `syncCounts.actual`. Handles skipped duplicates separately.
 
-### 3. Recovery Flow
+### 3. Recovery Flow (Recovery Needed)
 
-- **Clone Session**: Creates a copy of the session with isRecovery flag set to true
-- **Find Transactions**: Identifies transactions created after the referenced sync point
-- **Update Recovery Session**: Sets count of transactions expected to be removed
-- **Remove Transactions**: Deletes transactions created after the reference sync
-- **Update Session with Actual Counts**: Records the actual number of transactions removed
+- **Create Recovery Session**: If the current session isn't already marked `isRecovery`, creates a *new* `syncSession` record based on the failed session, marking it `isRecovery: true` and linking it via `recoverySession_id`. Updates the item's `sync_id` to point to this new recovery session.
+- **Perform Reversion**: Calls `recoveryService.performReversion` which:
+    - Finds and removes transactions added by sync operations *after* the point the recovery session is based on (using `syncTime`).
+    - Updates the recovery session's `syncCounts` (expected and actual removed).
+    - Calls the Resolution Phase logic using the recovery session.
+- **Unlock Item**: Sets the Plaid Item's `status` based on the resolution outcome (`complete` or `error`).
+- **Return Recovery Response**: Provides details about the recovery attempt.
 
-### 4. Resolution Phase (Shared)
+### 4. Resolution Phase (Shared by Normal and Recovery Flows)
 
-- **Counts Comparison**: Validates that expected and actual counts match
-- **On Success**: Creates new sync session with cursor set to next_cursor
-- **On Failure**: Creates new recovery session with current session data
+*(This logic resides primarily within `syncSessionService.resolveSession`)*
+
+- **Counts Comparison**: Validates if `syncCounts.expected` matches `syncCounts.actual` in the session being resolved (either the normal session or the recovery session).
+- **On Success (Counts Match)**:
+    - Creates a *new* `syncSession` record to represent the state *for the next sync*, using the `nextCursor` provided by Plaid.
+    - Updates the *current* session: sets `status` to `complete`, links `nextSession_id` to the new session.
+    - Updates the Plaid Item: sets `sync_id` to the *new* session's ID, sets `status` to `complete`.
+- **On Failure (Counts Mismatch)**:
+    - Creates a *new* `syncSession` marked `isRecovery: true`, based on the *current* (failed) session.
+    - Updates the Plaid Item: sets `sync_id` to the *new recovery* session's ID, sets `status` to `in_progress` (ready for the next attempt which will trigger the Recovery Flow).
+    - Updates the *current* (failed) session to link `nextSession_id` to the new recovery session.
+
+### 5. Finalization (Both Flows)
+
+- **Unlock Item**: Ensures the item's `status` is updated (typically `complete` on success/no-changes, `error` on unhandled exception, or left `in_progress` if resolution triggers recovery).
+- **Return Response**: Builds and returns a response object detailing the sync results (counts, cursors, status, recovery info if applicable).
 
 ## Data Models
 
-### Sync Session
+### Sync Session (`syncSession.js`)
 
-- `cursor` (String): Current cursor value used in this sync session
-- `nextCursor` (String): Cursor value returned by Plaid for next operation
-- `prevSession_id` (String): ID of the previous sync session in the chain
-- `syncTime` (Number): Unix timestamp of sync operation start
-- `status` (String): Current session status ("in_progress", "complete", "error", "recovery")
-- `syncCounts` (Object): Transaction processing counts
-  - `expected` (Object): Expected counts from Plaid API
-    - `added` (Number): Expected number of added transactions
-    - `modified` (Number): Expected number of modified transactions
-    - `removed` (Number): Expected number of removed transactions
-  - `actual` (Object): Actual counts processed
-    - `added` (Number): Actual number of added transactions
-    - `modified` (Number): Actual number of modified transactions
-    - `removed` (Number): Actual number of removed transactions
-- `isRecovery` (Boolean): Whether this session is a recovery session
+- `userId` (String): ID of the user owning the session.
+- `itemId` (String): Plaid Item ID.
+- `cursor` (String): Cursor value *used* for the Plaid `/transactions/sync` call associated with this session's *creation* (or empty for initial sync).
+- `nextCursor` (String): Cursor value returned by Plaid *after* processing this batch, to be used for the *next* sync. Stored when the session status becomes `complete`.
+- `prevSession_id` (String): ID of the previous sync session in the chain.
+- `nextSession_id` (String): ID of the next sync session created after this one completes or fails.
+- `prevSuccessfulSession_id` (String): ID of the most recent successfully completed session before this one.
+- `recoverySession_id` (String): If this is a recovery session, the ID of the session it's attempting to recover from.
+- `syncTime` (Number): Unix timestamp when the sync operation *related to this session's data processing* started.
+- `status` (String): Current session status (`in_progress`, `complete`, `error`). Note: Recovery state is tracked by `isRecovery`.
+- `syncCounts` (Object): Transaction processing counts.
+    - `expected` (Object): Counts reported by Plaid (`added`, `modified`, `removed`).
+    - `actual` (Object): Counts successfully processed by the application (`added`, `modified`, `removed`).
+- `isRecovery` (Boolean): True if this session represents a recovery attempt.
+- `failedTransactions` (Object): Stores details of transactions that failed processing within this session's batch.
+- `startTimestamp`, `endTimestamp`, `syncDuration`: Timestamps for performance monitoring.
+- `transactionsSkipped` (Array): List of transactions skipped (e.g., duplicates).
+- `plaidRequestId` (String): Plaid API request ID for traceability.
+- `lastNoChangesTime` (Number): Timestamp if this session concluded a sync where Plaid reported no changes.
 
-### Transaction Metadata
+### Plaid Item (`plaidItems.js`)
 
-- `cursor` (String): Cursor value when transaction was created/modified
-- `syncTime` (Number): Timestamp of sync operation that created/modified the transaction
-- `itemId` (String): Associated Plaid item identifier
-- `transaction_id` (String): Plaid's unique transaction identifier
+- `itemId` (String): Plaid Item ID.
+- `userId` (String): User ID.
+- `accessToken` (String): Encrypted Plaid access token.
+- `sync_id` (String): ID of the *current* or *most recent* `syncSession` associated with this item. Used as the entry point for the sync process.
+- `status` (String): Overall status of the item, also used for locking (`in_progress`, `complete`, `error`, `queued`, '').
+- `syncTag` (String): A tag potentially used for grouping or identification.
+- `institutionId`, `institutionName`: Details about the linked financial institution.
+- `syncData`: Legacy field, potentially still used or partially migrated.
+
+### Transaction Metadata (Stored on Transaction Records)
+
+- `cursor` (String): *Deprecated/Potentially Inaccurate*. The `syncSession`'s `syncTime` is the primary link.
+- `syncTime` (Number): Timestamp of the sync operation (`syncSession.syncTime`) that created/modified the transaction. Used for recovery/reversion.
+- `itemId` (String): Associated Plaid item identifier.
+- `transaction_id` (String): Plaid's unique transaction identifier (used for matching updates/removals).
 
 ## Testing Strategies
 
@@ -94,7 +131,7 @@ The transaction sync process follows this workflow:
 
 ## Implementation Notes
 
-- Use database transactions to ensure data consistency
-- Store proper metadata with each transaction for recovery support
-- Implement session reversion with clear confirmation workflow
-- Use unified recovery flow to eliminate code duplication
+- Use database transactions (if supported by the underlying DB model like AmptModel) for atomicity when processing batches, although the current code processes adds/modifies/removes in separate batches.
+- Ensure `syncTime` is accurately recorded on transactions for reliable recovery.
+- Item locking via the `status` field is critical to prevent race conditions.
+- The `resolveSession` logic is key to maintaining the integrity of the sync chain.

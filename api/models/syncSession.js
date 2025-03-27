@@ -9,6 +9,7 @@ const syncSchema = {
     prevSession_id: String,
     nextSession_id: String,
     prevSuccessfulSession_id: String,
+    recoverySession_id: String,
 
     cursor: String, // Cursor used for this sync
     nextCursor: String, // Next cursor provided by Plaid (if successful)
@@ -19,14 +20,13 @@ const syncSchema = {
     branchNumber: Number,
     syncTime: Number,
     syncId: String,
-    syncNumber: Number,
-    syncTag: (syncTag, { syncNumber }) => {
-        if(!syncNumber && syncTag) {
+    syncTag: (syncTag, { branchNumber }) => {
+        if(!branchNumber && syncTag) {
             return syncTag;
         }
 
         const [prefix, number] = syncTag.split('_');
-        return `${prefix}_${syncNumber}`;
+        return `${prefix}_${branchNumber}`;
     },
     
     syncCounts: {
