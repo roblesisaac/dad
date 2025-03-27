@@ -315,7 +315,7 @@ onMounted(async () => {
   
   // If there's exactly one bank, preselect it for direct sync
   if (banks.value.length === 1) {
-    await selectBank(banks.value[0]);
+    // await selectBank(banks.value[0]);
   }
 });
 

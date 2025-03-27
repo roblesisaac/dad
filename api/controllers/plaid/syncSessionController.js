@@ -1,7 +1,6 @@
 import syncSessionService from '../../services/plaid/syncSessionService.js';
 import recoveryService from '../../services/plaid/recoveryService.js';
 import itemService from '../../services/plaid/itemService.js';
-import { CustomError } from '../../services/plaid/customError.js';
 
 export default {
   /**
@@ -28,9 +27,25 @@ export default {
         { limit: parseInt(limit) }
       );
       
+      // Map sessions to include formatted performance data
+      const formattedSessions = syncSessions.map(session => {
+        const formatted = { ...session };
+        
+        // Add nicely formatted time strings if timestamps exist
+        if (session.startTimestamp) {
+          formatted.startTimeFormatted = new Date(session.startTimestamp).toLocaleString();
+        }
+        
+        if (session.endTimestamp) {
+          formatted.endTimeFormatted = new Date(session.endTimestamp).toLocaleString();
+        }
+        
+        return formatted;
+      });
+      
       return res.json({
         itemId,
-        syncSessions,
+        syncSessions: formattedSessions,
         currentSyncId: item.sync_id || null,
         count: syncSessions.length
       });
@@ -43,67 +58,52 @@ export default {
   },
   
   /**
-   * Revert to a specific sync session
+   * Initiates a reversion to a specific sync session
+   * Renamed from performReversion for consistency
    */
-  async performReversion(req, res) {
+  async initiateReversion(req, res) {
+    const { itemId, sessionId } = req.params;
+    const user = req.user;
+    
     try {
-      const user = req.user;
-      const { itemId, sessionId } = req.params;
-      
+      // Validate input parameters
       if (!itemId || !sessionId) {
         return res.status(400).json({
-          error: 'INVALID_PARAMS',
-          message: 'Missing itemId or sessionId'
+          success: false,
+          error: 'Missing required parameter: itemId or sessionId'
         });
       }
       
-      // Get the item
+      // Get the item first to pass to initiateReversion
       const item = await itemService.getItem(itemId, user._id);
-      
       if (!item) {
         return res.status(404).json({
-          error: 'ITEM_NOT_FOUND',
-          message: 'Item not found for this user'
+          success: false,
+          error: 'Item not found'
         });
       }
       
-      // Get the target sync session
-      const targetSession = await syncSessionService.getSyncSession(sessionId, user);
-      
-      if (!targetSession) {
-        return res.status(404).json({
-          error: 'SESSION_NOT_FOUND',
-          message: 'Sync session not found'
-        });
-      }
-      
-      // Ensure the session belongs to the specified item
-      if (targetSession.itemId !== itemId) {
-        return res.status(400).json({
-          error: 'INVALID_SESSION',
-          message: 'Session does not belong to the specified item'
-        });
-      }
-      
-      // Perform the reversion
-      const result = await recoveryService.performReversion(targetSession, item, user);
-      let message = `Successfully reverted to session. ${result.removedCount} transactions removed.`
-      
-      if (!result.success) {
-        console.error(`Recovery failed: ${result.error}`);
-        message = `Recovery failed: ${result.error}`;
-      }
+      // Use our new initiateReversion method
+      const result = await recoveryService.initiateReversion(
+        sessionId,
+        item,
+        user
+      );
       
       return res.json({
-        ...result,
-        itemId,
-        message
+        success: result.success,
+        removedCount: result.removedCount,
+        revertedTo: result.revertedTo,
+        error: result.error || null,
+        performanceMetrics: result.performanceMetrics || null
       });
     } catch (error) {
+      console.error('Error initiating reversion:', error);
       return res.status(500).json({
-        error: error.code || 'REVERT_ERROR',
-        message: error.message
+        success: false,
+        error: error.message || 'An error occurred during reversion'
       });
     }
-  }
+  }   
+  
 }

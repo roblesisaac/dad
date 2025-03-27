@@ -19,6 +19,11 @@ export function useBanks() {
   const banks = ref([]);
   const selectedBank = ref(null);
   const syncSessions = ref([]);
+  const syncMetrics = ref({
+    lastSyncDuration: null,
+    lastSuccessfulSync: null,
+    averageSyncDuration: null
+  });
   const loading = ref({
     banks: false,
     syncSessions: false,
@@ -53,7 +58,70 @@ export function useBanks() {
   };
   
   /**
-   * Fetch sync sessions for a specific bank
+   * Calculate and update sync performance metrics
+   */
+  const updateSyncMetrics = () => {
+    if (!syncSessions.value.length) {
+      syncMetrics.value = {
+        lastSyncDuration: null,
+        lastSuccessfulSync: null,
+        averageSyncDuration: null,
+      };
+      return;
+    }
+
+    // Get the most recent session
+    const lastSession = syncSessions.value[0]; 
+    
+    // Get the most recent successful session
+    const lastSuccessfulSession = syncSessions.value.find(s => s.status === 'complete');
+    
+    // Calculate average sync duration from complete sessions with duration data
+    const sessionsWithDuration = syncSessions.value
+      .filter(s => s.status === 'complete' && s.syncDuration);
+    
+    const totalDuration = sessionsWithDuration.reduce(
+      (sum, session) => sum + session.syncDuration, 0
+    );
+    
+    const averageDuration = sessionsWithDuration.length 
+      ? Math.round(totalDuration / sessionsWithDuration.length) 
+      : null;
+    
+    syncMetrics.value = {
+      lastSyncDuration: lastSession?.syncDuration || null,
+      lastSuccessfulSync: lastSuccessfulSession 
+        ? {
+            timestamp: lastSuccessfulSession.endTimestamp || lastSuccessfulSession.syncTime,
+            duration: lastSuccessfulSession.syncDuration || null,
+          }
+        : null,
+      averageSyncDuration: averageDuration,
+      sessionsWithPerformanceData: sessionsWithDuration.length
+    };
+  };
+  
+  /**
+   * Format duration in milliseconds to human-readable format
+   * @param {Number} ms - Duration in milliseconds
+   * @returns {String} Formatted duration
+   */
+  const formatDuration = (ms) => {
+    if (!ms) return 'N/A';
+    
+    if (ms < 1000) {
+      return `${ms}ms`;
+    } else if (ms < 60000) {
+      return `${(ms / 1000).toFixed(1)}s`;
+    } else {
+      const minutes = Math.floor(ms / 60000);
+      const seconds = ((ms % 60000) / 1000).toFixed(0);
+      return `${minutes}m ${seconds}s`;
+    }
+  };
+  
+  /**
+   * Fetch sync sessions for a specific bank with updated metrics
    * @param {String} itemId - Item ID
    */
   const fetchSyncSessions = async (itemId) => {
@@ -66,6 +134,10 @@ export function useBanks() {
     try {
       const response = await api.get(`plaid/items/${itemId}/sync-sessions`);
       syncSessions.value = response.syncSessions || [];
+      
+      // Calculate metrics after fetching sessions
+      updateSyncMetrics();
+      
       return syncSessions.value;
     } catch (err) {
       console.error(`Error fetching sync sessions for bank ${itemId}:`, err);
@@ -82,14 +154,14 @@ export function useBanks() {
    */
   const selectBank = async (bank) => {
     selectedBank.value = bank;
-    
+
     if (bank?.itemId) {
-      await fetchSyncSessions(bank.itemId);
+      // await fetchSyncSessions(bank.itemId);
     }
   };
   
   /**
-   * Sync transactions for a selected bank
+   * Sync transactions for a selected bank and update metrics
    */
   const syncSelectedBank = async () => {
     if (!selectedBank.value?.itemId) {
@@ -105,10 +177,20 @@ export function useBanks() {
       
       // Perform the sync
       const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
+      
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {
+        console.log('sync completed');
         await fetchBanks();
         await fetchSyncSessions(selectedBank.value.itemId);
+        
+        // Display performance metrics in console for debugging
+        if (result.performanceMetrics || result.syncDuration) {
+          console.log('Sync performance metrics:', 
+            result.performanceMetrics || { syncDuration: result.syncDuration }
+          );
+        }
+        
         isSyncing.value = false;
       } else if (result.error) {
         error.value.sync = result.error;
@@ -143,6 +225,11 @@ export function useBanks() {
       if (result.success) {
         await fetchBanks();
         await fetchSyncSessions(selectedBank.value.itemId);
+        
+        // Display recovery performance metrics in console for debugging
+        if (result.performanceMetrics) {
+          console.log('Recovery performance metrics:', result.performanceMetrics);
+        }
       } else if (result.error) {
         error.value.revert = result.error;
       }
@@ -267,6 +354,7 @@ export function useBanks() {
     banks,
     selectedBank,
     syncSessions,
+    syncMetrics,
     loading,
     error,
     isSyncing,
@@ -283,9 +371,11 @@ export function useBanks() {
     selectBank,
     syncSelectedBank,
     revertToSession,
+    updateSyncMetrics,
     
     // Utilities
     formatSyncDate,
+    formatDuration,
     getBankStatusClass,
     getBankStatusText,
     updateBankName

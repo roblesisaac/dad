@@ -122,23 +122,49 @@ class recoveryService extends PlaidBaseService {
       throw new Error('Invalid parameters for reversion');
     }
 
+    const startTimestamp = Date.now();
+    
     try {
       // Find and remove transactions created after the original sync point
       const removalResults = await this.removeTransactionsAfterSyncTime(
         item.itemId,
         user._id,
-        recoverySession.syncTime - 1,
+        // Use a default if syncTime is missing or NaN
+        (recoverySession.syncTime && !isNaN(recoverySession.syncTime)) 
+          ? recoverySession.syncTime - 1 
+          : Date.now() - (24 * 60 * 60 * 1000), // Default to 24 hours ago
         recoverySession
       );
 
-      recoverySession = removalResults.updatedRecoverySession;
+      recoverySession = removalResults.updatedRecoverySession || recoverySession;
+      
+      // Calculate duration and update timestamps
+      const endTimestamp = Date.now();
+      // Ensure we don't produce NaN for syncDuration
+      const syncDuration = (startTimestamp && !isNaN(startTimestamp))
+        ? endTimestamp - startTimestamp
+        : 0;
+      
+      // Update recovery session with performance metrics
+      await syncSessionService.updateSessionTimestamps(
+        recoverySession,
+        {
+          startTimestamp, 
+          endTimestamp,
+          syncDuration
+        }
+      );
       
       // Call resolveSession to handle the resolution phase
       const resolutionResult = await syncSessionService.resolveSession(
         recoverySession,
         item,
         user,
-        { nextCursor: recoverySession.cursor }
+        { 
+          nextCursor: recoverySession.cursor,
+          endTimestamp,
+          syncDuration
+        }
       );
       
       return {
@@ -146,10 +172,36 @@ class recoveryService extends PlaidBaseService {
         revertedTo: recoverySession.recoverySession_id,
         removedCount: removalResults.removedCount,
         recoverySession,
-        resolution: resolutionResult
+        resolution: resolutionResult,
+        performanceMetrics: {
+          startTimestamp,
+          endTimestamp,
+          syncDuration
+        }
       };
     } catch (error) {
       console.error(`Error performing reversion for session ${recoverySession._id}:`, error);
+      
+      // Calculate metrics even for errors
+      const endTimestamp = Date.now();
+      // Protect against NaN
+      const syncDuration = (startTimestamp && !isNaN(startTimestamp))
+        ? endTimestamp - startTimestamp
+        : 0;
+      
+      // Update recovery session with error and timestamps
+      await syncSessionService.updateSessionTimestamps(
+        recoverySession,
+        {
+          startTimestamp,
+          endTimestamp,
+          syncDuration,
+          error: {
+            message: error.message,
+            timestamp: endTimestamp
+          }
+        }
+      );
       
       // Update the item status to error
       await plaidItems.update(
@@ -160,7 +212,12 @@ class recoveryService extends PlaidBaseService {
       return {
         success: false,
         error: error.message,
-        recoverySession
+        recoverySession,
+        performanceMetrics: {
+          startTimestamp,
+          endTimestamp,
+          syncDuration
+        }
       };
     }
   }

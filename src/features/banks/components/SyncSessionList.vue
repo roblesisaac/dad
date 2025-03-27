@@ -7,10 +7,7 @@
     
     <!-- Loading state -->
     <div v-if="loading" class="py-8 text-center">
-      <div class="animate-pulse mx-auto h-6 w-6 mb-4 text-blue-500">
-        <RefreshCw class="h-6 w-6" />
-      </div>
-      <p class="text-gray-600">Loading sync history...</p>
+      <LoadingSpinner size="lg" message="Loading sync history..." />
     </div>
     
     <!-- Error state -->
@@ -69,6 +66,7 @@ import { ref, defineProps, defineEmits } from 'vue';
 import { RefreshCw, AlertTriangle, Clock } from 'lucide-vue-next';
 import SessionListItem from './SessionListItem.vue';
 import ConfirmReversionModal from './ConfirmReversionModal.vue';
+import LoadingSpinner from '@/shared/components/LoadingSpinner.vue';
 
 const props = defineProps({
   syncSessions: {

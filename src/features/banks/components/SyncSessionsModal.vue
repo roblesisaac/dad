@@ -68,14 +68,12 @@ const {
   syncSelectedBank,
   revertToSession,
   formatSyncDate,
-  selectBank
 } = useBanks();
 
 // Watch for bank changes or modal opening to fetch sessions
 watch(() => [props.isOpen, props.bank], async ([isOpen, bank]) => {
   if (isOpen && bank?.itemId) {
-    // Set the selected bank in the useBanks composable
-    await selectBank(bank);
+    await fetchSyncSessions(bank.itemId);
   }
 }, { immediate: true });
 
