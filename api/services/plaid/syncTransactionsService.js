@@ -105,10 +105,8 @@ class TransactionSyncService {
       }
       
       // 2. Normal Flow - Check for changes from Plaid
-      const cursor = currentSyncSession?.cursor || null;   
-      console.log('cursor:', cursor);   
+      const cursor = currentSyncSession?.cursor || null;
       const plaidData = await this._fetchTransactionsFromPlaid(lockedItem, user, cursor);
-      console.log('added:', plaidData?.added?.length);
       const hasChanges = this._checkForChanges(plaidData);
       
       // If no changes and we have a previous session, update lastNoChangesTime and return early
