@@ -111,57 +111,6 @@ class recoveryService extends PlaidBaseService {
   }
 
   /**
-   * Initiates the reversion process by creating a recovery session and then performing the reversion.
-   * @param {Object} sessionToRevert - The original session that requires reversion.
-   * @param {Object} item - The Plaid item associated with the session.
-   * @param {Object} user - The user object.
-   * @returns {Promise<Object>} Result of the reversion attempt.
-   */
-  async initiateReversion(sessionToRevert, item, user) {
-    if (!sessionToRevert || !sessionToRevert._id || !item || !user) {
-      throw new CustomError('INVALID_PARAMS', 'Missing required parameters for initiating reversion');
-    }
-
-    try {
-      // 1. Create a new recovery session based on the session to revert
-      // This also updates the item's sync_id and status
-      const recoverySession = await syncSessionService.createRecoverySyncSession(
-        sessionToRevert,
-        item,
-        user
-      );
-
-      // 2. Perform the actual reversion using the newly created recovery session
-      const reversionResult = await this.performReversion(
-        recoverySession,
-        item,
-        user
-      );
-
-      return reversionResult;
-
-    } catch (error) {
-      console.error(`Error initiating reversion for session ${sessionToRevert._id}:`, error);
-      // Attempt to mark item status as error if possible
-      try {
-        await plaidItems.update(
-          { itemId: item.itemId, userId: user._id },
-          { status: 'error' }
-        );
-      } catch (updateError) {
-        console.error(`Failed to update item status to error during reversion initiation for itemId ${item.itemId}:`, updateError);
-      }
-      // Re-throw the original error or a formatted one
-      throw CustomError.createFormattedError(error, {
-        operation: 'initiate_reversion',
-        itemId: item?.itemId,
-        userId: user?._id,
-        sessionId: sessionToRevert?._id
-      });
-    }
-  }
-
-  /**
    * Performs reversion operations on a recovery session
    * @param {Object} recoverySession - The recovery session (already created with isRecovery=true)
    * @param {Object} item - The Plaid item
@@ -213,6 +162,61 @@ class recoveryService extends PlaidBaseService {
         error: error.message,
         recoverySession
       };
+    }
+  }
+
+  /**
+   * Initiates a reversion by creating a recovery session and performing reversion
+   * @param {Object|String} targetSessionOrId - Session to revert to (or its ID)
+   * @param {Object} item - The Plaid item
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Result of the reversion
+   */
+  async initiateReversion(targetSessionOrId, item, user) {
+    try {
+      // Validate input parameters
+      if (!targetSessionOrId || !item || !user || !user._id) {
+        throw new CustomError('INVALID_PARAMS', 'Missing required parameters for reversion');
+      }
+
+      // Get the target session if an ID was provided
+      let targetSession = targetSessionOrId;
+      if (typeof targetSessionOrId === 'string') {
+        targetSession = await syncSessionService.getSyncSession(targetSessionOrId, user);
+        if (!targetSession) {
+          throw new CustomError('SESSION_NOT_FOUND', 'Target sync session not found');
+        }
+      }
+
+      // Create a recovery session based on the target session
+      const recoverySession = await syncSessionService.createRecoverySyncSession(
+        targetSession,
+        item,
+        user
+      );
+
+      // Execute the reversion process using the new recovery session
+      return await this.performReversion(
+        recoverySession,
+        item,
+        user
+      );
+    } catch (error) {
+      console.error('Error initiating reversion:', error);
+      
+      // Update the item status to error
+      if (item?.itemId && user?._id) {
+        await plaidItems.update(
+          { itemId: item.itemId, userId: user._id },
+          { status: 'error' }
+        );
+      }
+      
+      throw CustomError.createFormattedError(error, {
+        operation: 'initiate_reversion',
+        itemId: item?.itemId || 'unknown',
+        userId: user?._id || 'unknown'
+      });
     }
   }
 }

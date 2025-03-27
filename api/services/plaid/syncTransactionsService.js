@@ -46,39 +46,35 @@ class TransactionSyncService {
       const shouldRecover = isRecovery || !syncSessionService.countsMatch(syncCounts);
 
       if (shouldRecover) {
-        const recoveryResult = isRecovery
-          ? await recoveryService.performReversion(currentSyncSession, lockedItem, user)
-          : await recoveryService.initiateReversion(currentSyncSession, lockedItem, user);
+        // Use the new initiateReversion method which handles both creating 
+        // the recovery session and performing the reversion
+        const recoveryResult = await recoveryService.initiateReversion(
+          // If already in recovery, we can use the current session directly
+          isRecovery ? currentSyncSession : currentSyncSession,
+          lockedItem, 
+          user
+        );
 
-        // Unlock item - Set status based on recovery success
-        // If resolution was successful, status becomes 'complete', otherwise 'error'
-        const finalStatus = recoveryResult.resolution?.success ? 'complete' : 'error';
-        try {
-          await plaidItems.update({ itemId: lockedItem.itemId, userId: user._id }, { status: finalStatus });
-        } catch (unlockError) {
-           console.error(`Error setting final item status after recovery for itemId ${lockedItem.itemId}:`, unlockError);
-           // Potentially throw or just log, depending on desired behavior
-        }
-
+        // Unlock item
+        await this._unlockItem(lockedItem.itemId, user._id);
+        
         // Return recovery response
         const recoveryResponse = {
           recovery: {
             performed: true,
-            // Use the recoverySession from the result if available, otherwise the original session
             removedCount: recoveryResult.removedCount,
-            revertedTo: recoveryResult.revertedTo || currentSyncSession._id, // Fallback if revertedTo isn't set
+            revertedTo: recoveryResult.revertedTo,
             success: recoveryResult.success
           },
-          message: 'Recovery completed. ' +
-            (recoveryResult.resolution?.success // Check resolution specifically
-              ? 'A new sync session has been created with the correct cursor.'
+          message: 'Recovery completed. ' + 
+            (recoveryResult.resolution.success 
+              ? 'A new sync session has been created with the correct cursor.' 
               : 'Recovery encountered issues. Will retry on next sync operation.'),
           resolution: recoveryResult.resolution,
           batchResults: {
             added: 0,
             modified: 0,
-            // Ensure removedCount and actual exist before accessing
-            removed: recoveryResult.removedCount?.actual ?? 0
+            removed: recoveryResult.removedCount.actual
           }
         };
         
@@ -136,14 +132,9 @@ class TransactionSyncService {
         user,
         { nextCursor: syncResult.nextCursor }
       );
-
-      // Unlock item only if resolution was successful and didn't trigger another recovery
-      if (resolutionResult.success && !resolutionResult.isRecovery) {
-         await this._unlockItem(lockedItem.itemId, user._id); // Sets status to 'complete'
-      }
-      // If resolution failed (isRecovery=true), the item status was already set
-      // to 'in_progress' inside createRecoverySyncSession (called by resolveSession).
-      // If resolveSession itself threw an error, the main catch block handles it.
+      
+      // Unlock item
+      await this._unlockItem(lockedItem.itemId, user._id);
       
       // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
@@ -492,8 +483,7 @@ class TransactionSyncService {
   }
 
   /**
-   * Unlocks an item by setting its status to 'complete'.
-   * Use this typically after a fully successful sync operation.
+   * Unlocks an item
    * @param {String} itemId - Item ID
    * @param {String} userId - User ID
    * @returns {Promise<void>}
@@ -501,14 +491,10 @@ class TransactionSyncService {
    */
   async _unlockItem(itemId, userId) {
     try {
-      // Only set to 'complete' on successful unlock
       await plaidItems.update({ itemId, userId }, { status: 'complete' });
     } catch (error) {
-      console.error('Error unlocking item (setting status to complete):', error);
-      // Don't re-throw here, as the main operation might have succeeded.
-      // Log the error, the main catch handles sync failures.
-      // Consider if throwing CustomError('ITEM_UNLOCK_ERROR', ...) is necessary.
-      // For now, just logging.
+      console.error('Error unlocking item:', error);
+      throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');
     }
   };
 
