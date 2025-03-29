@@ -58,7 +58,7 @@
           <span class="text-xl font-bold text-purple-800">{{ formatLastSync }}</span>
         </div>
       </div>
-      <button class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold border-2 border-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] transition-all duration-200 flex items-center justify-center" @click="router.push('/dashboard')">
+      <button class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold border-2 border-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] transition-all duration-200 flex items-center justify-center" @click="router.push('/')">
         Go to Dashboard <ArrowRight class="ml-2 w-5 h-5" />
       </button>
     </div>

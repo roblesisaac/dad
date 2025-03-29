@@ -24,7 +24,7 @@ const itemSchema = {
   userId: {
     set: (_, { user }) => user._id
   },
-  accessToken: { 
+  accessToken: {
     set: setAccessToken,
     required: true
   },
@@ -46,9 +46,10 @@ const itemSchema = {
 
 
 function setAccessToken(accessToken, { user }) {
-  const encryptionKey = decrypt(user.encryptedKey, 'buffer');
+  const encryptionKey = decrypt(user?.encryptedKey, 'buffer');
   const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
-  return encrypt(userEncryptedKey);
+  const encrypted = encrypt(userEncryptedKey);
+  return encrypted;
 }
 
 export default AmptModel(['plaiditems', 'userId'], itemSchema);

@@ -28,10 +28,11 @@ class PlaidLinkService extends PlaidBaseService {
 
     if (itemId) {
       try {
-        const item = await itemService.getUserItems(user._id, itemId);
+        const item = await itemService.getItem(itemId, user._id);
         const access_token = itemService.decryptAccessToken(item, user);
         delete request.products;
         request.access_token = access_token;
+        console.log('request', request);
       } catch (error) {
         throw new Error(`ITEM_ACCESS_ERROR: ${error.message}`);
       }

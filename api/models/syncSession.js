@@ -4,12 +4,20 @@ const syncSchema = {
     userId: String,
     item_id: String, // item._id
     itemId: String, // item.itemId
-    status: String,
+    status: {
+        type: String,
+        enum: ['in_progress', 'complete', 'failed', 'comleted', 'recovery'],
+        default: 'complete'
+    },
 
     prevSession_id: String,
     nextSession_id: String,
     prevSuccessfulSession_id: String,
     recoverySession_id: String,
+    recoveryDetails: {
+        type: Object,
+        default: null
+    },
 
     cursor: String, // Cursor used for this sync
     nextCursor: String, // Next cursor provided by Plaid (if successful)

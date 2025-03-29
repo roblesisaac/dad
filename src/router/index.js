@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import dashboardRoutes from './routes/dashboardRoutes.js'
+import { authGuard } from '@auth0/auth0-vue'
 
 const CallbackView = () => import('@/shared/components/CallbackView.vue')
 const PrivacyPolicy = () => import('@/shared/views/PrivacyPolicy.vue')
@@ -21,13 +21,18 @@ const routes = [
     path: '/terms',
     name: 'terms',
     component: TermsOfService
-  },
+  },  
   {
     path: '/',
-    name: 'root',
-    component: Landing
+    name: 'dashboard',
+    component: () => import('@/features/dashboard/views/Dashboard.vue'),
+    beforeEnter: authGuard,
+    meta: {
+      requiresAuth: true,
+      requiresPlaidItems: true,
+      title: 'Spending Report'
+    }
   },
-  ...dashboardRoutes,
   {
     path: '/:pathMatch(.*)*',
     redirect: '/'

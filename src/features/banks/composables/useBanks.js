@@ -14,14 +14,14 @@ const syncMetrics = ref({
 const loading = ref({
   banks: false,
   syncSessions: false,
-  editBankName: false
+  editingBank: false
 });
 const error = ref({
   banks: null,
   syncSessions: null,
   sync: null,
   revert: null,
-  editBankName: null
+  editingBank: null
 });
 // --- End of moved state ---
 
@@ -306,12 +306,12 @@ export function useBanks() {
    */
   const updateBankName = async (bank) => {
     if (!bank?.itemId) {
-      error.value.editBankName = 'Invalid bank';
+      error.value.editingBank = 'Invalid bank';
       return null;
     }
     
-    loading.value.editBankName = true;
-    error.value.editBankName = null;
+    loading.value.editingBank = true;
+    error.value.editingBank = null;
     
     try {
       const response = await api.put(`plaid/items/${bank.itemId}`, {
@@ -332,10 +332,10 @@ export function useBanks() {
       return response;
     } catch (err) {
       console.error('Error updating bank name:', err);
-      error.value.editBankName = err.message || 'Failed to update bank name';
+      error.value.editingBank = err.message || 'Failed to update bank name';
       return null;
     } finally {
-      loading.value.editBankName = false;
+      loading.value.editingBank = false;
     }
   };
   

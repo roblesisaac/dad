@@ -11,119 +11,49 @@ class SyncSessionService {
    * Creates the very first sync session for an item with no previous sync history
    * @param {Object} user - User object
    * @param {Object} item - The item data
-   * @param {Object} options - Additional options for sync session
    * @returns {Promise<Object>} The created sync session and its ID
    */
-  async createInitialSync(user, item, options = {}) {
-    const syncTime = Date.now();
-    const { branchNumber = 1, syncId = null } = options;
-
+  async createInitialSync(user, item) {
     const initialSyncSession = {
-      userId: user._id,
-      item_id: item._id,
-      itemId: item.itemId,
-      status: 'in_progress',
-      cursor: '', // Empty string for initial sync
-      nextCursor: null, // Will be set after processing
-      prevSession_id: null,
-      prevSuccessfulSession_id: null,
-      syncTime,
-      syncTag: item.syncTag || null,
-      branchNumber,
-      syncId: syncId || `${randomString(10)}-${syncTime}`,
-      hasMore: false,
-      syncCounts: {
-        expected: {
-          added: 0,
-          modified: 0,
-          removed: 0
-        },
-        actual: {
-          added: 0,
-          modified: 0,
-          removed: 0
-        }
-      },
-      failedTransactions: {
-        added: [],
-        modified: [],
-        removed: []
-      },
-      recoveryAttempts: 0,
-      startTimestamp: Date.now(),
-      transactionsSkipped: []
+      branchNumber: 1,
+      hasMore: false
     };
     
     // Save the initial sync session
-    const savedSync = await SyncSessions.save(initialSyncSession);
-    
-    return {
-      syncTime,
-      syncSession: savedSync
-    };
+    return await this.createSync(initialSyncSession, user, item);
   }
 
   /**
    * Creates the next sync session based on a previous session
-   * @param {Object} previousSync - Previous sync data
+   * @param {Object} prevSync - Previous sync data
    * @param {Object} user - User object
    * @param {Object} item - The item data
-   * @param {Object} options - Additional options for sync session
    * @returns {Promise<Object>} The created sync session and its ID
    */
-  async createNextSync(previousSync, user, item, options = {}) {
-    if (!previousSync) {
+  async createNextSync(prevSync, user, item) {
+    if (!prevSync) {
       throw new Error('Previous sync session is required for createNextSync');
     }
 
-    const syncTime = Date.now();
-    const { branchNumber = 1, syncId = null } = options;
+    const { _id, branchNumber = 1, ...restPreviousSync } = prevSync;
 
     const nextSyncSession = {
-      userId: previousSync.userId || user._id,
-      item_id: previousSync.item_id || item._id,
-      itemId: previousSync.itemId || item.itemId,
-      status: 'in_progress',
-      cursor: previousSync.nextCursor || '', 
-      nextCursor: null, // Will be set after processing
-      prevSession_id: previousSync._id,
-      prevSuccessfulSession_id: previousSync.status === 'complete' ? 
-        previousSync._id 
-        : previousSync.prevSuccessfulSession_id || null,
-      syncTime,
-      syncTag: item.syncTag || previousSync.syncTag || null,
-      branchNumber: previousSync.branchNumber ? previousSync.branchNumber + 1 : branchNumber,
-      syncId: syncId || `${randomString(10)}-${syncTime}`,
-      hasMore: false,
-      syncCounts: {
-        expected: {
-          added: 0,
-          modified: 0,
-          removed: 0
-        },
-        actual: {
-          added: 0,
-          modified: 0,
-          removed: 0
-        }
-      },
-      failedTransactions: {
-        added: [],
-        modified: [],
-        removed: []
-      },
-      recoveryAttempts: 0,
-      startTimestamp: Date.now(),
-      transactionsSkipped: []
-    };
+      ...restPreviousSync,
+      cursor: prevSync.nextCursor || '',
+      prevSession_id: prevSync._id,
+      prevSuccessfulSession_id: prevSync.status === 'complete' ? prevSync._id : prevSync.prevSuccessfulSession_id || null,
+      branchNumber: branchNumber + 1,
+    }
     
     // Save the next sync session
-    const savedSync = await SyncSessions.save(nextSyncSession);
-    
-    return {
-      syncTime,
-      syncSession: savedSync
-    };
+    const nextSync = await this.createSync(nextSyncSession, user, item);
+
+    // Update prevSync with nextSession_id
+    await SyncSessions.update(prevSync._id, {
+      nextSession_id: nextSync._id
+    });
+
+    return nextSync;
   }
 
   /**
@@ -136,23 +66,13 @@ class SyncSessionService {
   async createSync(syncSessionData, user, item) {
     const syncTime = Date.now();
 
-    const { _id, syncCounts: oldSyncCounts, ...restSessionData } = syncSessionData;
+    const { _id, ...restSessionData } = syncSessionData;
 
     // Ensure syncCounts is properly initialized as an object
     const syncCounts = {
       expected: { added: 0, modified: 0, removed: 0 },
       actual: { added: 0, modified: 0, removed: 0 }
     };
-    
-    // Try to copy values from oldSyncCounts if it's valid
-    if (oldSyncCounts && typeof oldSyncCounts === 'object' && typeof oldSyncCounts !== 'string') {
-      if (oldSyncCounts.expected && typeof oldSyncCounts.expected === 'object') {
-        syncCounts.expected = { ...oldSyncCounts.expected };
-      }
-      if (oldSyncCounts.actual && typeof oldSyncCounts.actual === 'object') {
-        syncCounts.actual = { ...oldSyncCounts.actual };
-      }
-    }
 
     // Ensure required fields are set
     const sessionData = {
@@ -160,68 +80,54 @@ class SyncSessionService {
       userId: user._id,
       item_id: item._id,
       itemId: item.itemId,
-      status: 'in_progress',
       syncTime,
-      startTimestamp: Date.now(),
+      syncTag: item.syncTag || restSessionData.syncTag || null,
+      syncId: `${randomString(10)}-${syncTime}`,
+      startTimestamp: syncTime,
       isRecovery: false,
-      syncCounts // Explicitly set the syncCounts as a proper object
+      syncCounts
     };
     
     // Save the sync session
     const savedSync = await SyncSessions.save(sessionData);
+
+    // Update the item with the new sync session reference
+    await plaidItems.update(item._id, { sync_id: savedSync._id });
     
-    return {
-      syncTime,
-      syncSession: savedSync
-    };
+    return savedSync;
   }
 
   /**
    * Creates a recovery sync session
    * @param {Object} sessionToRetry - The target session to revert to
-   * @param {Object} item - The item to update
    * @param {Object} user - The user object
+   * @param {Object} item - The item to update
    * @param {Object} revertResult - Results from the reversion
    * @returns {Promise<Object>} Created recovery sync session
    */
-  async createRecoverySyncSession(sessionToRetry, item, user, revertResult = null) {
+  async createRecoverySyncSession(sessionToRetry, user, item, revertResult = null) {
     if (!sessionToRetry || !sessionToRetry._id) {
       throw new Error('Invalid session to revert to');
     }
     
-    const { _id, syncCounts: oldSyncCounts, branchNumber, ...sessionToRetryData } = sessionToRetry;
-    const syncTime = Date.now();
-    
-    // Initialize syncCounts as a proper object
-    const syncCounts = {
-      expected: { added: 0, modified: 0, removed: 0 },
-      actual: { added: 0, modified: 0, removed: 0 }
-    };
-    
-    // Try to copy values from oldSyncCounts if it's valid
-    if (oldSyncCounts && typeof oldSyncCounts === 'object' && typeof oldSyncCounts !== 'string') {
-      if (oldSyncCounts.expected && typeof oldSyncCounts.expected === 'object') {
-        syncCounts.expected = { ...oldSyncCounts.expected };
-      }
-      if (oldSyncCounts.actual && typeof oldSyncCounts.actual === 'object') {
-        syncCounts.actual = { ...oldSyncCounts.actual };
-      }
-    }
+    const { 
+      _id, 
+      branchNumber, 
+      recoveryAttempts = 0,
+      ...sessionToRetryData 
+    } = sessionToRetry;
     
     // Ensure branchNumber is a valid number or use default
-    const currentBranchNumber = (branchNumber && !isNaN(branchNumber)) ? branchNumber : 1;
-    const { recoveryAttempts = 0 } = sessionToRetry;
+    const currentBranchNumber = (!isNaN(branchNumber)) ? branchNumber : 1;
     
     const recoverySyncData = {
       ...sessionToRetryData,
-      syncTime,
       isRecovery: true,
-      recoveryAttempts: (recoveryAttempts && !isNaN(recoveryAttempts)) 
+      recoveryAttempts: !isNaN(recoveryAttempts) 
         ? recoveryAttempts + 1 
         : 1,
       branchNumber: this.addAndRound(currentBranchNumber, 0.1),
-      recoverySession_id: _id,
-      syncCounts // Explicitly set the syncCounts as a proper object
+      recoverySession_id: _id
     };
 
     if(revertResult) {
@@ -232,24 +138,13 @@ class SyncSessionService {
       }
     }
 
-    const recoverySync = await SyncSessions.save(recoverySyncData);
+    const recoverySync = await this.createSync(recoverySyncData, user, item);
 
     // Only update nextSession_id if failedSyncSession has a proper _id
-    if(sessionToRetry?._id && !sessionToRetry?.nextSession_id && recoverySync?._id) {
+    if(sessionToRetry?._id && recoverySync?._id) {
       await SyncSessions.update(sessionToRetry._id, {
         nextSession_id: recoverySync._id
       });
-    }
-    
-    // Update the item with the new recovery session
-    if (item?.itemId && user?._id && recoverySync?._id) {
-      await plaidItems.update(
-        { itemId: item.itemId, userId: user._id },
-        { 
-          sync_id: recoverySync._id,
-          status: 'in_progress'
-        }
-      );
     }
     
     return recoverySync;
@@ -471,48 +366,47 @@ class SyncSessionService {
    * @returns {Promise<Object>} The created sync session
    */
   async createSyncSessionFromLegacy(user, item) {
-    const legacySyncData = item.syncData;
+    const legacyData = item.syncData;
+    const { result } = legacyData;
     const syncTag = randomString(4, { isUppercase: true });
 
-    await plaidItems.update(item._id, { syncTag });
-    
-    if (!legacySyncData?.cursor) {
+    if (!legacyData?.cursor) {
       throw new Error('Invalid legacy sync data provided for migration');
     }
 
     // Convert legacy syncData format to syncSession format
-    const syncTime = legacySyncData.lastSyncTime || Date.now();
+    const status = legacyData.status === 'completed' ? 'complete' : legacyData.status;
     
-    const syncSession = {
-      userId: user._id,
-      item_id: item._id,
-      itemId: item.itemId,
-      status: legacySyncData.status === 'completed' ? 'complete' : legacySyncData.status,
-      cursor: legacySyncData.cursor,
-      nextCursor: legacySyncData.cursor, // In legacy format, there was only one cursor field
-      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? legacySyncData.cursor : null,
-      syncTime,
+    const syncSessionData = {
+      status,
+      cursor: legacyData.cursor,
+      nextCursor: legacyData.cursor, // Only one cursor field in legacy
+      prevSuccessfulSession_id: status === 'complete' ? legacyData.cursor : null,
       syncTag,
-      branchNumber: 1, // Default for legacy data
-      syncId: `legacy-${randomString(8)}-${syncTime}`,
+      branchNumber: 1,
       syncCounts: {
         expected: {
-          added: legacySyncData.result?.itemsAddedCount || 0,
-          modified: legacySyncData.result?.itemsModifiedCount || 0,
-          removed: legacySyncData.result?.itemsRemovedCount || 0
+          added: result?.itemsAddedCount || 0,
+          modified: result?.itemsModifiedCount || 0,
+          removed: result?.itemsRemovedCount || 0
         },
         actual: {
-          added: legacySyncData.result?.itemsAddedCount || 0,
-          modified: legacySyncData.result?.itemsModifiedCount || 0,
-          removed: legacySyncData.result?.itemsRemovedCount || 0
+          added: result?.itemsAddedCount || 0,
+          modified: result?.itemsModifiedCount || 0,
+          removed: result?.itemsRemovedCount || 0
         }
       },
-      error: legacySyncData.result?.errorMessage || null,
+      error: result?.errorMessage || null,
       isLegacy: true,
     };
     
     // Save the migrated sync session
-    return await SyncSessions.save(syncSession);
+    const syncSession = await this.createSync(syncSessionData, user, updatedItem);
+
+    // Update the item with the new syncTag
+    const updatedItem = await plaidItems.update(item._id, { syncTag });
+    
+    return syncSession;
   }
 
   /**
@@ -573,15 +467,15 @@ class SyncSessionService {
   /**
    * Resolves a sync session based on count comparison (shared resolution phase)
    * @param {Object} syncSession - Current sync session with syncCounts
-   * @param {Object} item - The Plaid item
    * @param {Object} user - User object
+   * @param {Object} item - The Plaid item
    * @param {Object} options - Additional options
    * @param {String} options.nextCursor - Next cursor for pagination
    * @param {Number} options.endTimestamp - End timestamp
    * @param {Number} options.syncDuration - Sync duration
    * @returns {Promise<Object>} The resolved session data and next steps
    */
-  async resolveSession(syncSession, item, user, options = {}) {
+  async resolveSession(syncSession, user, item, options = {}) {
     // Add validation at the beginning
     if (!syncSession?._id || !item?.itemId || !user?._id) {
       throw new Error('Invalid or missing data in resolveSession');
@@ -598,8 +492,8 @@ class SyncSessionService {
       // Failure case - create a recovery session
       const recoverySyncSession = await this.createRecoverySyncSession(
         syncSession,
+        user,
         item,
-        user, // User is validated above
         {
           error: {
             code: 'COUNT_MISMATCH',
@@ -619,27 +513,15 @@ class SyncSessionService {
       };
     }
 
-    let newSyncSession;
-
-    if(syncSession.isRecovery) {
-      newSyncSession = await this.createSync({
+    const newSyncSession = syncSession.isRecovery 
+      ? await this.createSync({
         ...syncSession,
         branchNumber: Math.floor(syncSession.branchNumber)
-      }, user, item);
-    } else {
-      newSyncSession = await this.createNextSync(
-        syncSession, 
-        user, 
-        item,
-        { 
-          branchNumber: syncSession.branchNumber || 1,
-          syncId: syncSession.syncId
-        }
-      );
-    }
+      }, user, item)
+      : await this.createNextSync(syncSession, user, item);
 
     const updateData = { 
-      nextSession_id: newSyncSession.syncSession._id,
+      nextSession_id: newSyncSession._id,
       userId: syncSession.userId,
       status: 'complete'
     };
@@ -663,14 +545,14 @@ class SyncSessionService {
     await plaidItems.update(
       { itemId: item.itemId, userId: user._id }, // Safe due to checks
       {
-        sync_id: newSyncSession.syncSession._id, // Ensure newSyncSession.syncSession is valid
+        sync_id: newSyncSession._id, // Ensure newSyncSession is valid
         status: 'complete'
       }
     );
     
     return {
       success: true,
-      newSyncSession: newSyncSession.syncSession,
+      newSyncSession: newSyncSession,
       countsMatch: true,
       isRecovery: false
     };

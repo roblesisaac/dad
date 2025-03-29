@@ -160,8 +160,8 @@ class recoveryService extends PlaidBaseService {
       
       const resolutionResult = await syncSessionService.resolveSession(
         recoverySession,
-        item,
         user,
+        item,
         { 
           endTimestamp,
           syncDuration
@@ -249,8 +249,8 @@ class recoveryService extends PlaidBaseService {
       // Create a recovery session based on the target session
       const recoverySession = await syncSessionService.createRecoverySyncSession(
         targetSession,
-        item,
-        user
+        user,
+        item
       );
 
       // Execute the reversion process using the new recovery session

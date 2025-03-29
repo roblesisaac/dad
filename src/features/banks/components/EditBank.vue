@@ -40,7 +40,7 @@
           
           <!-- Reconnect bank button -->
           <button 
-            @click="reconnectBank" 
+            @click="handleReconnectBank" 
             class="w-full flex items-center justify-center px-4 py-2 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none"
             :disabled="isReconnecting"
           >
@@ -127,7 +127,7 @@ const saveBankName = () => {
   }
 };
 
-const reconnectBank = () => {
+const handleReconnectBank = () => {
   if (props.bank?.itemId) {
     emit('reconnect', props.bank);
   }

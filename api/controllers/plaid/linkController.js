@@ -17,10 +17,10 @@ export default {
 
   async exchangeTokenAndSavePlaidItem(req, res) {
     try {
-      const { publicToken } = req.body;
+      const { public_token } = req.body;
       
       // 1. Exchange public token for access token
-      const accessData = await linkService.exchangePublicToken(publicToken);
+      const accessData = await linkService.exchangePublicToken(public_token);
       
       // 2. Save or update the Plaid item
       const plaidItem = await itemService.savePlaidAccessData(accessData, req.user);

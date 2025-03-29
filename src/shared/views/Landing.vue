@@ -28,6 +28,6 @@ const router = useRouter();
 const { isAuthed } = useAuth();
 
 const handleNavigation = () => {
-  router.push('/dashboard');
+  router.push('/');
 };
 </script>

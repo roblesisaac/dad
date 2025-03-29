@@ -108,13 +108,13 @@
     <!-- Action Buttons -->
     <div v-if="!editMode" class="p-4 border-t border-gray-200">
       <div class="grid grid-cols-1 gap-3">
-        <button 
+        <!-- <button 
           @click="goToOnboarding" 
           class="w-full py-3 flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
         >
           <RefreshCw class="w-4 h-4 mr-2" />
           Update Existing Institutions
-        </button>
+        </button> -->
         
         <button 
           @click="handleManageBanks" 

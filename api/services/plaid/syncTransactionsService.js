@@ -178,8 +178,8 @@ class TransactionSyncService {
       // 4. Resolution Phase - Resolve the session based on count comparison
       const resolutionResult = await syncSessionService.resolveSession(
         updatedSession,
-        lockedItem,
         user,
+        lockedItem,
         { 
           endTimestamp,
           syncDuration

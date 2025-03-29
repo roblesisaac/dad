@@ -26,10 +26,10 @@ onMounted(async () => {
     }
     
     // Always redirect to spending report
-    router.push('/dashboard');
+    router.push('/');
   } catch (err) {
     // If something else goes wrong, just redirect
-    router.push('/dashboard');
+    router.push('/');
   }
 });
 </script>
