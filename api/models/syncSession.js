@@ -68,7 +68,10 @@ const syncSchema = {
     syncDuration: Number, // Performance tracking
 
     isLegacy: Boolean,
-    isRecovery: Boolean,
+    isRecovery: {
+        type: Boolean,
+        default: false
+    },
 
     recoveryAttempts: Number,
 

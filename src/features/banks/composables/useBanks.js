@@ -226,11 +226,6 @@ export function useBanks() {
       if (result.success) {
         await fetchBanks();
         await fetchSyncSessions(selectedBank.value.itemId);
-        
-        // Display recovery performance metrics in console for debugging
-        if (result.performanceMetrics) {
-          console.log('Recovery performance metrics:', result.performanceMetrics);
-        }
       } else if (result.error) {
         error.value.revert = result.error;
       }

@@ -50,7 +50,8 @@ class TransactionSyncService {
       
       // 1. Recovery Assessment - Check if recovery is needed
       const { isRecovery, syncCounts } = currentSyncSession;
-      const shouldRecover = isRecovery || !syncSessionService.countsMatch(syncCounts);
+      const syncCountsMatch = syncSessionService.countsMatch(syncCounts);
+      const shouldRecover = isRecovery || !syncCountsMatch;
 
       if (shouldRecover) {
         // Use the new initiateReversion method which handles both creating 
@@ -152,6 +153,12 @@ class TransactionSyncService {
         syncTime, 
         plaidData,
         transactionsSkipped
+      );
+
+      // update session with next cursor
+      updatedSession = await syncSessionService.updateSessionCursor(
+        updatedSession,
+        syncResult.nextCursor
       );
       
       // Update session with actual counts and get the updated session

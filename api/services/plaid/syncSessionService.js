@@ -43,6 +43,7 @@ class SyncSessionService {
       prevSession_id: prevSync._id,
       prevSuccessfulSession_id: prevSync.status === 'complete' ? prevSync._id : prevSync.prevSuccessfulSession_id || null,
       branchNumber: branchNumber + 1,
+      isRecovery: false,
     }
     
     // Save the next sync session
@@ -84,7 +85,6 @@ class SyncSessionService {
       syncTag: item.syncTag || restSessionData.syncTag || null,
       syncId: `${randomString(10)}-${syncTime}`,
       startTimestamp: syncTime,
-      isRecovery: false,
       syncCounts
     };
     
@@ -401,10 +401,10 @@ class SyncSessionService {
     };
     
     // Save the migrated sync session
-    const syncSession = await this.createSync(syncSessionData, user, updatedItem);
+    const syncSession = await this.createSync(syncSessionData, user, item);
 
     // Update the item with the new syncTag
-    const updatedItem = await plaidItems.update(item._id, { syncTag });
+    await plaidItems.update(item._id, { syncTag, sync_id: syncSession._id });
     
     return syncSession;
   }
@@ -464,6 +464,22 @@ class SyncSessionService {
     };
   }
 
+  async updateSessionCursor(syncSession, nextCursor) {
+    if (!syncSession || !syncSession._id) {
+      return;
+    }
+    
+    const updatedSession = await SyncSessions.update(
+      syncSession._id,
+      {
+        userId: syncSession.userId,
+        nextCursor
+      }
+    );
+
+    return updatedSession;
+  }
+
   /**
    * Resolves a sync session based on count comparison (shared resolution phase)
    * @param {Object} syncSession - Current sync session with syncCounts
@@ -516,7 +532,8 @@ class SyncSessionService {
     const newSyncSession = syncSession.isRecovery 
       ? await this.createSync({
         ...syncSession,
-        branchNumber: Math.floor(syncSession.branchNumber)
+        branchNumber: Math.floor(syncSession.branchNumber),
+        isRecovery: false
       }, user, item)
       : await this.createNextSync(syncSession, user, item);
 
