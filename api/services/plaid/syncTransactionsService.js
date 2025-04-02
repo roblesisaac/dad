@@ -178,9 +178,12 @@ class TransactionSyncService {
         {
           endTimestamp,
           syncDuration,
-          transactionsSkipped: transactionsSkipped.length > 0 ? transactionsSkipped : undefined
+          failedTransactions: syncResult.failedTransactions
         }
       );
+      
+      // Double-check: Get the updated session to verify failedTransactions saved
+      const verifiedSession = await syncSessionService.getSyncSession(updatedSession._id, user);
       
       // 4. Resolution Phase - Resolve the session based on count comparison
       const resolutionResult = await syncSessionService.resolveSession(
@@ -201,7 +204,6 @@ class TransactionSyncService {
         syncResult,
         syncTime,
         1, // No more branching in the new workflow
-        transactionsSkipped,
         resolutionResult
       );
       
@@ -380,69 +382,101 @@ class TransactionSyncService {
       removed: 0
     };
     
-    // Initialize failed transactions tracking
+    // Initialize failed transactions tracking with empty arrays
     const failedTransactions = {
       added: [],
       modified: [],
-      removed: []
+      removed: [],
+      skipped: []
     };
     
-    // Process transactions in parallel with transaction safety
-    const [addedResults, modifiedResults, removedResults] = await Promise.all([
-      this._processAddedTransactions(plaidData.added, item, user, currentCursor, syncTime, transactionsSkipped),
-      this._processModifiedTransactions(plaidData.modified, user, currentCursor, syncTime),
-      this._processRemovedTransactions(plaidData.removed, user._id)
-    ]);
-    
-    // Update actual counts and collect failed transactions
-    actualCounts.added = addedResults.successCount || 0;
-    if (addedResults.failedTransactions && addedResults.failedTransactions.length > 0) {
-      failedTransactions.added = addedResults.failedTransactions;
+    try {      
+      // Process transactions in parallel with transaction safety
+      const [addedResults, modifiedResults, removedResults] = await Promise.all([
+        this._processAddedTransactions(plaidData.added, item, user, currentCursor, syncTime, transactionsSkipped),
+        this._processModifiedTransactions(plaidData.modified, user, currentCursor, syncTime),
+        this._processRemovedTransactions(plaidData.removed, user._id)
+      ]);
+      
+      // Update actual counts (with validation)
+      actualCounts.added = addedResults?.successCount || 0;
+      actualCounts.modified = modifiedResults?.successCount || 0;
+      actualCounts.removed = removedResults?.successCount || 0;
+      
+      // Process failedTransactions with careful validation for each section
+      
+      // Added transactions
+      if (addedResults?.failedTransactions) {
+        if (Array.isArray(addedResults.failedTransactions.added)) {
+          failedTransactions.added = [...addedResults.failedTransactions.added];
+        }
+        
+        if (Array.isArray(addedResults.failedTransactions.skipped)) {
+          failedTransactions.skipped = [...addedResults.failedTransactions.skipped];
+        }
+      }
+      
+      // Modified transactions
+      if (modifiedResults?.failedTransactions) {
+        if (Array.isArray(modifiedResults.failedTransactions)) {
+          failedTransactions.modified = [...modifiedResults.failedTransactions];
+        } else if (Array.isArray(modifiedResults.failedTransactions.modified)) {
+          failedTransactions.modified = [...modifiedResults.failedTransactions.modified];
+        }
+      }
+      
+      // Removed transactions
+      if (removedResults?.failedTransactions) {
+        if (Array.isArray(removedResults.failedTransactions)) {
+          failedTransactions.removed = [...removedResults.failedTransactions];
+        } else if (Array.isArray(removedResults.failedTransactions.removed)) {
+          failedTransactions.removed = [...removedResults.failedTransactions.removed];
+        }
+      }
+      
+      // Update expected counts for added if we skipped any duplicates
+      // This ensures we don't trigger a recovery for duplicates
+      if (transactionsSkipped.length > 0) {
+        expectedCounts.added -= transactionsSkipped.length;
+      }
+      
+      const syncCounts = {
+        expected: expectedCounts,
+        actual: actualCounts
+      };
+      
+      // Determine if there were any failures (excluding skipped/duplicate transactions)
+      const hasActualFailures = 
+        failedTransactions.added.length > 0 || 
+        failedTransactions.modified.length > 0 || 
+        failedTransactions.removed.length > 0;
+      
+      return {
+        addedCount: actualCounts.added,
+        addedTransactions: actualCounts.added === expectedCounts.added ?
+          plaidData.added.filter(tx => !transactionsSkipped.includes(tx.transaction_id))
+          : [],
+        modifiedCount: actualCounts.modified,
+        removedCount: actualCounts.removed,
+        hasMore: plaidData.has_more,
+        cursor: cursor,
+        nextCursor: plaidData.next_cursor,
+        expectedCounts,
+        actualCounts,
+        syncCounts,
+        failedTransactions: {
+          added: failedTransactions.added,
+          modified: failedTransactions.modified,
+          removed: failedTransactions.removed,
+          skipped: failedTransactions.skipped
+        },
+        hasFailures: hasActualFailures,
+        skippedCount: failedTransactions.skipped.length
+      };
+    } catch (error) {
+      console.error('Error in _processSyncData:', error);
+      throw error;
     }
-    
-    actualCounts.modified = modifiedResults.successCount || 0;
-    if (modifiedResults.failedTransactions && modifiedResults.failedTransactions.length > 0) {
-      failedTransactions.modified = modifiedResults.failedTransactions;
-    }
-    
-    actualCounts.removed = removedResults.successCount || 0;
-    if (removedResults.failedTransactions && removedResults.failedTransactions.length > 0) {
-      failedTransactions.removed = removedResults.failedTransactions;
-    }
-    
-    // Update expected counts for added if we skipped any duplicates
-    // This ensures we don't trigger a recovery for duplicates
-    if (transactionsSkipped.length > 0) {
-      expectedCounts.added -= transactionsSkipped.length;
-    }
-    
-    const syncCounts = {
-      expected: expectedCounts,
-      actual: actualCounts
-    };
-    
-    // Determine if there were any failures (excluding duplicate transactions)
-    const hasFailures = Object.values(failedTransactions).some(
-      failures => failures && failures.length > 0
-    );
-    
-    return {
-      addedCount: actualCounts.added,
-      addedTransactions: actualCounts.added === expectedCounts.added ?
-        plaidData.added.filter(tx => !transactionsSkipped.some(skipped => skipped.transaction_id === tx.transaction_id))
-        : [],
-      modifiedCount: actualCounts.modified,
-      removedCount: actualCounts.removed,
-      hasMore: plaidData.has_more,
-      cursor: cursor,
-      nextCursor: plaidData.next_cursor,
-      expectedCounts,
-      actualCounts,
-      syncCounts,
-      failedTransactions: hasFailures ? failedTransactions : null,
-      hasFailures,
-      transactionsSkipped
-    };
   }
 
   /**
@@ -467,38 +501,90 @@ class TransactionSyncService {
         syncTime
       );
       
-      // Identify and handle duplicate transactions separately from other errors
-      if (result.failedTransactions && result.failedTransactions.length > 0) {
-        // Filter out duplicate errors from failed transactions
+      // Ensure result has properly initialized properties
+      if (!result) {
+        return { 
+          successCount: 0, 
+          failedTransactions: { 
+            added: [], 
+            skipped: [] 
+          } 
+        };
+      }
+      
+      if (typeof result.successCount === 'undefined') {
+        result.successCount = 0;
+      }
+      
+      // Ensure failedTransactions is an object with arrays
+      if (!result.failedTransactions || typeof result.failedTransactions !== 'object') {
+        result.failedTransactions = {};
+      }
+      
+      // Normalize arrays
+      if (!Array.isArray(result.failedTransactions.added)) {
+        result.failedTransactions.added = [];
+      }
+      
+      if (!Array.isArray(result.failedTransactions.skipped)) {
+        result.failedTransactions.skipped = [];
+      }
+      
+      // Process the original failedTransactions array if it exists directly on result.failedTransactions
+      if (Array.isArray(result.failedTransactions) && result.failedTransactions.length > 0) {
+        // Find duplicates
         const duplicates = result.failedTransactions.filter(
           failure => failure.error && 
             typeof failure.error.message === 'string' && 
             failure.error.message.includes('Duplicate value for \'transaction_id\'')
         );
         
-        // Move duplicates to skipped transactions
-        if (duplicates.length > 0) {
-          transactionsSkipped.push(...duplicates.map(dup => ({
-            transaction_id: dup.transaction?.transaction_id,
-            name: dup.transaction?.name,
-            date: dup.transaction?.date,
-            amount: dup.transaction?.amount,
-            error: dup.error
-          })));
-          
-          // Remove duplicates from failedTransactions to prevent recovery
-          result.failedTransactions = result.failedTransactions.filter(
-            failure => !duplicates.some(dup => 
-              dup.transaction?.transaction_id === failure.transaction?.transaction_id
-            )
-          );
-        }
+        const otherFailures = result.failedTransactions.filter(
+          failure => !failure.error || 
+            typeof failure.error.message !== 'string' || 
+            !failure.error.message.includes('Duplicate value for \'transaction_id\'')
+        );
         
-        // Adjust the success count to account for duplicates as "successful" (they already exist)
-        result.successCount += duplicates.length;
+        // Process duplicates
+        if (duplicates.length > 0) {
+          const skippedItems = duplicates.map(dup => ({
+            transaction_id: dup.transaction?.transaction_id,
+            transaction: dup.transaction,
+            error: {
+              code: 'SKIPPED_DUPLICATE',
+              message: 'Transaction skipped - already exists in database',
+              originalError: dup.error
+            }
+          }));
+          
+          // Store skipped items
+          result.failedTransactions = {
+            added: otherFailures,
+            skipped: skippedItems
+          };
+          
+          // Add to transactionsSkipped for count adjustment
+          transactionsSkipped.push(...duplicates.map(dup => dup.transaction?.transaction_id));
+          
+          // Adjust the success count
+          result.successCount += duplicates.length;
+        } else {
+          // No duplicates, just move the array to the added property
+          result.failedTransactions = {
+            added: result.failedTransactions,
+            skipped: []
+          };
+        }
       }
       
-      return result;
+      // Return a clean result with explicitly structured data
+      return {
+        successCount: result.successCount,
+        failedTransactions: {
+          added: Array.isArray(result.failedTransactions.added) ? result.failedTransactions.added : [],
+          skipped: Array.isArray(result.failedTransactions.skipped) ? result.failedTransactions.skipped : []
+        }
+      };
     } catch (error) {
       console.error('Error in batch processing added transactions:', error);
       throw new CustomError('TRANSACTION_BATCH_ERROR', 
@@ -652,12 +738,11 @@ class TransactionSyncService {
    * @param {Object} syncResult - Results from processing
    * @param {Number} syncTime - Current sync timestamp
    * @param {Number} branchNumber - Batch number for this sync
-   * @param {Array} transactionsSkipped - Transactions skipped due to duplicates
    * @param {Object} resolutionResult - Result from the resolution phase
    * @returns {Object} Formatted response
    * @private
    */
-  _buildSyncResponse(syncResult, syncTime, branchNumber, transactionsSkipped = [], resolutionResult = null) {
+  _buildSyncResponse(syncResult, syncTime, branchNumber, resolutionResult = null) {
     const response = {
       added: syncResult.addedCount,
       addedTransactions: syncResult.addedTransactions,
@@ -677,9 +762,9 @@ class TransactionSyncService {
     };
     
     // Add information about skipped transactions if any
-    if (transactionsSkipped.length > 0) {
+    if (syncResult.skippedCount > 0) {
       response.skippedTransactions = {
-        count: transactionsSkipped.length,
+        count: syncResult.skippedCount,
         reason: 'Duplicate transactions were skipped'
       };
     }

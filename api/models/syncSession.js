@@ -54,16 +54,16 @@ const syncSchema = {
     failedTransactions: {
         type: Object,
         default: {
-            added: [], // Failed add operations with transaction data and errors
-            modified: [], // Failed modify operations with transaction data and errors
-            removed: []  // Failed remove operations with transaction IDs and errors
+            added: [], 
+            modified: [], 
+            removed: [], 
+            skipped: []
         }
     },
 
     // New fields as requested
     startTimestamp: Number,
     endTimestamp: Date,
-    transactionsSkipped: Array, // items not added due to duplicates
     plaidRequestId: String, // For traceability with Plaid's logs
     syncDuration: Number, // Performance tracking
 

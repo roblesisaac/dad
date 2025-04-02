@@ -205,6 +205,28 @@
         </FailedTransactionsGroup>
       </div>
       
+      <!-- Skipped transactions section -->
+      <div v-if="hasSkippedTransactions" class="mb-3">
+        <div class="font-medium text-amber-700 mb-2">Skipped Transactions</div>
+        
+        <FailedTransactionsGroup 
+          :transactions="session.failedTransactions.skipped"
+          title="Duplicate Transactions"
+          class="text-amber-600 border-amber-200"
+        >
+          <template #default="{ transactions }">
+            <FailedTransactionItem
+              v-for="skippedTx in transactions"
+              :key="skippedTx.transaction_id"
+              :transaction="skippedTx.transaction"
+              :transaction-id="skippedTx.transaction_id"
+              :error="skippedTx.error"
+              class="border-amber-200"
+            />
+          </template>
+        </FailedTransactionsGroup>
+      </div>
+      
       <!-- Recovery details -->
       <RecoveryDetails 
         v-if="session.isRecovery" 
@@ -336,5 +358,11 @@ const getTotalExpected = computed(() => {
 const getTotalActual = computed(() => {
   if (!props.session.syncCounts || !props.session.syncCounts.actual) return 'N/A';
   return Object.values(props.session.syncCounts.actual).reduce((total, count) => total + count, 0);
+});
+
+// Check if session has skipped transactions
+const hasSkippedTransactions = computed(() => {
+  if (!props.session.failedTransactions || !props.session.failedTransactions.skipped) return false;
+  return props.session.failedTransactions.skipped.length > 0;
 });
 </script> 

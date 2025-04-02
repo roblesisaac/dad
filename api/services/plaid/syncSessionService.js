@@ -266,13 +266,48 @@ class SyncSessionService {
   }
 
   /**
+   * Normalizes the failedTransactions object to ensure it has the correct structure
+   * @param {any} failedTransactions - The failedTransactions object to normalize
+   * @returns {Object} A properly structured failedTransactions object
+   * @private
+   */
+  normalizeFailedTransactions(failedTransactions) {
+    // If not an object or null/undefined, create an empty structure
+    if (!failedTransactions || typeof failedTransactions !== 'object') {
+      return {
+        added: [],
+        modified: [],
+        removed: [],
+        skipped: []
+      };
+    }
+    
+    // Ensure we have properly structured arrays
+    const normalized = {
+      added: Array.isArray(failedTransactions.added) ? failedTransactions.added : [],
+      modified: Array.isArray(failedTransactions.modified) ? failedTransactions.modified : [],
+      removed: Array.isArray(failedTransactions.removed) ? failedTransactions.removed : [],
+      skipped: Array.isArray(failedTransactions.skipped) ? failedTransactions.skipped : []
+    };
+    
+    // Cleanup for empty arrays
+    Object.keys(normalized).forEach(key => {
+      if (normalized[key].length === 0) {
+        normalized[key] = [];
+      }
+    });
+    
+    return normalized;
+  }
+
+  /**
    * Updates timestamps on a sync session
    * @param {Object} syncSession - Sync session to update
    * @param {Object} timestamps - Timestamp values to set
    * @param {Number} timestamps.startTimestamp - Start time of sync operation
    * @param {Number} timestamps.endTimestamp - End time of sync operation
    * @param {Number} timestamps.syncDuration - Duration of sync operation
-   * @param {Array} timestamps.transactionsSkipped - Optional transactions skipped
+   * @param {Array} timestamps.failedTransactions - Optional failed transactions
    * @returns {Promise<Object>} Updated sync session
    */
   async updateSessionTimestamps(syncSession, timestamps) {
@@ -299,20 +334,66 @@ class SyncSessionService {
       updateData.error = timestamps.error;
     }
     
-    if (timestamps.transactionsSkipped) {
-      updateData.transactionsSkipped = timestamps.transactionsSkipped;
+    // Handle failedTransactions with extra care to ensure it's a valid object
+    if (timestamps.failedTransactions) {
+      try {
+        // Normalize the failedTransactions structure
+        const normalizedFailedTransactions = this.normalizeFailedTransactions(timestamps.failedTransactions);
+        
+        // Check if any arrays have content
+        const hasItems = Object.values(normalizedFailedTransactions).some(arr => arr.length > 0);
+        
+        // Only include if we have actual content
+        if (hasItems) {
+          // Create a fresh object with the correct structure to avoid any reference issues
+          updateData.failedTransactions = {
+            added: normalizedFailedTransactions.added.length > 0 ? 
+              normalizedFailedTransactions.added.map(item => ({...item})) : [],
+            modified: normalizedFailedTransactions.modified.length > 0 ? 
+              normalizedFailedTransactions.modified.map(item => ({...item})) : [],
+            removed: normalizedFailedTransactions.removed.length > 0 ? 
+              normalizedFailedTransactions.removed.map(item => ({...item})) : [],
+            skipped: normalizedFailedTransactions.skipped.length > 0 ? 
+              normalizedFailedTransactions.skipped.map(item => ({...item})) : []
+          };
+        }
+      } catch (err) {
+        console.error('Error processing failedTransactions:', err);
+        // Don't include failedTransactions if there was an error processing it
+      }
     }
     
     // Only update if we have data to update
     if (Object.keys(updateData).length > 0) {
-      try {
-        await SyncSessions.update(
+      try {        
+        // Store failedTransactions separately since it's a complex object
+        const failedTransactions = updateData.failedTransactions ? 
+          JSON.parse(JSON.stringify(updateData.failedTransactions)) : undefined;
+        
+        // Remove complex objects from the update data
+        if (failedTransactions) {
+          delete updateData.failedTransactions;
+        }
+        
+        // First update the basic fields
+        let updatedSession = await SyncSessions.update(
           syncSession._id,
           {
             userId: syncSession.userId,
             ...updateData
           }
         );
+        
+        // Then update failedTransactions separately if it exists
+        if (failedTransactions) {
+          updatedSession = await SyncSessions.update(
+            syncSession._id,
+            {
+              userId: syncSession.userId,
+              failedTransactions
+            }
+          );
+        }
       } catch (error) {
         console.error(`Error updating session timestamps: ${error.message}`);
         // Log full error details but don't throw - we want to continue execution
