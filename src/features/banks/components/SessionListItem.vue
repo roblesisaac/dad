@@ -180,6 +180,7 @@
             <FailedTransactionItem
               v-for="failedTx in transactions"
               :key="failedTx.transaction_id"
+              :transaction="failedTx.transaction"
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
               :show-details="false"
@@ -197,6 +198,7 @@
             <FailedTransactionItem
               v-for="failedTx in transactions"
               :key="failedTx.transaction_id"
+              :transaction="failedTx.transaction"
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
               :show-details="false"

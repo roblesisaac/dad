@@ -63,7 +63,7 @@
 
 <script setup>
 import { ref, defineProps, defineEmits } from 'vue';
-import { RefreshCw, AlertTriangle, Clock } from 'lucide-vue-next';
+import { AlertTriangle, Clock } from 'lucide-vue-next';
 import SessionListItem from './SessionListItem.vue';
 import ConfirmReversionModal from './ConfirmReversionModal.vue';
 import LoadingSpinner from '@/shared/components/LoadingSpinner.vue';
