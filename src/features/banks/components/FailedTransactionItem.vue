@@ -13,7 +13,7 @@
         </div>
         <div>
           <span class="font-medium">Date:</span> 
-          {{ transaction?.date || 'Unknown' }}
+          {{ transaction?.authorized_date || 'Unknown' }}
         </div>
       </div>
     </slot>
