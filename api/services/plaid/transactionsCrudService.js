@@ -411,6 +411,46 @@ class TransactionQueryService extends PlaidBaseService {
         `Failed to process batch of ${transactionsToRemove?.length} removals: ${error.message}`);
     }
   }
+
+  /**
+   * Manually add a transaction from error data
+   * @param {Object} transaction - Transaction data to add
+   * @param {String} userId - User ID
+   * @returns {Promise<Object>} Added transaction
+   */
+  async addTransactionFromError(transaction, userId) {
+    try {
+      if (!transaction || !userId) {
+        throw new CustomError('INVALID_PARAMS', 'Missing transaction data or user ID');
+      }
+      
+      // Prepare transaction with user ID
+      const enrichedTransaction = {
+        ...transaction,
+        userId,
+        manuallyAdded: true,
+        addedAt: Date.now()
+      };
+      
+      // Check if this transaction already exists
+      const existing = await this.fetchTransactionByTransactionId(transaction.transaction_id, userId);
+      
+      if (existing) {
+        throw new CustomError('DUPLICATE_TRANSACTION', 'Transaction already exists in the database');
+      }
+      
+      // Save the transaction
+      const result = await plaidTransactions.save(enrichedTransaction);
+      return result;
+    } catch (error) {
+      console.error('Error manually adding transaction:', error);
+      throw CustomError.createFormattedError(error, {
+        transactionId: transaction?.transaction_id,
+        userId,
+        operation: 'add_transaction_from_error'
+      });
+    }
+  }
 }
 
 export default new TransactionQueryService(); 

@@ -109,4 +109,41 @@ export default {
       });
     }
   },
+  
+  /**
+   * Manually add a transaction from error data
+   */
+  async addTransactionFromError(req, res) {
+    try {
+      const user = req.user;
+      const { transaction } = req.body;
+      
+      if (!transaction || !transaction.transaction_id) {
+        return res.status(400).json({
+          error: 'INVALID_TRANSACTION',
+          message: 'Invalid transaction data provided'
+        });
+      }
+      
+      const result = await transactionQueryService.addTransactionFromError(transaction, user._id);
+      
+      return res.json({
+        success: true,
+        transaction: result
+      });
+    } catch (error) {
+      let status = 400;
+      let errorCode = 'TRANSACTION_ERROR';
+      let errorMessage = error.message;
+      
+      if (error.code === 'DUPLICATE_TRANSACTION') {
+        errorCode = 'DUPLICATE_TRANSACTION';
+      }
+      
+      return res.status(status).json({
+        error: errorCode,
+        message: errorMessage
+      });
+    }
+  }
 }; 

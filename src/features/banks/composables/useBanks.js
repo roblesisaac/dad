@@ -336,6 +336,46 @@ export function useBanks() {
     }
   };
   
+  /**
+   * Add a transaction from error data
+   * @param {Object} transaction - Transaction data from error
+   * @returns {Promise<Object>} Result of the operation
+   */
+  const addTransactionFromError = async (transaction) => {
+    if (!transaction) {
+      return { success: false, error: 'No transaction data provided' };
+    }
+    
+    try {
+      const result = await api.post('plaid/transactions/add-from-error', {
+        transaction
+      });
+      
+      if (result.success) {
+        // If the current bank is selected, refresh the sync sessions to show the update
+        if (selectedBank.value?.itemId) {
+          await fetchSyncSessions(selectedBank.value.itemId);
+        }
+        
+        return { 
+          success: true, 
+          transaction: result.transaction 
+        };
+      } else {
+        return { 
+          success: false, 
+          error: result.error || 'Failed to add transaction' 
+        };
+      }
+    } catch (err) {
+      console.error('Error adding transaction from error:', err);
+      return { 
+        success: false, 
+        error: err.message || 'Failed to add transaction' 
+      };
+    }
+  };
+  
   // Computed properties
   const isLoading = computed(() => 
     loading.value.banks || loading.value.syncSessions || isSyncing.value
@@ -370,6 +410,7 @@ export function useBanks() {
     syncSelectedBank,
     revertToSession,
     updateSyncMetrics,
+    addTransactionFromError,
     
     // Utilities
     formatSyncDate,

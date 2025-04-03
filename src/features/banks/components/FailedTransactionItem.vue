@@ -30,11 +30,28 @@
         <span class="font-medium">Time:</span> {{ formatDate(error?.timestamp) }}
       </div>
     </div>
+    
+    <!-- Add Transaction button for modified transactions -->
+    <div v-if="transaction && showAddButton" class="mt-2">
+      <button 
+        @click="addTransaction" 
+        class="w-full text-xs py-1 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        :disabled="isLoading"
+      >
+        <span v-if="isLoading">Adding...</span>
+        <span v-else>Add Transaction</span>
+      </button>
+      <div v-if="addResult" class="mt-1 text-xs font-medium" :class="addSuccess ? 'text-green-600' : 'text-red-600'">
+        {{ addResult }}
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { useUtils } from '@/shared/composables/useUtils.js';
+import { useBanks } from '@/features/banks/composables/useBanks.js';
+import { ref } from 'vue';
 
 const props = defineProps({
   transaction: {
@@ -52,11 +69,23 @@ const props = defineProps({
   showDetails: {
     type: Boolean,
     default: true
+  },
+  showAddButton: {
+    type: Boolean,
+    default: true
   }
 });
 
+// Use banks composable for adding transactions
+const { addTransactionFromError } = useBanks();
+
 // Use utility functions
 const { formatPrice } = useUtils();
+
+// Local state for add transaction
+const isLoading = ref(false);
+const addResult = ref('');
+const addSuccess = ref(false);
 
 // Format currency helper
 const formatCurrency = (amount) => {
@@ -84,6 +113,32 @@ const formatDate = (timestamp) => {
     }
   } catch (err) {
     return timestamp;
+  }
+};
+
+// Add transaction handler
+const addTransaction = async () => {
+  if (!props.transaction) return;
+  
+  isLoading.value = true;
+  addResult.value = '';
+  addSuccess.value = false;
+  
+  try {
+    const result = await addTransactionFromError(props.transaction);
+    
+    if (result.success) {
+      addSuccess.value = true;
+      addResult.value = 'Transaction added successfully';
+    } else {
+      addSuccess.value = false;
+      addResult.value = `Failed: ${result.error}`;
+    }
+  } catch (err) {
+    addSuccess.value = false;
+    addResult.value = `Error: ${err.message}`;
+  } finally {
+    isLoading.value = false;
   }
 };
 </script> 

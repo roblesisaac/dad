@@ -183,6 +183,7 @@
               :transaction="failedTx.transaction"
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
+              :show-add-button="true"
             />
           </template>
         </FailedTransactionsGroup>

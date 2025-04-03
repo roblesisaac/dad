@@ -21,6 +21,7 @@ export default function(api, baseUrl) {
   // Transactions
   member.get('/plaid/transactions/:_id?', transactionController.getTransactions);
   member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
+  member.post('/plaid/transactions/add-from-error', transactionController.addTransactionFromError);
   
   // Sync Sessions
   member.get('/plaid/items/:itemId/sync-sessions', syncSessionController.getSyncSessionsForItem);
