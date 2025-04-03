@@ -6,7 +6,7 @@ const syncSchema = {
     itemId: String, // item.itemId
     status: {
         type: String,
-        enum: ['queued', 'in_progress', 'complete', 'failed', 'recovered'],
+        enum: ['queued', 'in_progress', 'complete', 'failed', 'error', 'recovered'],
         default: 'queued'
     },
 
