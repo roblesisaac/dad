@@ -136,9 +136,16 @@ class SyncSessionService {
     // Only update nextSession_id if failedSyncSession has a proper _id
     if(sessionToRetry?._id && recoverySync?._id) {
       await SyncSessions.update(sessionToRetry._id, {
-        nextSession_id: recoverySync._id
+        ...sessionToRetry,
+        nextSession_id: recoverySync._id,
+        status: 'error'
       });
     }
+
+    // Update item status with recovery
+    await plaidItems.update(item._id, {
+      status: 'recovery'
+    });
     
     return recoverySync;
   }
@@ -563,26 +570,19 @@ class SyncSessionService {
       if(!countsMatch) {
         // Failure case - create a recovery session
         const recoverySyncSession = await this.createRecoverySyncSession(
-          syncSession,
+          { 
+            ...syncSession,
+            endTimestamp,
+            syncDuration,
+          },
           user,
           item,
           {
             error: {
               code: 'COUNT_MISMATCH',
               message: `Transaction count mismatch in ${syncSession.isRecovery ? 'recovery' : 'sync'} operation`,
-              timestamp: endTimestamp
+              timestamp: Date.now()
             }
-          }
-        );
-        
-        // Update current session with timestamps and error status
-        await SyncSessions.update(
-          syncSession._id,
-          {
-            userId: syncSession.userId,
-            endTimestamp,
-            syncDuration,
-            status: 'error'
           }
         );
         
