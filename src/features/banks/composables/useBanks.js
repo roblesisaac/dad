@@ -177,7 +177,9 @@ export function useBanks() {
       resetRecoveryCounter(selectedBank.value.itemId);
       
       // Perform the sync
-      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
+      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId, {
+        fullSync: false
+      });
       
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {

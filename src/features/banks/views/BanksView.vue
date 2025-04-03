@@ -80,7 +80,6 @@
 <script setup>
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
-import { useApi } from '@/shared/composables/useApi.js';
 import { usePlaidLink } from '@/features/onboarding/composables/usePlaidLink.js';
 import BankList from '../components/BankList.vue';
 import SyncSessionsModal from '../components/SyncSessionsModal.vue';
@@ -88,7 +87,6 @@ import EditBank from '../components/EditBank.vue';
 import { CheckCircle, AlertCircle } from 'lucide-vue-next';
 
 const emit = defineEmits(['connect-bank-complete']);
-const api = useApi();
 const { createLinkToken, exchangePublicToken, openPlaidLink, loading: plaidLoading, error: plaidError } = usePlaidLink();
 
 // Setup composable

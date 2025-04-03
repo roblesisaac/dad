@@ -28,7 +28,7 @@ export function usePlaidSync() {
    * @param {string} itemId - Item ID to sync
    * @returns {Promise<Object>} Sync result with completion status
    */
-  const syncLatestTransactionsForBank = async (itemId) => {
+  const syncLatestTransactionsForBank = async (itemId, options = {}) => {
     try {
       if (!itemId) {
         throw new Error('No itemId provided for syncing');
@@ -54,6 +54,8 @@ export function usePlaidSync() {
           
           // Call the backend API to process a single batch
           const result = await api.get(`plaid/sync/latest/transactions/${itemId}`);
+
+          console.log('result', result);
           
           if (!result) {
             throw new Error('No response received from sync endpoint');
@@ -129,7 +131,7 @@ export function usePlaidSync() {
           });
           
           // Check if we need to continue syncing
-          hasMore = result.hasMore;
+          hasMore = options.fullSync ? result.hasMore : false;
           retryCount = 0; // Reset retry count on success
           
           // Add a small delay between batches to avoid overwhelming the API
