@@ -70,7 +70,7 @@ export default {
         addedTransactions: syncResult.addedTransactions
       };
       
-      if (syncResult.recoveryPerformed) {
+      if (syncResult.recovery?.performed) {
         response.recovery = {
           performed: true,
           revertedTo: syncResult.revertedTo,

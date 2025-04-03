@@ -11,10 +11,6 @@ import plaidItems from '../../models/plaidItems.js';
 class recoveryService extends PlaidBaseService {
   /**
    * Find all transactions for an item with cursor or syncTime newer than a reference point
-   * @param {String} itemId - The item ID
-   * @param {String} userId - User ID
-   * @param {Number} referenceSyncTime - Reference sync time
-   * @returns {Promise<Object>} Result with transactions
    * @private
    */
   async _fetchTransactionsAfterSyncTime(itemId, userId, referenceSyncTime) {
@@ -33,10 +29,6 @@ class recoveryService extends PlaidBaseService {
   /**
    * Reverts transactions to a specific sync time and cursor point
    * Uses the label4 (itemId+syncTime) to find transactions to remove
-   * @param {String} itemId - The Plaid item ID
-   * @param {String} userId - The user ID
-   * @param {String} syncTime - Timestamp
-   * @param {Object} recoverySession - Recovery session to update with counts
    * @returns {Object} Result of the reversion operation
    */
   async removeTransactionsAfterSyncTime(itemId, userId, syncTime, recoverySession = null) {
@@ -112,18 +104,17 @@ class recoveryService extends PlaidBaseService {
 
   /**
    * Performs reversion operations on a recovery session
-   * @param {Object} recoverySession - The recovery session (already created with isRecovery=true)
-   * @param {Object} item - The Plaid item
-   * @param {Object} user - User object
    * @returns {Promise<Object>} Result of the reversion
    */
   async performReversion(recoverySession, item, user) {
-    if (!recoverySession || !recoverySession._id || !item || !user) {
+    if (!recoverySession?._id || !item || !user) {
       throw new Error('Invalid parameters for reversion');
     }
 
     const startTimestamp = Date.now();
-    const sessionToRecover = await syncSessionService.getSyncSession(recoverySession.recoverySession_id, user);
+    const { recoverySession_id } = recoverySession;
+    const sessionToRecover = await syncSessionService.getSyncSession(recoverySession_id, user);
+
     const syncTime = sessionToRecover.syncTime;
 
     if(isNaN(syncTime)) {
@@ -141,31 +132,23 @@ class recoveryService extends PlaidBaseService {
 
       recoverySession = removalResults.updatedRecoverySession || recoverySession;
       
-      // Calculate duration and update timestamps
-      const endTimestamp = Date.now();
-      // Ensure we don't produce NaN for syncDuration
-      const syncDuration = (startTimestamp && !isNaN(startTimestamp))
-        ? endTimestamp - startTimestamp
-        : 0;
+      // Update recovery session with any additional data like removed transactions
+      if (removalResults.removedCount) {
+        await syncSessionService.updateSessionMetadata(
+          recoverySession,
+          {
+            recoveryDetails: {
+              transactionsRemoved: removalResults.removedCount?.actual
+            }
+          }
+        );
+      }
       
-      // Update recovery session with performance metrics
-      await syncSessionService.updateSessionTimestamps(
-        recoverySession,
-        {
-          startTimestamp, 
-          endTimestamp,
-          syncDuration
-        }
-      );
-      
+      // Resolution now handles timestamps and updates internally
       const resolutionResult = await syncSessionService.resolveSession(
         recoverySession,
         user,
-        item,
-        { 
-          endTimestamp,
-          syncDuration
-        }
+        item
       );
       
       return {
@@ -176,39 +159,22 @@ class recoveryService extends PlaidBaseService {
         resolution: resolutionResult,
         performanceMetrics: {
           startTimestamp,
-          endTimestamp,
-          syncDuration
+          endTimestamp: resolutionResult.timestamp,
+          syncDuration: resolutionResult.duration
         }
       };
     } catch (error) {
       console.error(`Error performing reversion for session ${recoverySession._id}:`, error);
-      
-      // Calculate metrics even for errors
-      const endTimestamp = Date.now();
-      // Protect against NaN
-      const syncDuration = (startTimestamp && !isNaN(startTimestamp))
-        ? endTimestamp - startTimestamp
-        : 0;
-      
-      // Update recovery session with error and timestamps
-      await syncSessionService.updateSessionTimestamps(
-        recoverySession,
-        {
-          startTimestamp,
-          endTimestamp,
-          syncDuration,
-          error: {
-            message: error.message,
-            timestamp: endTimestamp
-          }
-        }
-      );
       
       // Update the item status to error
       await plaidItems.update(
         { itemId: item.itemId, userId: user._id },
         { status: 'error' }
       );
+      
+      // Calculate final metrics for response
+      const endTimestamp = Date.now();
+      const syncDuration = endTimestamp - startTimestamp;
       
       return {
         success: false,

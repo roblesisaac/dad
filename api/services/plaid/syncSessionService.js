@@ -9,8 +9,6 @@ import randomString from '../../utils/randomString.js';
 class SyncSessionService {
   /**
    * Creates the very first sync session for an item with no previous sync history
-   * @param {Object} user - User object
-   * @param {Object} item - The item data
    * @returns {Promise<Object>} The created sync session and its ID
    */
   async createInitialSync(user, item) {
@@ -25,9 +23,6 @@ class SyncSessionService {
 
   /**
    * Creates the next sync session based on a previous session
-   * @param {Object} prevSync - Previous sync data
-   * @param {Object} user - User object
-   * @param {Object} item - The item data
    * @returns {Promise<Object>} The created sync session and its ID
    */
   async createNextSync(prevSync, user, item) {
@@ -35,7 +30,7 @@ class SyncSessionService {
       throw new Error('Previous sync session is required for createNextSync');
     }
 
-    const { _id, branchNumber = 1, ...restPreviousSync } = prevSync;
+    const { _id, branchNumber = 1, error, failedTransactions, ...restPreviousSync } = prevSync;
 
     const nextSyncSession = {
       ...restPreviousSync,
@@ -52,6 +47,7 @@ class SyncSessionService {
     // Update prevSync with nextSession_id
     await SyncSessions.update(prevSync._id, {
       nextSession_id: nextSync._id
+
     });
 
     return nextSync;
@@ -59,9 +55,6 @@ class SyncSessionService {
 
   /**
    * Creates a sync session with explicit data
-   * @param {Object} syncSessionData - The data for the sync session
-   * @param {Object} user - User object
-   * @param {Object} item - The item data
    * @returns {Promise<Object>} The created sync session and its ID
    */
   async createSync(syncSessionData, user, item) {
@@ -100,9 +93,6 @@ class SyncSessionService {
   /**
    * Creates a recovery sync session
    * @param {Object} sessionToRetry - The target session to revert to
-   * @param {Object} user - The user object
-   * @param {Object} item - The item to update
-   * @param {Object} revertResult - Results from the reversion
    * @returns {Promise<Object>} Created recovery sync session
    */
   async createRecoverySyncSession(sessionToRetry, user, item, revertResult = null) {
@@ -114,6 +104,8 @@ class SyncSessionService {
       _id, 
       branchNumber, 
       recoveryAttempts = 0,
+      error,
+      failedTransactions,
       ...sessionToRetryData 
     } = sessionToRetry;
     
@@ -123,6 +115,7 @@ class SyncSessionService {
     const recoverySyncData = {
       ...sessionToRetryData,
       isRecovery: true,
+      error: revertResult?.error || null,
       recoveryAttempts: !isNaN(recoveryAttempts) 
         ? recoveryAttempts + 1 
         : 1,
@@ -166,7 +159,6 @@ class SyncSessionService {
   /**
    * Gets the sync data for an item
    * Returns the most recent sync session for the item
-   * @param {String} session_id - session._id
    * @returns {Promise<Object|null>} Sync data session or null if not found
    */
   async getSyncSession(sync_id, user) {
@@ -195,9 +187,6 @@ class SyncSessionService {
   
   /**
    * Gets all sync sessions for an item
-   * @param {String} itemId - The Plaid item ID
-   * @param {String} userId - The user ID
-   * @param {Object} options - Query options (limit, cursor)
    * @returns {Promise<Array>} Sync sessions sorted by recency
    */
   async getSyncSessionsForItem(itemId, userId, options = {}) {
@@ -224,8 +213,6 @@ class SyncSessionService {
   
   /**
    * Check if a sync is recent (within last 5 minutes)
-   * @param {Object} item - Item data
-   * @param {Object} [user] - User object
    * @returns {Promise<boolean>} True if a recent sync exists
    */
   async isSyncRecent(item, user) {
@@ -244,8 +231,27 @@ class SyncSessionService {
   }
 
   /**
+   * Creates an end timestamp and calculates the sync duration
+   * @returns {Object} - Object with endTimestamp and syncDuration
+   */
+  calcEndTimestampAndSyncDuration(syncSession) {
+    if(!syncSession) {
+      return { endTimestamp: Date.now(), syncDuration: 0 };
+    }
+
+    const endTimestamp = Date.now();
+    const startTimestamp = syncSession.startTimestamp;
+    const syncDuration = (startTimestamp && !isNaN(startTimestamp) ? 
+        endTimestamp - startTimestamp : 0);
+
+    return {
+      endTimestamp,
+      syncDuration 
+    };
+  }
+
+  /**
    * Checks if expected and actual transaction counts match
-   * @param {Object} syncCounts - The syncCounts object containing expected and actual counts
    * @returns {boolean} - True if counts match, false otherwise
    */
   countsMatch(syncCounts) {
@@ -267,8 +273,6 @@ class SyncSessionService {
 
   /**
    * Normalizes the failedTransactions object to ensure it has the correct structure
-   * @param {any} failedTransactions - The failedTransactions object to normalize
-   * @returns {Object} A properly structured failedTransactions object
    * @private
    */
   normalizeFailedTransactions(failedTransactions) {
@@ -301,44 +305,30 @@ class SyncSessionService {
   }
 
   /**
-   * Updates timestamps on a sync session
-   * @param {Object} syncSession - Sync session to update
-   * @param {Object} timestamps - Timestamp values to set
-   * @param {Number} timestamps.startTimestamp - Start time of sync operation
-   * @param {Number} timestamps.endTimestamp - End time of sync operation
-   * @param {Number} timestamps.syncDuration - Duration of sync operation
-   * @param {Array} timestamps.failedTransactions - Optional failed transactions
+   * Updates various metadata on a sync session including timestamps, errors, and transaction data
    * @returns {Promise<Object>} Updated sync session
    */
-  async updateSessionTimestamps(syncSession, timestamps) {
+  async updateSessionMetadata(syncSession, metadata) {
     if (!syncSession || !syncSession._id) {
       return syncSession;
     }
     
     const updateData = {};
     
-    // Only set the fields that are provided and are valid
-    if (timestamps.startTimestamp && !isNaN(timestamps.startTimestamp)) {
-      updateData.startTimestamp = timestamps.startTimestamp;
+    if (metadata.error) {
+      updateData.error = metadata.error;
     }
-    
-    if (timestamps.endTimestamp && !isNaN(timestamps.endTimestamp)) {
-      updateData.endTimestamp = new Date(timestamps.endTimestamp);
-    }
-    
-    if (timestamps.syncDuration && !isNaN(timestamps.syncDuration)) {
-      updateData.syncDuration = timestamps.syncDuration;
-    }
-    
-    if (timestamps.error) {
-      updateData.error = timestamps.error;
+
+    // Add support for recoveryDetails
+    if (metadata.recoveryDetails) {
+      updateData.recoveryDetails = metadata.recoveryDetails;
     }
     
     // Handle failedTransactions with extra care to ensure it's a valid object
-    if (timestamps.failedTransactions) {
+    if (metadata.failedTransactions) {
       try {
         // Normalize the failedTransactions structure
-        const normalizedFailedTransactions = this.normalizeFailedTransactions(timestamps.failedTransactions);
+        const normalizedFailedTransactions = this.normalizeFailedTransactions(metadata.failedTransactions);
         
         // Check if any arrays have content
         const hasItems = Object.values(normalizedFailedTransactions).some(arr => arr.length > 0);
@@ -394,8 +384,10 @@ class SyncSessionService {
             }
           );
         }
+
+        return updatedSession;
       } catch (error) {
-        console.error(`Error updating session timestamps: ${error.message}`);
+        console.error(`Error updating session metadata: ${error.message}`);
         // Log full error details but don't throw - we want to continue execution
         if (error.message.includes('NaN')) {
           console.error('NaN value detected in update data:', updateData);
@@ -411,30 +403,25 @@ class SyncSessionService {
 
   /**
    * Updates the lastNoChangesTime field when no changes are detected in a sync
-   * @param {String} syncSession_id - The ID of the sync session to update
-   * @param {Number} lastNoChangesTime - Timestamp when no changes were detected
-   * @param {Object} options - Additional options
-   * @param {Number} options.syncDuration - Optional sync duration
    * @returns {Promise<void>}
    */
-  async updateSyncSessionLastNoChangesTime(syncSession_id, lastNoChangesTime, options = {}) {
-    if (!syncSession_id) {
+  async updateSyncSessionLastNoChangesTime(syncSession) {
+    if (!syncSession?._id) {
       return;
     }
+
+    const { endTimestamp, syncDuration } = this.calcEndTimestampAndSyncDuration(syncSession);
     
     const updateData = {
-      lastNoChangesTime,
-      status: 'complete', // Ensure status is still complete
-      endTimestamp: new Date(lastNoChangesTime)
+      endTimestamp,
+      syncDuration,
+      lastNoChangesTime: endTimestamp,
+      status: 'complete',
+      error: null
     };
     
-    // Add syncDuration if provided
-    if (options.syncDuration) {
-      updateData.syncDuration = options.syncDuration;
-    }
-    
-    await SyncSessions.update(
-      syncSession_id,
+    return await SyncSessions.update(
+      syncSession._id,
       updateData
     );
   }
@@ -442,8 +429,6 @@ class SyncSessionService {
   /**
    * Creates a sync session from legacy sync data stored directly on the item
    * Used for migration from old sync format to new sync session format
-   * @param {Object} user - User object
-   * @param {Object} item - Item data containing legacy syncCounts
    * @returns {Promise<Object>} The created sync session
    */
   async createSyncSessionFromLegacy(user, item) {
@@ -492,9 +477,6 @@ class SyncSessionService {
 
   /**
    * Updates session counts for both normal and recovery flows
-   * @param {Object} syncSession - Sync session to update
-   * @param {String} type - Type of update ('expected' or 'actual')
-   * @param {Object} counts - Count values to set { added, modified, removed }
    * @returns {Promise<void>}
    */
   async updateSessionCounts(syncSession, type, counts) {
@@ -563,98 +545,108 @@ class SyncSessionService {
 
   /**
    * Resolves a sync session based on count comparison (shared resolution phase)
-   * @param {Object} syncSession - Current sync session with syncCounts
-   * @param {Object} user - User object
-   * @param {Object} item - The Plaid item
-   * @param {Object} options - Additional options
-   * @param {String} options.nextCursor - Next cursor for pagination
-   * @param {Number} options.endTimestamp - End timestamp
-   * @param {Number} options.syncDuration - Sync duration
    * @returns {Promise<Object>} The resolved session data and next steps
    */
-  async resolveSession(syncSession, user, item, options = {}) {
+  async resolveSession(syncSession, user, item) {
     // Add validation at the beginning
     if (!syncSession?._id || !item?.itemId || !user?._id) {
       throw new Error('Invalid or missing data in resolveSession');
     }
 
-    // Check if counts match using the syncCounts directly from the syncSession
-    const countsMatch = this.countsMatch(syncSession.syncCounts);
-    const { 
-      endTimestamp,
-      syncDuration
-    } = options;
+    // Calculate end timestamp and duration
+    const { endTimestamp, syncDuration } = this.calcEndTimestampAndSyncDuration(syncSession);
+    
+    try {
+      // Check if counts match using the syncCounts directly from the syncSession
+      const countsMatch = this.countsMatch(syncSession.syncCounts);
 
-    if(!countsMatch) {
-      // Failure case - create a recovery session
-      const recoverySyncSession = await this.createRecoverySyncSession(
-        syncSession,
-        user,
-        item,
-        {
-          error: {
-            code: 'COUNT_MISMATCH',
-            message: `Transaction count mismatch in ${syncSession.isRecovery ? 'recovery' : 'sync'} operation`,
-            timestamp: endTimestamp || Date.now()
+      if(!countsMatch) {
+        // Failure case - create a recovery session
+        const recoverySyncSession = await this.createRecoverySyncSession(
+          syncSession,
+          user,
+          item,
+          {
+            error: {
+              code: 'COUNT_MISMATCH',
+              message: `Transaction count mismatch in ${syncSession.isRecovery ? 'recovery' : 'sync'} operation`,
+              timestamp: endTimestamp
+            }
           }
+        );
+        
+        // Update current session with timestamps and error status
+        await SyncSessions.update(
+          syncSession._id,
+          {
+            userId: syncSession.userId,
+            endTimestamp,
+            syncDuration,
+            status: 'error'
+          }
+        );
+        
+        return {
+          success: false,
+          recoverySession: recoverySyncSession,
+          countsMatch: false,
+          isRecovery: true,
+          timestamp: endTimestamp,
+          duration: syncDuration
+        };
+      }
+
+      // For successful cases, create a new session
+      // createSync and createNextSync both handle updating the item and previous session
+      const newSyncSession = syncSession.isRecovery 
+        ? await this.createSync({
+          ...syncSession,
+          branchNumber: Math.floor(syncSession.branchNumber),
+          isRecovery: false
+        }, user, item)
+        : await this.createNextSync(syncSession, user, item);
+      
+      // Always update the completed session with finalized timestamps and status
+      await SyncSessions.update(
+        syncSession._id,
+        {
+          userId: syncSession.userId,
+          endTimestamp: new Date(endTimestamp),
+          syncDuration,
+          status: 'complete'
         }
       );
       
-      // Item is already updated inside createRecoverySyncSession
-      
       return {
-        success: false,
-        recoverySession: recoverySyncSession,
-        countsMatch: false,
-        isRecovery: true
+        success: true,
+        newSyncSession: newSyncSession,
+        countsMatch: true,
+        isRecovery: false,
+        timestamp: endTimestamp,
+        duration: syncDuration
       };
-    }
-
-    const newSyncSession = syncSession.isRecovery 
-      ? await this.createSync({
-        ...syncSession,
-        branchNumber: Math.floor(syncSession.branchNumber),
-        isRecovery: false
-      }, user, item)
-      : await this.createNextSync(syncSession, user, item);
-
-    const updateData = { 
-      nextSession_id: newSyncSession._id,
-      userId: syncSession.userId,
-      status: 'complete'
-    };
-    
-    // Only add timestamp data if provided
-    if (endTimestamp) {
-      updateData.endTimestamp = new Date(endTimestamp);
-    }
-    
-    if (syncDuration) {
-      updateData.syncDuration = syncDuration;
-    }
-    
-    // Update the previous session with nextSession_id, status, and timestamps
-    await SyncSessions.update(
-      syncSession._id,
-      updateData
-    );
-    
-    // Update item with new sync session reference
-    await plaidItems.update(
-      { itemId: item.itemId, userId: user._id }, // Safe due to checks
-      {
-        sync_id: newSyncSession._id, // Ensure newSyncSession is valid
-        status: 'complete'
+    } catch (error) {
+      console.error(`Error in resolveSession: ${error.message}`);
+      
+      if(syncSession._id) {
+        await SyncSessions.update(
+          syncSession._id,
+          {
+            userId: syncSession.userId,
+            endTimestamp: new Date(endTimestamp),
+            syncDuration,
+            status: 'error',
+            error: {
+              message: error.message,
+              timestamp: endTimestamp
+            }
+          }
+        );
       }
-    );
-    
-    return {
-      success: true,
-      newSyncSession: newSyncSession,
-      countsMatch: true,
-      isRecovery: false
-    };
-
+      
+      // Re-throw the original error for proper error handling upstream
+      throw error;
+    }
   }
 }
 

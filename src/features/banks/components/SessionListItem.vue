@@ -5,7 +5,7 @@
       'border-red-300 bg-red-50': session.status === 'error',
       'border-green-300 bg-green-50': session.status === 'complete',
       'border-yellow-300 bg-yellow-50': session.status === 'in_progress',
-      'border-blue-300 bg-blue-50': session.status === 'recovery'
+      'border-blue-300 bg-blue-50': session.status === 'recovered'
     }"
   >
     <!-- Session header -->

@@ -77,7 +77,7 @@ export function usePlaidSync() {
             
             // Update progress state for recovery
             updateSyncProgress({
-              status: 'recovery',
+              status: 'recovered',
               recoveryPerformed: true,
               recoveryRemovedCount: result.recovery.removedTransactions || result.recovery.removedCount || 0,
               itemId,

@@ -6,8 +6,8 @@ const syncSchema = {
     itemId: String, // item.itemId
     status: {
         type: String,
-        enum: ['in_progress', 'complete', 'failed', 'comleted', 'recovery'],
-        default: 'complete'
+        enum: ['queued', 'in_progress', 'complete', 'failed', 'recovered'],
+        default: 'queued'
     },
 
     prevSession_id: String,
@@ -64,8 +64,8 @@ const syncSchema = {
     // New fields as requested
     startTimestamp: Number,
     endTimestamp: Date,
-    plaidRequestId: String, // For traceability with Plaid's logs
     syncDuration: Number, // Performance tracking
+    plaidRequestId: String, // For traceability with Plaid's logs
 
     isLegacy: Boolean,
     isRecovery: {

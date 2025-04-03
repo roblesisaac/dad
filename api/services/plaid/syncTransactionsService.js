@@ -43,7 +43,7 @@ class TransactionSyncService {
       }
       
       // Update startTimestamp for this sync operation
-      await syncSessionService.updateSessionTimestamps(
+      await syncSessionService.updateSessionMetadata(
         currentSyncSession,
         { startTimestamp: syncStartTime }
       );
@@ -54,29 +54,13 @@ class TransactionSyncService {
       const shouldRecover = isRecovery || !syncCountsMatch;
 
       if (shouldRecover) {
-        // Use the new initiateReversion method which handles both creating 
-        // the recovery session and performing the reversion
+        // Handles both creating the recovery session and performing reversion
         const recoveryResult = await recoveryService.initiateReversion(
           // If already in recovery, we can use the current session directly
           isRecovery ? currentSyncSession : currentSyncSession,
           lockedItem, 
           user
         );
-
-        // Calculate sync duration and update timestamps
-        const endTimestamp = Date.now();
-        const syncDuration = endTimestamp - syncStartTime;
-        
-        // Update session timestamps if we still have access to the original session
-        if (recoveryResult.recoverySession && recoveryResult.recoverySession._id) {
-          await syncSessionService.updateSessionTimestamps(
-            recoveryResult.recoverySession,
-            { 
-              endTimestamp,
-              syncDuration 
-            }
-          );
-        }
 
         // Unlock item
         await this._unlockItem(lockedItem.itemId, user._id);
@@ -88,7 +72,7 @@ class TransactionSyncService {
             removedCount: recoveryResult.removedCount,
             revertedTo: recoveryResult.revertedTo,
             success: recoveryResult.success,
-            syncDuration // Add duration to response
+            syncDuration: recoveryResult.performanceMetrics?.syncDuration || 0
           },
           message: 'Recovery completed. ' + 
             (recoveryResult.resolution.success 
@@ -110,21 +94,13 @@ class TransactionSyncService {
       const plaidData = await this._fetchTransactionsFromPlaid(lockedItem, user, cursor);
       const hasChanges = this._checkForChanges(plaidData);
       
-      // If no changes and we have a previous session, update lastNoChangesTime and return early
-      if (!hasChanges) {
-        // Calculate sync duration for no-changes case
-        const endTimestamp = Date.now();
-        const syncDuration = endTimestamp - syncStartTime;
-        
+      if (!hasChanges) {        
         // Update both lastNoChangesTime and timestamps
-        await syncSessionService.updateSyncSessionLastNoChangesTime(
-          currentSyncSession._id,
-          endTimestamp,
-          { syncDuration }
+        const updatedSession = await syncSessionService.updateSyncSessionLastNoChangesTime(
+          currentSyncSession
         );
         
-        const response = await this._handleNoChangesCase(currentSyncSession, lockedItem, user, plaidData);
-        response.syncDuration = syncDuration; // Add duration to response
+        const response = await this._handleNoChangesCase(updatedSession, lockedItem, user, plaidData);
         return response;
       }
       
@@ -168,32 +144,22 @@ class TransactionSyncService {
         syncResult.actualCounts
       );
       
-      // Calculate sync duration
-      const endTimestamp = Date.now();
-      const syncDuration = endTimestamp - syncStartTime;
-      
-      // Update session with timestamps
-      await syncSessionService.updateSessionTimestamps(
-        updatedSession,
-        {
-          endTimestamp,
-          syncDuration,
-          failedTransactions: syncResult.failedTransactions
-        }
-      );
-      
-      // Double-check: Get the updated session to verify failedTransactions saved
-      const verifiedSession = await syncSessionService.getSyncSession(updatedSession._id, user);
+      // Update session with any failed transactions
+      if (syncResult.failedTransactions) {
+        await syncSessionService.updateSessionMetadata(
+          updatedSession,
+          {
+            failedTransactions: syncResult.failedTransactions
+          }
+        );
+      }
       
       // 4. Resolution Phase - Resolve the session based on count comparison
+      // resolveSession now handles timestamp calculations and updates internally
       const resolutionResult = await syncSessionService.resolveSession(
         updatedSession,
         user,
-        lockedItem,
-        { 
-          endTimestamp,
-          syncDuration
-        }
+        lockedItem
       );
       
       // Unlock item
@@ -207,23 +173,22 @@ class TransactionSyncService {
         resolutionResult
       );
       
-      // Add performance metrics to response
+      // Add performance metrics to response using timestamps from resolution result
       response.performanceMetrics = {
-        syncDuration,
+        syncDuration: resolutionResult.duration,
         startTimestamp: syncStartTime,
-        endTimestamp
+        endTimestamp: resolutionResult.timestamp
       };
       
       return response;
     } catch (error) {
       // Calculate duration even for errors
-      const endTimestamp = Date.now();
-      const syncDuration = endTimestamp - syncStartTime;
+      const { endTimestamp, syncDuration } = syncSessionService.calcEndTimestampAndSyncDuration(currentSyncSession);
       
       // Update session with error timestamp data if we have a session
       if (currentSyncSession && currentSyncSession._id) {
         try {
-          await syncSessionService.updateSessionTimestamps(
+          await syncSessionService.updateSessionMetadata(
             currentSyncSession,
             {
               endTimestamp,
@@ -235,7 +200,7 @@ class TransactionSyncService {
             }
           );
         } catch (updateError) {
-          console.error('Failed to update session timestamps on error:', updateError);
+          console.error('Failed to update session metadata on error:', updateError);
         }
       }
       
@@ -283,9 +248,6 @@ class TransactionSyncService {
 
   /**
    * Fetch transactions from Plaid
-   * @param {Object} item - Item data
-   * @param {Object} user - User object
-   * @param {String} cursor - Current cursor
    * @returns {Promise<Object>} Plaid data
    * @private
    */
@@ -328,9 +290,6 @@ class TransactionSyncService {
   async _handleNoChangesCase(currentSyncSession, item, user, plaidData) {
     const now = Date.now();
     
-    // lastNoChangesTime is set in the updateSyncSessionLastNoChangesTime method
-    // which is called before this method
-    
     // Release the sync lock
     await this._unlockItem(item.itemId, user._id);
     
@@ -343,7 +302,8 @@ class TransactionSyncService {
       cursor: plaidData.next_cursor,
       noChanges: true,
       lastSyncTime: currentSyncSession.syncTime,
-      lastNoChangesTime: now
+      lastNoChangesTime: now,
+      syncDuration: currentSyncSession.syncDuration
     };
   }
 
