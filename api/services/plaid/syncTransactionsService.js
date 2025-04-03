@@ -104,9 +104,6 @@ class TransactionSyncService {
         return response;
       }
       
-      // 2. Normal Flow - Process transaction data
-      const syncTime = Date.now();
-      
       // Update session with expected counts
       const expectedCounts = {
         added: plaidData.added?.length || 0,
@@ -126,15 +123,9 @@ class TransactionSyncService {
         lockedItem,
         user, 
         cursor,
-        syncTime, 
+        syncStartTime, 
         plaidData,
         transactionsSkipped
-      );
-
-      // update session with next cursor
-      updatedSession = await syncSessionService.updateSessionCursor(
-        updatedSession,
-        syncResult.nextCursor
       );
       
       // Update session with actual counts and get the updated session
@@ -168,7 +159,7 @@ class TransactionSyncService {
       // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
         syncResult,
-        syncTime,
+        syncStartTime,
         1, // No more branching in the new workflow
         resolutionResult
       );

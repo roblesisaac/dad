@@ -204,12 +204,12 @@ class recoveryService extends PlaidBaseService {
       }
 
       // Get the target session if an ID was provided
-      let targetSession = targetSessionOrId;
-      if (typeof targetSessionOrId === 'string') {
-        targetSession = await syncSessionService.getSyncSession(targetSessionOrId, user);
-        if (!targetSession) {
-          throw new CustomError('SESSION_NOT_FOUND', 'Target sync session not found');
-        }
+      const targetSession =  typeof targetSessionOrId === 'string'
+        ? await syncSessionService.getSyncSession(targetSessionOrId, user)
+        : targetSessionOrId;
+
+      if (!targetSession) {
+        throw new CustomError('SESSION_NOT_FOUND', 'Target sync session not found');
       }
 
       // Create a recovery session based on the target session

@@ -46,8 +46,8 @@ class SyncSessionService {
 
     // Update prevSync with nextSession_id
     await SyncSessions.update(prevSync._id, {
-      nextSession_id: nextSync._id
-
+      nextSession_id: nextSync._id,
+      status: 'complete'
     });
 
     return nextSync;
