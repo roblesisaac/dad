@@ -615,12 +615,14 @@ class TransactionSyncService {
    */
   async _unlockItem(itemId, userId, status = 'complete') {
     try {      
+      const currentItem = await plaidItems.findOne({ itemId, userId });
+
       // Only set to 'complete' if current status is 'in_progress'
       const newStatus = status === 'complete' && currentItem.status !== 'in_progress' 
         ? currentItem.status
         : status;
 
-      await plaidItems.update({ itemId, userId }, { status });
+      await plaidItems.update({ itemId, userId }, { status: newStatus });
     } catch (error) {
       console.error('Error unlocking item:', error);
       throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');
