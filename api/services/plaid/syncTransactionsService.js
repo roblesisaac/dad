@@ -615,7 +615,19 @@ class TransactionSyncService {
    */
   async _unlockItem(itemId, userId, status = 'complete') {
     try {
-      await plaidItems.update({ itemId, userId }, { status });
+      // First, ensure we have the most current item data
+      const currentItem = await plaidItems.findOne({ itemId, userId });
+      
+      if (!currentItem) {
+        console.warn(`Item not found for unlock: ${itemId}`);
+        return;
+      }
+      
+      // Use the item's document ID directly for a more precise update
+      // This ensures we're updating the exact document and not a different one that might match the filter
+      await plaidItems.update(currentItem._id, { status });
+      
+      console.log(`Item ${itemId} unlocked with status: ${status}`);
     } catch (error) {
       console.error('Error unlocking item:', error);
       throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');
