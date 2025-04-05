@@ -1,6 +1,8 @@
 import PlaidBaseService from './baseService.js';
 import plaidTransactions from '../../models/plaidTransactions.js';
 import { CustomError } from './customError.js';
+import syncSessionService from './syncSessionService.js';
+import plaidItems from '../../models/plaidItems.js';
 
 /**
  * Service responsible for querying and retrieving transactions
@@ -441,6 +443,54 @@ class TransactionQueryService extends PlaidBaseService {
       
       // Save the transaction
       const result = await plaidTransactions.save(enrichedTransaction);
+      
+      // Update sync session to mark this transaction as recovered
+      try {
+        // Get the item first to find the latest sync session
+        const item = await plaidItems.findOne({ itemId: transaction.itemId, userId });
+        
+        if (item && item.sync_id) {
+          // We have an item with a sync session
+          const user = { _id: userId };
+          const syncSession = await syncSessionService.getSyncSession(item.sync_id, user);
+          
+          if (syncSession && syncSession.failedTransactions) {
+            // Find the transaction in any of the failed transaction arrays
+            let found = false;
+            let updatedFailedTransactions = { ...syncSession.failedTransactions };
+            
+            // Check in added, modified, and removed arrays
+            ['added', 'modified', 'removed'].forEach(type => {
+              if (!found && Array.isArray(updatedFailedTransactions[type])) {
+                const index = updatedFailedTransactions[type].findIndex(
+                  tx => tx.transaction_id === transaction.transaction_id
+                );
+                
+                if (index !== -1) {
+                  // Add a recoveredAt timestamp to mark as recovered
+                  updatedFailedTransactions[type][index] = {
+                    ...updatedFailedTransactions[type][index],
+                    recovered: true,
+                    recoveredAt: Date.now()
+                  };
+                  found = true;
+                }
+              }
+            });
+            
+            if (found) {
+              // Update the sync session with the modified failedTransactions
+              await syncSessionService.updateSessionMetadata(syncSession, {
+                failedTransactions: updatedFailedTransactions
+              });
+            }
+          }
+        }
+      } catch (err) {
+        // Don't fail the main operation if updating sync session fails
+        console.error('Error updating sync session for recovered transaction:', err);
+      }
+      
       return result;
     } catch (error) {
       console.error('Error manually adding transaction:', error);
