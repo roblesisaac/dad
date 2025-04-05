@@ -307,6 +307,8 @@ class TransactionQueryService extends PlaidBaseService {
           console.error(`Error updating transaction ${transaction.transaction_id}:`, err.message);
         }
       }
+
+      console.log('result', result);
       
       return result;
     } catch (error) {

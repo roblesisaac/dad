@@ -353,6 +353,8 @@ class TransactionSyncService {
       actualCounts.added = addedResults?.successCount || 0;
       actualCounts.modified = modifiedResults?.successCount || 0;
       actualCounts.removed = removedResults?.successCount || 0;
+
+      console.log('actualCounts', actualCounts);
       
       // Process failedTransactions with careful validation for each section
       
@@ -384,12 +386,16 @@ class TransactionSyncService {
           failedTransactions.removed = [...removedResults.failedTransactions.removed];
         }
       }
+
+      console.log('failedTransactions', failedTransactions);
       
       // Update expected counts for added if we skipped any duplicates
       // This ensures we don't trigger a recovery for duplicates
       if (transactionsSkipped.length > 0) {
         expectedCounts.added -= transactionsSkipped.length;
       }
+
+      console.log('expectedCounts', expectedCounts);
       
       const syncCounts = {
         expected: expectedCounts,
@@ -555,7 +561,11 @@ class TransactionSyncService {
   async _processModifiedTransactions(transactions, user, cursor, syncTime) {
     try {
       // Use the dedicated service method for processing modified transactions
-      return await transactionsCrudService.processModifiedTransactions(transactions, user, cursor, syncTime);
+      const modifiedResults = await transactionsCrudService.processModifiedTransactions(transactions, user, cursor, syncTime);
+
+      console.log('modifiedResults', modifiedResults);
+
+      return modifiedResults;
     } catch (error) {
       console.error('Error in batch processing modified transactions:', error);
       throw new CustomError('TRANSACTION_BATCH_ERROR', 
