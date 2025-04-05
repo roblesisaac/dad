@@ -339,18 +339,16 @@ export function useBanks() {
   /**
    * Add a transaction from error data
    * @param {Object} transaction - Transaction data from error
-   * @param {String} syncSessionId - ID of the sync session
    * @returns {Promise<Object>} Result of the operation
    */
-  const addTransactionFromError = async (transaction, syncSessionId = null) => {
+  const addTransactionFromError = async (transaction) => {
     if (!transaction) {
       return { success: false, error: 'No transaction data provided' };
     }
     
     try {
       const result = await api.post('plaid/transactions/add-from-error', {
-        transaction,
-        syncSessionId
+        transaction
       });
       
       if (result.success) {
@@ -361,8 +359,7 @@ export function useBanks() {
         
         return { 
           success: true, 
-          transaction: result.transaction,
-          sessionUpdated: result.sessionUpdated 
+          transaction: result.transaction 
         };
       } else {
         return { 

@@ -50,7 +50,7 @@ const syncSchema = {
         default: null
     },
 
-    // Update the failedTransactions field with proper type definition
+    // New field for tracking failed transactions with detailed error information
     failedTransactions: {
         type: Object,
         default: {

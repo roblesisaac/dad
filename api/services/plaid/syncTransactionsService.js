@@ -63,7 +63,7 @@ class TransactionSyncService {
         );
 
         // Unlock item
-        await this._unlockItem(lockedItem.itemId, user._id, 'recovery');
+        await this._unlockItem(lockedItem.itemId, user._id);
         
         // Return recovery response
         const recoveryResponse = {
@@ -104,6 +104,9 @@ class TransactionSyncService {
         return response;
       }
       
+      // 2. Normal Flow - Process transaction data
+      const syncTime = Date.now();
+      
       // Update session with expected counts
       const expectedCounts = {
         added: plaidData.added?.length || 0,
@@ -123,12 +126,16 @@ class TransactionSyncService {
         lockedItem,
         user, 
         cursor,
-        syncStartTime, 
+        syncTime, 
         plaidData,
         transactionsSkipped
       );
 
-      console.log('syncResult', syncResult);
+      // update session with next cursor
+      updatedSession = await syncSessionService.updateSessionCursor(
+        updatedSession,
+        syncResult.nextCursor
+      );
       
       // Update session with actual counts and get the updated session
       updatedSession = await syncSessionService.updateSessionCounts(
@@ -137,9 +144,9 @@ class TransactionSyncService {
         syncResult.actualCounts
       );
       
-      // Update session with any failed transactions - using new method that handles transaction data better
+      // Update session with any failed transactions
       if (syncResult.failedTransactions) {
-        updatedSession = await syncSessionService.updateSessionWithTransactionData(
+        await syncSessionService.updateSessionMetadata(
           updatedSession,
           {
             failedTransactions: syncResult.failedTransactions
@@ -161,7 +168,7 @@ class TransactionSyncService {
       // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
         syncResult,
-        syncStartTime,
+        syncTime,
         1, // No more branching in the new workflow
         resolutionResult
       );
@@ -557,9 +564,7 @@ class TransactionSyncService {
   async _processModifiedTransactions(transactions, user, cursor, syncTime) {
     try {
       // Use the dedicated service method for processing modified transactions
-      const modifiedResults = await transactionsCrudService.processModifiedTransactions(transactions, user, cursor, syncTime);
-
-      return modifiedResults;
+      return await transactionsCrudService.processModifiedTransactions(transactions, user, cursor, syncTime);
     } catch (error) {
       console.error('Error in batch processing modified transactions:', error);
       throw new CustomError('TRANSACTION_BATCH_ERROR', 
@@ -617,16 +622,9 @@ class TransactionSyncService {
    * @returns {Promise<void>}
    * @private
    */
-  async _unlockItem(itemId, userId, status = 'complete') {
-    try {      
-      const currentItem = await plaidItems.findOne({ itemId, userId });
-
-      // Only set to 'complete' if current status is 'in_progress'
-      const newStatus = status === 'complete' && currentItem.status !== 'in_progress' 
-        ? currentItem.status
-        : status;
-
-      await plaidItems.update({ itemId, userId }, { status: newStatus });
+  async _unlockItem(itemId, userId) {
+    try {
+      await plaidItems.update({ itemId, userId }, { status: 'complete' });
     } catch (error) {
       console.error('Error unlocking item:', error);
       throw new CustomError('ITEM_UNLOCK_ERROR', 'Failed to unlock item');

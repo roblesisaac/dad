@@ -16,7 +16,7 @@ const syncData = {
   status: {
     type: String,
     default: '',
-    enum: ['', 'queued', 'in_progress', 'completed', 'failed', 'recovery']
+    enum: ['', 'queued', 'in_progress', 'completed', 'failed']
   }
 }
 

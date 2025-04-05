@@ -34,7 +34,6 @@
     <!-- Add Transaction button for modified transactions -->
     <div v-if="transaction && showAddButton" class="mt-2">
       <button 
-        v-if="!disabled"
         @click="addTransaction" 
         class="w-full text-xs py-1 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         :disabled="isLoading"
@@ -42,9 +41,6 @@
         <span v-if="isLoading">Adding...</span>
         <span v-else>Add Transaction</span>
       </button>
-      <div v-else class="w-full text-xs py-1 px-2 bg-green-100 text-green-700 rounded-sm text-center">
-        Already Added
-      </div>
       <div v-if="addResult" class="mt-1 text-xs font-medium" :class="addSuccess ? 'text-green-600' : 'text-red-600'">
         {{ addResult }}
       </div>
@@ -77,14 +73,6 @@ const props = defineProps({
   showAddButton: {
     type: Boolean,
     default: true
-  },
-  syncSessionId: {
-    type: String,
-    default: null
-  },
-  disabled: {
-    type: Boolean,
-    default: false
   }
 });
 
@@ -137,13 +125,11 @@ const addTransaction = async () => {
   addSuccess.value = false;
   
   try {
-    const result = await addTransactionFromError(props.transaction, props.syncSessionId);
+    const result = await addTransactionFromError(props.transaction);
     
     if (result.success) {
       addSuccess.value = true;
-      addResult.value = result.sessionUpdated 
-        ? 'Transaction added and session updated' 
-        : 'Transaction added successfully';
+      addResult.value = 'Transaction added successfully';
     } else {
       addSuccess.value = false;
       addResult.value = `Failed: ${result.error}`;

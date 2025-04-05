@@ -184,8 +184,6 @@
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
               :show-add-button="true"
-              :sync-session-id="session._id"
-              :disabled="failedTx.manuallyAdded"
             />
           </template>
         </FailedTransactionsGroup>
