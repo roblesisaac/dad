@@ -139,6 +139,9 @@ class SyncSessionService {
         nextSession_id: recoverySync._id
       });
     }
+
+    // Update item status to recovery
+    await plaidItems.update(item._id, { status: 'recovery' });
     
     return recoverySync;
   }
