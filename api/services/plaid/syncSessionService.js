@@ -314,6 +314,7 @@ class SyncSessionService {
    * @returns {Promise<Object>} Updated sync session
    */
   async updateSessionMetadata(syncSession, metadata) {
+    console.log('metadata', metadata);
     if (!syncSession || !syncSession._id) {
       return syncSession;
     }
@@ -357,6 +358,8 @@ class SyncSessionService {
         // Don't include failedTransactions if there was an error processing it
       }
     }
+
+    console.log('updateData', updateData);
     
     // Only update if we have data to update
     if (Object.keys(updateData).length > 0) {
@@ -364,11 +367,15 @@ class SyncSessionService {
         // Store failedTransactions separately since it's a complex object
         const failedTransactions = updateData.failedTransactions ? 
           JSON.parse(JSON.stringify(updateData.failedTransactions)) : undefined;
+
+          console.log('failedTransactions', failedTransactions);
         
         // Remove complex objects from the update data
         if (failedTransactions) {
           delete updateData.failedTransactions;
         }
+
+        console.log('data to update', updateData);
         
         // First update the basic fields
         let updatedSession = await SyncSessions.update(
