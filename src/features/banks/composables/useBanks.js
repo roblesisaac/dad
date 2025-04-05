@@ -355,9 +355,9 @@ export function useBanks() {
       
       if (result.success) {
         // If the current bank is selected, refresh the sync sessions to show the update
-        if (selectedBank.value?.itemId) {
-          await fetchSyncSessions(selectedBank.value.itemId);
-        }
+        // if (selectedBank.value?.itemId) {
+        //   await fetchSyncSessions(selectedBank.value.itemId);
+        // }
         
         return { 
           success: true, 

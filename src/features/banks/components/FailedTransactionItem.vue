@@ -1,13 +1,13 @@
 <template>
   <div class="bg-white p-2 rounded border" 
-       :class="[error.recovered ? 'border-green-200' : 'border-red-200', 'text-xs']">
+       :class="[recoveredAt ? 'border-green-200' : 'border-red-200', 'text-xs']">
     <slot name="header">
       <div class="font-medium mb-1 flex justify-between items-center">
         <div>
           {{ transaction?.name || 'Unknown Transaction' }} 
           <span class="text-gray-500">(ID: {{ truncateId(transactionId) }})</span>
         </div>
-        <div v-if="error.recovered" class="text-green-600 text-xs">
+        <div v-if="recoveredAt" class="text-green-600 text-xs">
           Recovered
         </div>
       </div>
@@ -26,11 +26,11 @@
     
     <div :class="[
            'p-1 rounded border', 
-           error.recovered ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100',
+           recoveredAt ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100',
            { 'mt-1': !showDetails }
          ]">
-      <div class="font-medium" :class="error.recovered ? 'text-green-700' : 'text-red-700'">
-        {{ error.recovered ? 'Recovered:' : 'Error:' }}
+      <div class="font-medium" :class="recoveredAt ? 'text-green-700' : 'text-red-700'">
+        {{ recoveredAt ? 'Recovered:' : 'Error:' }}
       </div>
       <div v-if="error?.code">
         <span class="font-medium">Code:</span> {{ error?.code }}
@@ -41,13 +41,13 @@
       <div v-if="error?.timestamp">
         <span class="font-medium">Time:</span> {{ formatDate(error?.timestamp) }}
       </div>
-      <div v-if="error?.recoveredAt">
-        <span class="font-medium">Recovered at:</span> {{ formatDate(error?.recoveredAt) }}
+      <div v-if="recoveredAt">
+        <span class="font-medium">Recovered at:</span> {{ formatDate(recoveredAt) }}
       </div>
     </div>
     
     <!-- Add Transaction button (only show if not already recovered) -->
-    <div v-if="transaction && showAddButton && !error.recovered" class="mt-2">
+    <div v-if="transaction && showAddButton && !recoveredAt" class="mt-2">
       <button 
         @click="addTransaction" 
         class="w-full text-xs py-1 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -91,6 +91,10 @@ const props = defineProps({
   },
   sessionId: {
     type: String,
+    default: null
+  },
+  recoveredAt: {
+    type: Number,
     default: null
   }
 });
