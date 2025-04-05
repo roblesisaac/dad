@@ -50,7 +50,7 @@ const syncSchema = {
         default: null
     },
 
-    // New field for tracking failed transactions with detailed error information
+    // Update the failedTransactions field with proper type definition
     failedTransactions: {
         type: Object,
         default: {
@@ -58,6 +58,23 @@ const syncSchema = {
             modified: [], 
             removed: [], 
             skipped: []
+        },
+        // Add specific serialization to ensure it's stored as JSON
+        serialize: (value) => {
+            if (!value) return JSON.stringify({
+                added: [], modified: [], removed: [], skipped: []
+            });
+            return JSON.stringify(value);
+        },
+        deserialize: (value) => {
+            if (!value || value === "") return {
+                added: [], modified: [], removed: [], skipped: []
+            };
+            try {
+                return typeof value === 'string' ? JSON.parse(value) : value;
+            } catch (e) {
+                return { added: [], modified: [], removed: [], skipped: [] };
+            }
         }
     },
 
