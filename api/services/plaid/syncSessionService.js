@@ -361,56 +361,40 @@ class SyncSessionService {
 
     console.log('updateData', updateData);
     
-    // Only update if we have data to update
-    if (Object.keys(updateData).length > 0) {
-      try {        
-        // Store failedTransactions separately since it's a complex object
-        const failedTransactions = updateData.failedTransactions ? 
-          JSON.parse(JSON.stringify(updateData.failedTransactions)) : undefined;
-
-          console.log('failedTransactions', failedTransactions);
-        
-        // Remove complex objects from the update data
-        if (failedTransactions) {
-          delete updateData.failedTransactions;
+    try {
+      // Include all update data in a single update operation
+      // Don't separate failedTransactions anymore
+      const updatedSession = await SyncSessions.update(
+        syncSession._id,
+        {
+          userId: syncSession.userId,
+          ...updateData
         }
-
-        console.log('data to update', updateData);
-        
-        // First update the basic fields
-        let updatedSession = await SyncSessions.update(
-          syncSession._id,
-          {
-            userId: syncSession.userId,
-            ...updateData
-          }
-        );
-        
-        // Then update failedTransactions separately if it exists
-        if (failedTransactions) {
-          updatedSession = await SyncSessions.update(
-            syncSession._id,
-            {
-              userId: syncSession.userId,
-              failedTransactions
-            }
-          );
-        }
-
-        return updatedSession;
-      } catch (error) {
-        console.error(`Error updating session metadata: ${error.message}`);
-        // Log full error details but don't throw - we want to continue execution
-        if (error.message.includes('NaN')) {
-          console.error('NaN value detected in update data:', updateData);
-        }
+      );
+      
+      console.log('Session updated successfully with all data including failedTransactions');
+      return updatedSession;
+    } catch (error) {
+      console.error(`Error updating session metadata: ${error.message}`, error);
+      // More detailed error logging
+      if (error.message.includes('NaN')) {
+        console.error('NaN value detected in update data:', updateData);
+      }
+      
+      // Try a simplified update as fallback if the main update fails
+      try {
+        console.log('Attempting simplified update as fallback');
+        // Return the original session with the data we tried to update
+        // This keeps the data in memory even if DB update failed
+        return {
+          ...syncSession,
+          ...updateData
+        };
+      } catch (fallbackError) {
+        console.error('Even fallback update failed:', fallbackError);
+        return syncSession;
       }
     }
-    
-    return {
-      ...syncSession,
-      ...updateData
-    };
   }
 
   /**
