@@ -214,7 +214,7 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
       throw new Error(`No item found with filter '${JSON.stringify(filter)}`);
     }
 
-    const { validated:validatedUpdate, uniqueFieldsToCheck, skipped } = await validate({ ...existingItem, ...updates }, 'set');
+    const { validated:validatedUpdate, uniqueFieldsToCheck, skipped } = await validate({ ...existingItem, ...updates });
     const existingId = existingItem._id;
 
     for(const uniqueField of uniqueFieldsToCheck) {
