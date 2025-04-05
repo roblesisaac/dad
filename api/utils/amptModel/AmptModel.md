@@ -12,7 +12,6 @@ AmptModel is a lightweight ODM (Object-Document Mapper) utility built on top of 
 - **Label Mappings**: Utilize Ampt's label system for efficient data access patterns
 - **Relationship Support**: Handle references between different models
 - **Consistent Interface**: Standardized methods for CRUD operations
-- **Object Serialization**: Support for custom serialization/deserialization of complex objects
 
 ## Initialization
 
@@ -43,57 +42,6 @@ The AmptModel factory function takes three parameters:
 1. **collectionNameConfig**: String or array defining the collection name pattern
 2. **schemaConfig**: Object defining the data schema with validation rules
 3. **globalConfig**: Optional configuration that applies to all models
-
-## Complex Object Serialization
-
-When working with complex objects (nested objects, arrays of objects), DynamoDB may not store them correctly. AmptModel supports custom serialization and deserialization methods to properly store and retrieve these complex structures:
-
-```javascript
-const schema = {
-  // Field with serialization/deserialization support
-  complexField: {
-    type: Object,
-    default: { items: [], metadata: {} },
-    
-    // Convert to string for storage
-    serialize: (value) => {
-      if (!value) return JSON.stringify({});
-      return JSON.stringify(value);
-    },
-    
-    // Convert back to object when retrieved
-    deserialize: (value) => {
-      if (!value || value === "") return {};
-      try {
-        return typeof value === 'string' ? JSON.parse(value) : value;
-      } catch (e) {
-        console.error('Error deserializing:', e);
-        return {};
-      }
-    }
-  }
-};
-```
-
-### How Serialization Works
-
-1. **serialize**: Called when saving or updating a record
-   - Converts complex structures to strings before storage
-   - Allows customization of how data is formatted
-   - Handles edge cases like null or undefined values
-
-2. **deserialize**: Called when retrieving a record
-   - Converts stored strings back to the original complex structure
-   - Provides proper error handling for malformed data
-   - Returns a default value if parsing fails
-
-### When to Use Serialization
-
-Add serialization to fields that:
-- Contain nested objects or arrays of objects
-- Have a complex structure that DynamoDB might not handle correctly
-- Need special formatting or processing before storage
-- Require custom parsing logic when retrieved
 
 ## Collection Name Configuration
 

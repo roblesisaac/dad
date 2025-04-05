@@ -183,6 +183,11 @@ class SyncSessionService {
         return null;
       }
       
+      // Handle deserialization of failedTransactions
+      if (syncSession.failedTransactions) {
+        syncSession.failedTransactions = this.deserializeFailedTransactions(syncSession.failedTransactions);
+      }
+      
       return syncSession;
     } catch (error) {
       console.warn(`Error fetching sync session '${sync_id}': ${error.message}`);
@@ -209,7 +214,15 @@ class SyncSessionService {
         { limit, reverse: true } // Most recent first
       );
       
-      return sessions.items || [];
+      // Deserialize failedTransactions in each session
+      const processedSessions = (sessions.items || []).map(session => {
+        if (session.failedTransactions) {
+          session.failedTransactions = this.deserializeFailedTransactions(session.failedTransactions);
+        }
+        return session;
+      });
+      
+      return processedSessions;
     } catch (error) {
       console.warn(`Error fetching sync sessions for item ${itemId}: ${error.message}`);
       return [];
@@ -362,6 +375,90 @@ class SyncSessionService {
   }
 
   /**
+   * Serializes the failedTransactions object to a JSON string
+   * @private
+   */
+  serializeFailedTransactions(value) {
+    if (!value) {
+      console.log('Serializing empty failedTransactions');
+      return JSON.stringify({
+        added: [], modified: [], removed: [], skipped: []
+      });
+    }
+    
+    try {
+      // Handle case where value is already a string
+      if (typeof value === 'string') {
+        // Validate it's proper JSON
+        JSON.parse(value);
+        console.log('failedTransactions already serialized');
+        return value;
+      }
+      
+      // Ensure value has the expected structure
+      const result = {
+        added: Array.isArray(value.added) ? value.added : [],
+        modified: Array.isArray(value.modified) ? value.modified : [],
+        removed: Array.isArray(value.removed) ? value.removed : [],
+        skipped: Array.isArray(value.skipped) ? value.skipped : []
+      };
+      
+      const serialized = JSON.stringify(result);
+      console.log(`Serialized failedTransactions (${serialized.length} chars)`);
+      return serialized;
+    } catch (e) {
+      console.error('Error serializing failedTransactions:', e);
+      return JSON.stringify({
+        added: [], modified: [], removed: [], skipped: [],
+        error: 'Serialization error'
+      });
+    }
+  }
+
+  /**
+   * Deserializes the failedTransactions string to an object
+   * @private
+   */
+  deserializeFailedTransactions(value) {
+    if (!value || value === "") {
+      console.log('Deserializing empty failedTransactions value');
+      return {
+        added: [], modified: [], removed: [], skipped: []
+      };
+    }
+    
+    try {
+      // Already an object, just ensure proper structure
+      if (typeof value === 'object' && !Array.isArray(value)) {
+        console.log('failedTransactions already an object');
+        return {
+          added: Array.isArray(value.added) ? value.added : [],
+          modified: Array.isArray(value.modified) ? value.modified : [],
+          removed: Array.isArray(value.removed) ? value.removed : [],
+          skipped: Array.isArray(value.skipped) ? value.skipped : []
+        };
+      }
+      
+      // Parse the string
+      const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+      console.log('Deserialized failedTransactions successfully');
+      
+      return {
+        added: Array.isArray(parsed.added) ? parsed.added : [],
+        modified: Array.isArray(parsed.modified) ? parsed.modified : [],
+        removed: Array.isArray(parsed.removed) ? parsed.removed : [],
+        skipped: Array.isArray(parsed.skipped) ? parsed.skipped : []
+      };
+    } catch (e) {
+      console.error('Error deserializing failedTransactions:', e);
+      return {
+        added: [], modified: [], removed: [], skipped: [],
+        deserializeError: typeof value === 'string' ? value.substring(0, 100) : String(value)
+      };
+    }
+  }
+
+  /**
    * Updates various metadata on a sync session including timestamps, errors, and transaction data
    * @returns {Promise<Object>} Updated sync session
    */
@@ -394,8 +491,7 @@ class SyncSessionService {
         // Only include if we have actual content
         if (hasItems) {
           // Create a fresh object with the correct structure to avoid any reference issues
-          // Use the exact structure expected by the model's serialization method
-          updateData.failedTransactions = {
+          const preparedFailedTransactions = {
             added: normalizedFailedTransactions.added.length > 0 ? 
               normalizedFailedTransactions.added.map(item => ({...item})) : [],
             modified: normalizedFailedTransactions.modified.length > 0 ? 
@@ -406,9 +502,12 @@ class SyncSessionService {
               normalizedFailedTransactions.skipped.map(item => ({...item})) : []
           };
           
+          // Serialize the failedTransactions before saving to database
+          updateData.failedTransactions = this.serializeFailedTransactions(preparedFailedTransactions);
+          
           // Debug logging to verify structure
           console.log('failedTransactions prepared for database:', 
-            JSON.stringify(updateData.failedTransactions).substring(0, 200) + '...');
+            updateData.failedTransactions.substring(0, 200) + '...');
         }
       } catch (err) {
         console.error('Error processing failedTransactions:', err);
@@ -429,13 +528,19 @@ class SyncSessionService {
       );
       
       console.log('Session updated successfully with all data including failedTransactions');
+      
       // Basic validation of returned session
       if (updatedSession && metadata.failedTransactions && 
           (!updatedSession.failedTransactions || 
-           JSON.stringify(updatedSession.failedTransactions) === '{}' ||
-           JSON.stringify(updatedSession.failedTransactions) === '[]' ||
+           updatedSession.failedTransactions === '{}' ||
+           updatedSession.failedTransactions === '[]' ||
            updatedSession.failedTransactions === '')) {
         console.warn('Warning: failedTransactions may not have been saved correctly');
+      }
+      
+      // Make sure to deserialize before returning
+      if (updatedSession && updatedSession.failedTransactions) {
+        updatedSession.failedTransactions = this.deserializeFailedTransactions(updatedSession.failedTransactions);
       }
       
       return updatedSession;
@@ -450,23 +555,40 @@ class SyncSessionService {
       // Try direct update with full data for debugging
       try {
         console.log('Attempting direct update with complete session data');
+        
+        // Make sure to serialize failedTransactions in the complete session data
+        const completeUpdateData = { ...syncSession, ...updateData };
+        if (completeUpdateData.failedTransactions && typeof completeUpdateData.failedTransactions !== 'string') {
+          completeUpdateData.failedTransactions = this.serializeFailedTransactions(completeUpdateData.failedTransactions);
+        }
+        
         const directUpdate = await SyncSessions.update(
           syncSession._id,
-          {
-            ...syncSession,
-            ...updateData
-          }
+          completeUpdateData
         );
+        
+        // Deserialize for return
+        if (directUpdate && directUpdate.failedTransactions) {
+          directUpdate.failedTransactions = this.deserializeFailedTransactions(directUpdate.failedTransactions);
+        }
+        
         return directUpdate;
       } catch (directError) {
         console.error('Direct update failed:', directError);
         
         // Return the original session with the data we tried to update
         // This keeps the data in memory even if DB update failed
-        return {
+        const result = {
           ...syncSession,
-          ...updateData
+          ...metadata
         };
+        
+        // Ensure failedTransactions is properly structured if present
+        if (result.failedTransactions) {
+          result.failedTransactions = this.deserializeFailedTransactions(result.failedTransactions);
+        }
+        
+        return result;
       }
     }
   }
@@ -752,10 +874,14 @@ class SyncSessionService {
       if (hasFailedTransactions && updatedSession) {
         if (!updatedSession.failedTransactions) {
           console.error('Failed to save failedTransactions - field missing from updated session');
-        } else if (typeof updatedSession.failedTransactions === 'string' && 
-                 updatedSession.failedTransactions !== '') {
-          console.log('Warning: failedTransactions saved as string, may need deserialization');
-        } else if (typeof updatedSession.failedTransactions === 'object') {
+        } else if (typeof updatedSession.failedTransactions === 'string') {
+          // If it's still a string, deserialize it
+          updatedSession.failedTransactions = this.deserializeFailedTransactions(updatedSession.failedTransactions);
+          console.log('Deserialized returned failedTransactions from string');
+        }
+        
+        // Log counts for verification
+        if (typeof updatedSession.failedTransactions === 'object') {
           const counts = {};
           Object.keys(updatedSession.failedTransactions).forEach(key => {
             const array = updatedSession.failedTransactions[key];

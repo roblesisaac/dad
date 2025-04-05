@@ -441,13 +441,20 @@ class TransactionQueryService extends PlaidBaseService {
           const session = await SyncSessions.findOne(syncSessionId);
           
           if (session) {
-            // Make sure failedTransactions is properly initialized
-            const failedTransactions = session.failedTransactions || {
-              added: [],
-              modified: [],
-              removed: [],
-              skipped: []
-            };
+            // Deserialize failedTransactions if it's a string
+            let failedTransactions;
+            if (session.failedTransactions) {
+              failedTransactions = typeof session.failedTransactions === 'string'
+                ? syncSessionService.deserializeFailedTransactions(session.failedTransactions)
+                : session.failedTransactions;
+            } else {
+              failedTransactions = {
+                added: [],
+                modified: [],
+                removed: [],
+                skipped: []
+              };
+            }
             
             // Find the transaction in modified list (if it exists)
             const modifiedList = failedTransactions.modified || [];
