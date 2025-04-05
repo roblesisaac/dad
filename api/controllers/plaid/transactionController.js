@@ -116,7 +116,7 @@ export default {
   async addTransactionFromError(req, res) {
     try {
       const user = req.user;
-      const { transaction } = req.body;
+      const { transaction, sessionId } = req.body;
       
       if (!transaction || !transaction.transaction_id) {
         return res.status(400).json({
@@ -125,7 +125,7 @@ export default {
         });
       }
       
-      const result = await transactionQueryService.addTransactionFromError(transaction, user._id);
+      const result = await transactionQueryService.addTransactionFromError(transaction, user._id, sessionId);
       
       return res.json({
         success: true,

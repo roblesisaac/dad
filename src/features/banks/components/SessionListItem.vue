@@ -166,6 +166,7 @@
               :transaction="failedTx.transaction"
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
+              :session-id="session._id"
             />
           </template>
         </FailedTransactionsGroup>
@@ -184,6 +185,7 @@
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
               :show-add-button="true"
+              :session-id="session._id"
             />
           </template>
         </FailedTransactionsGroup>
@@ -201,6 +203,7 @@
               :transaction="failedTx.transaction"
               :transaction-id="failedTx.transaction_id"
               :error="failedTx.error"
+              :session-id="session._id"
             />
           </template>
         </FailedTransactionsGroup>
@@ -222,6 +225,7 @@
               :transaction="skippedTx.transaction"
               :transaction-id="skippedTx.transaction_id"
               :error="skippedTx.error"
+              :session-id="session._id"
               class="border-amber-200"
             />
           </template>

@@ -339,23 +339,25 @@ export function useBanks() {
   /**
    * Add a transaction from error data
    * @param {Object} transaction - Transaction data from error
+   * @param {String} sessionId - Optional sync session ID for direct update
    * @returns {Promise<Object>} Result of the operation
    */
-  const addTransactionFromError = async (transaction) => {
+  const addTransactionFromError = async (transaction, sessionId = null) => {
     if (!transaction) {
       return { success: false, error: 'No transaction data provided' };
     }
     
     try {
       const result = await api.post('plaid/transactions/add-from-error', {
-        transaction
+        transaction,
+        sessionId
       });
       
       if (result.success) {
         // If the current bank is selected, refresh the sync sessions to show the update
-        // if (selectedBank.value?.itemId) {
-        //   await fetchSyncSessions(selectedBank.value.itemId);
-        // }
+        if (selectedBank.value?.itemId) {
+          await fetchSyncSessions(selectedBank.value.itemId);
+        }
         
         return { 
           success: true, 

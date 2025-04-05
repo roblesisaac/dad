@@ -418,9 +418,10 @@ class TransactionQueryService extends PlaidBaseService {
    * Manually add a transaction from error data
    * @param {Object} transaction - Transaction data to add
    * @param {String} userId - User ID
+   * @param {String} sessionId - Optional sync session ID for direct update
    * @returns {Promise<Object>} Added transaction
    */
-  async addTransactionFromError(transaction, userId) {
+  async addTransactionFromError(transaction, userId, sessionId = null) {
     try {
       if (!transaction || !userId) {
         throw new CustomError('INVALID_PARAMS', 'Missing transaction data or user ID');
@@ -446,13 +447,10 @@ class TransactionQueryService extends PlaidBaseService {
       
       // Update sync session to mark this transaction as recovered
       try {
-        // Get the item first to find the latest sync session
-        const item = await plaidItems.findOne({ itemId: transaction.itemId, userId });
-        
-        if (item && item.sync_id) {
-          // We have an item with a sync session
+        // If sessionId is provided, use it directly
+        if (sessionId) {
           const user = { _id: userId };
-          const syncSession = await syncSessionService.getSyncSession(item.sync_id, user);
+          const syncSession = await syncSessionService.getSyncSession(sessionId, user);
           
           if (syncSession && syncSession.failedTransactions) {
             // Find the transaction in any of the failed transaction arrays
@@ -483,6 +481,47 @@ class TransactionQueryService extends PlaidBaseService {
               await syncSessionService.updateSessionMetadata(syncSession, {
                 failedTransactions: updatedFailedTransactions
               });
+            }
+          }
+        } else {
+          // Fallback to previous approach of finding item first
+          const item = await plaidItems.findOne({ itemId: transaction.itemId, userId });
+          
+          if (item && item.sync_id) {
+            // We have an item with a sync session
+            const user = { _id: userId };
+            const syncSession = await syncSessionService.getSyncSession(item.sync_id, user);
+            
+            if (syncSession && syncSession.failedTransactions) {
+              // Find the transaction in any of the failed transaction arrays
+              let found = false;
+              let updatedFailedTransactions = { ...syncSession.failedTransactions };
+              
+              // Check in added, modified, and removed arrays
+              ['added', 'modified', 'removed'].forEach(type => {
+                if (!found && Array.isArray(updatedFailedTransactions[type])) {
+                  const index = updatedFailedTransactions[type].findIndex(
+                    tx => tx.transaction_id === transaction.transaction_id
+                  );
+                  
+                  if (index !== -1) {
+                    // Add a recoveredAt timestamp to mark as recovered
+                    updatedFailedTransactions[type][index] = {
+                      ...updatedFailedTransactions[type][index],
+                      recovered: true,
+                      recoveredAt: Date.now()
+                    };
+                    found = true;
+                  }
+                }
+              });
+              
+              if (found) {
+                // Update the sync session with the modified failedTransactions
+                await syncSessionService.updateSessionMetadata(syncSession, {
+                  failedTransactions: updatedFailedTransactions
+                });
+              }
             }
           }
         }

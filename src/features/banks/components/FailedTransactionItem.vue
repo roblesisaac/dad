@@ -1,9 +1,15 @@
 <template>
-  <div class="bg-white p-2 rounded border border-red-200 text-xs">
+  <div class="bg-white p-2 rounded border" 
+       :class="[error.recovered ? 'border-green-200' : 'border-red-200', 'text-xs']">
     <slot name="header">
-      <div class="font-medium mb-1">
-        {{ transaction?.name || 'Unknown Transaction' }} 
-        <span class="text-gray-500">(ID: {{ truncateId(transactionId) }})</span>
+      <div class="font-medium mb-1 flex justify-between items-center">
+        <div>
+          {{ transaction?.name || 'Unknown Transaction' }} 
+          <span class="text-gray-500">(ID: {{ truncateId(transactionId) }})</span>
+        </div>
+        <div v-if="error.recovered" class="text-green-600 text-xs">
+          Recovered
+        </div>
       </div>
       
       <div v-if="showDetails" class="grid grid-cols-2 gap-2 mb-2">
@@ -18,8 +24,14 @@
       </div>
     </slot>
     
-    <div class="bg-red-50 p-1 rounded border border-red-100" :class="{ 'mt-1': !showDetails }">
-      <div class="font-medium text-red-700">Error:</div>
+    <div :class="[
+           'p-1 rounded border', 
+           error.recovered ? 'bg-green-50 border-green-100' : 'bg-red-50 border-red-100',
+           { 'mt-1': !showDetails }
+         ]">
+      <div class="font-medium" :class="error.recovered ? 'text-green-700' : 'text-red-700'">
+        {{ error.recovered ? 'Recovered:' : 'Error:' }}
+      </div>
       <div v-if="error?.code">
         <span class="font-medium">Code:</span> {{ error?.code }}
       </div>
@@ -29,10 +41,13 @@
       <div v-if="error?.timestamp">
         <span class="font-medium">Time:</span> {{ formatDate(error?.timestamp) }}
       </div>
+      <div v-if="error?.recoveredAt">
+        <span class="font-medium">Recovered at:</span> {{ formatDate(error?.recoveredAt) }}
+      </div>
     </div>
     
-    <!-- Add Transaction button for modified transactions -->
-    <div v-if="transaction && showAddButton" class="mt-2">
+    <!-- Add Transaction button (only show if not already recovered) -->
+    <div v-if="transaction && showAddButton && !error.recovered" class="mt-2">
       <button 
         @click="addTransaction" 
         class="w-full text-xs py-1 px-2 bg-blue-500 hover:bg-blue-600 text-white rounded-sm focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
@@ -51,7 +66,7 @@
 <script setup>
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useBanks } from '@/features/banks/composables/useBanks.js';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps({
   transaction: {
@@ -73,6 +88,10 @@ const props = defineProps({
   showAddButton: {
     type: Boolean,
     default: true
+  },
+  sessionId: {
+    type: String,
+    default: null
   }
 });
 
@@ -125,7 +144,7 @@ const addTransaction = async () => {
   addSuccess.value = false;
   
   try {
-    const result = await addTransactionFromError(props.transaction);
+    const result = await addTransactionFromError(props.transaction, props.sessionId);
     
     if (result.success) {
       addSuccess.value = true;
