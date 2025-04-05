@@ -116,7 +116,7 @@ export default {
   async addTransactionFromError(req, res) {
     try {
       const user = req.user;
-      const { transaction } = req.body;
+      const { transaction, syncSessionId } = req.body;
       
       if (!transaction || !transaction.transaction_id) {
         return res.status(400).json({
@@ -125,11 +125,16 @@ export default {
         });
       }
       
-      const result = await transactionQueryService.addTransactionFromError(transaction, user._id);
+      const result = await transactionQueryService.addTransactionFromError(
+        transaction, 
+        user._id,
+        syncSessionId
+      );
       
       return res.json({
         success: true,
-        transaction: result
+        transaction: result,
+        sessionUpdated: !!syncSessionId
       });
     } catch (error) {
       let status = 400;
