@@ -13,9 +13,6 @@ import transactionsCrudService from './transactionsCrudService.js';
 class TransactionSyncService {
   /**
    * Syncs the latest transactions for an item
-   * @param {Object|string} item - Item object or item ID
-   * @param {Object} user - User object
-   * @returns {Promise<Object>} Sync results
    */
   async syncTransactions(item, user) {
     // Track sync start time for performance measurement
@@ -105,9 +102,6 @@ class TransactionSyncService {
       }
       
       // 2. Normal Flow - Process transaction data
-      const syncTime = Date.now();
-      
-      // Update session with expected counts
       const expectedCounts = {
         added: plaidData.added?.length || 0,
         modified: plaidData.modified?.length || 0,
@@ -126,7 +120,7 @@ class TransactionSyncService {
         lockedItem,
         user, 
         cursor,
-        syncTime, 
+        syncStartTime, 
         plaidData,
         transactionsSkipped
       );
@@ -168,7 +162,7 @@ class TransactionSyncService {
       // 4. Resolution Phase - Build response based on resolution result
       const response = this._buildSyncResponse(
         syncResult,
-        syncTime,
+        syncStartTime,
         1, // No more branching in the new workflow
         resolutionResult
       );
@@ -695,11 +689,6 @@ class TransactionSyncService {
 
   /**
    * Builds a response object with sync results
-   * @param {Object} syncResult - Results from processing
-   * @param {Number} syncTime - Current sync timestamp
-   * @param {Number} branchNumber - Batch number for this sync
-   * @param {Object} resolutionResult - Result from the resolution phase
-   * @returns {Object} Formatted response
    * @private
    */
   _buildSyncResponse(syncResult, syncTime, branchNumber, resolutionResult = null) {
