@@ -291,6 +291,21 @@ class SyncSessionService {
       };
     }
     
+    // Check if failedTransactions is potentially already a stringified object
+    if (typeof failedTransactions === 'string') {
+      try {
+        failedTransactions = JSON.parse(failedTransactions);
+      } catch (e) {
+        console.error('Failed to parse stringified failedTransactions:', e);
+        return {
+          added: [],
+          modified: [],
+          removed: [],
+          skipped: []
+        };
+      }
+    }
+    
     // Ensure we have properly structured arrays
     const normalized = {
       added: Array.isArray(failedTransactions.added) ? failedTransactions.added : [],
@@ -299,9 +314,46 @@ class SyncSessionService {
       skipped: Array.isArray(failedTransactions.skipped) ? failedTransactions.skipped : []
     };
     
-    // Cleanup for empty arrays
+    // Sanitize each array to ensure all items are objects with safe properties
     Object.keys(normalized).forEach(key => {
-      if (normalized[key].length === 0) {
+      if (normalized[key].length > 0) {
+        // Map through each item to ensure it's a clean object
+        normalized[key] = normalized[key].map(item => {
+          // Handle if item is a string (potentially a stringified object)
+          if (typeof item === 'string') {
+            try {
+              return JSON.parse(item);
+            } catch (e) {
+              // If we can't parse it, return a basic object
+              return { transaction_id: item, error: 'Unparseable item' };
+            }
+          }
+          
+          // For objects, create a clean copy
+          if (item && typeof item === 'object') {
+            // Extract important properties to ensure we don't have circular references
+            const safeItem = {};
+            
+            // Only copy safe, serializable properties
+            ['transaction_id', 'account_id', 'user_id', 'error', 'message', 'code', 'type']
+              .forEach(prop => {
+                if (item[prop] !== undefined) {
+                  safeItem[prop] = item[prop];
+                }
+              });
+              
+            // If we found no properties, add a placeholder
+            if (Object.keys(safeItem).length === 0) {
+              safeItem.unknown = true;
+            }
+            
+            return safeItem;
+          }
+          
+          // Fallback for other types
+          return { value: String(item) };
+        });
+      } else {
         normalized[key] = [];
       }
     });
@@ -342,6 +394,7 @@ class SyncSessionService {
         // Only include if we have actual content
         if (hasItems) {
           // Create a fresh object with the correct structure to avoid any reference issues
+          // Use the exact structure expected by the model's serialization method
           updateData.failedTransactions = {
             added: normalizedFailedTransactions.added.length > 0 ? 
               normalizedFailedTransactions.added.map(item => ({...item})) : [],
@@ -352,6 +405,10 @@ class SyncSessionService {
             skipped: normalizedFailedTransactions.skipped.length > 0 ? 
               normalizedFailedTransactions.skipped.map(item => ({...item})) : []
           };
+          
+          // Debug logging to verify structure
+          console.log('failedTransactions prepared for database:', 
+            JSON.stringify(updateData.failedTransactions).substring(0, 200) + '...');
         }
       } catch (err) {
         console.error('Error processing failedTransactions:', err);
@@ -362,8 +419,7 @@ class SyncSessionService {
     console.log('updateData', updateData);
     
     try {
-      // Include all update data in a single update operation
-      // Don't separate failedTransactions anymore
+      // Include all update data in a single update operation with userId
       const updatedSession = await SyncSessions.update(
         syncSession._id,
         {
@@ -373,26 +429,44 @@ class SyncSessionService {
       );
       
       console.log('Session updated successfully with all data including failedTransactions');
+      // Basic validation of returned session
+      if (updatedSession && metadata.failedTransactions && 
+          (!updatedSession.failedTransactions || 
+           JSON.stringify(updatedSession.failedTransactions) === '{}' ||
+           JSON.stringify(updatedSession.failedTransactions) === '[]' ||
+           updatedSession.failedTransactions === '')) {
+        console.warn('Warning: failedTransactions may not have been saved correctly');
+      }
+      
       return updatedSession;
     } catch (error) {
       console.error(`Error updating session metadata: ${error.message}`, error);
+      
       // More detailed error logging
       if (error.message.includes('NaN')) {
         console.error('NaN value detected in update data:', updateData);
       }
       
-      // Try a simplified update as fallback if the main update fails
+      // Try direct update with full data for debugging
       try {
-        console.log('Attempting simplified update as fallback');
+        console.log('Attempting direct update with complete session data');
+        const directUpdate = await SyncSessions.update(
+          syncSession._id,
+          {
+            ...syncSession,
+            ...updateData
+          }
+        );
+        return directUpdate;
+      } catch (directError) {
+        console.error('Direct update failed:', directError);
+        
         // Return the original session with the data we tried to update
         // This keeps the data in memory even if DB update failed
         return {
           ...syncSession,
           ...updateData
         };
-      } catch (fallbackError) {
-        console.error('Even fallback update failed:', fallbackError);
-        return syncSession;
       }
     }
   }
@@ -635,6 +709,66 @@ class SyncSessionService {
       
       // Re-throw the original error for proper error handling upstream
       throw error;
+    }
+  }
+
+  /**
+   * Updates the sync session with transaction data
+   * This is a specialized wrapper around updateSessionMetadata focused on transaction data
+   * @returns {Promise<Object>} Updated sync session
+   */
+  async updateSessionWithTransactionData(syncSession, transactionData) {
+    if (!syncSession || !syncSession._id) {
+      console.error('Cannot update session with transaction data: Invalid session');
+      return syncSession;
+    }
+    
+    try {
+      // Check if failedTransactions exists in the input data
+      const hasFailedTransactions = transactionData && 
+        transactionData.failedTransactions && 
+        typeof transactionData.failedTransactions === 'object';
+        
+      if (hasFailedTransactions) {
+        // Log the structure for debugging
+        console.log('updateSessionWithTransactionData - failedTransactions structure:',
+          Object.keys(transactionData.failedTransactions).join(', '));
+          
+        // Count the number of items in each category for logging
+        const counts = {};
+        Object.keys(transactionData.failedTransactions).forEach(key => {
+          const array = transactionData.failedTransactions[key];
+          counts[key] = Array.isArray(array) ? array.length : 0;
+        });
+        console.log('updateSessionWithTransactionData - item counts:', counts);
+      } else {
+        console.log('updateSessionWithTransactionData - no failedTransactions data provided');
+      }
+      
+      // Update the session with the transaction data
+      const updatedSession = await this.updateSessionMetadata(syncSession, transactionData);
+      
+      // Verify the update was successful for the failedTransactions field
+      if (hasFailedTransactions && updatedSession) {
+        if (!updatedSession.failedTransactions) {
+          console.error('Failed to save failedTransactions - field missing from updated session');
+        } else if (typeof updatedSession.failedTransactions === 'string' && 
+                 updatedSession.failedTransactions !== '') {
+          console.log('Warning: failedTransactions saved as string, may need deserialization');
+        } else if (typeof updatedSession.failedTransactions === 'object') {
+          const counts = {};
+          Object.keys(updatedSession.failedTransactions).forEach(key => {
+            const array = updatedSession.failedTransactions[key];
+            counts[key] = Array.isArray(array) ? array.length : 0;
+          });
+          console.log('Updated session failedTransactions counts:', counts);
+        }
+      }
+      
+      return updatedSession;
+    } catch (error) {
+      console.error('Error in updateSessionWithTransactionData:', error);
+      return syncSession;
     }
   }
 }

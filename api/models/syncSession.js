@@ -61,19 +61,77 @@ const syncSchema = {
         },
         // Add specific serialization to ensure it's stored as JSON
         serialize: (value) => {
-            if (!value) return JSON.stringify({
-                added: [], modified: [], removed: [], skipped: []
-            });
-            return JSON.stringify(value);
+            if (!value) {
+                console.log('syncSession: serializing empty failedTransactions');
+                return JSON.stringify({
+                    added: [], modified: [], removed: [], skipped: []
+                });
+            }
+            
+            try {
+                // Handle case where value is already a string
+                if (typeof value === 'string') {
+                    // Validate it's proper JSON
+                    JSON.parse(value);
+                    console.log('syncSession: failedTransactions already serialized');
+                    return value;
+                }
+                
+                // Ensure value has the expected structure
+                const result = {
+                    added: Array.isArray(value.added) ? value.added : [],
+                    modified: Array.isArray(value.modified) ? value.modified : [],
+                    removed: Array.isArray(value.removed) ? value.removed : [],
+                    skipped: Array.isArray(value.skipped) ? value.skipped : []
+                };
+                
+                const serialized = JSON.stringify(result);
+                console.log(`syncSession: serialized failedTransactions (${serialized.length} chars)`);
+                return serialized;
+            } catch (e) {
+                console.error('syncSession: Error serializing failedTransactions:', e);
+                return JSON.stringify({
+                    added: [], modified: [], removed: [], skipped: [],
+                    error: 'Serialization error'
+                });
+            }
         },
         deserialize: (value) => {
-            if (!value || value === "") return {
-                added: [], modified: [], removed: [], skipped: []
-            };
+            if (!value || value === "") {
+                console.log('syncSession: deserializing empty failedTransactions value');
+                return {
+                    added: [], modified: [], removed: [], skipped: []
+                };
+            }
+            
             try {
-                return typeof value === 'string' ? JSON.parse(value) : value;
+                // Already an object, just ensure proper structure
+                if (typeof value === 'object' && !Array.isArray(value)) {
+                    console.log('syncSession: failedTransactions already an object');
+                    return {
+                        added: Array.isArray(value.added) ? value.added : [],
+                        modified: Array.isArray(value.modified) ? value.modified : [],
+                        removed: Array.isArray(value.removed) ? value.removed : [],
+                        skipped: Array.isArray(value.skipped) ? value.skipped : []
+                    };
+                }
+                
+                // Parse the string
+                const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+                console.log('syncSession: deserialized failedTransactions successfully');
+                
+                return {
+                    added: Array.isArray(parsed.added) ? parsed.added : [],
+                    modified: Array.isArray(parsed.modified) ? parsed.modified : [],
+                    removed: Array.isArray(parsed.removed) ? parsed.removed : [],
+                    skipped: Array.isArray(parsed.skipped) ? parsed.skipped : []
+                };
             } catch (e) {
-                return { added: [], modified: [], removed: [], skipped: [] };
+                console.error('syncSession: Error deserializing failedTransactions:', e);
+                return {
+                    added: [], modified: [], removed: [], skipped: [],
+                    deserializeError: typeof value === 'string' ? value.substring(0, 100) : String(value)
+                };
             }
         }
     },

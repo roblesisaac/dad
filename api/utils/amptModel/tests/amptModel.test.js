@@ -180,4 +180,60 @@ describe('amptModels', () => {
     expect(removed).toBe(true);
   });
 
+  // Add test for complex object serialization and deserialization
+  test('serialization and deserialization work for complex objects', async () => {
+    // Create a test model with a complex object field that uses serialization
+    const complexSchema = {
+      userId: String,
+      complexData: {
+        type: Object,
+        default: { items: [], metadata: {} },
+        serialize: (value) => {
+          if (!value) return JSON.stringify({});
+          return JSON.stringify(value);
+        },
+        deserialize: (value) => {
+          if (!value || value === "") return {};
+          try {
+            return typeof value === 'string' ? JSON.parse(value) : value;
+          } catch (e) {
+            console.error('Error deserializing:', e);
+            return {};
+          }
+        }
+      },
+      label1: 'userId'
+    };
+    
+    const ComplexModel = amptModel('complex_test', complexSchema);
+    
+    // Test object with nested structure
+    const testData = {
+      userId: 'test-user-123',
+      complexData: {
+        items: [{ id: 1, name: 'Item 1' }, { id: 2, name: 'Item 2' }],
+        metadata: { lastUpdated: Date.now(), count: 2 }
+      }
+    };
+    
+    // Save complex object
+    const saved = await ComplexModel.save(testData);
+    expect(saved._id).toMatch(/^complex_test/);
+    
+    // Retrieved object should match the original
+    const retrieved = await ComplexModel.findOne({ userId: 'test-user-123' });
+    expect(retrieved.complexData).toEqual(testData.complexData);
+    
+    // Update the object with new complex data
+    const updatedData = {
+      complexData: {
+        items: [{ id: 3, name: 'New Item' }],
+        metadata: { lastUpdated: Date.now(), count: 1, status: 'updated' }
+      }
+    };
+    
+    const updated = await ComplexModel.update({ userId: 'test-user-123' }, updatedData);
+    expect(updated.complexData).toEqual(updatedData.complexData);
+  }, 30*1000);
+
 }, 20*1000);

@@ -94,6 +94,17 @@ async function validateItem(rules, dataToValidate, field, config) {
   field = field || config?.parentField || dataToValidate;
 
   let dataValue = getDataValue(dataToValidate, field);
+  
+  // Handle deserialization when retrieving data (action = 'get')
+  if (config.action === 'get' && rules.deserialize && dataValue !== undefined) {
+    try {
+      dataValue = rules.deserialize(dataValue);
+      setValue(dataToValidate, field, dataValue);
+    } catch (e) {
+      console.error(`Error deserializing field ${field}:`, e);
+    }
+  }
+  
   const globalValidationProps = Object.keys(config?.globalConfig || {});
   const localtValidationProps = Object.keys(rules);
   const validationProps = [...globalValidationProps, ...localtValidationProps];
@@ -121,6 +132,15 @@ async function validateItem(rules, dataToValidate, field, config) {
     }
     
     return await executeCustomMethod(rules, dataToValidate, field, dataValue)
+  }
+  
+  // Handle serialization when saving data (action = 'set')
+  if (config.action === 'set' && rules.serialize && dataValue !== undefined) {
+    try {
+      dataValue = rules.serialize(dataValue);
+    } catch (e) {
+      console.error(`Error serializing field ${field}:`, e);
+    }
   }
 
   return dataValue;

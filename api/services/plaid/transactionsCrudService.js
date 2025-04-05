@@ -406,17 +406,17 @@ class TransactionQueryService extends PlaidBaseService {
    */
   async addTransactionFromError(transaction, userId, syncSessionId = null) {
     try {
-      if (!transaction || !userId) {
-        throw new CustomError('INVALID_PARAMS', 'Missing transaction data or user ID');
+      // Validate input
+      if (!transaction || !transaction.transaction_id) {
+        throw new Error('Invalid transaction data');
+      }
+
+      if (!userId) {
+        throw new Error('User ID is required');
       }
       
-      // Prepare transaction with user ID
-      const enrichedTransaction = {
-        ...transaction,
-        userId,
-        manuallyAdded: true,
-        addedAt: Date.now()
-      };
+      // Enrich transaction with userId and metadata
+      const enrichedTransaction = this._enrichTransaction(transaction, userId);
       
       // Check if this transaction already exists
       const existing = await this.fetchTransactionByTransactionId(transaction.transaction_id, userId);
@@ -432,7 +432,10 @@ class TransactionQueryService extends PlaidBaseService {
       if (syncSessionId) {
         try {
           // Import dynamically to avoid circular dependencies
-          const SyncSessions = (await import('../../models/syncSession.js')).default;
+          const [SyncSessions, syncSessionService] = await Promise.all([
+            import('../../models/syncSession.js').then(module => module.default),
+            import('./syncSessionService.js').then(module => module.default)
+          ]);
           
           // Get the session
           const session = await SyncSessions.findOne(syncSessionId);
@@ -458,13 +461,16 @@ class TransactionQueryService extends PlaidBaseService {
                 addedAt: Date.now()
               };
               
-              // Update the session
-              await SyncSessions.update(syncSessionId, {
-                failedTransactions: {
-                  ...failedTransactions,
-                  modified: modifiedList
+              // Use the specialized method for updating transaction data
+              await syncSessionService.updateSessionWithTransactionData(
+                session,
+                {
+                  failedTransactions: {
+                    ...failedTransactions,
+                    modified: modifiedList
+                  }
                 }
-              });
+              );
             }
           }
         } catch (err) {
@@ -482,6 +488,19 @@ class TransactionQueryService extends PlaidBaseService {
         operation: 'add_transaction_from_error'
       });
     }
+  }
+
+  /**
+   * Helper method to enrich a transaction with user ID and metadata
+   * @private
+   */
+  _enrichTransaction(transaction, userId) {
+    return {
+      ...transaction,
+      userId,
+      manuallyAdded: true,
+      addedAt: Date.now()
+    };
   }
 }
 

@@ -137,9 +137,9 @@ class TransactionSyncService {
         syncResult.actualCounts
       );
       
-      // Update session with any failed transactions
+      // Update session with any failed transactions - using new method that handles transaction data better
       if (syncResult.failedTransactions) {
-        await syncSessionService.updateSessionMetadata(
+        updatedSession = await syncSessionService.updateSessionWithTransactionData(
           updatedSession,
           {
             failedTransactions: syncResult.failedTransactions
