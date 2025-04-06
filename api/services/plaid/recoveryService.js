@@ -213,11 +213,13 @@ class recoveryService extends PlaidBaseService {
       }
 
       // Create a recovery session based on the target session
-      const recoverySession = await syncSessionService.createRecoverySyncSession(
-        targetSession,
-        user,
-        item
-      );
+      const recoverySession = targetSession.isRecovery 
+        ? targetSession 
+        : await syncSessionService.createRecoverySyncSession(
+            targetSession,
+            user,
+            item
+          );
 
       // Execute the reversion process using the new recovery session
       return await this.performReversion(

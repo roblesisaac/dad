@@ -54,7 +54,7 @@ class TransactionSyncService {
         // Handles both creating the recovery session and performing reversion
         const recoveryResult = await recoveryService.initiateReversion(
           // If already in recovery, we can use the current session directly
-          isRecovery ? currentSyncSession : currentSyncSession,
+          currentSyncSession,
           lockedItem, 
           user
         );
