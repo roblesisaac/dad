@@ -120,7 +120,7 @@ class TransactionSyncService {
         lockedItem,
         user, 
         cursor,
-        syncStartTime, 
+        currentSyncSession.syncTime, 
         plaidData,
         transactionsSkipped
       );
