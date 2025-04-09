@@ -26,7 +26,7 @@
             <!-- Info section -->
             <div class="col-span-7 flex flex-col justify-center">
               <div class="text-xs text-emerald-600 font-medium">
-                {{ item.authorized_date }}
+                {{ formatDateTime(item.authorized_datetime) || item.authorized_date }}
               </div>
               <div class="text-gray-800 font-medium text-transform-capitalize">
                 {{ item.name }} <span v-if="item.check_number?.length" class="text-gray-500 text-sm">#{{ item.check_number }}</span>
@@ -66,13 +66,30 @@
 import { computed } from 'vue';
 import TransactionDetails from './TransactionDetails.vue';
 import { useUtils } from '@/shared/composables/useUtils';
-import { Minus } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 const { fontColor, formatPrice } = useUtils();
 const { categoryName, state } = defineProps({
   categoryName: String,
   state: Object
 });
+
+function formatDateTime(datetimeStr) {
+  if (!datetimeStr) return '';
+  
+  try {
+    const date = new Date(datetimeStr);
+    return new Intl.DateTimeFormat('en-US', { 
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    }).format(date);
+  } catch (err) {
+    return '';
+  }
+}
 
 const items = computed(() => {
   const selectedCategory = state.selected.tab.categorizedItems.find(categorized => {
