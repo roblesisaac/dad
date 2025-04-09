@@ -26,7 +26,6 @@ const syncSchema = {
     lastNoChangesTime: Number,
 
     branchNumber: Number,
-    syncTime: Number,
     syncId: String,
     syncTag: (syncTag, { branchNumber }) => {
         if(!branchNumber && syncTag) {
@@ -62,6 +61,7 @@ const syncSchema = {
     },
 
     // New fields as requested
+    syncTime: Number,
     startTimestamp: Number,
     endTimestamp: Date,
     syncDuration: Number, // Performance tracking
