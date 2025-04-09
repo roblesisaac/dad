@@ -104,6 +104,70 @@ export default {
         error: error.message || 'An error occurred during reversion'
       });
     }
-  }   
+  },
   
+  /**
+   * Continue without recovery for a specific recovery session
+   * Creates a new sync session that skips the recovery process
+   */
+  async continueWithoutRecovery(req, res) {
+    const { itemId, sessionId } = req.params;
+    const user = req.user;
+    
+    try {
+      // Validate input parameters
+      if (!itemId || !sessionId) {
+        return res.status(400).json({
+          success: false,
+          error: 'Missing required parameter: itemId or sessionId'
+        });
+      }
+      
+      // Get the item
+      const item = await itemService.getItem(itemId, user._id);
+      if (!item) {
+        return res.status(404).json({
+          success: false,
+          error: 'Item not found'
+        });
+      }
+      
+      // Get the recovery session
+      const recoverySession = await syncSessionService.getSyncSession(sessionId, user);
+      if (!recoverySession) {
+        return res.status(404).json({
+          success: false,
+          error: 'Session not found'
+        });
+      }
+      
+      // Verify this is a recovery session
+      if (!recoverySession.isRecovery) {
+        return res.status(400).json({
+          success: false,
+          error: 'This operation can only be performed on recovery sessions'
+        });
+      }
+      
+      // Create a new session that continues without recovery
+      const newSession = await syncSessionService.createContinueWithoutRecoverySync(
+        recoverySession,
+        user,
+        item
+      );
+      
+      return res.json({
+        success: true,
+        newSessionId: newSession._id,
+        message: 'Successfully continued without recovery',
+        session: newSession
+      });
+    } catch (error) {
+      console.error('Error continuing without recovery:', error);
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'An error occurred while continuing without recovery'
+      });
+    }
+  }
 }

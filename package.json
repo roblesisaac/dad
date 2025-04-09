@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@ampt/cli": "^1.1.19",
-    "@ampt/data": "^1.0.26",
-    "@ampt/sdk": "^1.0.19",
+    "@ampt/data": "^1.0.27",
+    "@ampt/sdk": "^1.0.20",
     "@auth0/auth0-vue": "^2.4.0",
     "@fontsource-variable/sometype-mono": "^5.1.1",
     "date-fns": "^4.1.0",

@@ -26,6 +26,7 @@ export default function(api, baseUrl) {
   // Sync Sessions
   member.get('/plaid/items/:itemId/sync-sessions', syncSessionController.getSyncSessionsForItem);
   member.post('/plaid/items/:itemId/revert/:sessionId', syncSessionController.initiateReversion);
+  member.post('/plaid/items/:itemId/continue-without-recovery/:sessionId', syncSessionController.continueWithoutRecovery);
   
   // Maintenance
 }

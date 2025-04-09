@@ -251,6 +251,13 @@
         >
           Revert to this Session
         </button>
+        <button
+          v-if="session.isRecovery"
+          @click="continueWithoutRecovery"
+          class="text-xs px-2 py-1 bg-amber-500 text-white rounded hover:bg-amber-600 focus:outline-none"
+        >
+          Continue Without Recovery
+        </button>
       </div>
     </div>
   </div>
@@ -280,7 +287,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['revert']);
+const emit = defineEmits(['revert', 'continue-without-recovery']);
 
 // Setup utils
 const { formatPrice } = useUtils();
@@ -342,6 +349,11 @@ const hasSyncCountsMismatch = computed(() => {
 // Request to revert to this session
 const requestRevert = () => {
   emit('revert', props.session);
+};
+
+// Request to continue without recovery
+const continueWithoutRecovery = () => {
+  emit('continue-without-recovery', props.session);
 };
 
 // Format date helper - retained for local timestamp formatting

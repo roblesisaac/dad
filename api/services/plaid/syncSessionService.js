@@ -30,7 +30,7 @@ class SyncSessionService {
       throw new Error('Previous sync session is required for createNextSync');
     }
 
-    const { _id, branchNumber = 1, error, failedTransactions, ...restPreviousSync } = prevSync;
+    const { _id, branchNumber = 1, error, failedTransactions, syncCounts, ...restPreviousSync } = prevSync;
 
     const nextSyncSession = {
       ...restPreviousSync,
@@ -650,6 +650,65 @@ class SyncSessionService {
       // Re-throw the original error for proper error handling upstream
       throw error;
     }
+  }
+
+  /**
+   * Creates a sync session that continues without recovery
+   * Used when user chooses to skip recovery flow for a recovery session
+   * @param {Object} recoverySession - The recovery session to continue from
+   * @param {Object} user - User object
+   * @param {Object} item - Item object
+   * @returns {Promise<Object>} The created sync session
+   */
+  async createContinueWithoutRecoverySync(recoverySession, user, item) {
+    if (!recoverySession) {
+      throw new Error('Recovery session is required for createContinueWithoutRecoverySync');
+    }
+
+    if (!recoverySession.isRecovery) {
+      throw new Error('This method can only be used with recovery sessions');
+    }
+
+    const { 
+      _id, 
+      branchNumber = 1, 
+      error, 
+      failedTransactions, 
+      syncCounts, // Explicitly exclude syncCounts
+      isRecovery,
+      recoverySession_id,
+      recoveryDetails,
+      recoveryAttempts,
+      ...restSessionData 
+    } = recoverySession;
+
+    const nextSyncSession = {
+      ...restSessionData,
+      cursor: recoverySession.nextCursor || '',
+      prevSession_id: recoverySession._id,
+      prevSuccessfulSession_id: recoverySession.prevSuccessfulSession_id || null,
+      branchNumber: Math.floor(branchNumber) + 1, // Use whole number for branch
+      isRecovery: false,
+      continuedFromRecovery: true, // Mark as continued from recovery
+      recoverySkipped: {
+        originalRecoveryId: recoverySession._id,
+        timestamp: Date.now()
+      }
+    };
+
+    // Save the next sync session
+    const nextSync = await this.createSync(nextSyncSession, user, item);
+
+    // Update recovery session with nextSession_id
+    await SyncSessions.update(recoverySession._id, {
+      nextSession_id: nextSync._id,
+      status: 'complete' // Mark the recovery session as complete
+    });
+
+    // Update item status to complete (from recovery)
+    await plaidItems.update(item._id, { status: 'complete' });
+
+    return nextSync;
   }
 }
 

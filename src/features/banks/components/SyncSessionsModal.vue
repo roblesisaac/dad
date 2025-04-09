@@ -34,6 +34,7 @@
         @refresh="handleRefresh"
         @sync="handleSync"
         @revert-to-session="handleRevertToSession"
+        @continue-without-recovery="handleContinueWithoutRecovery"
       />
     </template>
   </BaseModal>
@@ -68,6 +69,7 @@ const {
   syncSelectedBank,
   revertToSession,
   formatSyncDate,
+  continueWithoutRecovery,
 } = useBanks();
 
 // Watch for bank changes or modal opening to fetch sessions
@@ -102,5 +104,12 @@ const handleRefresh = async () => {
  */
 const handleRevertToSession = async (session) => {
   await revertToSession(session);
+};
+
+/**
+ * Handle continue without recovery action
+ */
+const handleContinueWithoutRecovery = async (session) => {
+  await continueWithoutRecovery(session);
 };
 </script> 

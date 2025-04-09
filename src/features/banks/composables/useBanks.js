@@ -208,8 +208,43 @@ export function useBanks() {
   };
   
   /**
-   * Revert to a specific sync session
-   * @param {Object} session - Sync session to revert to
+   * Continue without recovery for a session
+   * @param {Object} session - Session object
+   */
+  const continueWithoutRecovery = async (session) => {
+    if (!session || !session._id || !selectedBank.value?.itemId) {
+      error.value.sync = 'Invalid session or no bank selected';
+      return null;
+    }
+    
+    error.value.sync = null;
+    
+    try {
+      // Call the API to continue without recovery
+      const result = await api.post(
+        `plaid/items/${selectedBank.value.itemId}/continue-without-recovery/${session._id}`
+      );
+      
+      if (result.success) {
+        // Refresh the sync sessions after continuing
+        await fetchSyncSessions(selectedBank.value.itemId);
+        return result;
+      } else if (result.error) {
+        error.value.sync = result.error;
+        return null;
+      }
+      
+      return result;
+    } catch (err) {
+      console.error('Error continuing without recovery:', err);
+      error.value.sync = err.message || 'Failed to continue without recovery';
+      return null;
+    }
+  };
+  
+  /**
+   * Revert to a previous sync session
+   * @param {Object} session - Session to revert to
    */
   const revertToSession = async (session) => {
     if (!selectedBank.value?.itemId || !session?._id) {
@@ -410,6 +445,7 @@ export function useBanks() {
     fetchSyncSessions,
     selectBank,
     syncSelectedBank,
+    continueWithoutRecovery,
     revertToSession,
     updateSyncMetrics,
     addTransactionFromError,
