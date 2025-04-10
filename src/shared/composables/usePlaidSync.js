@@ -67,7 +67,7 @@ export function usePlaidSync() {
           // Call the backend API to process a single batch
           const result = await api.get(`plaid/sync/latest/transactions/${itemId}`);
 
-          console.log('result', result);
+          console.log('result has more', result?.hasMore);
           
           if (!result) {
             throw new Error('No response received from sync endpoint');
