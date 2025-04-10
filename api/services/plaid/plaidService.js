@@ -1,11 +1,10 @@
 import PlaidBaseService from './baseService.js';
 import itemService from './itemService.js';
+import crypto from 'crypto';
 
 class PlaidService extends PlaidBaseService {
   /**
    * Fetch accounts from Plaid
-   * @param {Object} item - Item data
-   * @param {Object} user - User data
    * @returns {Promise<Array>} Accounts data
    */
   async fetchAccountsFromPlaid(item, user) {
@@ -37,8 +36,6 @@ class PlaidService extends PlaidBaseService {
 
   /**
    * Fetch item info from Plaid
-   * @param {Object} item - Item data
-   * @param {Object} user - User data
    * @returns {Promise<Object>} Plaid item data
    */
   async syncItemFromPlaid(item, user) {
@@ -49,9 +46,6 @@ class PlaidService extends PlaidBaseService {
 
   /**
    * Fetch transactions from Plaid
-   * @param {string} access_token - Plaid access token
-   * @param {string} cursor - Pagination cursor
-   * @param {string} startDate - Optional start date
    * @returns {Promise<Object>} Transactions data
    */
   async syncLatestTransactionsFromPlaid(access_token, cursor = null, startDate = null) {
@@ -74,6 +68,79 @@ class PlaidService extends PlaidBaseService {
       );
     } catch (error) {
       throw new Error(`PLAID_API_ERROR: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate a client user ID from an identifier
+   * @returns {string} - Hashed client user ID
+   */
+  generateClientUserId(identifier) {
+    return crypto
+      .createHash('sha256')
+      .update(identifier.toLowerCase().trim())
+      .digest('hex')
+      .slice(0, 32);
+  }
+
+  /**
+   * Create a Plaid Link token
+   * @returns {Promise<string>} - Link token
+   */
+  async createLinkToken(user, itemId = null) {
+    this.validateUser(user);
+
+    const clientUserId = this.generateClientUserId(user._id);
+
+    const request = {
+      user: { 
+        client_user_id: clientUserId
+      },
+      client_name: 'TrackTabs',
+      products: ['transactions'],
+      country_codes: ['US'],
+      language: 'en'
+    };
+
+    if (itemId) {
+      try {
+        const item = await itemService.getItem(itemId, user._id);
+        const access_token = itemService.decryptAccessToken(item, user);
+        delete request.products;
+        request.access_token = access_token;
+      } catch (error) {
+        throw new Error(`ITEM_ACCESS_ERROR: ${error.message}`);
+      }
+    }
+
+    try {
+      const { link_token } = await this.handleResponse(
+        this.client.linkTokenCreate(request)
+      );
+      return link_token;
+    } catch (error) {
+      console.error('Link token creation failed:', error);
+      throw new Error(`LINK_TOKEN_ERROR: ${error.message}`);
+    }
+  }
+
+  /**
+   * Exchange a public token for an access token
+   * @returns {Promise<Object>} - Access token data
+   */
+  async exchangePublicToken(publicToken) {
+    if (!publicToken) {
+      throw new Error('INVALID_TOKEN: Public token is required');
+    }
+
+    try {
+      return await this.handleResponse(
+        this.client.itemPublicTokenExchange({
+          public_token: publicToken,
+        })
+      );
+    } catch (error) {
+      throw new Error(`TOKEN_EXCHANGE_ERROR: ${error.message}`);
     }
   }
 }

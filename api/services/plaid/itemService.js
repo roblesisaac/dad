@@ -1,6 +1,6 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
-import { decrypt, decryptWithKey } from '../../utils/encryption.js';
+import { decrypt, decryptWithKey, encrypt, encryptWithKey } from '../../utils/encryption.js';
 import { CustomError } from './customError.js';
 
 class ItemService extends PlaidBaseService {
@@ -50,9 +50,6 @@ class ItemService extends PlaidBaseService {
 
   /**
    * Updates an item's sync status
-   * @param {string} itemId - Item ID
-   * @param {string} userId - User ID
-   * @param {Object} syncData - Sync status data to update
    * @returns {Promise<Object>} Updated item
    */
   async updateItemSyncStatus(itemId, userId, syncDataUpdate) {
@@ -129,40 +126,41 @@ class ItemService extends PlaidBaseService {
     try {
       const { access_token, item_id } = accessData;
 
-      // Let the model handle default syncData
-      const itemData = {
-        accessToken: access_token,
-        itemId: item_id,
-        user
-      };
-
       const existingItem = await plaidItems.findOne({ itemId: item_id, userId: user._id });
+      const accessToken = existingItem
+        ? this.setAccessToken(access_token, user)
+        : access_token;
 
-      let savedItem;
-      if (existingItem) {
-        savedItem = await plaidItems.update(
-          { itemId: item_id, userId: user._id },
-          itemData
-        );
-      } else {
-        savedItem = await plaidItems.save(itemData);
+      const itemData = {
+        itemId: item_id,
+        user,
+        accessToken
       }
+
+      const savedItem = existingItem
+        ? await plaidItems.update({ itemId: item_id, userId: user._id }, itemData)
+        : await plaidItems.save(itemData);
 
       return { 
         itemId: item_id,
         syncData: savedItem.syncData,
         userId: user._id
-      };
+      }
     } catch (error) {
       console.error('Save error:', error);
       throw new Error(`SAVE_ERROR: Failed to save Plaid access data - ${error.message}`);
     }
   }
 
+  setAccessToken(accessToken, user) {
+    const encryptionKey = decrypt(user?.encryptedKey, 'buffer');
+    const userEncryptedKey = encryptWithKey(accessToken, encryptionKey);
+    const encrypted = encrypt(userEncryptedKey);
+    return encrypted;
+  }
+
   /**
    * Validates item data and retrieves it if needed
-   * @param {Object|String} item - Item object or ID
-   * @param {Object} user - User object
    * @returns {Object} Validated item object
    */
   async validateAndGetItem(item, user) {
@@ -197,9 +195,6 @@ class ItemService extends PlaidBaseService {
   
   /**
    * Updates an item's properties
-   * @param {string} itemId - Item ID
-   * @param {string} userId - User ID
-   * @param {Object} updateData - Data to update (e.g., institutionName)
    * @returns {Promise<Object>} Updated item
    */
   async updateItem(itemId, userId, updateData) {
