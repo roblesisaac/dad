@@ -294,7 +294,7 @@ const saveBankName = async (bank) => {
 };
 
 // Clean up on unmount
-watch(() => notification.value.timeout, (newTimeout, oldTimeout) => {
+watch(() => notification.value.timeout, (_, oldTimeout) => {
   if (oldTimeout) {
     clearTimeout(oldTimeout);
   }

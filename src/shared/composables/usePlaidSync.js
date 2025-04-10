@@ -16,10 +16,7 @@ export function usePlaidSync() {
   const { state } = useDashboardState();
   const isSyncing = ref(false);
   const syncProgress = ref({});
-  const currentBankIndex = ref(0);
   const syncedBanks = ref([]);
-  const MAX_RETRIES = 0; // Max retries per sync operation
-  const consecutiveRecoveries = ref({}); // Track consecutive recoveries by itemId
   const statusBarTimeout = ref(null); // Add ref to track the timeout ID
   const { concatAndProcessTransactions } = useTabProcessing();
 
@@ -39,14 +36,8 @@ export function usePlaidSync() {
       
       let hasMore = true;
       let batchCount = 0;
-      let retryCount = 0;
       let totalStats = { added: 0, modified: 0, removed: 0 };
       const startTimestamp = Date.now();
-      
-      // Initialize consecutive recoveries tracker for this item if it doesn't exist
-      if (!consecutiveRecoveries.value[itemId]) {
-        consecutiveRecoveries.value[itemId] = 0;
-      }
       
       // Set initial sync progress
       updateSyncProgress({
@@ -67,53 +58,16 @@ export function usePlaidSync() {
           // Call the backend API to process a single batch
           const result = await api.get(`plaid/sync/latest/transactions/${itemId}`);
 
-          console.log('result has more', result?.hasMore);
+          console.log('result', result);
           
           if (!result) {
             throw new Error('No response received from sync endpoint');
           }
-          
-          // Check if a recovery was performed
-          if (result?.recovery?.performed) {
-            // Increment the consecutive recovery counter
-            consecutiveRecoveries.value[itemId]++;
-            
-            // Check if we've hit the limit of consecutive recoveries
-            if (consecutiveRecoveries.value[itemId] >= 3) {
-              throw new Error(`Transaction recovery has been attempted 3 times in a row. Manual intervention may be required.`);
-            }
-            
-            // Update UI with recovery information
-            updateStatusBar(
-              `Recovery performed: ${result.recovery.removedTransactions || result.recovery.removedCount || 0} transactions removed. Resyncing...`,
-              true
-            );
-            
-            // Update progress state for recovery
-            updateSyncProgress({
-              status: 'recovered',
-              recoveryPerformed: true,
-              recoveryRemovedCount: result.recovery.removedTransactions || result.recovery.removedCount || 0,
-              itemId,
-              message: result.message || 'Recovery performed successfully'
-            });
-            
-            // Wait a moment before continuing with the sync
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Since we've performed a recovery, we need to start a new sync
-            // The next API call will restart the sync with the reset cursor
-            continue;
-          }
-          
-          // If we got here, it means we had a successful sync batch without recovery
-          // Reset the consecutive recovery counter
-          consecutiveRecoveries.value[itemId] = 0;
 
           // Check if batchResults exists before accessing its properties
           const batchResults = result.batchResults || { added: 0, modified: 0, removed: 0 };
           
-          // NEW: Check if there are any failures in the sync result
+          // Check if there are any failures in the sync result
           if (result.hasFailures) {
             const failureMessage = result.failureDetails?.message || 'Some transactions failed to process';
             const errorMessage = `Sync failed: ${failureMessage}`;
@@ -172,7 +126,6 @@ export function usePlaidSync() {
           
           // Check if we need to continue syncing
           hasMore = result.hasMore;
-          retryCount = 0; // Reset retry count on success
           
           // Add a small delay between batches to avoid overwhelming the API
           if (hasMore) {
@@ -180,15 +133,27 @@ export function usePlaidSync() {
           }
         } catch (error) {
           console.error(`Error in batch ${batchCount}:`, error);
-          retryCount++;
           
-          if (retryCount > MAX_RETRIES) {
-            throw new Error(`Sync failed after ${MAX_RETRIES} retries: ${error.message || 'Unknown error'}`);
-          }
+          // Update status bar with error message
+          updateStatusBar(`Sync error: ${error.message || 'Unknown error'}`, false);
           
-          // Add delay before retry
-          updateStatusBar(`Retrying batch... (attempt ${retryCount}/${MAX_RETRIES})`, true);
-          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+          // Update progress state with error
+          updateSyncProgress({
+            status: 'error',
+            error: error.message,
+            itemId,
+            lastSync: new Date().toISOString()
+          });
+          
+          // Set isSyncing to false
+          isSyncing.value = false;
+          
+          // Return error result
+          return {
+            completed: false,
+            itemId,
+            error: error.message
+          };
         }
       }
       
@@ -237,16 +202,6 @@ export function usePlaidSync() {
   };
   
   /**
-   * Resets the consecutive recovery counter for an item
-   * @param {string} itemId - Item ID to reset counter for
-   */
-  const resetRecoveryCounter = (itemId) => {
-    if (itemId && consecutiveRecoveries.value) {
-      consecutiveRecoveries.value[itemId] = 0;
-    }
-  };
-  
-  /**
    * Sync latest transactions for all connected banks/items
    * Processes banks sequentially to avoid overwhelming the API
    * 
@@ -257,7 +212,6 @@ export function usePlaidSync() {
       // Reset sync state
       isSyncing.value = true;
       syncedBanks.value = [];
-      currentBankIndex.value = 0;
       
       // Fetch all connected banks
       const banks = await api.get('plaid/items');
@@ -273,7 +227,6 @@ export function usePlaidSync() {
       // Process banks sequentially
       const results = [];
       for (let i = 0; i < banks.length; i++) {
-        currentBankIndex.value = i;
         const bank = banks[i];
         
         // Update UI to show which bank is being synced
@@ -349,9 +302,6 @@ export function usePlaidSync() {
         cursor: progress.cursor,
         branchNumber: progress.branchNumber || 0,
         startTimestamp: progress.startTimestamp,
-        // Add recovery information if present
-        recoveryPerformed: progress.recoveryPerformed || false,
-        recoveryRemovedCount: progress.recoveryRemovedCount || 0,
         message: progress.message
       };
     }
@@ -408,13 +358,10 @@ export function usePlaidSync() {
     syncProgress,
     allSyncsComplete,
     syncedBanks,
-    currentBankIndex,
-    consecutiveRecoveries,
     
     // Core sync methods
     syncLatestTransactionsForBank,
     syncLatestTransactionsForAllBanks,
-    resetRecoveryCounter,
     
     // Status methods
     updateStatusBar

@@ -31,8 +31,7 @@ export function useBanks() {
   const { 
     syncLatestTransactionsForBank,
     isSyncing, 
-    syncProgress,
-    resetRecoveryCounter
+    syncProgress
   } = usePlaidSync();
   
   // Get functionality from plaid link composable
