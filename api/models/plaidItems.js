@@ -16,7 +16,7 @@ const syncData = {
   status: {
     type: String,
     default: '',
-    enum: ['', 'queued', 'in_progress', 'completed', 'failed', 'recovery']
+    enum: ['', 'queued', 'in_progress', 'completed', 'failed', 'recovery', 'login_required']
   }
 }
 
@@ -37,7 +37,11 @@ const itemSchema = {
   institutionName: String,
   sync_id: String,
   syncTag: String,
-  status: String,
+  status: {
+    type: String,
+    default: 'complete',
+    enum: ['complete', 'in_progress', 'error', 'login_required', 'recovery', 'disconnected', 'pending']
+  },
 
   syncData,
   
