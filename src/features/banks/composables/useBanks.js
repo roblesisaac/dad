@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useApi } from '@/shared/composables/useApi.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 
@@ -150,6 +150,59 @@ export function useBanks() {
   };
   
   /**
+   * Add or update an in-progress session in the syncSessions list
+   * @param {String} itemId - Item ID
+   * @param {Object} progress - Current sync progress
+   */
+  const updateInProgressSession = (itemId, progress) => {
+    if (!itemId || !progress) return;
+    
+    const now = Date.now();
+    
+    // Look for an existing in-progress session
+    const existingSessionIndex = syncSessions.value.findIndex(s => 
+      s.status === 'in_progress' && s.itemId === itemId
+    );
+    
+    // Create an optimistic session object
+    const sessionUpdate = {
+      _id: `temp-session-${now}`,
+      itemId: itemId,
+      status: 'in_progress',
+      syncTime: now,
+      startTimestamp: progress.startTimestamp || now,
+      syncCounts: {
+        actual: { 
+          added: progress.added || 0, 
+          modified: progress.modified || 0, 
+          removed: progress.removed || 0 
+        },
+        expected: { 
+          added: 0, 
+          modified: 0, 
+          removed: 0 
+        }
+      },
+      branchNumber: progress.branchNumber || 1
+    };
+    
+    if (existingSessionIndex !== -1) {
+      // Update the existing session
+      syncSessions.value[existingSessionIndex] = {
+        ...syncSessions.value[existingSessionIndex],
+        ...sessionUpdate,
+        syncCounts: {
+          ...syncSessions.value[existingSessionIndex].syncCounts,
+          actual: sessionUpdate.syncCounts.actual
+        }
+      };
+    } else {
+      // Add the new session at the top of the list
+      syncSessions.value.unshift(sessionUpdate);
+    }
+  };
+  
+  /**
    * Select a bank and fetch its sync sessions
    * @param {Object} bank - Bank object
    */
@@ -171,19 +224,35 @@ export function useBanks() {
     }
     
     error.value.sync = null;
+    const itemId = selectedBank.value.itemId;
+    
+    // Ensure we have sync sessions loaded first
+    if (syncSessions.value.length === 0) {
+      await fetchSyncSessions(itemId);
+    }
     
     try {
       // Reset recovery counter to ensure we can attempt the sync
-      resetRecoveryCounter(selectedBank.value.itemId);
+      resetRecoveryCounter(itemId);
+      
+      // Create a listener for sync progress updates
+      const unsubscribe = watch(syncProgress, (newProgress) => {
+        if (newProgress && newProgress.itemId === itemId && newProgress.status === 'in_progress') {
+          updateInProgressSession(itemId, newProgress);
+        }
+      });
       
       // Perform the sync
-      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
+      const result = await syncLatestTransactionsForBank(itemId);
+      
+      // Cleanup the watcher
+      unsubscribe();
       
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {
         console.log('sync completed');
         await fetchBanks();
-        await fetchSyncSessions(selectedBank.value.itemId);
+        await fetchSyncSessions(itemId);
         
         // Display performance metrics in console for debugging
         if (result.performanceMetrics || result.syncDuration) {
@@ -211,7 +280,7 @@ export function useBanks() {
         }
         
         // Refresh the sync sessions to show the latest status
-        await fetchSyncSessions(selectedBank.value.itemId);
+        await fetchSyncSessions(itemId);
       }
       
       return result;

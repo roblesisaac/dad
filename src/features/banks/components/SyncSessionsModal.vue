@@ -48,6 +48,24 @@
         </div>
       </div>
       
+      <!-- Show sync progress if syncing -->
+      <div v-if="isSyncing && syncProgress" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 mt-0.5">
+            <RefreshCw class="h-5 w-5 text-blue-500 animate-spin" />
+          </div>
+          <div class="ml-3 w-full">
+            <h3 class="text-sm font-medium text-blue-800">Sync in Progress</h3>
+            <div class="mt-1 text-sm text-blue-700">
+              <p>Added: {{ syncProgress.added || 0 }} | Modified: {{ syncProgress.modified || 0 }} | Removed: {{ syncProgress.removed || 0 }}</p>
+            </div>
+            <div class="w-full h-2 mt-2 bg-blue-100 rounded-full overflow-hidden">
+              <div class="h-full bg-blue-500" :style="{ width: `${Math.min((syncProgress.added || 0) / 10, 100)}%` }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <SyncSessionList
         :sync-sessions="syncSessions"
         :current-sync-id="bank.sync_id"
@@ -64,11 +82,11 @@
 </template>
 
 <script setup>
-import { watch } from 'vue';
+import { watch, ref, onUnmounted } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import SyncSessionList from './SyncSessionList.vue';
-import { AlertTriangle } from 'lucide-vue-next';
+import { AlertTriangle, RefreshCw } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -89,6 +107,7 @@ const {
   loading,
   error,
   isSyncing,
+  syncProgress,
   fetchSyncSessions,
   syncSelectedBank,
   revertToSession,
@@ -96,14 +115,62 @@ const {
   continueWithoutRecovery,
 } = useBanks();
 
+// Setup polling for updates during sync
+const pollingInterval = ref(null);
+const POLLING_INTERVAL_MS = 3000; // Poll every 3 seconds
+
+// Watch for sync status changes
+watch(isSyncing, (newVal) => {
+  if (newVal) {
+    // Start polling when syncing begins
+    startPolling();
+  } else {
+    // Stop polling when sync finishes
+    stopPolling();
+  }
+});
+
+// Start polling for sync session updates
+const startPolling = () => {
+  if (!pollingInterval.value) {
+    pollingInterval.value = setInterval(() => {
+      if (props.bank?.itemId) {
+        fetchSyncSessions(props.bank.itemId);
+      }
+    }, POLLING_INTERVAL_MS);
+  }
+};
+
+// Stop polling
+const stopPolling = () => {
+  if (pollingInterval.value) {
+    clearInterval(pollingInterval.value);
+    pollingInterval.value = null;
+  }
+};
+
 // Watch for bank changes or modal opening to fetch sessions
 watch(() => [props.isOpen, props.bank], async ([isOpen, bank]) => {
   if (isOpen && bank?.itemId) {
     await fetchSyncSessions(bank.itemId);
+    
+    // If already syncing, start polling
+    if (isSyncing.value) {
+      startPolling();
+    }
+  } else {
+    // Stop polling when modal closes
+    stopPolling();
   }
 }, { immediate: true });
 
+// Clean up on unmount
+onUnmounted(() => {
+  stopPolling();
+});
+
 const closeModal = () => {
+  stopPolling();
   emit('close');
 };
 
@@ -111,11 +178,17 @@ const closeModal = () => {
  * Handle sync action
  */
 const handleSync = async () => {
+  // Start polling immediately when sync is triggered
+  startPolling();
+  
   const result = await syncSelectedBank();
   
-  // If sync completed successfully, refresh sessions list
-  if (result && result.completed) {
-    await fetchSyncSessions(props.bank.itemId);
+  // If sync completed or errored, we'll get fresh sessions in syncSelectedBank
+  // so no need to fetch sessions again
+  
+  // If sync failed, stop polling
+  if (result && !result.completed) {
+    stopPolling();
   }
 };
 

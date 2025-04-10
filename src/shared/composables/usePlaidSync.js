@@ -41,11 +41,23 @@ export function usePlaidSync() {
       let batchCount = 0;
       let retryCount = 0;
       let totalStats = { added: 0, modified: 0, removed: 0 };
+      const startTimestamp = Date.now();
       
       // Initialize consecutive recoveries tracker for this item if it doesn't exist
       if (!consecutiveRecoveries.value[itemId]) {
         consecutiveRecoveries.value[itemId] = 0;
       }
+      
+      // Set initial sync progress
+      updateSyncProgress({
+        added: 0,
+        modified: 0,
+        removed: 0,
+        status: 'in_progress',
+        itemId,
+        startTimestamp,
+        branchNumber: 1
+      });
       
       // Continue syncing batches until complete
       while (hasMore) {
@@ -318,6 +330,11 @@ export function usePlaidSync() {
   const updateSyncProgress = (progress) => {
     if (!progress) return;
     
+    // Add timestamps if not present
+    if (!progress.startTimestamp) {
+      progress.startTimestamp = Date.now();
+    }
+    
     syncProgress.value = progress;
     
     // Update component state if provided
@@ -331,6 +348,7 @@ export function usePlaidSync() {
         nextSync: progress.nextSync,
         cursor: progress.cursor,
         branchNumber: progress.branchNumber || 0,
+        startTimestamp: progress.startTimestamp,
         // Add recovery information if present
         recoveryPerformed: progress.recoveryPerformed || false,
         recoveryRemovedCount: progress.recoveryRemovedCount || 0,
