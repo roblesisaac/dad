@@ -29,7 +29,7 @@
                 {{ formatDateTime(item.authorized_datetime) || item.authorized_date }}
               </div>
               <div class="text-gray-800 font-medium text-transform-capitalize">
-                {{ item.name }} <span v-if="item.check_number?.length" class="text-gray-500 text-sm">#{{ item.check_number }}</span>
+                {{ makeProper(item.name) }} <span v-if="item.check_number?.length" class="text-gray-500 text-sm">#{{ item.check_number }}</span>
               </div>
               <div v-if="item.pending" class="text-xs text-gray-500 mt-1">
                 <span class="inline-flex items-center">
@@ -68,7 +68,7 @@ import TransactionDetails from './TransactionDetails.vue';
 import { useUtils } from '@/shared/composables/useUtils';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
-const { fontColor, formatPrice } = useUtils();
+const { fontColor, formatPrice, makeProper } = useUtils();
 const { categoryName, state } = defineProps({
   categoryName: String,
   state: Object

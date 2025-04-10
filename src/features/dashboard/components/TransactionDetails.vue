@@ -13,11 +13,11 @@
                 {{ item.amount < 0 ? 'Paid From' : 'Deposited To' }}
               </span>
               <span class="font-medium">
-                {{ accountData.name }} 
+                {{ makeProper(accountData.name) }} 
                 <span class="text-gray-500">#{{ accountData.mask }}</span>
               </span>
               <span v-if="accountName && accountName !== accountData.name" class="text-sm text-gray-600">
-                {{ accountName }}
+                {{ makeProper(accountName) }}
               </span>
             </div>
             
@@ -34,7 +34,7 @@
           <div class="grid grid-cols-2 gap-3 text-sm">
             <div>
               <div class="text-gray-500">Channel</div>
-              <div class="font-medium">{{ item.payment_channel }}</div>
+              <div class="font-medium">{{ makeProper(item.payment_channel) }}</div>
             </div>
             <div>
               <div class="text-gray-500">Status</div>
@@ -125,7 +125,7 @@ import { useApi } from '@/shared/composables/useApi';
 import { useUtils } from '@/shared/composables/useUtils';
 
 const api = useApi();
-const { waitUntilTypingStops, formatPrice } = useUtils();
+const { waitUntilTypingStops, formatPrice, makeProper } = useUtils();
 const { item, state } = defineProps({
   item: Object,
   state: Object
@@ -143,8 +143,7 @@ const accountName = computed(() => accountData.value.official_name || accountDat
 
 const prettyCategory = computed(() => {
   const category = item.category || '';
-
-  return category.split(',').join(', ');
+  return category.split(',').map(c => makeProper(c.trim())).join(', ');
 });
 
 const rulesAppliedToItem = computed(() => {

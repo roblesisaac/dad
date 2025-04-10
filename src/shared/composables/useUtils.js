@@ -40,6 +40,13 @@ export function useUtils() {
     return Array.isArray(value) ? value : [value];
   }
 
+  function makeProper(str) {
+    if (!str || typeof str !== 'string') return '';
+    return str.split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(' ');
+  }
+
   // UI helpers
   function waitUntilTypingStops(ms=500) {
     return new Promise((resolve) => {
@@ -74,6 +81,7 @@ export function useUtils() {
     // String/value utilities
     lowercase,
     makeArray,
+    makeProper,
     
     // UI helpers
     waitUntilTypingStops,
