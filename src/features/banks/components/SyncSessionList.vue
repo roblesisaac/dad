@@ -48,6 +48,7 @@
         :format-sync-date="formatSyncDate"
         @revert="confirmRevert"
         @continue-without-recovery="handleContinueWithoutRecovery"
+        @reconnect="handleReconnect"
       />
     </div>
     
@@ -92,7 +93,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['refresh', 'sync', 'revert-to-session', 'continue-without-recovery']);
+const emit = defineEmits(['refresh', 'sync', 'revert-to-session', 'continue-without-recovery', 'reconnect']);
 
 // Local state for reversion modal
 const showRevertConfirmation = ref(false);
@@ -120,5 +121,10 @@ const confirmRevertSession = (session) => {
 // Handle continue without recovery
 const handleContinueWithoutRecovery = (session) => {
   emit('continue-without-recovery', session);
+};
+
+// Handle reconnect
+const handleReconnect = (session) => {
+  emit('reconnect', session);
 };
 </script> 

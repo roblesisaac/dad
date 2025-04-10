@@ -147,7 +147,11 @@
       </div>
       
       <!-- Error information -->
-      <SessionErrorInfo v-if="session.error" :error="session.error" />
+      <SessionErrorInfo 
+        v-if="session.error" 
+        :error="session.error" 
+        @reconnect="handleReconnect"
+      />
       
       <!-- Failed transactions section -->
       <div v-if="hasFailedTransactions" class="mb-3">
@@ -287,7 +291,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['revert', 'continue-without-recovery']);
+const emit = defineEmits(['revert', 'continue-without-recovery', 'reconnect']);
 
 // Setup utils
 const { formatPrice } = useUtils();
@@ -386,4 +390,9 @@ const hasSkippedTransactions = computed(() => {
   if (!props.session.failedTransactions || !props.session.failedTransactions.skipped) return false;
   return props.session.failedTransactions.skipped.length > 0;
 });
+
+// Handle reconnect event from SessionErrorInfo
+const handleReconnect = () => {
+  emit('reconnect', props.session);
+};
 </script> 

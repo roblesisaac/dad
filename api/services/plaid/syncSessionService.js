@@ -710,6 +710,51 @@ class SyncSessionService {
 
     return nextSync;
   }
+
+  /**
+   * Updates a sync session status and adds error information if provided
+   * @param {String} syncSessionId - ID of the session to update
+   * @param {String} status - New status ('error', 'complete', etc.)
+   * @param {Object} errorInfo - Optional error information
+   * @returns {Promise<Object>} Updated session
+   */
+  async updateSessionStatus(syncSessionId, status, errorInfo = null) {
+    if (!syncSessionId) {
+      throw new Error('Sync session ID is required to update status');
+    }
+    
+    try {
+      const syncSession = await SyncSessions.findOne(syncSessionId);
+      
+      if (!syncSession) {
+        console.warn(`Sync session '${syncSessionId}' not found for status update`);
+        return null;
+      }
+      
+      // Calculate end timestamp and duration if not already set
+      const { endTimestamp, syncDuration } = this.calcEndTimestampAndSyncDuration(syncSession);
+      
+      const updateData = {
+        status,
+        endTimestamp,
+        syncDuration
+      };
+      
+      // Add error info if provided
+      if (errorInfo) {
+        updateData.error = errorInfo;
+      }
+      
+      // Update the session
+      return await SyncSessions.update(
+        syncSessionId,
+        updateData
+      );
+    } catch (error) {
+      console.error(`Error updating session status: ${error.message}`);
+      return null;
+    }
+  }
 }
 
 export default new SyncSessionService(); 

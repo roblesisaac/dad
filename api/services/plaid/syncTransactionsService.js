@@ -203,8 +203,8 @@ class TransactionSyncService {
       const userIdForError = user?._id;
 
       // Handle any errors during the process, ensuring item status is updated
-      // Pass specific IDs if available
-      await this._handleSyncError(error, itemIdToUnlock, userIdForError);
+      // Pass specific IDs and the current session if available
+      await this._handleSyncError(error, itemIdToUnlock, userIdForError, currentSyncSession);
       throw error; // Re-throw to be handled by the caller
     }
   }
@@ -750,10 +750,11 @@ class TransactionSyncService {
    * @param {Error} error - Original error
    * @param {String} itemId - Item ID (if available)
    * @param {String} userId - User ID (if available)
+   * @param {Object} currentSyncSession - Current sync session
    * @returns {Promise<void>}
    * @private
    */
-  async _handleSyncError(error, itemId, userId) {
+  async _handleSyncError(error, itemId, userId, currentSyncSession) {
     // Format the error with context
     const formattedError = this._formatError(error, itemId, userId); // Use passed IDs
 
@@ -762,6 +763,30 @@ class TransactionSyncService {
       try {
         // Attempt to set status to 'error' to release lock and indicate failure
         await this._updateItemErrorStatus(itemId, userId);
+        
+        // Update the current sync session if available
+        if (currentSyncSession && currentSyncSession._id) {
+          try {
+            // Check if the error indicates a need for reconnection
+            const requiresReconnect = error.code === 'ITEM_LOGIN_REQUIRED' || 
+              error.code === 'INVALID_CREDENTIALS' || 
+              error.code === 'INVALID_MFA' ||
+              error.code === 'ITEM_LOCKED' || 
+              error.code === 'USER_SETUP_REQUIRED';
+            
+            // Update the sync session status to error with appropriate metadata
+            await syncSessionService.updateSessionStatus(currentSyncSession._id, 'error', {
+              code: error.code || 'SYNC_ERROR',
+              message: error.message || 'An error occurred during sync',
+              timestamp: Date.now(),
+              plaidErrorCode: error.plaidErrorCode || null,
+              plaidErrorMessage: error.plaidErrorMessage || null,
+              requiresReconnect: requiresReconnect
+            });
+          } catch (sessionError) {
+            console.error(`Failed to update sync session for itemId ${itemId}:`, sessionError);
+          }
+        }
       } catch (updateError) {
         console.error(`Failed to update item status to error for itemId ${itemId}:`, updateError);
         // Log the original error as well

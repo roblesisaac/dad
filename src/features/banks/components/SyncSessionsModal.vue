@@ -120,6 +120,7 @@
         @sync="handleSync"
         @revert-to-session="handleRevertToSession"
         @continue-without-recovery="handleContinueWithoutRecovery"
+        @reconnect="handleReconnectBank"
       />
     </template>
   </BaseModal>
