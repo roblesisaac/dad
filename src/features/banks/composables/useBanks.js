@@ -3,7 +3,6 @@ import { useApi } from '@/shared/composables/useApi.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 import { usePlaidLink } from '@/features/onboarding/composables/usePlaidLink.js';
 
-// --- State moved outside the composable function ---
 const banks = ref([]);
 const selectedBank = ref(null);
 const syncSessions = ref([]);

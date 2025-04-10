@@ -26,6 +26,7 @@ export function usePlaidSync() {
    * @returns {Promise<Object>} Sync result with completion status
    */
   const syncLatestTransactionsForBank = async (itemId) => {
+    console.log('syncLatestTransactionsForBank', itemId);
     try {
       if (!itemId) {
         throw new Error('No itemId provided for syncing');

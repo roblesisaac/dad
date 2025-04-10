@@ -234,9 +234,6 @@ const handleSync = async () => {
   
   const result = await syncSelectedBank();
   
-  // If sync completed or errored, we'll get fresh sessions in syncSelectedBank
-  // so no need to fetch sessions again
-  
   // If sync failed or has no more batches to process, stop polling
   if (result && (!result.completed || !result.hasMore)) {
     stopPolling();
