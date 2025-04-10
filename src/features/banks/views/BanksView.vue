@@ -100,6 +100,7 @@ const {
   selectBank,
   getBankStatusClass,
   getBankStatusText,
+  handleReconnectBank,
   updateBankName
 } = useBanks();
 
@@ -211,12 +212,7 @@ const handleConnectBank = async () => {
 };
 
 const handlePlaidSuccess = async (publicToken, metadata) => {
-  try {
-    // Add debugging
-    console.log('Plaid success callback received with token:', 
-      publicToken ? 'Token received' : 'No token received', 
-      'for item:', reconnectingItemId.value);
-    
+  try {    
     if (!publicToken) {
       throw new Error('No public token received from Plaid');
     }
@@ -294,39 +290,6 @@ const saveBankName = async (bank) => {
   } catch (err) {
     console.error('Error saving bank name:', err);
     showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
-  }
-};
-
-const handleReconnectBank = async (bank) => {
-  if (!bank?.itemId) return;
-  
-  try {
-    loading.value.isReconnectingBank = true;
-    error.value.isReconnectingBank = null;
-    
-    // Store the itemId for the reconnection
-    reconnectingItemId.value = bank.itemId;
-    
-    // Cleanup any existing Plaid handler
-    cleanupPlaidHandler();
-    
-    // Get link token for reconnection using the item ID
-    const token = await createLinkToken(bank.itemId);
-    
-    // Open Plaid Link directly for reconnection
-    currentPlaidHandler.value = await openPlaidLink(token, {
-      onSuccess: handlePlaidSuccess,
-      onExit: handlePlaidExit,
-      onError: handlePlaidError
-    });
-    
-  } catch (err) {
-    console.error('Error reconnecting bank:', err);
-    error.value.isReconnectingBank = err.message || 'Failed to reconnect bank';
-    showNotification(`Error reconnecting bank: ${error.value.isReconnectingBank}`, 'error');
-    reconnectingItemId.value = null;
-  } finally {
-    loading.value.isReconnectingBank = false;
   }
 };
 
