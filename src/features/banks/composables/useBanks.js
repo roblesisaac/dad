@@ -25,12 +25,7 @@ const error = ref({
   editingBank: null
 });
 const requiresReconnect = ref(false);
-// --- End of moved state ---
 
-/**
- * Composable for managing banks (Plaid items) including fetching, 
- * syncing, and managing sync sessions
- */
 export function useBanks() {
   const api = useApi();
   const { 
@@ -128,8 +123,6 @@ export function useBanks() {
   
   /**
    * Format duration in milliseconds to human-readable format
-   * @param {Number} ms - Duration in milliseconds
-   * @returns {String} Formatted duration
    */
   const formatDuration = (ms) => {
     if (!ms) return 'N/A';
@@ -174,68 +167,11 @@ export function useBanks() {
   };
   
   /**
-   * Add or update an in-progress session in the syncSessions list
-   * @param {String} itemId - Item ID
-   * @param {Object} progress - Current sync progress
-   */
-  const updateInProgressSession = (itemId, progress) => {
-    if (!itemId || !progress) return;
-    
-    const now = Date.now();
-    
-    // Look for an existing in-progress session
-    const existingSessionIndex = syncSessions.value.findIndex(s => 
-      s.status === 'in_progress' && s.itemId === itemId
-    );
-    
-    // Create an optimistic session object
-    const sessionUpdate = {
-      _id: `temp-session-${now}`,
-      itemId: itemId,
-      status: 'in_progress',
-      syncTime: now,
-      startTimestamp: progress.startTimestamp || now,
-      syncCounts: {
-        actual: { 
-          added: progress.added || 0, 
-          modified: progress.modified || 0, 
-          removed: progress.removed || 0 
-        },
-        expected: { 
-          added: 0, 
-          modified: 0, 
-          removed: 0 
-        }
-      },
-      branchNumber: progress.branchNumber || 1
-    };
-    
-    if (existingSessionIndex !== -1) {
-      // Update the existing session
-      syncSessions.value[existingSessionIndex] = {
-        ...syncSessions.value[existingSessionIndex],
-        ...sessionUpdate,
-        syncCounts: {
-          ...syncSessions.value[existingSessionIndex].syncCounts,
-          actual: sessionUpdate.syncCounts.actual
-        }
-      };
-    } else {
-      // Add the new session at the top of the list
-      syncSessions.value.unshift(sessionUpdate);
-    }
-  };
-  
-  /**
    * Select a bank and fetch its sync sessions
    * @param {Object} bank - Bank object
    */
   const selectBank = async (bank) => {
     selectedBank.value = bank;
-
-    if (bank?.itemId) {
-      // await fetchSyncSessions(bank.itemId);
-    }
   };
   
   /**
@@ -256,6 +192,11 @@ export function useBanks() {
       
       // Refetch the sync sessions to show the updates
       await fetchSyncSessions(selectedBank.value.itemId);
+      
+      // Set isSyncing to false when sync is complete - this will stop polling
+      if (!result.hasMore) {
+        isSyncing.value = false;
+      }
       
       return result;
     } catch (err) {
@@ -464,7 +405,7 @@ export function useBanks() {
     switch (bank.status) {
       case 'error':
         return 'bg-red-500';
-      case 'login_required': // Add special case for login_required
+      case 'login_required':
         return 'bg-yellow-500';
       case 'in_progress':
         return 'bg-yellow-500';
@@ -486,7 +427,7 @@ export function useBanks() {
     switch (bank.status) {
       case 'error':
         return 'Error';
-      case 'login_required': // Add special case for login_required
+      case 'login_required':
         return 'Reconnection Required';
       case 'in_progress':
         return 'In Progress';
@@ -555,11 +496,6 @@ export function useBanks() {
       });
       
       if (result.success) {
-        // If the current bank is selected, refresh the sync sessions to show the update
-        // if (selectedBank.value?.itemId) {
-        //   await fetchSyncSessions(selectedBank.value.itemId);
-        // }
-        
         return { 
           success: true, 
           transaction: result.transaction 
@@ -624,6 +560,8 @@ export function useBanks() {
     getBankStatusText,
     updateBankName,
     addTransactionFromError,
+    updateSyncMetrics,
+    formatDuration,
     
     // Plaid Link
     createLinkToken,

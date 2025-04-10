@@ -211,9 +211,13 @@ watch(() => [props.isOpen, props.bank], async ([isOpen, bank]) => {
   }
 }, { immediate: true });
 
-// Clean up on unmount
+// Clean up on unmount - make sure polling is stopped
 onUnmounted(() => {
   stopPolling();
+  
+  // Make sure we reset any leftover sync state flags
+  requiresReconnect.value = false;
+  error.value.sync = null;
 });
 
 const closeModal = () => {
@@ -233,8 +237,8 @@ const handleSync = async () => {
   // If sync completed or errored, we'll get fresh sessions in syncSelectedBank
   // so no need to fetch sessions again
   
-  // If sync failed, stop polling
-  if (result && !result.completed) {
+  // If sync failed or has no more batches to process, stop polling
+  if (result && (!result.completed || !result.hasMore)) {
     stopPolling();
   }
 };
