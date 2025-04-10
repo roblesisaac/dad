@@ -79,12 +79,16 @@ function formatDateTime(datetimeStr) {
   
   try {
     const date = new Date(datetimeStr);
+    
+    // Format the date in user's local timezone
     return new Intl.DateTimeFormat('en-US', { 
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
+      minute: '2-digit',
+      // Display in user's local timezone instead of forcing PST
+      // This matches what the user would expect based on when they made the transaction
     }).format(date);
   } catch (err) {
     return '';
