@@ -177,9 +177,7 @@ export function useBanks() {
       resetRecoveryCounter(selectedBank.value.itemId);
       
       // Perform the sync
-      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId, {
-        fullSync: false
-      });
+      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
       
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {
@@ -195,15 +193,35 @@ export function useBanks() {
         }
         
         isSyncing.value = false;
-      } else if (result.error) {
-        error.value.sync = result.error;
+      } else {
+        // Handle error case
+        if (result.error) {
+          // Set a user-friendly error message
+          error.value.sync = result.error;
+        }
+        
+        // If we have failure details, add them to the error message
+        if (result.failureDetails) {
+          const { addedFailures, modifiedFailures, removedFailures } = result.failureDetails;
+          const totalFailures = (addedFailures || 0) + (modifiedFailures || 0) + (removedFailures || 0);
+          
+          if (totalFailures > 0) {
+            error.value.sync = `Sync stopped: ${totalFailures} transactions failed to process. Please check the sync history for details.`;
+          }
+        }
+        
+        // Refresh the sync sessions to show the latest status
+        await fetchSyncSessions(selectedBank.value.itemId);
       }
       
       return result;
     } catch (err) {
       console.error('Error syncing bank:', err);
       error.value.sync = err.message || 'Failed to sync bank';
-      return null;
+      return {
+        completed: false,
+        error: err.message
+      };
     }
   };
   

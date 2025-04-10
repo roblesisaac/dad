@@ -101,6 +101,34 @@ export function usePlaidSync() {
           // Check if batchResults exists before accessing its properties
           const batchResults = result.batchResults || { added: 0, modified: 0, removed: 0 };
           
+          // NEW: Check if there are any failures in the sync result
+          if (result.hasFailures) {
+            const failureMessage = result.failureDetails?.message || 'Some transactions failed to process';
+            const errorMessage = `Sync failed: ${failureMessage}`;
+            
+            // Update status bar with failure message
+            updateStatusBar(`Sync error: ${failureMessage}`, false);
+            
+            // Update progress state with error
+            updateSyncProgress({
+              status: 'error',
+              error: errorMessage,
+              itemId,
+              lastSync: new Date().toISOString()
+            });
+            
+            // Set isSyncing to false
+            isSyncing.value = false;
+            
+            // Return failed result
+            return {
+              completed: false,
+              itemId,
+              error: errorMessage,
+              failureDetails: result.failureDetails
+            };
+          }
+          
           // Update stats with the latest batch results
           totalStats.added += batchResults.added || 0;
           totalStats.modified += batchResults.modified || 0;
@@ -131,7 +159,7 @@ export function usePlaidSync() {
           });
           
           // Check if we need to continue syncing
-          hasMore = options.fullSync ? result.hasMore : false;
+          hasMore = result.hasMore;
           retryCount = 0; // Reset retry count on success
           
           // Add a small delay between batches to avoid overwhelming the API

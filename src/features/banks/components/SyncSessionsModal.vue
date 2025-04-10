@@ -25,6 +25,29 @@
     </template>
     
     <template #content>
+      <!-- Show sync error notification if present -->
+      <div v-if="error.sync" class="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 mt-0.5">
+            <AlertTriangle class="h-5 w-5 text-red-500" />
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-red-800">Sync Error</h3>
+            <div class="mt-1 text-sm text-red-700">
+              <p>{{ error.sync }}</p>
+            </div>
+            <div class="mt-2">
+              <button 
+                @click="handleSync" 
+                class="inline-flex items-center px-2 py-1 border border-red-600 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none"
+              >
+                Retry Sync
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <SyncSessionList
         :sync-sessions="syncSessions"
         :current-sync-id="bank.sync_id"
@@ -45,6 +68,7 @@ import { watch } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import SyncSessionList from './SyncSessionList.vue';
+import { AlertTriangle } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -87,7 +111,12 @@ const closeModal = () => {
  * Handle sync action
  */
 const handleSync = async () => {
-  await syncSelectedBank();
+  const result = await syncSelectedBank();
+  
+  // If sync completed successfully, refresh sessions list
+  if (result && result.completed) {
+    await fetchSyncSessions(props.bank.itemId);
+  }
 };
 
 /**
