@@ -78,21 +78,24 @@ function formatDateTime(datetimeStr) {
   if (!datetimeStr) return '';
   
   try {
-    // Parse the ISO date string
     const date = new Date(datetimeStr);
     
-    // Adjust by 3 hours to match the expected time (UTC-5 instead of UTC-8)
-    const adjustedDate = new Date(date.getTime() - (3 * 60 * 60 * 1000));
+    // Manual adjustment: add 5 hours to convert from UTC to Eastern time
+    const adjustedDate = new Date(date.getTime() + (5 * 60 * 60 * 1000));
     
-    return new Intl.DateTimeFormat('en-US', { 
+    // Format the adjusted date
+    const options = { 
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
+      hour: 'numeric',
       minute: '2-digit',
-      timeZone: 'America/Los_Angeles'
-    }).format(adjustedDate);
+      hour12: true
+    };
+    
+    return adjustedDate.toLocaleString('en-US', options);
   } catch (err) {
+    console.error('Error formatting date:', err);
     return '';
   }
 }
