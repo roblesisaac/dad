@@ -78,18 +78,20 @@ function formatDateTime(datetimeStr) {
   if (!datetimeStr) return '';
   
   try {
+    // Parse the ISO date string
     const date = new Date(datetimeStr);
     
-    // Format the date in user's local timezone
+    // Adjust by 3 hours to match the expected time (UTC-5 instead of UTC-8)
+    const adjustedDate = new Date(date.getTime() - (3 * 60 * 60 * 1000));
+    
     return new Intl.DateTimeFormat('en-US', { 
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      // Display in user's local timezone instead of forcing PST
-      // This matches what the user would expect based on when they made the transaction
-    }).format(date);
+      timeZone: 'America/Los_Angeles'
+    }).format(adjustedDate);
   } catch (err) {
     return '';
   }

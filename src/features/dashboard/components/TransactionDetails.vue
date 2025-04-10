@@ -23,7 +23,7 @@
             
             <div class="flex justify-between pt-2 border-t border-gray-100">
               <span class="text-sm text-gray-600">Current Balance</span>
-              <span class="font-medium text-emerald-600">{{ formatPrice(accountData.balances?.current) }}</span>
+              <span class="font-medium text-emerald-600">{{ formatPrice(Number(accountData.balances?.current) || 0) }}</span>
             </div>
           </div>
         </div>

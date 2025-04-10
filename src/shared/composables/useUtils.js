@@ -57,7 +57,9 @@ export function useUtils() {
   }
 
   function formatPrice(amt=0, { toFixed = 2 } = {}) {
-    return amt.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: toFixed, maximumFractionDigits: toFixed });
+    // Ensure amt is a valid number
+    const validAmount = typeof amt === 'number' && !isNaN(amt) ? amt : 0;
+    return validAmount.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: toFixed, maximumFractionDigits: toFixed });
   }
 
   return {
