@@ -1,6 +1,7 @@
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onUnmounted } from 'vue';
 import { useApi } from '@/shared/composables/useApi.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
+import { usePlaidLink } from '@/features/plaid-link/composables/usePlaidLink.js';
 
 // --- State moved outside the composable function ---
 const banks = ref([]);
@@ -23,6 +24,7 @@ const error = ref({
   revert: null,
   editingBank: null
 });
+const requiresReconnect = ref(false);
 // --- End of moved state ---
 
 /**
@@ -37,6 +39,28 @@ export function useBanks() {
     syncProgress,
     resetRecoveryCounter
   } = usePlaidSync();
+  
+  // Get functionality from plaid link composable
+  const { 
+    createLinkToken, 
+    openPlaidLink, 
+    exchangePublicToken 
+  } = usePlaidLink();
+  
+  // Local state for reconnection
+  const currentPlaidHandler = ref(null);
+
+  // Method to clean up any Plaid handler
+  const cleanupPlaidHandler = () => {
+    if (currentPlaidHandler.value) {
+      try {
+        currentPlaidHandler.value.destroy();
+        currentPlaidHandler.value = null;
+      } catch (e) {
+        console.error('Error destroying Plaid Link handler:', e);
+      }
+    }
+  };
   
   /**
    * Fetch all banks (Plaid items) for the current user
@@ -215,82 +239,133 @@ export function useBanks() {
   };
   
   /**
-   * Sync transactions for a selected bank and update metrics
+   * Sync the selected bank
+   * @returns {Promise<Object>} Sync result
    */
   const syncSelectedBank = async () => {
-    if (!selectedBank.value?.itemId) {
-      error.value.sync = 'No bank selected';
-      return null;
-    }
-    
-    error.value.sync = null;
-    const itemId = selectedBank.value.itemId;
-    
-    // Ensure we have sync sessions loaded first
-    if (syncSessions.value.length === 0) {
-      await fetchSyncSessions(itemId);
-    }
-    
     try {
-      // Reset recovery counter to ensure we can attempt the sync
-      resetRecoveryCounter(itemId);
+      // Reset reconnect flag
+      requiresReconnect.value = false;
+      error.value.sync = null;
       
-      // Create a listener for sync progress updates
-      const unsubscribe = watch(syncProgress, (newProgress) => {
-        if (newProgress && newProgress.itemId === itemId && newProgress.status === 'in_progress') {
-          updateInProgressSession(itemId, newProgress);
-        }
-      });
-      
-      // Perform the sync
-      const result = await syncLatestTransactionsForBank(itemId);
-      
-      // Cleanup the watcher
-      unsubscribe();
-      
-      // If sync was successful, refresh the bank data and sync sessions
-      if (result.completed) {
-        console.log('sync completed');
-        await fetchBanks();
-        await fetchSyncSessions(itemId);
-        
-        // Display performance metrics in console for debugging
-        if (result.performanceMetrics || result.syncDuration) {
-          console.log('Sync performance metrics:', 
-            result.performanceMetrics || { syncDuration: result.syncDuration }
-          );
-        }
-        
-        isSyncing.value = false;
-      } else {
-        // Handle error case
-        if (result.error) {
-          // Set a user-friendly error message
-          error.value.sync = result.error;
-        }
-        
-        // If we have failure details, add them to the error message
-        if (result.failureDetails) {
-          const { addedFailures, modifiedFailures, removedFailures } = result.failureDetails;
-          const totalFailures = (addedFailures || 0) + (modifiedFailures || 0) + (removedFailures || 0);
-          
-          if (totalFailures > 0) {
-            error.value.sync = `Sync stopped: ${totalFailures} transactions failed to process. Please check the sync history for details.`;
-          }
-        }
-        
-        // Refresh the sync sessions to show the latest status
-        await fetchSyncSessions(itemId);
+      if (!selectedBank.value?.itemId) {
+        throw new Error('No bank selected for sync');
       }
+      
+      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
+      
+      // Refetch the sync sessions to show the updates
+      await fetchSyncSessions(selectedBank.value.itemId);
       
       return result;
     } catch (err) {
-      console.error('Error syncing bank:', err);
+      console.error('Error syncing selected bank:', err);
+      
+      // Handle special case for login required error
+      if (err.response?.data?.error === 'ITEM_LOGIN_REQUIRED' || 
+          err.response?.data?.requiresReconnect ||
+          ['INVALID_CREDENTIALS', 'INVALID_MFA', 'ITEM_LOCKED', 'USER_SETUP_REQUIRED']
+            .includes(err.response?.data?.error)) {
+        
+        requiresReconnect.value = true;
+        error.value.sync = err.response?.data?.message || 
+                          'This bank connection requires reauthentication. Please reconnect your bank.';
+        
+        return { 
+          completed: false, 
+          requiresReconnect: true,
+          itemId: err.response?.data?.itemId || selectedBank.value.itemId,
+          error: error.value.sync,
+          errorCode: err.response?.data?.error,
+          errorDetails: err.response?.data?.plaidErrorDetails
+        };
+      }
+      
       error.value.sync = err.message || 'Failed to sync bank';
-      return {
-        completed: false,
-        error: err.message
-      };
+      return { completed: false, error: error.value.sync };
+    }
+  };
+  
+  /**
+   * Handle Plaid Link success callback
+   */
+  const handlePlaidSuccess = async (publicToken, metadata) => {
+    try {
+      if (!publicToken) {
+        throw new Error('No public token received from Plaid');
+      }
+      
+      // Exchange the public token for an access token
+      await exchangePublicToken({ 
+        publicToken, 
+        metadata,
+        itemId: selectedBank.value?.itemId
+      });
+      
+      // Reset reconnect flag
+      requiresReconnect.value = false;
+      
+      // Refresh the banks list
+      await fetchBanks();
+      
+      // If there was a selected bank, refresh its sync sessions
+      if (selectedBank.value?.itemId) {
+        await fetchSyncSessions(selectedBank.value.itemId);
+      }
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error exchanging token:', err);
+      return { success: false, error: err.message };
+    } finally {
+      cleanupPlaidHandler();
+    }
+  };
+  
+  /**
+   * Handle Plaid Link exit
+   */
+  const handlePlaidExit = (err, metadata) => {
+    cleanupPlaidHandler();
+    return { cancelled: true };
+  };
+  
+  /**
+   * Handle Plaid Link error
+   */
+  const handlePlaidError = (error) => {
+    console.error('Plaid error:', error);
+    cleanupPlaidHandler();
+    return { success: false, error };
+  };
+  
+  /**
+   * Reconnect a bank that requires login
+   */
+  const handleReconnectBank = async () => {
+    if (!selectedBank.value?.itemId) {
+      console.error('No bank selected for reconnection');
+      return { success: false, error: 'No bank selected' };
+    }
+    
+    try {
+      // Clean up any existing handler
+      cleanupPlaidHandler();
+      
+      // Get link token for reconnection
+      const token = await createLinkToken(selectedBank.value.itemId);
+      
+      // Open Plaid Link for reconnection
+      currentPlaidHandler.value = await openPlaidLink(token, {
+        onSuccess: handlePlaidSuccess,
+        onExit: handlePlaidExit,
+        onError: handlePlaidError
+      });
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error reconnecting bank:', err);
+      return { success: false, error: err.message };
     }
   };
   
@@ -389,6 +464,8 @@ export function useBanks() {
     switch (bank.status) {
       case 'error':
         return 'bg-red-500';
+      case 'login_required': // Add special case for login_required
+        return 'bg-yellow-500';
       case 'in_progress':
         return 'bg-yellow-500';
       case 'complete':
@@ -409,6 +486,8 @@ export function useBanks() {
     switch (bank.status) {
       case 'error':
         return 'Error';
+      case 'login_required': // Add special case for login_required
+        return 'Reconnection Required';
       case 'in_progress':
         return 'In Progress';
       case 'complete':
@@ -500,6 +579,11 @@ export function useBanks() {
     }
   };
   
+  // Clean up on unmount
+  onUnmounted(() => {
+    cleanupPlaidHandler();
+  });
+  
   // Computed properties
   const isLoading = computed(() => 
     loading.value.banks || loading.value.syncSessions || isSyncing.value
@@ -521,6 +605,7 @@ export function useBanks() {
     error,
     isSyncing,
     syncProgress,
+    requiresReconnect,
     
     // Computed
     isLoading,
@@ -529,19 +614,26 @@ export function useBanks() {
     
     // Methods
     fetchBanks,
-    fetchSyncSessions,
     selectBank,
     syncSelectedBank,
+    fetchSyncSessions,
     continueWithoutRecovery,
     revertToSession,
-    updateSyncMetrics,
-    addTransactionFromError,
-    
-    // Utilities
     formatSyncDate,
-    formatDuration,
     getBankStatusClass,
     getBankStatusText,
-    updateBankName
+    updateBankName,
+    addTransactionFromError,
+    
+    // Plaid Link
+    createLinkToken,
+    openPlaidLink,
+    exchangePublicToken,
+    currentPlaidHandler,
+    cleanupPlaidHandler,
+    handleReconnectBank,
+    handlePlaidSuccess,
+    handlePlaidExit,
+    handlePlaidError
   };
 } 

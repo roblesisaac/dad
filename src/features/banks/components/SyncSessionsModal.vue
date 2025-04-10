@@ -38,10 +38,57 @@
             </div>
             <div class="mt-2">
               <button 
+                v-if="!requiresReconnect"
                 @click="handleSync" 
                 class="inline-flex items-center px-2 py-1 border border-red-600 text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50 focus:outline-none"
               >
                 Retry Sync
+              </button>
+              <button 
+                v-else
+                @click="handleReconnectBank" 
+                class="inline-flex items-center px-2 py-1 border border-black text-xs font-medium rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white hover:bg-gray-50 focus:outline-none"
+              >
+                <RefreshCw class="h-3 w-3 mr-1" />
+                Reconnect Bank
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Show special login required notification -->
+      <div v-if="requiresReconnect && !error.sync" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+        <div class="flex items-start">
+          <div class="flex-shrink-0 mt-0.5">
+            <AlertTriangle class="h-5 w-5 text-yellow-500" />
+          </div>
+          <div class="ml-3">
+            <h3 class="text-sm font-medium text-yellow-800">Reconnection Required</h3>
+            <div class="mt-1 text-sm text-yellow-700">
+              <p v-if="syncProgress?.errorCode === 'INVALID_CREDENTIALS'">
+                Your login credentials may have changed. Please reconnect your bank account with your updated credentials.
+              </p>
+              <p v-else-if="syncProgress?.errorCode === 'INVALID_MFA'">
+                Additional authentication is required by your bank. Please reconnect to complete the authentication process.
+              </p>
+              <p v-else-if="syncProgress?.errorCode === 'ITEM_LOCKED'">
+                Your account is temporarily locked. Please reconnect your bank to resolve this issue.
+              </p>
+              <p v-else-if="syncProgress?.errorCode === 'USER_SETUP_REQUIRED'">
+                Your bank requires additional setup for this account. Please reconnect to complete the setup process.
+              </p>
+              <p v-else>
+                Your bank connection needs to be updated. This usually happens when your credentials have changed or additional authentication is required.
+              </p>
+            </div>
+            <div class="mt-2">
+              <button 
+                @click="handleReconnectBank" 
+                class="inline-flex items-center px-2 py-1 border border-black text-xs font-medium rounded shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] bg-white hover:bg-gray-50 focus:outline-none"
+              >
+                <RefreshCw class="h-3 w-3 mr-1" />
+                Reconnect Bank
               </button>
             </div>
           </div>
@@ -110,6 +157,8 @@ const {
   revertToSession,
   formatSyncDate,
   continueWithoutRecovery,
+  requiresReconnect,
+  handleReconnectBank,
 } = useBanks();
 
 // Setup polling for updates during sync

@@ -248,14 +248,127 @@ class TransactionSyncService {
   async _fetchTransactionsFromPlaid(item, user, cursor) {
     const accessToken = itemService.decryptAccessToken(item, user);
     
-    // Pre-fetch data from Plaid to check for changes
-    const plaidData = await plaidService.syncLatestTransactionsFromPlaid(
-      accessToken,
-      cursor,
-      null // No start date filter
-    );
-    
-    return plaidData;
+    try {
+      // Pre-fetch data from Plaid to check for changes
+      const plaidData = await plaidService.syncLatestTransactionsFromPlaid(
+        accessToken,
+        cursor,
+        null // No start date filter
+      );
+      
+      // Check for Plaid API error responses that might be formatted as data
+      if (plaidData.error_code) {
+        // Map Plaid error codes to appropriate item statuses and error codes
+        const errorMappings = {
+          'ITEM_LOGIN_REQUIRED': {
+            status: 'login_required',
+            code: 'ITEM_LOGIN_REQUIRED',
+            message: 'This connection requires reauthentication. Please reconnect your bank account.'
+          },
+          'INVALID_CREDENTIALS': {
+            status: 'login_required',
+            code: 'INVALID_CREDENTIALS',
+            message: 'The provided credentials are invalid. Please reconnect your bank account.'
+          },
+          'INVALID_MFA': {
+            status: 'login_required',
+            code: 'INVALID_MFA',
+            message: 'Additional authentication required. Please reconnect your bank account.'
+          },
+          'ITEM_LOCKED': {
+            status: 'login_required',
+            code: 'ITEM_LOCKED',
+            message: 'Your account is temporarily locked. Please reconnect your bank account.'
+          },
+          'USER_SETUP_REQUIRED': {
+            status: 'login_required',
+            code: 'USER_SETUP_REQUIRED',
+            message: 'Your bank requires additional account setup. Please reconnect your bank account.'
+          },
+          'MFA_NOT_SUPPORTED': {
+            status: 'error',
+            code: 'MFA_NOT_SUPPORTED',
+            message: 'Your bank uses MFA that is not currently supported.'
+          },
+          'NO_ACCOUNTS': {
+            status: 'error',
+            code: 'NO_ACCOUNTS',
+            message: 'No accounts found at this financial institution.'
+          },
+          'PRODUCT_NOT_READY': {
+            status: 'pending',
+            code: 'PRODUCT_NOT_READY',
+            message: 'Product data is not yet ready to be retrieved.'
+          },
+          'ITEM_NOT_SUPPORTED': {
+            status: 'error',
+            code: 'ITEM_NOT_SUPPORTED',
+            message: 'This type of account is not currently supported.'
+          }
+        };
+        
+        // Get the appropriate mapping for this error or use a default
+        const errorMap = errorMappings[plaidData.error_code] || {
+          status: 'error',
+          code: plaidData.error_code,
+          message: plaidData.error_message || 'An error occurred with your bank connection.'
+        };
+        
+        // Update item status based on the error
+        await plaidItems.update(
+          { itemId: item.itemId, userId: user._id },
+          { status: errorMap.status }
+        );
+        
+        // Throw a properly formatted error
+        throw new CustomError(errorMap.code, errorMap.message, { 
+          itemId: item.itemId,
+          plaidErrorCode: plaidData.error_code,
+          plaidErrorMessage: plaidData.error_message,
+          plaidErrorType: plaidData.error_type,
+          plaidRequestId: plaidData.request_id
+        });
+      }
+
+      return plaidData;
+    } catch (error) {
+      // If this is already a custom error we threw above, just re-throw it
+      if (error instanceof CustomError) {
+        throw error;
+      }
+      
+      // Handle Plaid errors that might bubble up with error_code property
+      if (error.error_code) {
+        // Determine appropriate status based on error code
+        let status = 'error';
+        
+        // Handle known error codes that require specific statuses
+        if (['ITEM_LOGIN_REQUIRED', 'INVALID_CREDENTIALS', 'INVALID_MFA', 
+             'ITEM_LOCKED', 'USER_SETUP_REQUIRED'].includes(error.error_code)) {
+          status = 'login_required';
+        }
+        
+        // Update item status
+        await plaidItems.update(
+          { itemId: item.itemId, userId: user._id },
+          { status: status }
+        );
+        
+        // Throw a properly formatted error
+        throw new CustomError(error.error_code, 
+          error.error_message || 'An error occurred with your bank connection.', 
+          { 
+            itemId: item.itemId,
+            plaidErrorCode: error.error_code,
+            plaidErrorMessage: error.error_message,
+            plaidErrorType: error.error_type,
+            plaidRequestId: error.request_id
+          });
+      }
+      
+      // For other errors, rethrow
+      throw error;
+    }
   }
 
   /**

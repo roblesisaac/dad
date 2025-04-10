@@ -97,6 +97,27 @@ export default {
       } else if (error.code === 'RECOVERY_FAILED') {
         status = 500;
         errorCode = 'RECOVERY_FAILED';
+      } else if (['ITEM_LOGIN_REQUIRED', 'INVALID_CREDENTIALS', 'INVALID_MFA', 'ITEM_LOCKED', 'USER_SETUP_REQUIRED'].includes(error.code)) {
+        // All of these errors require reconnection via Plaid Link
+        status = 401;
+        errorCode = error.code;
+        errorMessage = error.message || 'This bank connection requires reauthentication. Please reconnect your bank.';
+        
+        // Additional details to help frontend handle reconnection
+        return res.status(status).json({
+          error: errorCode,
+          message: errorMessage,
+          requiresReconnect: true,
+          itemId: error.itemId || error.data?.itemId,
+          plaidErrorDetails: error.data || null
+        });
+      } else if (error.code === 'PRODUCT_NOT_READY') {
+        status = 409; // Conflict - resource not ready
+        errorCode = 'PRODUCT_NOT_READY';
+        errorMessage = 'Product data is not yet ready to be retrieved. Please try again later.';
+      } else if (['MFA_NOT_SUPPORTED', 'ITEM_NOT_SUPPORTED', 'NO_ACCOUNTS'].includes(error.code)) {
+        status = 422; // Unprocessable Entity - can't proceed with this item
+        errorCode = error.code;
       }
       
       if (error.code) {
@@ -105,7 +126,8 @@ export default {
       
       return res.status(status).json({
         error: errorCode,
-        message: errorMessage
+        message: errorMessage,
+        plaidErrorDetails: error.data || null
       });
     }
   },
