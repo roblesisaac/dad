@@ -59,9 +59,6 @@
             <div class="mt-1 text-sm text-blue-700">
               <p>Added: {{ syncProgress.added || 0 }} | Modified: {{ syncProgress.modified || 0 }} | Removed: {{ syncProgress.removed || 0 }}</p>
             </div>
-            <div class="w-full h-2 mt-2 bg-blue-100 rounded-full overflow-hidden">
-              <div class="h-full bg-blue-500" :style="{ width: `${Math.min((syncProgress.added || 0) / 10, 100)}%` }"></div>
-            </div>
           </div>
         </div>
       </div>
