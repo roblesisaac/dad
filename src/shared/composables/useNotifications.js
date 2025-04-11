@@ -34,9 +34,55 @@ export function useNotifications() {
     }
   }
 
+  // Helper functions for different notification types
+  const showInfo = (message = 'This is an info notification', timeout = 5000) => {
+    return notify({
+      message,
+      type: 'INFO',
+      timeout
+    });
+  }
+  
+  const showSuccess = (message = 'Operation completed successfully!', timeout = 5000) => {
+    return notify({
+      message,
+      type: 'SUCCESS',
+      timeout
+    });
+  }
+  
+  const showWarning = (message = 'Warning: This action may have consequences', timeout = 7000) => {
+    return notify({
+      message,
+      type: 'WARNING',
+      timeout
+    });
+  }
+  
+  const showError = (message = 'An error occurred. Please try again.', timeout = 10000) => {
+    return notify({
+      message,
+      type: 'ERROR',
+      timeout
+    });
+  }
+  
+  const showPersistent = (message = 'This notification will not disappear automatically', type = 'INFO') => {
+    return notify({
+      message, 
+      type,
+      timeout: 0 // Won't auto-dismiss
+    });
+  }
+
   return {
     notifications,
     notify,
-    removeNotification
+    removeNotification,
+    showInfo,
+    showSuccess,
+    showWarning,
+    showError,
+    showPersistent
   }
 } 

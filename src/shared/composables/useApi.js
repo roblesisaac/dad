@@ -11,7 +11,7 @@ export function useApi() {
   const error = ref(null);
 
   const { getToken } = useAuth();
-  const { notify } = useNotifications();
+  const { showError, showWarning } = useNotifications();
 
   async function request(method, url, body = null, settings = {}) {
     loading.value = true;
@@ -64,24 +64,15 @@ export function useApi() {
     } catch (err) {
       error.value = err;
       console.error('Request error:', err);
-      console.log('Error response:', err.response); // Debug log
+      console.log('Error response:', err.response);
 
-      // Handle different error types
+      // Handle different error types using the helper functions
       if (err.name === 'AbortError') {
-        notify({
-          message: 'Request timed out. Please try again.',
-          type: 'ERROR'
-        });
+        showError('Request timed out. Please try again.');
       } else if (!navigator.onLine) {
-        notify({
-          message: 'No internet connection. Please check your network.',
-          type: 'WARNING'
-        });
+        showWarning('No internet connection. Please check your network.');
       } else {
-        notify({
-          message: err.response?.data?.message || err.message,
-          type: 'ERROR'
-        });
+        showError(err.response?.data?.message || err.message);
       }
       throw err;
     } finally {
