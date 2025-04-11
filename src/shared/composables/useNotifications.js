@@ -34,7 +34,6 @@ export function useNotifications() {
     }
   }
 
-  // Helper functions for different notification types
   const showInfo = (message = 'This is an info notification', timeout = 5000) => {
     return notify({
       message,
