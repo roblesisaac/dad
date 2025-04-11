@@ -168,7 +168,7 @@ export function useBanks() {
    * Select a bank and fetch its sync sessions
    * @param {Object} bank - Bank object
    */
-  const selectBank = async (bank) => {
+  const selectBank = (bank) => {
     selectedBank.value = bank;
   };
   
@@ -513,6 +513,44 @@ export function useBanks() {
     }
   };
   
+  /**
+   * Rotate the access token for a bank
+   * @param {Object} bank - Bank to rotate token for
+   * @returns {Promise<Object>} Result of token rotation
+   */
+  const rotateAccessToken = async (bank) => {
+    if (!bank?.itemId) {
+      return { success: false, error: 'Invalid bank data' };
+    }
+    
+    try {
+      const result = await api.post(`plaid/items/${bank.itemId}/rotate-token`);
+      
+      if (result.success) {
+        // Refresh the banks list to get latest status
+        await fetchBanks();
+        
+        // If this is the selected bank, refresh its data
+        if (selectedBank.value?.itemId === bank.itemId) {
+          await fetchSyncSessions(bank.itemId);
+        }
+        
+        return { 
+          success: true, 
+          message: result.message || 'Access token successfully rotated'
+        };
+      }
+      
+      return { success: false, error: result.error || 'Failed to rotate token' };
+    } catch (err) {
+      console.error('Error rotating access token:', err);
+      return { 
+        success: false, 
+        error: err.response?.data?.message || err.message || 'Failed to rotate token'
+      };
+    }
+  };
+  
   // Clean up on unmount
   onUnmounted(() => {
     cleanupPlaidHandler();
@@ -560,6 +598,7 @@ export function useBanks() {
     addTransactionFromError,
     updateSyncMetrics,
     formatDuration,
+    rotateAccessToken,
     
     // Plaid Link
     createLinkToken,

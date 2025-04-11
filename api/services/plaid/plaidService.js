@@ -143,6 +143,50 @@ class PlaidService extends PlaidBaseService {
       throw new Error(`TOKEN_EXCHANGE_ERROR: ${error.message}`);
     }
   }
+
+  /**
+   * Invalidate an existing access token and create a new one
+   * @param {Object} item - Plaid item with the token to invalidate
+   * @param {Object} user - User object owning the item
+   * @returns {Promise<Object>} Result with new access token info
+   */
+  async invalidateAndRotateAccessToken(item, user) {
+    if (!item?.accessToken) {
+      throw new Error('INVALID_ITEM: Missing access token');
+    }
+
+    try {
+      const access_token = itemService.decryptAccessToken(item, user);
+      
+      // Call Plaid API to invalidate and create a new token
+      const response = await this.handleResponse(
+        this.client.itemAccessTokenInvalidate({ access_token })
+      );
+      
+      // Save the new access token
+      const accessData = {
+        access_token: response.new_access_token,
+        item_id: item.itemId
+      };
+      
+      // Save the new token to database
+      await itemService.savePlaidAccessData(accessData, user);
+      
+      return {
+        success: true,
+        itemId: item.itemId,
+        message: 'Access token successfully rotated'
+      };
+    } catch (error) {
+      if (error.error_code) {
+        throw {
+          error_code: error.error_code,
+          error_message: error.error_message || 'Plaid token rotation failed'
+        };
+      }
+      throw new Error(`TOKEN_ROTATION_ERROR: ${error.message}`);
+    }
+  }
 }
 
 export default new PlaidService(); 

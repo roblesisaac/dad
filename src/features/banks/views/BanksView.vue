@@ -41,9 +41,11 @@
       :bank="bankToEdit"
       :is-saving="loading.editingBank"
       :is-reconnecting="loading.isReconnectingBank"
+      :is-rotating-token="loading.isRotatingToken"
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="handleReconnectBank"
+      @rotate-token="handleRotateToken"
     />
     
     <!-- Loading Indicator (only for link token creation) -->
@@ -101,7 +103,8 @@ const {
   getBankStatusClass,
   getBankStatusText,
   handleReconnectBank,
-  updateBankName
+  updateBankName,
+  rotateAccessToken
 } = useBanks();
 
 // Local state
@@ -122,14 +125,16 @@ const reconnectingItemId = ref(null);
 loading.value = {
   ...loading.value,
   isReconnectingBank: false,
-  linkToken: false
+  linkToken: false,
+  isRotatingToken: false
 };
 
 // Initialize error state
 error.value = {
   ...error.value,
   isReconnectingBank: null,
-  linkToken: null
+  linkToken: null,
+  rotateToken: null
 };
 
 // Watch for changes in plaid loading and error states
@@ -267,6 +272,7 @@ const handleSyncBank = async () => {
 };
 
 const handleEditBankName = (bank) => {
+  selectBank(bank);
   bankToEdit.value = bank;
   isEditBankNameModalOpen.value = true;
 };
@@ -290,6 +296,31 @@ const saveBankName = async (bank) => {
   } catch (err) {
     console.error('Error saving bank name:', err);
     showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
+  }
+};
+
+const handleRotateToken = async (bank) => {
+  if (!bank?.itemId) return;
+  
+  loading.value.isRotatingToken = true;
+  error.value.rotateToken = null;
+  
+  try {
+    const result = await rotateAccessToken(bank);
+    
+    if (result.success) {
+      showNotification('Access token successfully renewed');
+      closeEditBankNameModal();
+    } else {
+      error.value.rotateToken = result.error;
+      showNotification(`Failed to renew access token: ${result.error}`, 'error');
+    }
+  } catch (err) {
+    console.error('Error rotating token:', err);
+    error.value.rotateToken = err.message;
+    showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
+  } finally {
+    loading.value.isRotatingToken = false;
   }
 };
 

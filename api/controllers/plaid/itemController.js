@@ -106,6 +106,53 @@ export default {
         message: errorMessage
       });
     }
+  },
+
+  async rotateAccessToken(req, res) {
+    try {
+      const { _id: itemId } = req.params;
+      const userId = req.user._id;
+      
+      if (!itemId) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Item ID is required'
+        });
+      }
+      
+      // Get the item
+      const item = await itemService.getItem(itemId, userId);
+      if (!item) {
+        return res.status(404).json({
+          error: 'ITEM_NOT_FOUND',
+          message: 'Bank connection not found'
+        });
+      }
+      
+      // Rotate the token
+      const result = await plaidService.invalidateAndRotateAccessToken(item, req.user);
+      
+      // Return success response without access token
+      res.json({
+        success: true,
+        itemId: item.itemId,
+        message: 'Access token successfully rotated'
+      });
+    } catch (error) {
+      const [errorCode = 'ROTATION_ERROR', errorMessage = error.message] = error.message.split(': ');
+      
+      // Log the error for debugging
+      console.error('Token rotation error:', {
+        code: errorCode,
+        message: errorMessage,
+        originalError: error
+      });
+      
+      res.status(400).json({ 
+        error: errorCode,
+        message: errorMessage
+      });
+    }
   }
 };
 

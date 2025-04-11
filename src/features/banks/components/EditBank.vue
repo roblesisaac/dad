@@ -49,6 +49,45 @@
             {{ isReconnecting ? 'Reconnecting...' : 'Reconnect Bank' }}
           </button>
           
+          <!-- Rotate access token button -->
+          <button 
+            @click="showRotateConfirm = true" 
+            class="w-full flex items-center justify-center px-4 py-2 border border-orange-400 rounded-md text-orange-700 bg-white hover:bg-orange-50 focus:outline-none"
+            :disabled="isRotatingToken"
+          >
+            <KeySquare v-if="!isRotatingToken" class="h-4 w-4 mr-2" />
+            <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
+            {{ isRotatingToken ? 'Renewing...' : 'Renew Access Token' }}
+          </button>
+          
+          <!-- Confirmation dialog for token rotation -->
+          <dialog 
+            :open="showRotateConfirm" 
+            class="fixed inset-0 z-10 overflow-y-auto"
+          >
+            <div class="fixed inset-0 bg-black bg-opacity-30" @click="showRotateConfirm = false"></div>
+            <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 max-w-md mx-auto shadow-xl z-20">
+              <h3 class="text-lg font-medium text-gray-900">Confirm Token Renewal</h3>
+              <p class="mt-2 mb-4 text-sm text-gray-500">
+                This will invalidate the current access token and create a new one. This action is useful if you suspect the token has been compromised.
+              </p>
+              <div class="mt-4 flex space-x-3 justify-end">
+                <button 
+                  @click="showRotateConfirm = false" 
+                  class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                >
+                  Cancel
+                </button>
+                <button 
+                  @click="handleRotateToken" 
+                  class="px-4 py-2 border border-transparent rounded-md text-white bg-orange-600 hover:bg-orange-700 focus:outline-none"
+                >
+                  Confirm Renewal
+                </button>
+              </div>
+            </div>
+          </dialog>
+          
           <!-- Disconnect bank button - commented out for future implementation -->
           <!-- <button 
             @click="disconnectBank" 
@@ -73,7 +112,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { RefreshCcw, AlertCircle, Loader } from 'lucide-vue-next';
+import { RefreshCcw, AlertCircle, Loader, KeySquare } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -91,12 +130,17 @@ const props = defineProps({
   isReconnecting: {
     type: Boolean,
     default: false
+  },
+  isRotatingToken: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['close', 'save', 'reconnect']);
+const emit = defineEmits(['close', 'save', 'reconnect', 'rotate-token']);
 
 const bankName = ref('');
+const showRotateConfirm = ref(false);
 const modalTitle = computed(() => {
   if (props.bank?.status === 'error') {
     return 'Bank Connection Issue';
@@ -130,6 +174,14 @@ const saveBankName = () => {
 const handleReconnectBank = () => {
   if (props.bank?.itemId) {
     emit('reconnect', props.bank);
+  }
+};
+
+// Handle token rotation with confirmation
+const handleRotateToken = () => {
+  if (props.bank?.itemId) {
+    showRotateConfirm.value = false;
+    emit('rotate-token', props.bank);
   }
 };
 
