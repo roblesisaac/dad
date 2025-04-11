@@ -41,11 +41,9 @@
       :bank="bankToEdit"
       :is-saving="loading.editingBank"
       :is-reconnecting="loading.isReconnectingBank"
-      :is-removing-relink="loading.isRemovingRelink"
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="handleReconnectBank"
-      @remove-relink="handleRemoveAndRelink"
     />
     
     <!-- Loading Indicator (only for link token creation) -->
@@ -83,7 +81,6 @@
 import { ref, onMounted, watch, onBeforeUnmount } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import { usePlaidLink } from '@/features/onboarding/composables/usePlaidLink.js';
-import { useApi } from '@/shared/composables/useApi.js';
 import BankList from '../components/BankList.vue';
 import SyncSessionsModal from '../components/SyncSessionsModal.vue';
 import EditBank from '../components/EditBank.vue';
@@ -125,7 +122,6 @@ const reconnectingItemId = ref(null);
 loading.value = {
   ...loading.value,
   isReconnectingBank: false,
-  isRemovingRelink: false,
   linkToken: false
 };
 
@@ -133,7 +129,6 @@ loading.value = {
 error.value = {
   ...error.value,
   isReconnectingBank: null,
-  isRemovingRelink: null,
   linkToken: null
 };
 
@@ -295,37 +290,6 @@ const saveBankName = async (bank) => {
   } catch (err) {
     console.error('Error saving bank name:', err);
     showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
-  }
-};
-
-// Handle the Remove and Re-link flow
-const handleRemoveAndRelink = async (bank) => {
-  if (!bank?.itemId) return;
-  
-  loading.value.isRemovingRelink = true;
-  
-  try {
-    // First remove the bank connection
-    const api = useApi();
-    await api.delete(`plaid/items/${bank.itemId}`);
-    
-    // Close the edit modal
-    closeEditBankNameModal();
-    
-    // Show intermediate notification
-    showNotification('Bank disconnected. Starting new connection process...', 'success');
-    
-    // Start a new connection flow
-    await handleConnectBank();
-    
-    // Refresh the banks list
-    await fetchBanks();
-    
-  } catch (err) {
-    console.error('Error removing and re-linking bank:', err);
-    showNotification(`Error: ${err.message || 'Failed to remove bank connection'}`, 'error');
-  } finally {
-    loading.value.isRemovingRelink = false;
   }
 };
 

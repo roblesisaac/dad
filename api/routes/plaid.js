@@ -15,8 +15,6 @@ export default function(api, baseUrl) {
   // Items and Accounts
   member.get('/plaid/items/:_id?', itemController.getUserItems);
   member.put('/plaid/items/:_id', itemController.updateItem);
-  member.delete('/plaid/items/:_id', itemController.unlinkItem);
-  member.post('/plaid/items/:_id/relink', itemController.relinkItem);
   member.get('/plaid/sync/items', itemController.syncItems);
   member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
 

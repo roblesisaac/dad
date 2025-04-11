@@ -298,8 +298,7 @@ export function useBanks() {
       currentPlaidHandler.value = await openPlaidLink(token, {
         onSuccess: handlePlaidSuccess,
         onExit: handlePlaidExit,
-        onError: handlePlaidError,
-        linkCustomizationName: 'update_mode'
+        onError: handlePlaidError
       });
       
       return { success: true };
