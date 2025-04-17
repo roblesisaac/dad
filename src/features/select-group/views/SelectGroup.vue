@@ -213,11 +213,11 @@ const toggleBankAccounts = () => {
 // Update sorting when groups are reordered
 const updateGroupSorting = () => {
   if (!props.editMode) return;
-  
   const allGroups = [...customGroups.value, ...bankAccounts.value];
   allGroups.forEach((group, index) => {
     group.sort = index;
   });
+  state.allUserGroups = allGroups;
 };
 
 // Edit group modal state
@@ -250,19 +250,12 @@ const {
 // Sync sessions modal state
 const isSyncSessionsModalOpen = ref(false);
 
-const goToOnboarding = () => {
-  emit('close');
-  router.push({ name: 'onboarding' });
-};
-
 const handleDeleteGroup = (group) => {
   setGroupsAndAccounts();
   closeEditGroupModal();
 }
 
 const handleCreateNewGroup = async () => {
-  if (!props.editMode) return;
-  
   const newGroup = await createNewGroup();
   setGroupsAndAccounts();
   openEditGroupModal(newGroup);

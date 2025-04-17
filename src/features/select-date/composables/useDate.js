@@ -13,7 +13,9 @@ import {
   addYears,
   subDays,
   isSameMonth,
-  isSameYear
+  isSameYear,
+  startOfWeek,
+  endOfWeek
 } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
@@ -107,6 +109,24 @@ export function useDate() {
         tempDate.end = new Date();
         break;
         
+      case 'thisWeek':
+        // Current week (starting Sunday)
+        tempDate.start = startOfWeek(today);
+        tempDate.end = endOfWeek(today);
+        break;
+        
+      case 'thisMonth':
+        // Current month
+        tempDate.start = startOfMonth(today);
+        tempDate.end = endOfMonth(today);
+        break;
+        
+      case 'last7Days':
+        // Last 7 days
+        tempDate.start = subDays(today, 6); // 6 days ago to today = 7 days
+        tempDate.end = today;
+        break;
+        
       case 'prevMonth':
         if (isMonthRange()) {
           // If already on a monthly view, go to previous month
@@ -171,6 +191,12 @@ export function useDate() {
       case 'last90Days':
         tempDate.start = subDays(today, 90);
         tempDate.end = today;
+        break;
+        
+      case 'thisYear':
+        // Current year
+        tempDate.start = startOfYear(today);
+        tempDate.end = endOfYear(today);
         break;
     }
   };

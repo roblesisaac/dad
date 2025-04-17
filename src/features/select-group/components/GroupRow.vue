@@ -97,7 +97,6 @@ import { computed, watch } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '../composables/useSelectGroup';
 import { useBalanceDisplay } from '../composables/useBalanceDisplay';
-import NetBalance from './NetBalance.vue';
 import { EllipsisVertical, GripVertical, ChevronRight } from 'lucide-vue-next';
 
 // Define emits
