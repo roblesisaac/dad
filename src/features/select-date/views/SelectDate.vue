@@ -3,14 +3,14 @@
   <!-- Date Range Selector -->
   <div 
     @click="toggleDatePicker"
-    class="w-full flex items-center justify-between px-4 py-3 border rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer bg-white"
+    class="w-full flex items-center justify-between px-4 py-2 transition-all cursor-pointer bg-white font-bold"
   >
-    <div class="flex items-center space-x-2">
-      <Calendar class="h-5 w-5 text-blue-600" />
-      <span class="font-medium">{{ dateRangeSummary }}</span>
+    <div class="flex items-center min-w-0">
+      <Calendar class="h-4 w-4 text-blue-600 flex-shrink-0 mr-2" />
+      <span class="text-xs text-black truncate font-bold">{{ dateRangeSummary }}</span>
     </div>
     <ChevronDown 
-      class="h-4 w-4 text-gray-500 transition-transform duration-200"
+      class="h-4 w-4 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-1"
       :class="{ 'transform rotate-180': showDatePicker }"
     />
   </div>
