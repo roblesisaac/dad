@@ -187,6 +187,114 @@ class PlaidService extends PlaidBaseService {
       throw new Error(`TOKEN_ROTATION_ERROR: ${error.message}`);
     }
   }
+
+  /**
+   * Unlink a Plaid item but preserve item data locally for future relinking
+   * @param {Object} item - Plaid item to unlink
+   * @param {Object} user - User object owning the item
+   * @returns {Promise<Object>} Result of the operation
+   */
+  async unlinkAndRelinkItem(item, user) {
+    if (!item?.accessToken) {
+      throw new Error('INVALID_ITEM: Missing access token');
+    }
+
+    try {
+      // Get original item data before modifications
+      const validatedItem = await itemService.validateAndGetItem(item, user);
+      if (!validatedItem) {
+        throw new Error('ITEM_NOT_FOUND: Item data not found');
+      }
+
+      // Decrypt the access token for Plaid API call
+      const access_token = itemService.decryptAccessToken(validatedItem, user);
+      
+      // Remove the item from Plaid
+      await this.handleResponse(
+        this.client.itemRemove({ access_token })
+      );
+      
+      // Mark the item as unlinked in our database but preserve the data
+      const unlinkResult = await itemService.markItemAsUnlinked(validatedItem.itemId, user._id);
+      
+      if (!unlinkResult.success) {
+        throw new Error('DB_ERROR: Failed to update item status in database');
+      }
+      
+      // Create a link token for reconnection
+      const link_token = await this.createLinkToken(user);
+      
+      return {
+        success: true,
+        itemId: validatedItem.itemId,
+        institutionId: validatedItem.institutionId,
+        institutionName: validatedItem.institutionName,
+        message: 'Item successfully unlinked and ready for reconnection',
+        link_token
+      };
+    } catch (error) {
+      if (error.error_code) {
+        throw {
+          error_code: error.error_code,
+          error_message: error.error_message || 'Plaid unlink operation failed'
+        };
+      }
+      throw new Error(`UNLINK_ERROR: ${error.message}`);
+    }
+  }
+
+  /**
+   * Relink a previously unlinked item with a new access token
+   * @param {String} itemId - Original item ID to relink
+   * @param {Object} accessData - New access token data from Plaid
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Result of the relinking operation
+   */
+  async relinkItem(itemId, accessData, user) {
+    try {
+      if (!itemId || !accessData?.access_token || !accessData?.item_id) {
+        throw new Error('INVALID_PARAMS: Missing required relinking data');
+      }
+      
+      // Get the original unlinked item
+      const originalItem = await itemService.getItem(itemId, user._id);
+      
+      if (!originalItem) {
+        throw new Error('ITEM_NOT_FOUND: Original item not found for relinking');
+      }
+      
+      if (originalItem.status !== 'unlinked') {
+        throw new Error('INVALID_STATE: Item is not in unlinked state');
+      }
+      
+      // Save the new access data to the existing item record
+      const relinkResult = await itemService.relinkItem(itemId, accessData, user);
+      
+      // Update related transactions and sync sessions
+      let recordUpdateResults = { transactionsUpdated: 0, sessionsUpdated: 0 };
+      
+      if (relinkResult.success) {
+        recordUpdateResults = await itemService.updateRelatedRecords(
+          itemId, 
+          originalItem.itemId, 
+          accessData.item_id,
+          user._id
+        );
+      }
+      
+      return {
+        success: true,
+        itemId: accessData.item_id,
+        originalItemId: itemId,
+        message: 'Item successfully relinked',
+        transactionsUpdated: recordUpdateResults.transactionsUpdated || 0,
+        sessionsUpdated: recordUpdateResults.sessionsUpdated || 0
+      };
+    } catch (error) {
+      console.error('Relink error:', error);
+      throw new Error(`RELINK_ERROR: ${error.message}`);
+    }
+  }
 }
 
 export default new PlaidService(); 

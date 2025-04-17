@@ -49,6 +49,57 @@
             {{ isReconnecting ? 'Reconnecting...' : 'Reconnect Bank' }}
           </button>
           
+          <!-- Unlink and Relink bank button -->
+          <button 
+            @click="showUnlinkConfirm = true" 
+            class="w-full flex items-center justify-center px-4 py-2 border border-purple-500 rounded-md text-purple-700 bg-white hover:bg-purple-50 focus:outline-none"
+            :disabled="isUnlinking"
+          >
+            <Unplug v-if="!isUnlinking" class="h-4 w-4 mr-2" />
+            <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
+            {{ isUnlinking ? 'Processing...' : 'Unlink & Relink Bank' }}
+          </button>
+          
+          <!-- Confirmation dialog for unlink/relink -->
+          <dialog 
+            :open="showUnlinkConfirm" 
+            class="fixed inset-0 z-10 overflow-y-auto"
+          >
+            <div class="fixed inset-0 bg-black bg-opacity-30" @click="showUnlinkConfirm = false"></div>
+            <div class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 max-w-md mx-auto shadow-xl z-20">
+              <h3 class="text-lg font-medium text-gray-900">Confirm Unlink and Relink</h3>
+              <div class="mt-3">
+                <AlertCircle class="h-5 w-5 text-amber-500 inline mr-1" />
+                <span class="font-medium">Important:</span>
+              </div>
+              <p class="mt-2 mb-2 text-sm text-gray-500">
+                This will completely remove your connection with {{ bank?.institutionName || 'this bank' }} and ask you to reconnect.
+              </p>
+              <ul class="list-disc pl-5 text-sm text-gray-500 mb-4">
+                <li>Your transaction history will be preserved</li>
+                <li>You'll be asked to log in to {{ bank?.institutionName || 'your bank' }} again</li>
+                <li>Use this if reconnecting alone doesn't solve connection issues</li>
+              </ul>
+              <p class="text-sm font-medium text-gray-700">
+                Are you sure you want to proceed?
+              </p>
+              <div class="mt-4 flex space-x-3 justify-end">
+                <button 
+                  @click="showUnlinkConfirm = false" 
+                  class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none"
+                >
+                  Cancel
+                </button>
+                <button 
+                  @click="handleUnlinkAndRelinkBank" 
+                  class="px-4 py-2 border border-transparent rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none"
+                >
+                  Unlink & Relink
+                </button>
+              </div>
+            </div>
+          </dialog>
+          
           <!-- Rotate access token button -->
           <button 
             @click="showRotateConfirm = true" 
@@ -88,14 +139,6 @@
             </div>
           </dialog>
           
-          <!-- Disconnect bank button - commented out for future implementation -->
-          <!-- <button 
-            @click="disconnectBank" 
-            class="w-full px-4 py-2 border border-red-300 rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none"
-          >
-            Disconnect Bank
-          </button> -->
-          
           <!-- Cancel button -->
           <button 
             @click="$emit('close')" 
@@ -112,7 +155,7 @@
 <script setup>
 import { ref, watch, computed } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { RefreshCcw, AlertCircle, Loader, KeySquare } from 'lucide-vue-next';
+import { RefreshCcw, AlertCircle, Loader, KeySquare, Unplug } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -134,13 +177,18 @@ const props = defineProps({
   isRotatingToken: {
     type: Boolean,
     default: false
+  },
+  isUnlinking: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['close', 'save', 'reconnect', 'rotate-token']);
+const emit = defineEmits(['close', 'save', 'reconnect', 'rotate-token', 'unlink-relink']);
 
 const bankName = ref('');
 const showRotateConfirm = ref(false);
+const showUnlinkConfirm = ref(false);
 const modalTitle = computed(() => {
   if (props.bank?.status === 'error') {
     return 'Bank Connection Issue';
@@ -185,10 +233,11 @@ const handleRotateToken = () => {
   }
 };
 
-// Placeholder for future implementation
-// const disconnectBank = () => {
-//   if (props.bank?.itemId) {
-//     emit('disconnect', props.bank);
-//   }
-// };
+// Handle unlink and relink with confirmation
+const handleUnlinkAndRelinkBank = () => {
+  if (props.bank?.itemId) {
+    showUnlinkConfirm.value = false;
+    emit('unlink-relink', props.bank);
+  }
+};
 </script> 

@@ -54,7 +54,12 @@ async function validate(schema, dataToValidate, config={}) {
 
     if (isANestedObject(schema[field])) {
       if (!isPlainObject(dataToValidate[field])) {
-        throw new Error(getErrorMessage(errorCodes.OBJECT_ERROR, `Field: ${field} but got ${typeof dataToValidate[field]}`));
+        if (rules.default !== undefined && (dataToValidate[field] === undefined || 
+            dataToValidate[field] === null || dataToValidate[field] === '')) {
+          dataToValidate[field] = rules.default;
+        } else {
+          throw new Error(getErrorMessage(errorCodes.OBJECT_ERROR, `Field: ${field} but got ${typeof dataToValidate[field]}`));
+        }
       }
 
       const validationResult = await validate(rules, dataToValidate[field], { parentField: field, ...config });
@@ -94,6 +99,14 @@ async function validateItem(rules, dataToValidate, field, config) {
   field = field || config?.parentField || dataToValidate;
 
   let dataValue = getDataValue(dataToValidate, field);
+  
+  // First, apply default if needed and available
+  if ((dataValue === undefined || dataValue === null || dataValue === '') && 
+      rules.default !== undefined && typeof rules !== 'function') {
+    dataValue = rules.default;
+    setValue(dataToValidate, field, dataValue);
+  }
+  
   const globalValidationProps = Object.keys(config?.globalConfig || {});
   const localtValidationProps = Object.keys(rules);
   const validationProps = [...globalValidationProps, ...localtValidationProps];
@@ -150,8 +163,16 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const enumerator = () => {
+    if ((dataValue === undefined || dataValue === null || dataValue === '') && rules.default !== undefined) {
+      dataValue = rules.default;
+      setValue(dataToValidate, field, dataValue);
+    }
+    
     if (!rules.enum.includes(dataValue)) {
-      throw new Error(getErrorMessage(errorCodes.ENUM_ERROR, `Field: ${field} - Value: ${dataValue} - Enum: ${rules.enum.join(', ')}`));
+      throw new Error(getErrorMessage(
+        errorCodes.ENUM_ERROR, 
+        `Field name "${field}": value is currently set to "${dataValue}" but we expected one of the following: ${rules.enum.join(', ')}`
+      ));
     }
 
     return dataValue;
@@ -214,7 +235,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const setDefaultValue = () => {
-    if(dataValue === undefined || dataValue === null) {
+    if(dataValue === undefined || dataValue === null || dataValue === '') {
       return rules.default;
     }
 
@@ -238,6 +259,12 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }  
 
   const type = () => {
+    // Apply default if value is empty, null, or undefined
+    if ((dataValue === undefined || dataValue === null || dataValue === '') && rules.default !== undefined) {
+      dataValue = rules.default;
+      setValue(dataToValidate, field, dataValue);
+    }
+    
     if (!isAValidDataType(rules, dataValue)) {
       if(rules.strict) {
         throw new Error(getErrorMessage(errorCodes.TYPE_ERROR, `Field: ${field} - Value: ${dataValue} - Type: ${getTypeName(rules)}`));

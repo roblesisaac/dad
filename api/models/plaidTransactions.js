@@ -8,6 +8,18 @@ const encryptedValue = {
 
 const transactionSchema = {
   userId: String,
+  dateNameAmount: {
+    unique: true,
+    computed: (_, tx) => {
+      const date = tx.authorized_datetime || tx.authorized_date || tx.date;
+      
+      let concat = `${date}_${tx.name}_${tx.amount}`;
+
+      concat = concat.replace(/\*/g, '_');
+      
+      return concat.toLowerCase();
+    }
+  },
   account_id: String,
   amount: encryptedValue,
   iso_currency_code: String,
@@ -20,12 +32,12 @@ const transactionSchema = {
     type: String,
     website: String
   }],
-  category: (value) => Array.isArray(value) ? value.join() : value,
+  category: (v) => Array.isArray(v) ? v.join() : v,
   category_id: String,
   check_number: String,
   date: String,
   datetime: String,
-  authorized_date: (value, item) => value || item.date,
+  authorized_date: (v, tx) => v || tx.date,
   authorized_datetime: String,
   location: {
     address: String,
@@ -76,7 +88,9 @@ const transactionSchema = {
   itemId: String,
   cursor: String,
   tags: [String],
-  // sync_id: String,
+  sync_id: String,
+  relinkOriginItemId: String,
+  relinkTimestamp: Number,
 
   label1: 'transaction_id',
   label2: {
@@ -91,7 +105,7 @@ const transactionSchema = {
     name: 'syncTime',
     concat: ['itemId', 'syncTime']
   },
-  label5: 'cursor'
+  label5: 'dateNameAmount'
 }
 
 export default AmptModel(['plaidtransactions', 'userId'], transactionSchema);

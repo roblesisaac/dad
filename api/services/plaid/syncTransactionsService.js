@@ -11,9 +11,6 @@ import transactionsCrudService from './transactionsCrudService.js';
  * Implements a robust transaction sync process with recovery capabilities
  */
 class TransactionSyncService {
-  /**
-   * Syncs the latest transactions for an item
-   */
   async syncTransactions(item, user) {
     // Track sync start time for performance measurement
     const syncStartTime = Date.now();
@@ -211,8 +208,6 @@ class TransactionSyncService {
 
   /**
    * Create initial sync session
-   * @param {Object} item - Item data
-   * @param {Object} user - User object
    * @returns {Promise<Object>} Sync session
    * @private
    */
@@ -373,7 +368,6 @@ class TransactionSyncService {
 
   /**
    * Check for changes from Plaid
-   * @param {Object} plaidData - Plaid data
    * @returns {Boolean} True if changes exist, false otherwise
    */
   _checkForChanges(plaidData) {    
@@ -387,10 +381,6 @@ class TransactionSyncService {
 
   /**
    * Handle the case when no changes are detected from Plaid
-   * @param {Object} currentSyncSession - Previous sync session
-   * @param {Object} item - Item data
-   * @param {Object} user - User object 
-   * @param {Object} plaidData - Data retrieved from Plaid
    * @returns {Promise<Object>} Response object
    * @private
    */
@@ -416,12 +406,6 @@ class TransactionSyncService {
 
   /**
    * Process transaction sync data from Plaid
-   * @param {Object} item - Item data
-   * @param {Object} user - User object 
-   * @param {String} cursor - Transaction cursor
-   * @param {Number} syncTime - Current sync timestamp
-   * @param {Object} plaidData - Pre-fetched data from Plaid
-   * @param {Array} transactionsSkipped - Array to collect skipped transactions
    * @returns {Promise<Object>} Processing results
    * @private
    */
@@ -548,12 +532,6 @@ class TransactionSyncService {
 
   /**
    * Process and save added transactions
-   * @param {Array} transactions - Transactions to add
-   * @param {Object} item - Item data
-   * @param {Object} user - User object
-   * @param {String} cursor - Current cursor
-   * @param {Number} syncTime - Current sync syncTime timestamp
-   * @param {Array} transactionsSkipped - Array to collect skipped transactions
    * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
@@ -603,7 +581,7 @@ class TransactionSyncService {
         const duplicates = result.failedTransactions.filter(
           failure => failure.error && 
             typeof failure.error.message === 'string' && 
-            failure.error.message.includes('Duplicate value for \'transaction_id\'')
+            failure.error.message.includes('Duplicate value')
         );
         
         const otherFailures = result.failedTransactions.filter(
@@ -661,10 +639,6 @@ class TransactionSyncService {
 
   /**
    * Process and update modified transactions
-   * @param {Array} transactions - Transactions to modify
-   * @param {Object} user - User object
-   * @param {String} cursor - Current cursor
-   * @param {Number} syncTime - Current sync syncTime timestamp
    * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
@@ -681,8 +655,6 @@ class TransactionSyncService {
 
   /**
    * Process and remove deleted transactions
-   * @param {Array} transactionsToRemove - IDs of transactions to remove
-   * @param {String} userId - User ID
    * @returns {Promise<Object>} Result with success count and failed transactions
    * @private
    */
@@ -699,8 +671,6 @@ class TransactionSyncService {
 
   /**
    * Gets and locks an item for sync
-   * @param {Object|String} item - Item object or ID
-   * @param {Object} user - User object
    * @returns {Promise<Object>} Validated item data
    * @private
    */
@@ -724,8 +694,6 @@ class TransactionSyncService {
 
   /**
    * Unlocks an item
-   * @param {String} itemId - Item ID
-   * @param {String} userId - User ID
    * @returns {Promise<void>}
    * @private
    */
@@ -747,10 +715,6 @@ class TransactionSyncService {
 
   /**
    * Handles errors in the sync process
-   * @param {Error} error - Original error
-   * @param {String} itemId - Item ID (if available)
-   * @param {String} userId - User ID (if available)
-   * @param {Object} currentSyncSession - Current sync session
    * @returns {Promise<void>}
    * @private
    */
@@ -762,7 +726,7 @@ class TransactionSyncService {
     if (itemId && userId) {
       try {
         // Attempt to set status to 'error' to release lock and indicate failure
-        await this._updateItemErrorStatus(itemId, userId);
+        await plaidItems.update({ itemId, userId }, { status: 'error' });
         
         // Update the current sync session if available
         if (currentSyncSession && currentSyncSession._id) {
@@ -801,26 +765,7 @@ class TransactionSyncService {
   }
 
   /**
-   * Updates item status to error
-   * @param {String} itemId - Item ID
-   * @param {String} userId - User ID
-   * @returns {Promise<void>}
-   * @private
-   */
-  async _updateItemErrorStatus(itemId, userId) {
-    // Update the item status to error
-    // This also implicitly unlocks the item if the lock was based on 'in_progress' status
-    await plaidItems.update(
-      { itemId, userId },
-      { status: 'error' }
-    );
-  }
-
-  /**
    * Format error with context
-   * @param {Error} error - Original error
-   * @param {String} itemId - Item ID (if available)
-   * @param {String} userId - User ID (if available)
    * @returns {Error} Formatted error
    * @private
    */

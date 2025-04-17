@@ -289,6 +289,58 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
     return savedItems;
   }
 
+  /**
+   * Update multiple documents that match the filter with the provided updates
+   * @param {Object|String} filter - Filter to match documents to update
+   * @param {Object} updates - Updates to apply to all matching documents
+   * @returns {Promise<Object>} Result with modifiedCount and updatedItems
+   */
+  async function updateMany(filter, updates) {
+    if (!filter || !updates || Object.keys(updates).length === 0) {
+      throw new Error('INVALID_PARAMS: Both filter and updates are required for updateMany');
+    }
+
+    // Find all items that match the filter
+    const items = await findAll(filter);
+    
+    if (!items || items.length === 0) {
+      return {
+        modifiedCount: 0,
+        updatedItems: []
+      };
+    }
+
+    const updatedItems = [];
+    const errors = [];
+
+    // Update each item individually
+    for (const item of items) {
+      try {
+        // Use the existing update method to update this item
+        const updated = await update(
+          item._id,
+          updates
+        );
+        updatedItems.push(updated);
+      } catch (error) {
+        errors.push({
+          item,
+          error: error.message
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      console.error('Some items failed to update:', errors);
+    }
+
+    return {
+      modifiedCount: updatedItems.length,
+      updatedItems,
+      errors: errors.length > 0 ? errors : undefined
+    };
+  }
+
   return {
     validate,
     labelsMap,
@@ -298,6 +350,7 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
     findOne,
     update,
     insertMany,
+    updateMany,
     erase: async function(filter) { 
       if(typeof filter === 'string') {
         return {

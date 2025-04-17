@@ -32,6 +32,11 @@ const syncSchema = {
             return syncTag;
         }
 
+        // Handle case when syncTag is null, undefined or empty
+        if(!syncTag) {
+            return branchNumber ? `sync_${branchNumber}` : 'sync_1';
+        }
+
         const [prefix, number] = syncTag.split('_');
         return `${prefix}_${branchNumber}`;
     },
@@ -66,6 +71,9 @@ const syncSchema = {
     endTimestamp: Date,
     syncDuration: Number, // Performance tracking
     plaidRequestId: String, // For traceability with Plaid's logs
+
+    originalItemId: String,
+    relinkTimestamp: Number,
 
     isLegacy: Boolean,
     isRecovery: {

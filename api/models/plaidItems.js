@@ -40,10 +40,17 @@ const itemSchema = {
   status: {
     type: String,
     default: 'complete',
-    enum: ['complete', 'in_progress', 'error', 'login_required', 'recovery', 'disconnected', 'pending']
+    // enum: ['complete', 'in_progress', 'error', 'login_required', 'recovery', 'disconnected', 'pending']
+    enum: ['complete', 'in_progress', 'error', 'login_required', 'recovery', 'disconnected', 'pending', 'unlinked']
   },
 
-  syncData,
+  // Fields for unlinking and relinking tracking
+  originalItemId: String, // Original itemId when unlinked
+  newItemId: String, // New Plaid itemId after relinking
+  unlinkTimestamp: Number, // When item was unlinked
+  relinkTimestamp: Number, // When item was relinked
+
+  // syncData,
   
   label1: 'itemId'
 };

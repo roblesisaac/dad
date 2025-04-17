@@ -42,10 +42,12 @@
       :is-saving="loading.editingBank"
       :is-reconnecting="loading.isReconnectingBank"
       :is-rotating-token="loading.isRotatingToken"
+      :is-unlinking="isUnlinkingBank"
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="handleReconnectBank"
       @rotate-token="handleRotateToken"
+      @unlink-relink="handleUnlinkAndRelinkBank"
     />
     
     <!-- Loading Indicator (only for link token creation) -->
@@ -98,13 +100,18 @@ const {
   loading,
   error,
   isSyncing,
+  hasBanks,
+  isLoading,
   fetchBanks,
   selectBank,
+  syncSelectedBank,
   getBankStatusClass,
   getBankStatusText,
   handleReconnectBank,
   updateBankName,
-  rotateAccessToken
+  rotateAccessToken,
+  unlinkAndRelinkBank,
+  relinkBank
 } = useBanks();
 
 // Local state
@@ -120,13 +127,15 @@ const isEditBankNameModalOpen = ref(false);
 const bankToEdit = ref(null);
 const currentPlaidHandler = ref(null);
 const reconnectingItemId = ref(null);
+const isUnlinkingBank = ref(false);
 
 // Initialize loading state
 loading.value = {
   ...loading.value,
   isReconnectingBank: false,
   linkToken: false,
-  isRotatingToken: false
+  isRotatingToken: false,
+  isUnlinkingBank: false
 };
 
 // Initialize error state
@@ -310,6 +319,7 @@ const handleRotateToken = async (bank) => {
     
     if (result.success) {
       showNotification('Access token successfully renewed');
+      await fetchBanks();
       closeEditBankNameModal();
     } else {
       error.value.rotateToken = result.error;
@@ -321,6 +331,34 @@ const handleRotateToken = async (bank) => {
     showNotification(`Error: ${err.message || 'Unknown error'}`, 'error');
   } finally {
     loading.value.isRotatingToken = false;
+  }
+};
+
+const handleUnlinkAndRelinkBank = async (bank) => {
+  if (!bank?.itemId) return;
+  
+  try {
+    isUnlinkingBank.value = true;
+    const result = await unlinkAndRelinkBank(bank);
+    
+    if (result.success && result.link_token) {
+      showNotification('Bank successfully unlinked. Please reconnect your account.');
+      
+      // Start the relinking process with the provided link token
+      const relinkResult = await relinkBank(bank.itemId, result.link_token);
+      
+      if (!relinkResult.success) {
+        showNotification(relinkResult.error || 'Failed to initiate relinking process', 'error');
+      }
+    } else {
+      showNotification(result.error || 'Failed to unlink bank', 'error');
+    }
+  } catch (err) {
+    console.error('Error unlinking bank:', err);
+    showNotification('An error occurred while unlinking the bank', 'error');
+  } finally {
+    isUnlinkingBank.value = false;
+    closeEditBankNameModal();
   }
 };
 

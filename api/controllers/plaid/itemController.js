@@ -153,6 +153,120 @@ export default {
         message: errorMessage
       });
     }
+  },
+
+  /**
+   * Unlink a Plaid item while preserving its data for future relinking
+   */
+  async unlinkAndRelinkItem(req, res) {
+    try {
+      const { _id: itemId } = req.params;
+      const userId = req.user._id;
+      
+      if (!itemId) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Item ID is required'
+        });
+      }
+      
+      // Get the item
+      const item = await itemService.getItem(itemId, userId);
+      if (!item) {
+        return res.status(404).json({
+          error: 'ITEM_NOT_FOUND',
+          message: 'Bank connection not found'
+        });
+      }
+      
+      // Unlink the item
+      const result = await plaidService.unlinkAndRelinkItem(item, req.user);
+      
+      // Return success response with link token for relinking
+      res.json({
+        success: true,
+        itemId: item.itemId,
+        institutionName: item.institutionName,
+        link_token: result.link_token,
+        message: 'Bank successfully unlinked and ready for reconnection'
+      });
+    } catch (error) {
+      const [errorCode = 'UNLINK_ERROR', errorMessage = error.message] = error.message.split(': ');
+      
+      // Log the error for debugging
+      console.error('Unlink error:', {
+        code: errorCode,
+        message: errorMessage,
+        originalError: error
+      });
+      
+      res.status(400).json({ 
+        error: errorCode,
+        message: errorMessage
+      });
+    }
+  },
+  
+  /**
+   * Complete the relinking process by saving new access token to unlinked item
+   */
+  async relinkItem(req, res) {
+    try {
+      const { 
+        originalItemId, 
+        publicToken,
+        metadata 
+      } = req.body;
+      
+      if (!originalItemId || !publicToken) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Original item ID and public token are required'
+        });
+      }
+      
+      // Exchange public token for access token
+      const accessData = await plaidService.exchangePublicToken(publicToken);
+      
+      if (!accessData || !accessData.access_token) {
+        return res.status(400).json({
+          error: 'TOKEN_EXCHANGE_ERROR',
+          message: 'Failed to exchange public token'
+        });
+      }
+      
+      // Relink the item with new access token
+      const result = await plaidService.relinkItem(
+        originalItemId, 
+        accessData, 
+        req.user
+      );
+      
+      // Return success response with update counts
+      res.json({
+        success: true,
+        originalItemId,
+        newItemId: accessData.item_id,
+        institutionName: metadata?.institution?.name || 'Unknown Institution',
+        message: 'Bank successfully relinked',
+        transactionsUpdated: result.transactionsUpdated || 0,
+        sessionsUpdated: result.sessionsUpdated || 0
+      });
+    } catch (error) {
+      const [errorCode = 'RELINK_ERROR', errorMessage = error.message] = error.message.split(': ');
+      
+      // Log the error for debugging
+      console.error('Relink error:', {
+        code: errorCode,
+        message: errorMessage,
+        originalError: error
+      });
+      
+      res.status(400).json({ 
+        error: errorCode,
+        message: errorMessage
+      });
+    }
   }
 };
 

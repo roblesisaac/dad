@@ -16,6 +16,8 @@ export default function(api, baseUrl) {
   member.get('/plaid/items/:_id?', itemController.getUserItems);
   member.put('/plaid/items/:_id', itemController.updateItem);
   member.post('/plaid/items/:_id/rotate-token', itemController.rotateAccessToken);
+  member.post('/plaid/items/:_id/unlink-relink', itemController.unlinkAndRelinkItem);
+  member.post('/plaid/items/relink', itemController.relinkItem);
   member.get('/plaid/sync/items', itemController.syncItems);
   member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
 

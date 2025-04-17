@@ -2,6 +2,8 @@ import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
 import { decrypt, decryptWithKey, encrypt, encryptWithKey } from '../../utils/encryption.js';
 import { CustomError } from './customError.js';
+import plaidTransactions from '../../models/plaidTransactions.js';
+import syncSessions from '../../models/syncSession.js';
 
 class ItemService extends PlaidBaseService {
   decryptAccessToken(item, user) {
@@ -240,6 +242,154 @@ class ItemService extends PlaidBaseService {
     } catch (error) {
       console.error('Error updating item:', error);
       throw new Error(`ITEM_UPDATE_ERROR: ${error.message}`);
+    }
+  }
+
+  /**
+   * Mark an item as unlinked while preserving its data for future relinking
+   * @param {String} itemId - ID of the item to mark as unlinked
+   * @param {String} userId - User ID owning the item
+   * @returns {Promise<Object>} Result with success status
+   */
+  async markItemAsUnlinked(itemId, userId) {
+    try {
+      if (!itemId || !userId) {
+        throw new Error('INVALID_PARAMS: Missing itemId or userId');
+      }
+      
+      // Get the current item first to verify it exists and capture its state
+      const currentItem = await this.getItem(itemId, userId);
+      
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item to unlink');
+      }
+      
+      // Preserve original data and mark as unlinked
+      const updateData = {
+        status: 'unlinked',
+        originalItemId: currentItem.itemId,
+        unlinkTimestamp: Date.now()
+      };
+      
+      // Update the item to unlinked status
+      const result = await plaidItems.update(
+        { itemId, userId },
+        updateData
+      );
+      
+      if (result.modifiedCount === 0) {
+        throw new Error('ITEM_UPDATE_ERROR: Failed to mark item as unlinked');
+      }
+      
+      return {
+        success: true,
+        itemId,
+        message: 'Item successfully marked as unlinked'
+      };
+    } catch (error) {
+      console.error('Error marking item as unlinked:', error);
+      throw new Error(`UNLINK_ERROR: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Relink an item with new access token data
+   * @param {String} itemId - ID of the item to relink
+   * @param {Object} accessData - New access data from Plaid
+   * @param {Object} user - User object
+   * @returns {Promise<Object>} Result with success status
+   */
+  async relinkItem(itemId, accessData, user) {
+    try {
+      if (!itemId || !accessData?.access_token || !accessData?.item_id || !user?._id) {
+        throw new Error('INVALID_PARAMS: Missing required relinking data');
+      }
+      
+      // Get the current item first to verify it exists
+      const currentItem = await this.getItem(itemId, user._id);
+      
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item to relink');
+      }
+      
+      // Save the access token data
+      const accessToken = this.setAccessToken(accessData.access_token, user);
+      
+      // Update the item with new data
+      const updateData = {
+        accessToken,
+        status: 'complete',
+        newItemId: accessData.item_id,
+        itemId: accessData.item_id,
+        relinkTimestamp: Date.now(),
+        sync_id: ''
+      };
+      
+      // Update the item in database
+      const result = await plaidItems.update(
+        { itemId, userId: user._id },
+        updateData
+      );
+      
+      if (result.modifiedCount === 0) {
+        throw new Error('ITEM_UPDATE_ERROR: Failed to relink item');
+      }
+      
+      return {
+        success: true,
+        itemId,
+        newItemId: accessData.item_id,
+        message: 'Item successfully relinked'
+      };
+    } catch (error) {
+      console.error('Error relinking item:', error);
+      throw new Error(`RELINK_ERROR: ${error.message}`);
+    }
+  }
+  
+  /**
+   * Update related records (transactions and sync sessions) after relinking
+   * @param {String} originalItemId - Original item ID in our database
+   * @param {String} oldPlaidItemId - Old Plaid item ID
+   * @param {String} newPlaidItemId - New Plaid item ID
+   * @param {String} userId - User ID
+   * @returns {Promise<Object>} Result with success status
+   */
+  async updateRelatedRecords(originalItemId, oldPlaidItemId, newPlaidItemId, userId) {
+    try {
+      if (!originalItemId || !oldPlaidItemId || !newPlaidItemId || !userId) {
+        throw new Error('INVALID_PARAMS: Missing required parameters for updating related records');
+      }
+      
+      // 1. Update transactions with the new item ID using updateMany
+      const transactionUpdateResult = await plaidTransactions.updateMany(
+        { syncTime: `${oldPlaidItemId}*`, userId },
+        { 
+          itemId: newPlaidItemId,
+          relinkOriginItemId: oldPlaidItemId,
+          relinkTimestamp: Date.now()
+        }
+      );
+      
+      // 2. Update sync sessions with the new item ID using updateMany
+      const syncSessionUpdateResult = await syncSessions.updateMany(
+        { itemId: oldPlaidItemId, userId },
+        { 
+          itemId: newPlaidItemId,
+          originalItemId: oldPlaidItemId,
+          relinkTimestamp: Date.now()
+        }
+      );
+      
+      return {
+        success: true,
+        transactionsUpdated: transactionUpdateResult?.modifiedCount || 0,
+        sessionsUpdated: syncSessionUpdateResult?.modifiedCount || 0,
+        message: 'Related records successfully updated'
+      };
+    } catch (error) {
+      console.error('Error updating related records:', error);
+      throw new Error(`RELINK_RECORDS_ERROR: ${error.message}`);
     }
   }
 }

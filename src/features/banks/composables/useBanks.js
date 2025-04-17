@@ -226,6 +226,120 @@ export function useBanks() {
   };
   
   /**
+   * Unlink a bank and prepare for relinking
+   * @param {Object} bank - Bank object to unlink
+   * @returns {Promise<Object>} Result with link token for reconnection
+   */
+  const unlinkAndRelinkBank = async (bank) => {
+    if (!bank?.itemId) {
+      error.value.editingBank = 'Invalid bank data';
+      return { success: false, error: 'Invalid bank data' };
+    }
+    
+    try {
+      const response = await api.post(`plaid/items/${bank.itemId}/unlink-relink`);
+      
+      if (response.success && response.link_token) {
+        // Return link token for reconnection
+        return {
+          success: true,
+          itemId: bank.itemId,
+          institutionName: bank.institutionName,
+          link_token: response.link_token,
+          message: response.message
+        };
+      } else {
+        throw new Error(response.error || 'Failed to unlink bank');
+      }
+    } catch (err) {
+      console.error('Error unlinking bank:', err);
+      return {
+        success: false, 
+        error: err.response?.data?.message || err.message || 'Failed to unlink bank'
+      };
+    }
+  };
+  
+  /**
+   * Handle Plaid success for relinking
+   * @param {String} publicToken - Public token from Plaid
+   * @param {Object} metadata - Metadata from Plaid
+   * @param {String} originalItemId - Original item ID
+   * @returns {Promise<Object>} Result of relinking
+   */
+  const handleRelinkSuccess = async (publicToken, metadata, originalItemId) => {
+    try {
+      if (!publicToken || !originalItemId) {
+        return { 
+          success: false, 
+          error: 'Missing required data for relinking'
+        };
+      }
+      
+      // Send public token and original item ID to backend for relinking
+      const response = await api.post('plaid/items/relink', {
+        originalItemId,
+        publicToken,
+        metadata
+      });
+      
+      // Refresh the banks list after relinking
+      await fetchBanks();
+      
+      return {
+        success: true,
+        message: response.message || 'Bank successfully relinked'
+      };
+    } catch (err) {
+      console.error('Error relinking bank:', err);
+      return {
+        success: false,
+        error: err.response?.data?.message || err.message || 'Failed to relink bank'
+      };
+    } finally {
+      cleanupPlaidHandler();
+    }
+  };
+  
+  /**
+   * Complete the relinking process
+   * @param {String} itemId - Original item ID
+   * @param {String} linkToken - Link token for reconnection
+   * @returns {Promise<Object>} Result of Plaid Link process
+   */
+  const relinkBank = async (itemId, linkToken) => {
+    try {
+      // Clean up any existing handler
+      cleanupPlaidHandler();
+      
+      if (!linkToken) {
+        // Create a link token if not provided
+        linkToken = await createLinkToken();
+      }
+      
+      // Configure handler for relinking success
+      const onSuccessForRelink = (publicToken, metadata) => {
+        return handleRelinkSuccess(publicToken, metadata, itemId);
+      };
+      
+      // Open Plaid Link for relinking
+      currentPlaidHandler.value = await openPlaidLink(linkToken, {
+        onSuccess: onSuccessForRelink,
+        onExit: handlePlaidExit,
+        onError: handlePlaidError
+      });
+      
+      return { success: true };
+    } catch (err) {
+      console.error('Error initiating relink:', err);
+      return { 
+        success: false, 
+        error: err.message || 'Failed to initiate relinking'
+      };
+    }
+  };
+  
+  /**
    * Handle Plaid Link success callback
    */
   const handlePlaidSuccess = async (publicToken, metadata) => {
@@ -599,6 +713,9 @@ export function useBanks() {
     updateSyncMetrics,
     formatDuration,
     rotateAccessToken,
+    unlinkAndRelinkBank,
+    relinkBank,
+    handleRelinkSuccess,
     
     // Plaid Link
     createLinkToken,
