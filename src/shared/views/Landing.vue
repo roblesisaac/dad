@@ -45,11 +45,19 @@
             </button>
           </div>
 
-          <div class="pt-10 flex items-center justify-center lg:justify-start gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-             <!-- Placeholder logos for social proof -->
-             <div class="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
-             <div class="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
-             <div class="h-8 w-24 bg-gray-200 rounded animate-pulse"></div>
+          <div class="pt-10 flex flex-wrap items-center justify-center lg:justify-start gap-y-4 gap-x-8 text-sm font-bold text-gray-500 uppercase tracking-widest">
+             <div class="flex items-center gap-2">
+               <ShieldCheck class="w-5 h-5 text-black" />
+               <span>Bank-Level Security</span>
+             </div>
+             <div class="flex items-center gap-2">
+               <Zap class="w-5 h-5 text-black" />
+               <span>Real-time Sync</span>
+             </div>
+             <div class="flex items-center gap-2">
+               <Lock class="w-5 h-5 text-black" />
+               <span>Private First</span>
+             </div>
           </div>
         </div>
 
@@ -116,7 +124,7 @@
 <script setup>
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/shared/composables/useAuth.js';
-import { ArrowRight, ShoppingBag, Briefcase, Home } from 'lucide-vue-next';
+import { ArrowRight, ShoppingBag, Briefcase, Home, ShieldCheck, Zap, Lock } from 'lucide-vue-next';
 
 const router = useRouter();
 const { isAuthed, login } = useAuth();
