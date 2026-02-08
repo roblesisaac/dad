@@ -1,0 +1,19 @@
+{
+  "packages": [
+    {
+      "name": "@ampt/data",
+      "currentVersion": "1.0.26",
+      "latestVersion": "1.0.27",
+      "isDevDep": false,
+      "majorChange": false
+    },
+    {
+      "name": "@ampt/sdk",
+      "currentVersion": "1.0.19",
+      "latestVersion": "1.0.20",
+      "isDevDep": false,
+      "majorChange": false
+    }
+  ],
+  "checkedAt": 1770525175064
+}
