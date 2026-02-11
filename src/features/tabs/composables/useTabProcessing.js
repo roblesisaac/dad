@@ -1,16 +1,32 @@
 import { nextTick } from 'vue';
+import { parseISO, isValid, startOfMonth, startOfYear } from 'date-fns';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabRules } from '@/features/tabs/composables/useTabRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
-import { useDate } from '@/features/select-date/composables/useDate.js';
+
+/**
+ * Convert a date value to a Date object.
+ * Extracted here to avoid circular dependency with useDate composable.
+ */
+function convertToDate(dateValue) {
+  if (!dateValue) return new Date();
+  if (dateValue === 'firstOfMonth') return startOfMonth(new Date());
+  if (dateValue === 'firstOfYear') return startOfYear(new Date());
+  if (dateValue === 'today') return new Date();
+  if (typeof dateValue === 'string') {
+    const parsed = parseISO(dateValue);
+    return isValid(parsed) ? parsed : new Date();
+  }
+  if (dateValue instanceof Date) return dateValue;
+  return new Date();
+}
 
 export function useTabProcessing() {
   const { state } = useDashboardState();
   const { ruleMethods, combinedRulesForTab } = useTabRules();
   const { getDayOfWeekPST } = useUtils();
   const tabsAPI = useTabsAPI();
-  const { convertToDate } = useDate();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 
