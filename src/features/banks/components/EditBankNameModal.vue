@@ -201,6 +201,21 @@
                 : (isResetCursorConfirming ? 'CLICK AGAIN TO CONFIRM RESET CURSOR' : 'RESET CURSOR')
             }}
           </button>
+
+          <button
+            @click="togglePlaidItemJson"
+            class="w-full flex items-center justify-center px-4 py-2 border-2 border-emerald-700 shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] font-bold rounded-none text-emerald-800 bg-white hover:bg-emerald-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(4,120,87,1)] transition-all uppercase tracking-wide"
+          >
+            {{ showPlaidItemJson ? 'HIDE PLAID ITEM JSON' : 'SHOW PLAID ITEM JSON' }}
+          </button>
+
+          <div
+            v-if="showPlaidItemJson"
+            class="w-full p-3 border-2 border-emerald-700 rounded-none bg-emerald-50 text-xs text-emerald-900 font-mono shadow-[2px_2px_0px_0px_rgba(4,120,87,1)] overflow-x-auto"
+          >
+            <p class="font-bold uppercase mb-2 text-sm">Plaid Item JSON</p>
+            <pre class="whitespace-pre-wrap break-words">{{ plaidItemJson }}</pre>
+          </div>
           
           <!-- Disconnect bank button - commented out for future implementation -->
           <!-- <button 
@@ -294,6 +309,7 @@ const deleteSelection = ref({
   accountGroups: false,
   syncSessions: false
 });
+const showPlaidItemJson = ref(false);
 const isResetCursorConfirming = ref(false);
 let resetCursorConfirmTimeout = null;
 const modalTitle = computed(() => {
@@ -307,6 +323,12 @@ const hasSelectedDownloadType = computed(() => {
 });
 const hasSelectedDeleteType = computed(() => {
   return Object.values(deleteSelection.value).some(Boolean);
+});
+const plaidItemJson = computed(() => {
+  const currentItem = { ...(props.bank || {}) };
+  delete currentItem.accessToken;
+
+  return JSON.stringify(currentItem, null, 2);
 });
 
 const formatSummaryTime = (value) => {
@@ -349,6 +371,7 @@ watch(() => props.isOpen, (isOpen) => {
       accountGroups: false,
       syncSessions: false
     };
+    showPlaidItemJson.value = false;
     clearResetCursorConfirmation();
   }
 }, { immediate: true });
@@ -406,6 +429,10 @@ const resetCursor = () => {
 
   clearResetCursorConfirmation();
   emit('reset-cursor', props.bank);
+};
+
+const togglePlaidItemJson = () => {
+  showPlaidItemJson.value = !showPlaidItemJson.value;
 };
 
 onUnmounted(() => {
