@@ -14,7 +14,7 @@ const loadPlaidScript = async () => {
 
 export function usePlaidIntegration() {
   const api = useApi();
-  
+
   const state = reactive({
     syncedItems: [],
     isRepairing: false,
@@ -56,17 +56,17 @@ export function usePlaidIntegration() {
   async function resyncTransactions(itemId = null) {
     try {
       state.error = null;
-      state.blueBar.message = itemId 
+      state.blueBar.message = itemId
         ? 'Resyncing transaction data for account...'
         : 'Resyncing transaction data for all accounts...';
       state.blueBar.loading = true;
-      
+
       // If an itemId is provided, sync that specific bank
       // Otherwise, sync all banks
-      const result = itemId 
+      const result = itemId
         ? await syncLatestTransactionsForBank(itemId)
         : await syncLatestTransactionsForAllBanks();
-      
+
       return result;
     } catch (error) {
       console.error('Error resyncing transactions:', error);
@@ -104,7 +104,7 @@ export function usePlaidIntegration() {
 
     return Plaid.create({
       token,
-      onSuccess: async function(publicToken) {
+      onSuccess: async function (publicToken) {
         try {
           state.isRepairing = true;
           await handlePlaidSuccess(publicToken);
@@ -115,7 +115,7 @@ export function usePlaidIntegration() {
           state.isRepairing = false;
         }
       },
-      onExit: function(err, metadata) {
+      onExit: function (err, metadata) {
         state.isRepairing = false;
         if (err != null) {
           state.error = 'Connection process was interrupted. Please try again.';
@@ -124,7 +124,7 @@ export function usePlaidIntegration() {
           state.error = null;
         }
       },
-      onEvent: function(eventName, metadata) {
+      onEvent: function (eventName, metadata) {
       },
     });
   }
@@ -156,7 +156,7 @@ export function usePlaidIntegration() {
     try {
       state.isRepairing = true;
       state.error = null;
-      
+
       const linkToken = await api.post(`plaid/connect/link/${itemId}`);
       const link = createPlaidLink(linkToken);
       link.open();
@@ -172,9 +172,9 @@ export function usePlaidIntegration() {
       state.error = null;
       state.isOnboarding = true;
       state.onboardingStep = 'connect';
-      
+
       const { link_token } = await api.post('plaid/connect/link');
-      
+
       if (!link_token) {
         throw new Error('No link token received from server');
       }
@@ -210,6 +210,15 @@ export function usePlaidIntegration() {
       const syncResult = await syncLatestTransactionsForBank(itemId);
 
       if (syncResult && syncResult.completed) {
+        // Update syncProgress with the actual results
+        if (syncResult.stats) {
+          state.syncProgress.added = syncResult.stats.added || 0;
+          state.syncProgress.modified = syncResult.stats.modified || 0;
+          state.syncProgress.removed = syncResult.stats.removed || 0;
+        }
+        state.syncProgress.status = 'completed';
+        state.syncProgress.lastSync = new Date().toISOString();
+
         // Update state after successful sync
         state.onboardingStep = 'complete';
         state.hasItems = true;

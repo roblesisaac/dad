@@ -20,14 +20,19 @@ const syncSchema = {
     syncId: String,
     syncNumber: Number,
     syncTag: (syncTag, { syncNumber }) => {
-        if(!syncNumber && syncTag) {
+        if (!syncNumber && syncTag) {
             return syncTag;
+        }
+
+        // Return null if syncTag is not provided
+        if (!syncTag) {
+            return null;
         }
 
         const [prefix, number] = syncTag.split('_');
         return `${prefix}_${syncNumber}`;
     },
-    
+
     syncCounts: {
         type: Object,
         default: {

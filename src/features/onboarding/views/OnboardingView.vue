@@ -2,8 +2,26 @@
   <div class="max-w-6xl mx-auto p-8">
     <!-- Onboarding Flow -->
     <div class="max-w-xl mx-auto bg-white p-8 border-2 border-black shadow-[5px_5px_0px_#000]">
-      <h2 class="text-3xl font-bold mb-3 text-center text-purple-800">Welcome to Your Financial Dashboard!</h2>
-      <p class="mb-8 text-center text-gray-700">Let's get started by connecting your first bank account.</p>
+      <!-- Reconnection Banner (when credentials expired) -->
+      <div 
+        v-if="isReconnecting" 
+        class="mb-6 p-4 bg-amber-50 border-2 border-amber-500 text-amber-800 flex items-start gap-3"
+      >
+        <LucideAlertTriangle class="w-6 h-6 flex-shrink-0 mt-0.5" />
+        <div>
+          <p class="font-bold">Bank Connection Expired</p>
+          <p class="text-sm">Your bank connection needs to be re-established. Please reconnect your account below.</p>
+        </div>
+      </div>
+
+      <h2 class="text-3xl font-bold mb-3 text-center text-purple-800">
+        {{ isReconnecting ? 'Reconnect Your Bank Account' : 'Welcome to Your Financial Dashboard!' }}
+      </h2>
+      <p class="mb-8 text-center text-gray-700">
+        {{ isReconnecting 
+          ? 'Your previous connection has expired. Click below to securely reconnect.' 
+          : "Let's get started by connecting your first bank account." }}
+      </p>
       
       <OnboardingStatus 
         v-if="['syncing', 'complete'].includes(state.onboardingStep)"
@@ -36,7 +54,7 @@
         >
           <LucidePlus v-if="!state.loading" class="w-5 h-5 mr-2" />
           <LucideLoader v-else class="w-5 h-5 mr-2 animate-spin" />
-          {{ state.loading ? 'Connecting...' : 'Connect Your Bank' }}
+          {{ state.loading ? 'Connecting...' : (isReconnecting ? 'Reconnect Your Bank' : 'Connect Your Bank') }}
         </button>
       </div>
 
@@ -49,8 +67,8 @@
 </template>
 
 <script setup>
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import OnboardingStatus from '../components/OnboardingStatus.vue';
 import { usePlaidIntegration } from '../composables/usePlaidIntegration';
 import { 
@@ -59,10 +77,12 @@ import {
   LucideWallet,
   LucidePlus,
   LucideLoader,
-  LucideAlertCircle
+  LucideAlertCircle,
+  LucideAlertTriangle
 } from 'lucide-vue-next';
 
 const router = useRouter();
+const route = useRoute();
 const { 
   state, 
   initializePlaid, 
@@ -70,12 +90,16 @@ const {
   resyncTransactions
 } = usePlaidIntegration();
 
+// Check if user is reconnecting due to expired credentials
+const isReconnecting = computed(() => route.query.reconnect === 'true');
+
 onMounted(async () => {
   try {
     await initializePlaid();
     
     // If user already has items and not in onboarding, redirect to dashboard
-    if (state.hasItems && !state.isOnboarding) {
+    // But NOT if they're reconnecting (they need to stay here)
+    if (state.hasItems && !state.isOnboarding && !isReconnecting.value) {
       router.push('/dashboard');
     }
   } catch (error) {

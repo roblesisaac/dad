@@ -33,11 +33,11 @@ class SyncSessionService {
       item_id: previousSync?.item_id || item._id,
       itemId: previousSync?.itemId || item.itemId,
       status: 'in_progress',
-      cursor: previousSync.nextCursor || '', // The cursor used for this sync (empty string for initial sync)
+      cursor: previousSync?.nextCursor || '', // The cursor used for this sync (empty string for initial sync)
       nextCursor: null, // Will be set after processing when we know the next cursor
       prevSession_id: previousSync?._id,
-      prevSuccessfulSession_id: previousSync?.status === 'complete' ? 
-        previousSync?._id 
+      prevSuccessfulSession_id: previousSync?.status === 'complete' ?
+        previousSync?._id
         : previousSync?.prevSuccessfulSession_id || null,
 
       syncTime,
@@ -51,7 +51,7 @@ class SyncSessionService {
 
       // Initialize hasMore to false - will be set during processing
       hasMore: false,
-      
+
       // Initialize syncCounts with expected values from plaidData
       syncCounts: {
         expected: expectedCounts,
@@ -61,27 +61,27 @@ class SyncSessionService {
           removed: 0
         }
       },
-      
+
       // Initialize failedTransactions tracking
       failedTransactions: {
         added: [],
         modified: [],
         removed: []
       },
-      
+
       recoveryAttempts: 0,
       recoveryStatus: null
     };
-    
+
     // Save the initial sync session
     const savedSync = await SyncSessions.save(initialSyncSession);
-    
+
     return {
       syncTime,
       syncSession: savedSync
     };
   }
-  
+
   /**
    * Creates a recovery sync session
    * @param {Object} previousSync - Previous sync data
@@ -92,7 +92,7 @@ class SyncSessionService {
   async createRecoverySyncSession(sessionToRetry, failedSyncSession, revertResult) {
     const syncTime = Date.now();
     const { _id, syncCounts, ...sessionToRetryData } = sessionToRetry;
-    
+
     const recoverySyncData = {
       ...sessionToRetryData,
       prevSession_id: failedSyncSession._id,
@@ -105,7 +105,7 @@ class SyncSessionService {
       syncNumber: this.addAndRound(failedSyncSession.syncNumber, 0.1)
     };
 
-    if(revertResult) {
+    if (revertResult) {
       recoverySyncData.recoveryDetails = {
         transactionsRemoved: revertResult.removedCount,
         previousBatchNumber: failedSyncSession.batchNumber,
@@ -116,12 +116,12 @@ class SyncSessionService {
 
     const recoverySync = await SyncSessions.save(recoverySyncData);
 
-    if(failedSyncSession?._id && recoverySync._id) {
+    if (failedSyncSession?._id && recoverySync._id) {
       await SyncSessions.update(failedSyncSession._id, {
         nextSession_id: recoverySync._id
       });
     }
-    
+
     // Save recovery sync session
     return recoverySync;
   }
@@ -130,8 +130,8 @@ class SyncSessionService {
     let result = value + addValue;
     let multiplier = Math.pow(10, 1);
     return Math.round(result * multiplier) / multiplier;
-}
-  
+  }
+
   /**
    * Updates the sync session after transaction processing
    * @param {Object} syncSession - The sync session to update
@@ -144,16 +144,16 @@ class SyncSessionService {
     // Get the existing expected counts to preserve them
     const existingSyncCounts = syncSession.syncCounts || {};
     const expectedCounts = existingSyncCounts.expected || syncResult.expectedCounts;
-    
+
     // Create the updated syncCounts with preserved expected counts
     const syncCounts = {
       expected: expectedCounts,
       actual: syncResult.actualCounts
     };
-    
+
     const countsMatch = this.countsMatch(syncCounts);
     let error = null;
-    
+
     // Check if counts match
     if (!countsMatch) {
       error = {
@@ -163,7 +163,7 @@ class SyncSessionService {
       };
       console.error(`[TransactionSync] Count mismatch for item ${syncSession.itemId}: ${error.message}`);
     }
-    
+
     // Check for transaction failures
     if (syncResult.hasFailures) {
       if (!error) {
@@ -178,49 +178,49 @@ class SyncSessionService {
       }
       console.error(`[TransactionSync] Transaction failures for item ${syncSession.itemId}: ${error.message}`);
     }
-    
+
     // Determine if this sync was successful (counts match and status is complete or in_progress)
     const isSuccessful = countsMatch && !syncResult.hasFailures && (status === 'complete' || status === 'in_progress');
-    
+
     // Build the update data
     const updateData = {
       status,
       userId: syncSession.userId,
       nextCursor: syncResult.nextCursor, // The next cursor to use
       hasMore: syncResult.hasMore,
-      
+
       // Only update prevSuccessfulSession_id if this sync was successful and we don't already have one
-      prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ? 
+      prevSuccessfulSession_id: isSuccessful && !syncSession.prevSuccessfulSession_id ?
         syncSession._id : // Use current session ID as the successful one
         syncSession.prevSuccessfulSession_id, // Keep existing value
-      
+
       error,
       syncCounts
     };
-    
+
     // Add failed transactions to the update if present
     if (syncResult.hasFailures && syncResult.failedTransactions) {
       updateData.failedTransactions = syncResult.failedTransactions;
     }
-    
+
     // Update the sync session
     await SyncSessions.update(
       syncSession._id,
       updateData
     );
-    
+
     // If there was a previous sync, update its nextCursor field
     if (previousSync && previousSync._id) {
       await SyncSessions.update(
         previousSync._id,
-        { 
+        {
           nextSession_id: syncSession._id,
           userId: previousSync.userId
         }
       );
     }
   }
-  
+
   /**
    * Gets the sync data for an item
    * Returns the most recent sync session for the item
@@ -232,25 +232,25 @@ class SyncSessionService {
       if (!sync_id) {
         return null;
       }
-      
+
       const syncSession = await SyncSessions.findOne(sync_id);
 
-      if(!syncSession) {
+      if (!syncSession) {
         return null;
       }
 
-      if(syncSession.userId !== user._id) {
+      if (syncSession.userId !== user._id) {
         console.warn(`Sync session '${sync_id}' found but user ${user._id} does not match`);
         return null;
       }
-      
+
       return syncSession;
     } catch (error) {
       console.warn(`Error fetching sync session '${sync_id}': ${error.message}`);
       return null;
     }
   }
-  
+
   /**
    * Gets all sync sessions for an item
    * @param {String} itemId - The Plaid item ID
@@ -263,23 +263,23 @@ class SyncSessionService {
       if (!itemId || !userId) {
         return [];
       }
-      
+
       const { limit = 20 } = options;
-      
+
       // Query sessions by itemId and userId
 
       const sessions = await SyncSessions.find(
         { itemIdTime: `${itemId}:*`, userId },
         { limit, reverse: true } // Most recent first
       );
-      
+
       return sessions.items || [];
     } catch (error) {
       console.warn(`Error fetching sync sessions for item ${itemId}: ${error.message}`);
       return [];
     }
   }
-  
+
   /**
    * Check if a sync is recent (within last 5 minutes)
    * @param {Object} item - Item data
@@ -288,18 +288,18 @@ class SyncSessionService {
   async isSyncRecent(item) {
     // Find the most recent sync
     const syncSession = await this.getSyncSession(item.sync_id);
-    
+
     if (!syncSession || !syncSession.syncTime) {
       return false;
     }
-    
+
     const lastUpdateTime = syncSession.syncTime;
     const currentTime = Date.now();
     const fiveMinutes = 5 * 60 * 1000;
-    
+
     return (currentTime - lastUpdateTime) < fiveMinutes;
   }
-  
+
   /**
    * Updates the recovery stats in a sync session
    * @param {Object} syncSession - Sync data session
@@ -311,24 +311,24 @@ class SyncSessionService {
     if (!syncSession || !syncSession._id) {
       return;
     }
-    
+
     const updateData = {
       recoveryAttempts: (syncSession.recoveryAttempts || 0) + 1,
       recoveryStatus: status,
       lastRecoveryAt: new Date().toISOString(),
       userId: syncSession.userId
     };
-    
+
     if (status === 'failed' && errorMessage) {
       updateData.recoveryError = errorMessage;
     }
-    
+
     await SyncSessions.update(
       syncSession._id,
       updateData
     );
   }
-  
+
   /**
    * Check if recovery is needed based on sync status
    * @param {Object} item - Item data
@@ -340,19 +340,19 @@ class SyncSessionService {
     if (!syncSession || syncSession.isRecovery) {
       return false;
     }
-    
+
     // Recovery is needed if:
     // 1. The item is in error state
     if (item.status === 'error' || syncSession.status === 'error') {
       return true;
     }
-    
+
     // 2. The last sync had count mismatches
     if (!this.countsMatch(syncSession.syncCounts)) {
       console.warn(`Recovery needed for item ${item.itemId} due to count mismatch in previous sync`);
       return true;
     }
-    
+
     return false;
   }
 
@@ -365,10 +365,10 @@ class SyncSessionService {
     if (!syncCounts || !syncCounts.expected || !syncCounts.actual) {
       return false;
     }
-    
+
     return syncCounts.expected.added === syncCounts.actual.added &&
-           syncCounts.expected.modified === syncCounts.actual.modified &&
-           syncCounts.expected.removed === syncCounts.actual.removed;
+      syncCounts.expected.modified === syncCounts.actual.modified &&
+      syncCounts.expected.removed === syncCounts.actual.removed;
   }
 
   /**
@@ -381,10 +381,10 @@ class SyncSessionService {
     if (!syncSession_id) {
       return;
     }
-    
+
     await SyncSessions.update(
       syncSession_id,
-      { 
+      {
         lastNoChangesTime,
         status: 'complete' // Ensure status is still complete
       }
@@ -405,14 +405,14 @@ class SyncSessionService {
     await plaidItems.update(item._id, {
       syncTag
     });
-    
+
     if (!legacySyncData || !legacySyncData.cursor) {
       throw new Error('Invalid legacy sync data provided for migration');
     }
 
     // Convert legacy syncData format to syncSession format
     const syncTime = legacySyncData.lastSyncTime || Date.now();
-    
+
     const syncSession = {
       userId: user._id,
       item_id: item._id,
@@ -420,7 +420,7 @@ class SyncSessionService {
       status: legacySyncData.status === 'completed' ? 'complete' : legacySyncData.status,
       cursor: legacySyncData.cursor,
       nextCursor: legacySyncData.cursor, // In legacy format, there was only one cursor field
-      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ? 
+      prevSuccessfulSession_id: legacySyncData.status === 'complete' || legacySyncData.status === 'completed' ?
         legacySyncData.cursor : null,
       syncTime,
       syncNumber: 1,
@@ -459,7 +459,7 @@ class SyncSessionService {
         }
       }
     };
-    
+
     // Save the migrated sync session
     return await SyncSessions.save(syncSession);
   }
@@ -475,7 +475,7 @@ class SyncSessionService {
     if (!targetSession || !targetSession._id || !item || !user) {
       throw new Error('Invalid parameters for reversion');
     }
-    
+
     try {
       // Use recovery service to revert transactions
       const revertResult = await transactionRecoveryService.removeTransactionsAfterSyncTime(
@@ -483,24 +483,24 @@ class SyncSessionService {
         user._id,
         targetSession.syncTime
       );
-      
+
       if (!revertResult.isReverted) {
         throw new Error(`Failed to revert: ${revertResult.message}`);
       }
-      
+
       // Create a recovery sync session
       const recoverySyncSession = await this.createRecoverySyncSession(
         targetSession,
         { _id: item.sync_id, syncNumber: targetSession.syncNumber },
         revertResult
       );
-      
+
       // Update the item to point to the recovery session
       await plaidItems.update(item._id, {
         status: 'complete',
         sync_id: recoverySyncSession._id
       });
-      
+
       return {
         success: true,
         revertedTo: targetSession._id,
@@ -516,15 +516,15 @@ class SyncSessionService {
     }
   }
 
-  generateRandomLetters(length=4) {
+  generateRandomLetters(length = 4) {
     const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let result = '';
-  
+
     for (let i = 0; i < length; i++) {
-        const randomLetter = letters[Math.floor(Math.random() * letters.length)];
-        result += randomLetter;
+      const randomLetter = letters[Math.floor(Math.random() * letters.length)];
+      result += randomLetter;
     }
-  
+
     return result;
   }
 }

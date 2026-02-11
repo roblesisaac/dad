@@ -122,12 +122,24 @@
 </template>
 
 <script setup>
+import { watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuth } from '@/shared/composables/useAuth.js';
 import { ArrowRight, ShoppingBag, Briefcase, Home, ShieldCheck, Zap, Lock } from 'lucide-vue-next';
 
 const router = useRouter();
-const { isAuthed, login } = useAuth();
+const { isAuthed, isLoading, login } = useAuth();
+
+// Auto-redirect to dashboard if user is already logged in
+watch(
+  [isLoading, isAuthed],
+  ([loading, authenticated]) => {
+    if (!loading && authenticated) {
+      router.push('/dashboard');
+    }
+  },
+  { immediate: true }
+);
 
 const handlePrimaryAction = () => {
   if (isAuthed.value) {

@@ -5,18 +5,19 @@ const state = reactive({
   allUserGroups: [],
   allUserTabs: [],
   allUserRules: [],
-  
+  itemsNeedingReauth: [], // Accounts that need to be reconnected
+
   blueBar: { message: false, loading: false },
   date: { start: 'firstOfMonth', end: 'today' },
   isLoading: true,
-  
+
   selected: {
     allGroupTransactions: [],
     group: computed(() => state.allUserGroups.find(g => g.isSelected)),
     tabsForGroup: computed({
       get: () => getTabsForGroup(state.selected.group),
       set: (reorderedTabs) => {
-        reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);       
+        reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);
       }
     }),
     tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected)),
@@ -30,7 +31,7 @@ export function useDashboardState() {
 }
 
 function getTabsForGroup(group) {
-  if(!group) return [];
+  if (!group) return [];
 
   const tabs = state.allUserTabs.filter(tab => {
     const tabMatchesGroupId = tab.showForGroup.includes(group._id);
@@ -38,5 +39,5 @@ function getTabsForGroup(group) {
     return tabMatchesGroupId || tabIsGlobal;
   });
 
-  return tabs.sort((a,b) => a.sort - b.sort);
+  return tabs.sort((a, b) => a.sort - b.sort);
 }

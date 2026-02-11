@@ -8,11 +8,11 @@ export default async (schema, dataToValidate, config) => {
   return await validate(schema, dataToValidate, config);
 };
 
-async function validate(schema, dataToValidate, config={}) {
+async function validate(schema, dataToValidate, config = {}) {
   const validated = {};
   const uniqueFieldsToCheck = [];
   const refs = [];
-  const skipped = [];  
+  const skipped = [];
 
   if (typeof schema === 'function') {
     return { validated: await schema(dataToValidate || '') };
@@ -30,7 +30,7 @@ async function validate(schema, dataToValidate, config={}) {
     if (isANestedArray(rules)) {
       validated[field] = [];
 
-      if(!dataToValidate[field] && rules.default) {
+      if (!dataToValidate[field] && rules.default) {
         dataToValidate[field] = rules.default;
       }
 
@@ -38,7 +38,7 @@ async function validate(schema, dataToValidate, config={}) {
         throw new Error(getErrorMessage(errorCodes.ARRAY_ERROR, `Field: ${field}`));
       }
 
-      if(!dataToValidate[field]) {
+      if (!dataToValidate[field]) {
         dataToValidate[field] = [];
       }
 
@@ -53,6 +53,12 @@ async function validate(schema, dataToValidate, config={}) {
     }
 
     if (isANestedObject(schema[field])) {
+      // If the nested object is undefined, initialize it to an empty object
+      // This allows optional nested objects to pass validation
+      if (dataToValidate[field] === undefined || dataToValidate[field] === null) {
+        dataToValidate[field] = {};
+      }
+
       if (!isPlainObject(dataToValidate[field])) {
         throw new Error(getErrorMessage(errorCodes.OBJECT_ERROR, `Field: ${field} but got ${typeof dataToValidate[field]}`));
       }
@@ -64,22 +70,22 @@ async function validate(schema, dataToValidate, config={}) {
 
     const validationResult = await validateItem(rules, dataToValidate, field, config);
 
-    if(validationResult?._shouldSkip) {
+    if (validationResult?._shouldSkip) {
       skipped.push(field);
       continue;
     }
 
     validated[field] = validationResult;
 
-    if(rules.unique) {
+    if (rules.unique) {
       uniqueFieldsToCheck.push(field);
     }
 
-    if(rules.ref) {
+    if (rules.ref) {
       refs.push(field);
     }
 
-  }  
+  }
 
   return { uniqueFieldsToCheck, validated, refs, skipped };
 }
@@ -87,7 +93,7 @@ async function validate(schema, dataToValidate, config={}) {
 async function validateItem(rules, dataToValidate, field, config) {
   const _shouldSkip = rules.hasOwnProperty('get') && !config.action && !rules.computed;
 
-  if(_shouldSkip) {
+  if (_shouldSkip) {
     return { _shouldSkip };
   }
 
@@ -98,28 +104,28 @@ async function validateItem(rules, dataToValidate, field, config) {
   const localtValidationProps = Object.keys(rules);
   const validationProps = [...globalValidationProps, ...localtValidationProps];
 
-  for(const ruleName of validationProps) {
-    if(ruleName === 'computed' && config.action === 'get') {
+  for (const ruleName of validationProps) {
+    if (ruleName === 'computed' && config.action === 'get') {
       continue;
     }
 
     const ruleFunction = getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config);
 
-    if(ruleFunction) {
+    if (ruleFunction) {
       dataValue = await ruleFunction();
       setValue(dataToValidate, field, dataValue);
     }
   }
 
-  if(typeof rules === 'function') {
-    if(isAJavascriptType(rules)) {
+  if (typeof rules === 'function') {
+    if (isAJavascriptType(rules)) {
       try {
         return rules(dataValue || '');
       } catch (e) {
         throw new Error(getErrorMessage(errorCodes.TYPE_ERROR, `Field: ${field} - ${e.message}`));
       }
     }
-    
+
     return await executeCustomMethod(rules, dataToValidate, field, dataValue)
   }
 
@@ -139,9 +145,9 @@ async function executeCustomMethod(method, item, field, value) {
 }
 
 function getDataValue(dataToValidate, field) {
-  return typeof dataToValidate === 'object' && dataToValidate !== null 
-  ? dataToValidate[field] 
-  : dataToValidate;
+  return typeof dataToValidate === 'object' && dataToValidate !== null
+    ? dataToValidate[field]
+    : dataToValidate;
 }
 
 function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, config) {
@@ -158,7 +164,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const lowercase = () => {
-    if(typeof dataValue === 'string') {
+    if (typeof dataValue === 'string') {
       return dataValue.toLowerCase();
     }
 
@@ -201,7 +207,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
     if (typeof dataValue !== 'string' || dataValue.length === 0) {
       return dataValue;
     }
-  
+
     return dataValue.charAt(0).toUpperCase() + dataValue.slice(1);
   }
 
@@ -214,7 +220,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const setDefaultValue = () => {
-    if(dataValue === undefined || dataValue === null) {
+    if (dataValue === undefined || dataValue === null) {
       return rules.default;
     }
 
@@ -222,7 +228,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const specialAction = async (action) => {
-    if(config?.action !== action) {
+    if (config?.action !== action) {
       return dataValue;
     }
 
@@ -230,20 +236,20 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
   }
 
   const trim = () => {
-    if(typeof dataValue === 'string') {
+    if (typeof dataValue === 'string') {
       return dataValue.trim();
     }
 
     return dataValue;
-  }  
+  }
 
   const type = () => {
     if (!isAValidDataType(rules, dataValue)) {
-      if(rules.strict) {
+      if (rules.strict) {
         throw new Error(getErrorMessage(errorCodes.TYPE_ERROR, `Field: ${field} - Value: ${dataValue} - Type: ${getTypeName(rules)}`));
       }
 
-      if(typeof rules.type === 'function') {
+      if (typeof rules.type === 'function') {
         return rules.type(dataValue || '');
       }
     }
@@ -287,7 +293,7 @@ function getRuleFunction(ruleName, rules, dataToValidate, field, dataValue, conf
     computed,
     get: async () => await specialAction('get'),
     set: async () => await specialAction('set'),
-  
+
   }[ruleName];
 }
 
@@ -314,7 +320,7 @@ function isAValidDataType(rules, dataValue) {
   const dataTypeName = typeof dataValue;
   const hasASpecifiedType = rules?.type;
   const typeIsWild = rulesTypeName === '*';
-  
+
   return !hasASpecifiedType || typeIsWild || dataTypeName === rulesTypeName;
 }
 

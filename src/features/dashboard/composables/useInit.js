@@ -18,7 +18,7 @@ export function useInit() {
   const router = useRouter();
   const { state } = useDashboardState();
   const { syncLatestTransactionsForAllBanks } = usePlaidSync();
-  
+
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
   const rulesAPI = useRulesAPI(api);
@@ -33,20 +33,32 @@ export function useInit() {
       await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
 
       try {
-        state.allUserTabs = await tabsAPI.fetchUserTabs();  
+        state.allUserTabs = await tabsAPI.fetchUserTabs();
         state.allUserRules = await rulesAPI.fetchUserRules();
       } catch (error) {
         console.error('Error fetching tabs/rules:', error);
       }
-      
-      try {
-        const { groups, accounts } = await fetchGroupsAndAccounts();
 
-        if(!groups || !accounts) {
+      try {
+        const { groups, accounts, itemsNeedingReauth } = await fetchGroupsAndAccounts();
+
+        // Store items needing reauth in state
+        if (itemsNeedingReauth && itemsNeedingReauth.length > 0) {
+          state.itemsNeedingReauth = itemsNeedingReauth;
+          const count = itemsNeedingReauth.length;
+          state.blueBar.message = `${count} bank connection${count > 1 ? 's need' : ' needs'} to be reconnected`;
+        }
+
+        if (!groups || groups.length === 0 || !accounts || accounts.length === 0) {
           state.blueBar.message = null;
           state.blueBar.loading = false;
 
-          router.push({ name: 'onboarding' });
+          // If there are items needing reauth, pass that info to onboarding
+          const routeParams = { name: 'onboarding' };
+          if (itemsNeedingReauth && itemsNeedingReauth.length > 0) {
+            routeParams.query = { reconnect: 'true' };
+          }
+          router.push(routeParams);
           return;
         }
 

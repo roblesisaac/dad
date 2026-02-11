@@ -17,6 +17,8 @@ class PlaidAccountService extends PlaidBaseService {
 
       // Fetch the accounts from Plaid
       let fetchedAccounts = [];
+      const itemsNeedingReauth = []; // Track items that need re-authentication
+
       for (const item of userItems) {
         try {
           const accounts = await plaidService.fetchAccountsFromPlaid(
@@ -25,12 +27,41 @@ class PlaidAccountService extends PlaidBaseService {
           fetchedAccounts = [...fetchedAccounts, ...accounts];
         } catch (error) {
           console.error(`Error retrieving accounts for item ${item._id}:`, error);
+
+          // Check if this is a decryption or authentication error
+          const errorMessage = error.message || '';
+          const isDecryptError = errorMessage.includes('DECRYPT_ERROR');
+          const isLoginRequired = error.error_code === 'ITEM_LOGIN_REQUIRED' ||
+            errorMessage.includes('ITEM_LOGIN_REQUIRED');
+
+          if (isDecryptError || isLoginRequired) {
+            // Track this item as needing re-authentication
+            // We DON'T delete the item here because it has transaction history
+            // The cleanup will happen after the user reconnects successfully
+            itemsNeedingReauth.push({
+              itemId: item.itemId,
+              _id: item._id,
+              institutionName: item.institutionName || 'Unknown Institution',
+              reason: isDecryptError ? 'credentials_expired' : 'login_required',
+              message: isDecryptError
+                ? 'This account needs to be reconnected'
+                : 'Please log in again to this account'
+            });
+          }
           // Continue with other items even if one fails
         }
       }
 
-      // If no accounts were retrieved, throw an error
+      // If no accounts were retrieved but we have items needing reauth,
+      // return the reauth info instead of throwing an error
       if (!fetchedAccounts.length) {
+        if (itemsNeedingReauth.length > 0) {
+          return {
+            accounts: [],
+            groups: [],
+            itemsNeedingReauth
+          };
+        }
         throw new Error('NO_ACCOUNTS: Failed to retrieve any accounts from Plaid');
       }
 
@@ -45,6 +76,11 @@ class PlaidAccountService extends PlaidBaseService {
         existingGroups,
         user
       );
+
+      // Include items needing reauth in the response if any
+      if (itemsNeedingReauth.length > 0) {
+        saved.itemsNeedingReauth = itemsNeedingReauth;
+      }
 
       return saved;
     } catch (error) {
@@ -132,7 +168,7 @@ class PlaidAccountService extends PlaidBaseService {
     }
   }
 
-  async updateExistingGroups(existingGroups=[], updatedAccounts=[]) {
+  async updateExistingGroups(existingGroups = [], updatedAccounts = []) {
     const updatedGroups = [];
     for (const group of existingGroups) {
       const accounts = group.accounts?.map(account => {

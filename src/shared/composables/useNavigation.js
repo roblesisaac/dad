@@ -5,14 +5,14 @@ import { useAuth } from '@/shared/composables/useAuth'
 export function useNavigation() {
   const router = useRouter()
   const { isAuthed, login, logoutUser } = useAuth()
-  
+
   const navigationLinks = computed(() => {
     const routes = router.options.routes.filter(route => {
       // Exclude auth, callback, and special routes
       const excludedRoutes = ['callback']
       return !excludedRoutes.includes(route.name)
     }).map(route => ({
-      name: route.name,
+      name: (route.name === 'root' || !route.name) ? 'Home' : route.name,
       path: route.path
     }))
 
@@ -27,11 +27,11 @@ export function useNavigation() {
     return [...routes, authLink]
   })
 
-  const regularLinks = computed(() => 
+  const regularLinks = computed(() =>
     navigationLinks.value.filter(link => !link.isAuthLink)
   )
 
-  const authLink = computed(() => 
+  const authLink = computed(() =>
     navigationLinks.value.find(link => link.isAuthLink)
   )
 

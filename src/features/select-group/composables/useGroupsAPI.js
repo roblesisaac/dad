@@ -12,10 +12,10 @@ export function useGroupsAPI() {
    */
   async function fetchGroupsAndAccounts() {
     const response = await api.get('/plaid/sync/accounts/and/groups');
-    if (!response) return { groups: [], accounts: [] };
-    
-    const { groups, accounts } = response;
-    return { groups, accounts };
+    if (!response) return { groups: [], accounts: [], itemsNeedingReauth: [] };
+
+    const { groups, accounts, itemsNeedingReauth } = response;
+    return { groups, accounts, itemsNeedingReauth: itemsNeedingReauth || [] };
   }
 
   /**
