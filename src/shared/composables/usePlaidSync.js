@@ -28,7 +28,7 @@ export function usePlaidSync() {
    * @param {string} itemId - Item ID to sync
    * @returns {Promise<Object>} Sync result with completion status
    */
-  const syncLatestTransactionsForBank = async (itemId) => {
+  const syncLatestTransactionsForBank = async (itemId, { onBatchComplete } = {}) => {
     try {
       if (!itemId) {
         throw new Error('No itemId provided for syncing');
@@ -127,6 +127,15 @@ export function usePlaidSync() {
             batchNumber: batchCount,
             itemId
           });
+
+          // Notify caller that a batch completed (for real-time UI updates)
+          if (onBatchComplete) {
+            try {
+              await onBatchComplete(result);
+            } catch (cbErr) {
+              console.warn('onBatchComplete callback error:', cbErr);
+            }
+          }
 
           // Check if we need to continue syncing
           hasMore = result.hasMore;

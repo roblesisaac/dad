@@ -130,8 +130,15 @@ export function useBanks() {
       // Reset recovery counter to ensure we can attempt the sync
       resetRecoveryCounter(selectedBank.value.itemId);
 
-      // Perform the sync
-      const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
+      // Perform the sync with a callback to refresh sessions after each batch
+      const itemId = selectedBank.value.itemId;
+      const result = await syncLatestTransactionsForBank(itemId, {
+        onBatchComplete: async () => {
+          // Refresh sync sessions list so new sessions appear in real-time
+          await fetchSyncSessions(itemId);
+        }
+      });
+
       // If sync was successful, refresh the bank data and sync sessions
       if (result.completed) {
         await fetchBanks();

@@ -72,12 +72,8 @@ export default {
         addedTransactions: syncResult.addedTransactions
       };
 
-      if (syncResult.recoveryPerformed) {
-        response.recovery = {
-          performed: true,
-          revertedTo: syncResult.revertedTo,
-          removedTransactions: syncResult.recoveryRemovedCount
-        };
+      if (syncResult.recovery?.performed) {
+        response.recovery = syncResult.recovery;
       }
 
       // Include any failure information

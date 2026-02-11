@@ -91,7 +91,7 @@ class TransactionSyncService {
       await this._updateSyncSession(syncSession, syncResult, prevSyncSession);
 
       // 8. Item update
-      await this._updateItemAfterSync(itemData, syncResult, syncSession._id, syncTime);
+      await this._updateItemAfterSync(itemData, syncResult, syncSession._id, syncTime, syncResult.hasMore);
 
       // 9. Post-processing - Build response
       const response = this._buildSyncResponse(syncResult, syncTime, batchNumber);
@@ -423,22 +423,30 @@ class TransactionSyncService {
    * @returns {Promise<void>}
    * @private
    */
-  async _updateItemAfterSync(item, syncResult, sync_id, syncTime) {
+  async _updateItemAfterSync(item, syncResult, sync_id, syncTime, hasMore = false) {
     const countsMatch = syncSessionService.countsMatch(syncResult.syncCounts);
     const hasFailures = syncResult.hasFailures || false;
 
-    // Determine item status based on sync result
-    const status = !countsMatch || hasFailures ?
-      'error'
-      : 'complete';
+    // When hasMore is true (mid-sync), always keep status as 'complete' and update
+    // sync_id so the next batch doesn't trigger recovery. Only surface errors on
+    // the final batch (hasMore === false) to prevent recovery cascades.
+    let status;
+    if (hasMore) {
+      // Mid-sync: always mark complete so next batch proceeds normally
+      status = 'complete';
+    } else {
+      // Final batch: respect actual error state
+      status = !countsMatch || hasFailures ? 'error' : 'complete';
+    }
 
     // Create update object
     const updateData = {
       status
     };
 
-    // Only update sync_id if there were no errors
-    if (countsMatch && !hasFailures) {
+    // Always update sync_id during multi-batch sync so next batch can find
+    // the previous session. Only withhold sync_id on final batch errors.
+    if (hasMore || (countsMatch && !hasFailures)) {
       updateData.sync_id = sync_id;
     }
 
