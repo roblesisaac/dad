@@ -36,45 +36,45 @@ export function usePlaidSync() {
 
       isSyncing.value = true;
       updateStatusBar(`Syncing transactions for account...`, true);
-      
+
       let hasMore = true;
       let batchCount = 0;
       let retryCount = 0;
       let totalStats = { added: 0, modified: 0, removed: 0 };
-      
+
       // Initialize consecutive recoveries tracker for this item if it doesn't exist
       if (!consecutiveRecoveries.value[itemId]) {
         consecutiveRecoveries.value[itemId] = 0;
       }
-      
+
       // Continue syncing batches until complete
       while (hasMore) {
         try {
           batchCount++;
-          
+
           // Call the backend API to process a single batch
           const result = await api.get(`plaid/sync/latest/transactions/${itemId}`);
-          
+
           if (!result) {
             throw new Error('No response received from sync endpoint');
           }
-          
+
           // Check if a recovery was performed
           if (result?.recovery?.performed) {
             // Increment the consecutive recovery counter
             consecutiveRecoveries.value[itemId]++;
-            
+
             // Check if we've hit the limit of consecutive recoveries
             if (consecutiveRecoveries.value[itemId] >= 3) {
               throw new Error(`Transaction recovery has been attempted 3 times in a row. Manual intervention may be required.`);
             }
-            
+
             // Update UI with recovery information
             updateStatusBar(
               `Recovery performed: ${result.recovery.removedTransactions || result.recovery.removedCount || 0} transactions removed. Resyncing...`,
               true
             );
-            
+
             // Update progress state for recovery
             updateSyncProgress({
               status: 'recovery',
@@ -83,27 +83,27 @@ export function usePlaidSync() {
               itemId,
               message: result.message || 'Recovery performed successfully'
             });
-            
+
             // Wait a moment before continuing with the sync
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // Since we've performed a recovery, we need to start a new sync
             // The next API call will restart the sync with the reset cursor
             continue;
           }
-          
+
           // If we got here, it means we had a successful sync batch without recovery
           // Reset the consecutive recovery counter
           consecutiveRecoveries.value[itemId] = 0;
 
           // Check if batchResults exists before accessing its properties
           const batchResults = result.batchResults || { added: 0, modified: 0, removed: 0 };
-          
+
           // Update stats with the latest batch results
           totalStats.added += batchResults.added || 0;
           totalStats.modified += batchResults.modified || 0;
           totalStats.removed += batchResults.removed || 0;
-          
+
           // If there are added transactions in the response and we're in a dashboard view, update visible transactions
           if (result.addedTransactions && result.addedTransactions.length > 0) {
             const addedCount = await concatAndProcessTransactions(result.addedTransactions);
@@ -111,13 +111,13 @@ export function usePlaidSync() {
               updateStatusBar(`Added ${addedCount} new transactions to your current view`, false);
             }
           }
-          
+
           // Update UI with progress
           updateStatusBar(
             `Syncing transactions... (${totalStats.added} processed)`,
             true
           );
-          
+
           // Update progress state
           updateSyncProgress({
             added: totalStats.added,
@@ -127,11 +127,11 @@ export function usePlaidSync() {
             batchNumber: batchCount,
             itemId
           });
-          
+
           // Check if we need to continue syncing
           hasMore = result.hasMore;
           retryCount = 0; // Reset retry count on success
-          
+
           // Add a small delay between batches to avoid overwhelming the API
           if (hasMore) {
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -139,20 +139,20 @@ export function usePlaidSync() {
         } catch (error) {
           console.error(`Error in batch ${batchCount}:`, error);
           retryCount++;
-          
+
           if (retryCount > MAX_RETRIES) {
             throw new Error(`Sync failed after ${MAX_RETRIES} retries: ${error.message || 'Unknown error'}`);
           }
-          
+
           // Add delay before retry
           updateStatusBar(`Retrying batch... (attempt ${retryCount}/${MAX_RETRIES})`, true);
           await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
         }
       }
-      
+
       // Sync completed for this bank
       updateStatusBar(`Transactions synced successfully!`, false);
-      
+
       // Mark sync as complete in progress state
       updateSyncProgress({
         added: totalStats.added,
@@ -164,8 +164,10 @@ export function usePlaidSync() {
         lastSync: new Date().toISOString()
       });
 
+      isSyncing.value = false;
+
       const finalItem = await api.get(`plaid/items/${itemId}`);
-      
+
       return {
         completed: true,
         itemId,
@@ -175,7 +177,7 @@ export function usePlaidSync() {
     } catch (error) {
       console.error('Error syncing transactions for bank:', error);
       updateStatusBar(`Sync error: ${error.message || 'Unknown error'}`, false);
-      
+
       // Mark sync as failed in progress state
       updateSyncProgress({
         status: 'error',
@@ -183,9 +185,9 @@ export function usePlaidSync() {
         itemId,
         lastSync: new Date().toISOString()
       });
-      
+
       isSyncing.value = false;
-      
+
       return {
         completed: false,
         itemId,
@@ -193,7 +195,7 @@ export function usePlaidSync() {
       };
     }
   };
-  
+
   /**
    * Resets the consecutive recovery counter for an item
    * @param {string} itemId - Item ID to reset counter for
@@ -203,7 +205,7 @@ export function usePlaidSync() {
       consecutiveRecoveries.value[itemId] = 0;
     }
   };
-  
+
   /**
    * Sync latest transactions for all connected banks/items
    * Processes banks sequentially to avoid overwhelming the API
@@ -216,41 +218,41 @@ export function usePlaidSync() {
       isSyncing.value = true;
       syncedBanks.value = [];
       currentBankIndex.value = 0;
-      
+
       // Fetch all connected banks
       const banks = await api.get('plaid/items');
-      
+
       if (!banks || banks.length === 0) {
         updateStatusBar('No connected accounts found', false);
         isSyncing.value = false;
         return { completed: true, message: 'No accounts found' };
       }
-      
+
       updateStatusBar(`Starting to sync transactions for ${banks.length} accounts...`, true);
-      
+
       // Process banks sequentially
       const results = [];
       for (let i = 0; i < banks.length; i++) {
         currentBankIndex.value = i;
         const bank = banks[i];
-        
+
         // Update UI to show which bank is being synced
         updateStatusBar(`Syncing account ${i + 1} of ${banks.length}...`, true);
-        
+
         // Sync this bank's transactions
         const result = await syncLatestTransactionsForBank(bank.itemId);
         results.push(result);
         syncedBanks.value.push({ ...bank, syncResult: result });
-        
+
         // If there was an error with this bank, log it but continue with others
         if (!result.completed) {
           console.warn(`Error syncing bank ${bank._id || bank.itemId}:`, result.error);
         }
       }
-      
+
       // All banks have been processed
       isSyncing.value = false;
-      
+
       // Calculate total stats across all banks
       const totalStats = results.reduce((total, result) => {
         if (result.stats) {
@@ -260,10 +262,10 @@ export function usePlaidSync() {
         }
         return total;
       }, { added: 0, modified: 0, removed: 0 });
-      
+
       // Final UI update
       updateStatusBar(`Sync completed! Added ${totalStats.added} transactions`, false);
-      
+
       return {
         completed: true,
         banks: syncedBanks.value,
@@ -273,23 +275,23 @@ export function usePlaidSync() {
       console.error('Error syncing all banks:', error);
       updateStatusBar(`Error: ${error.message || 'Failed to sync accounts'}`, false);
       isSyncing.value = false;
-      
+
       return {
         completed: false,
         error: error.message
       };
     }
   };
-  
+
   /**
    * Updates the sync progress in the state
    * @param {Object} progress - Progress data
    */
   const updateSyncProgress = (progress) => {
     if (!progress) return;
-    
+
     syncProgress.value = progress;
-    
+
     // Update component state if provided
     if (state && state.syncProgress) {
       state.syncProgress = {
@@ -307,7 +309,7 @@ export function usePlaidSync() {
         message: progress.message
       };
     }
-    
+
     // Update onboarding state if applicable
     if (state && state.onboardingStep === 'syncing' && progress.status === 'completed') {
       state.onboardingStep = 'complete';
@@ -325,11 +327,11 @@ export function usePlaidSync() {
       if (statusBarTimeout.value) {
         clearTimeout(statusBarTimeout.value);
       }
-      
+
       // Update status bar message and loading state
       state.blueBar.message = message;
       state.blueBar.loading = loading;
-      
+
       // Set new timeout to clear message after 3 seconds
       statusBarTimeout.value = setTimeout(() => {
         state.blueBar.message = null;
@@ -344,7 +346,7 @@ export function usePlaidSync() {
     if (!syncProgress.value || Object.keys(syncProgress.value).length === 0) {
       return true;
     }
-    
+
     return syncProgress.value.status !== 'in_progress';
   });
 
@@ -353,7 +355,7 @@ export function usePlaidSync() {
     // Cleanup if needed
     isSyncing.value = false;
   });
-  
+
   return {
     // State
     isSyncing,
@@ -362,12 +364,12 @@ export function usePlaidSync() {
     syncedBanks,
     currentBankIndex,
     consecutiveRecoveries,
-    
+
     // Core sync methods
     syncLatestTransactionsForBank,
     syncLatestTransactionsForAllBanks,
     resetRecoveryCounter,
-    
+
     // Status methods
     updateStatusBar
   };

@@ -51,6 +51,17 @@
         :format-sync-date="formatSyncDate"
         @revert="confirmRevert"
       />
+      
+      <!-- Loading more indicator -->
+      <div v-if="loadingMore" class="py-4 text-center">
+        <div class="animate-pulse mx-auto h-5 w-5 text-gray-400">
+          <RefreshCw class="h-5 w-5" />
+        </div>
+        <p class="text-sm text-gray-400 mt-1">Loading more...</p>
+      </div>
+      
+      <!-- Infinite scroll sentinel -->
+      <div ref="sentinelRef" class="h-1" />
     </div>
     
     <!-- Confirmation modal for reversion -->
@@ -65,7 +76,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits } from 'vue';
+import { ref, defineProps, defineEmits, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import { RefreshCw, AlertTriangle, Clock } from 'lucide-vue-next';
 import SessionListItem from './SessionListItem.vue';
 import ConfirmReversionModal from './ConfirmReversionModal.vue';
@@ -90,14 +101,66 @@ const props = defineProps({
   formatSyncDate: {
     type: Function,
     required: true
+  },
+  loadingMore: {
+    type: Boolean,
+    default: false
+  },
+  hasMore: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['refresh', 'sync', 'revert-to-session']);
+const emit = defineEmits(['refresh', 'sync', 'revert-to-session', 'load-more']);
 
 // Local state for reversion modal
 const showRevertConfirmation = ref(false);
 const sessionToRevert = ref(null);
+
+// Infinite scroll
+const sentinelRef = ref(null);
+let observer = null;
+
+const setupObserver = () => {
+  if (observer) {
+    observer.disconnect();
+  }
+
+  if (!sentinelRef.value) return;
+
+  observer = new IntersectionObserver((entries) => {
+    const entry = entries[0];
+    if (entry.isIntersecting && props.hasMore && !props.loadingMore) {
+      emit('load-more');
+    }
+  }, {
+    rootMargin: '100px'
+  });
+
+  observer.observe(sentinelRef.value);
+};
+
+// Watch for the sentinel element to appear (it only renders when sessions exist)
+watch(() => props.syncSessions.length, async (len) => {
+  if (len > 0) {
+    await nextTick();
+    setupObserver();
+  }
+});
+
+onMounted(() => {
+  if (sentinelRef.value) {
+    setupObserver();
+  }
+});
+
+onUnmounted(() => {
+  if (observer) {
+    observer.disconnect();
+    observer = null;
+  }
+});
 
 // Open revert confirmation modal
 const confirmRevert = (session) => {

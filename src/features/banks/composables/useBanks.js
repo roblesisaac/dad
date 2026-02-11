@@ -8,17 +8,19 @@ import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
  */
 export function useBanks() {
   const api = useApi();
-  const { 
+  const {
     syncLatestTransactionsForBank,
-    isSyncing, 
+    isSyncing,
     syncProgress,
     resetRecoveryCounter
   } = usePlaidSync();
-  
+
   // State
   const banks = ref([]);
   const selectedBank = ref(null);
   const syncSessions = ref([]);
+  const syncSessionsLastKey = ref(null);
+  const loadingMoreSessions = ref(false);
   const loading = ref({
     banks: false,
     syncSessions: false,
@@ -31,14 +33,14 @@ export function useBanks() {
     revert: null,
     editBankName: null
   });
-  
+
   /**
    * Fetch all banks (Plaid items) for the current user
    */
   const fetchBanks = async () => {
     loading.value.banks = true;
     error.value.banks = null;
-    
+
     try {
       const response = await api.get('plaid/items');
       banks.value = response || [];
@@ -51,21 +53,23 @@ export function useBanks() {
       loading.value.banks = false;
     }
   };
-  
+
   /**
    * Fetch sync sessions for a specific bank
    * @param {String} itemId - Item ID
    */
   const fetchSyncSessions = async (itemId) => {
     if (!itemId) return;
-    
+
     loading.value.syncSessions = true;
     error.value.syncSessions = null;
     syncSessions.value = [];
-    
+    syncSessionsLastKey.value = null;
+
     try {
       const response = await api.get(`plaid/items/${itemId}/sync-sessions`);
       syncSessions.value = response.syncSessions || [];
+      syncSessionsLastKey.value = response.lastKey || null;
       return syncSessions.value;
     } catch (err) {
       console.error(`Error fetching sync sessions for bank ${itemId}:`, err);
@@ -75,19 +79,42 @@ export function useBanks() {
       loading.value.syncSessions = false;
     }
   };
-  
+
+  /**
+   * Fetch more sync sessions (next page) for a specific bank
+   * @param {String} itemId - Item ID
+   */
+  const fetchMoreSyncSessions = async (itemId) => {
+    if (!itemId || !syncSessionsLastKey.value || loadingMoreSessions.value) return;
+
+    loadingMoreSessions.value = true;
+
+    try {
+      const response = await api.get(
+        `plaid/items/${itemId}/sync-sessions?start=${encodeURIComponent(syncSessionsLastKey.value)}`
+      );
+      const newSessions = response.syncSessions || [];
+      syncSessions.value = [...syncSessions.value, ...newSessions];
+      syncSessionsLastKey.value = response.lastKey || null;
+    } catch (err) {
+      console.error(`Error fetching more sync sessions for bank ${itemId}:`, err);
+    } finally {
+      loadingMoreSessions.value = false;
+    }
+  };
+
   /**
    * Select a bank and fetch its sync sessions
    * @param {Object} bank - Bank object
    */
   const selectBank = async (bank) => {
     selectedBank.value = bank;
-    
+
     if (bank?.itemId) {
       await fetchSyncSessions(bank.itemId);
     }
   };
-  
+
   /**
    * Sync transactions for a selected bank
    */
@@ -96,13 +123,13 @@ export function useBanks() {
       error.value.sync = 'No bank selected';
       return null;
     }
-    
+
     error.value.sync = null;
-    
+
     try {
       // Reset recovery counter to ensure we can attempt the sync
       resetRecoveryCounter(selectedBank.value.itemId);
-      
+
       // Perform the sync
       const result = await syncLatestTransactionsForBank(selectedBank.value.itemId);
       // If sync was successful, refresh the bank data and sync sessions
@@ -113,7 +140,7 @@ export function useBanks() {
       } else if (result.error) {
         error.value.sync = result.error;
       }
-      
+
       return result;
     } catch (err) {
       console.error('Error syncing bank:', err);
@@ -121,7 +148,7 @@ export function useBanks() {
       return null;
     }
   };
-  
+
   /**
    * Revert to a specific sync session
    * @param {Object} session - Sync session to revert to
@@ -131,14 +158,14 @@ export function useBanks() {
       error.value.revert = 'Invalid bank or session';
       return null;
     }
-    
+
     error.value.revert = null;
-    
+
     try {
       const result = await api.post(
         `plaid/items/${selectedBank.value.itemId}/revert/${session._id}`
       );
-      
+
       // If reversion was successful, refresh the bank data and sync sessions
       if (result.success) {
         await fetchBanks();
@@ -146,7 +173,7 @@ export function useBanks() {
       } else if (result.error) {
         error.value.revert = result.error;
       }
-      
+
       return result;
     } catch (err) {
       console.error('Error reverting to session:', err);
@@ -154,7 +181,7 @@ export function useBanks() {
       return null;
     }
   };
-  
+
   /**
    * Format the sync session date
    * @param {Number} timestamp - Sync time timestamp
@@ -162,7 +189,7 @@ export function useBanks() {
    */
   const formatSyncDate = (timestamp) => {
     if (!timestamp) return 'Unknown';
-    
+
     try {
       const date = new Date(timestamp);
       return date.toLocaleString();
@@ -170,7 +197,7 @@ export function useBanks() {
       return 'Invalid date';
     }
   };
-  
+
   /**
    * Get status class for a bank based on its status
    * @param {Object} bank - Bank object
@@ -178,7 +205,7 @@ export function useBanks() {
    */
   const getBankStatusClass = (bank) => {
     if (!bank) return 'bg-gray-200';
-    
+
     switch (bank.status) {
       case 'error':
         return 'bg-red-500';
@@ -190,7 +217,7 @@ export function useBanks() {
         return 'bg-gray-200';
     }
   };
-  
+
   /**
    * Get status text for a bank based on its status
    * @param {Object} bank - Bank object
@@ -198,7 +225,7 @@ export function useBanks() {
    */
   const getBankStatusText = (bank) => {
     if (!bank) return 'Unknown';
-    
+
     switch (bank.status) {
       case 'error':
         return 'Error';
@@ -210,7 +237,7 @@ export function useBanks() {
         return bank.status || 'Unknown';
     }
   };
-  
+
   /**
    * Update bank name (institutionName)
    * @param {Object} bank - Bank object with updated institutionName
@@ -221,26 +248,26 @@ export function useBanks() {
       error.value.editBankName = 'Invalid bank';
       return null;
     }
-    
+
     loading.value.editBankName = true;
     error.value.editBankName = null;
-    
+
     try {
       const response = await api.put(`plaid/items/${bank.itemId}`, {
         institutionName: bank.institutionName
       });
-      
+
       // Update the bank in the banks array
       const index = banks.value.findIndex(b => b.itemId === bank.itemId);
       if (index !== -1) {
         banks.value[index] = { ...banks.value[index], ...response };
       }
-      
+
       // If this is the selected bank, update it as well
       if (selectedBank.value?.itemId === bank.itemId) {
         selectedBank.value = { ...selectedBank.value, ...response };
       }
-      
+
       return response;
     } catch (err) {
       console.error('Error updating bank name:', err);
@@ -250,18 +277,20 @@ export function useBanks() {
       loading.value.editBankName = false;
     }
   };
-  
+
   // Computed properties
-  const isLoading = computed(() => 
+  const isLoading = computed(() =>
     loading.value.banks || loading.value.syncSessions || isSyncing.value
   );
-  
+
   const hasBanks = computed(() => banks.value.length > 0);
-  
+
+  const hasMoreSyncSessions = computed(() => syncSessionsLastKey.value !== null);
+
   const bankById = computed(() => (itemId) => {
     return banks.value.find(bank => bank.itemId === itemId) || null;
   });
-  
+
   return {
     // State
     banks,
@@ -271,19 +300,22 @@ export function useBanks() {
     error,
     isSyncing,
     syncProgress,
-    
+    loadingMoreSessions,
+
     // Computed
     isLoading,
     hasBanks,
+    hasMoreSyncSessions,
     bankById,
-    
+
     // Methods
     fetchBanks,
     fetchSyncSessions,
+    fetchMoreSyncSessions,
     selectBank,
     syncSelectedBank,
     revertToSession,
-    
+
     // Utilities
     formatSyncDate,
     getBankStatusClass,

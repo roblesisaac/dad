@@ -33,6 +33,7 @@
       :is-open="isSyncSessionsModalOpen"
       :bank="selectedBank"
       @close="closeSyncSessionsModal"
+      @data-changed="fetchBanks"
     />
     
     <!-- Edit Bank Name Modal -->

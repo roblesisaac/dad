@@ -22,11 +22,14 @@ Determine the best fix approach — either update the frontend to read the corre
 
 ## Tasks
 
-- [ ] 1. Verify the actual shape of a bank object returned by `GET /plaid/items` (check whether `syncData.lastSyncTime` is populated after a sync completes, or if it's also `null`).
+- [x] 1. Verify the actual shape of a bank object returned by `GET /plaid/items` (check whether `syncData.lastSyncTime` is populated after a sync completes, or if it's also `null`).
+  > **Finding:** `syncData.lastSyncTime` was **never written** by the new sync flow. `_updateItemAfterSync` in `syncTransactionsService.js` only wrote `status` and `sync_id` — it never touched `syncData`. The old `updateItemSyncStatus` in `itemService.js` wrote to `syncData`, but it's not called by the current sync flow. So both the frontend path AND the backend write were broken.
 
-- [ ] 2. If `syncData.lastSyncTime` is reliably populated: Update `BankList.vue` line 94 to read `bank.syncData?.lastSyncTime` instead of `bank.lastSyncTime`.
+- [x] 2. If `syncData.lastSyncTime` is reliably populated: Update `BankList.vue` line 94 to read `bank.syncData?.lastSyncTime` instead of `bank.lastSyncTime`.
+  > **Done:** Fixed `BankList.vue` to read `bank.syncData?.lastSyncTime` instead of `bank.lastSyncTime`.
 
-- [ ] 3. If `syncData.lastSyncTime` is **not** reliably populated: Trace the sync completion flow in `syncTransactionsService.js` and `syncSessionService.js` to determine where `syncData.lastSyncTime` should be set upon sync completion, and add/fix the update accordingly.
+- [x] 3. If `syncData.lastSyncTime` is **not** reliably populated: Trace the sync completion flow in `syncTransactionsService.js` and `syncSessionService.js` to determine where `syncData.lastSyncTime` should be set upon sync completion, and add/fix the update accordingly.
+  > **Done:** Updated `_updateItemAfterSync` in `syncTransactionsService.js` to accept `syncTime` and write `syncData.lastSyncTime` on every sync completion. The `syncTime` is passed through from the sync session creation.
 
 - [ ] 4. As a fallback/enhancement, consider deriving the "last sync" timestamp from the most recent sync session's `syncTime` field when displaying in `BankList.vue`, since sync sessions are the source of truth for sync history.
 

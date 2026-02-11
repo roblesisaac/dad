@@ -255,39 +255,47 @@ class SyncSessionService {
    * Gets all sync sessions for an item
    * @param {String} itemId - The Plaid item ID
    * @param {String} userId - The user ID
-   * @param {Object} options - Query options (limit, cursor)
-   * @returns {Promise<Array>} Sync sessions sorted by recency
+   * @param {Object} options - Query options (limit, start)
+   * @returns {Promise<Object>} { sessions: Array, lastKey: string|null }
    */
   async getSyncSessionsForItem(itemId, userId, options = {}) {
     try {
       if (!itemId || !userId) {
-        return [];
+        return { sessions: [], lastKey: null };
       }
 
-      const { limit = 20 } = options;
+      const { limit = 20, start } = options;
+
+      const findOptions = { limit, reverse: true };
+      if (start) {
+        findOptions.start = start;
+      }
 
       // Query sessions by itemId and userId
-
-      const sessions = await SyncSessions.find(
+      const result = await SyncSessions.find(
         { itemIdTime: `${itemId}:*`, userId },
-        { limit, reverse: true } // Most recent first
+        findOptions
       );
 
-      return sessions.items || [];
+      return {
+        sessions: result.items || [],
+        lastKey: result.lastKey || null
+      };
     } catch (error) {
       console.warn(`Error fetching sync sessions for item ${itemId}: ${error.message}`);
-      return [];
+      return { sessions: [], lastKey: null };
     }
   }
 
   /**
    * Check if a sync is recent (within last 5 minutes)
    * @param {Object} item - Item data
+   * @param {Object} user - User object
    * @returns {Promise<boolean>} True if a recent sync exists
    */
-  async isSyncRecent(item) {
+  async isSyncRecent(item, user) {
     // Find the most recent sync
-    const syncSession = await this.getSyncSession(item.sync_id);
+    const syncSession = await this.getSyncSession(item.sync_id, user);
 
     if (!syncSession || !syncSession.syncTime) {
       return false;

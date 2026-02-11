@@ -15,12 +15,12 @@ class TransactionQueryService extends PlaidBaseService {
     if (!accountId || !dateRange) {
       return null;
     }
-    
+
     // Split the date range by underscore separator
     const [startDate, endDate] = dateRange.split('_');
-    
+
     if (!startDate) return null;
-    
+
     if (endDate) {
       return `${accountId}:${startDate.trim()}|accountdate_${accountId}:${endDate.trim()}`;
     } else {
@@ -31,12 +31,12 @@ class TransactionQueryService extends PlaidBaseService {
     try {
       // Initialize the formatted query with the user ID
       const formattedQuery = { userId: user._id };
-      
+
       // Format account_id if present
       if (query.account_id) {
         formattedQuery.account_id = `${query.account_id}:${query.account_id}*`;
       }
-      
+
       // Format date range for accountdate if present
       if (query.date && query.account_id) {
         const formattedDate = this._formatDateForQuery(query.account_id, query.date);
@@ -44,12 +44,12 @@ class TransactionQueryService extends PlaidBaseService {
           formattedQuery.accountdate = formattedDate;
         }
       }
-      
+
       // Remove any keys that shouldn't be in the final query
       ['date', 'select'].forEach(key => {
         delete query[key];
       });
-      
+
       // Execute the query
       const res = await plaidTransactions.find(formattedQuery);
       return Array.isArray(res) ? res : (res.items || []);
@@ -63,16 +63,16 @@ class TransactionQueryService extends PlaidBaseService {
       if (!transactionId || !userId) {
         throw new CustomError('INVALID_PARAMS', 'Missing transaction ID or user ID');
       }
-      
+
       const transaction = await plaidTransactions.findOne({
         transaction_id: transactionId,
         userId
       });
-      
+
       if (!transaction) {
         throw new CustomError('NOT_FOUND', 'Transaction not found');
       }
-      
+
       return transaction;
     } catch (error) {
       console.error('Error fetching transaction by ID:', error);
@@ -115,21 +115,21 @@ class TransactionQueryService extends PlaidBaseService {
         userId,
         transaction_id: '*'
       });
-      
+
       const duplicateGroups = {};
-      
+
       // Group transactions by name, amount, and date to find duplicates
       transactions.forEach(tx => {
         // Create a key based on name, amount, and date
         const key = `${tx.name}_${tx.amount}_${tx.date}`;
-        
+
         if (!duplicateGroups[key]) {
           duplicateGroups[key] = [];
         }
-        
+
         duplicateGroups[key].push(tx);
       });
-      
+
       // Filter for groups with more than one transaction
       const results = Object.values(duplicateGroups)
         .filter(group => group.length > 1)
@@ -138,7 +138,7 @@ class TransactionQueryService extends PlaidBaseService {
           count: group.length,
           transactions: group
         }));
-      
+
       return results;
     } catch (error) {
       console.error('Error finding duplicates:', error);
@@ -162,11 +162,11 @@ class TransactionQueryService extends PlaidBaseService {
         successCount: 0,
         failedTransactions: []
       };
-      
+
       if (!transactions || transactions.length === 0) {
         return result;
       }
-      
+
       // Process transactions individually to track failures
       for (const transaction of transactions) {
         try {
@@ -178,10 +178,10 @@ class TransactionQueryService extends PlaidBaseService {
             cursor,
             syncTime
           };
-          
+
           // Attempt to create the transaction
           await this.createTransaction(enrichedTransaction);
-          
+
           // Increment success count
           result.successCount++;
         } catch (err) {
@@ -195,35 +195,40 @@ class TransactionQueryService extends PlaidBaseService {
             },
             transaction: { ...transaction } // Store original transaction data for retry
           });
-          
+
           console.error(`Error saving transaction ${transaction.transaction_id}:`, err.message);
         }
       }
-      
+
       return result;
     } catch (error) {
       console.error('Error in batch processing added transactions:', error);
-      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+      throw new CustomError('TRANSACTION_BATCH_ERROR',
         `Failed to process batch of ${transactions?.length} transactions: ${error.message}`);
     }
   }
 
   /**
-   * Create a single transaction
+   * Create a single transaction (idempotent: duplicates are no-ops)
    * @param {Object} transaction - Transaction data to create
-   * @returns {Promise<Object>} Created transaction
+   * @returns {Promise<Object>} Created or existing transaction
    */
   async createTransaction(transaction) {
     try {
       if (!transaction) {
         throw new CustomError('INVALID_PARAMS', 'Missing transaction data');
       }
-      
+
       const result = await plaidTransactions.save(transaction);
       return result;
     } catch (error) {
+      // Idempotent: if duplicate transaction_id, treat as no-op success
+      if (error.message?.includes("Duplicate value for 'transaction_id'")) {
+        console.log(`Idempotent no-op: transaction ${transaction.transaction_id} already exists`);
+        return { transaction_id: transaction.transaction_id, wasNoOp: true };
+      }
       console.error('Error creating transaction:', error);
-      throw new CustomError('TRANSACTION_SAVE_ERROR', 
+      throw new CustomError('TRANSACTION_SAVE_ERROR',
         `Failed to save transaction: ${error.message}`);
     }
   }
@@ -240,22 +245,27 @@ class TransactionQueryService extends PlaidBaseService {
       if (!transactionId || !userId || !updateData) {
         throw new CustomError('INVALID_PARAMS', 'Missing required parameters');
       }
-      
+
       // Skip _id field if present as it shouldn't be modified
       const updates = { ...updateData };
       delete updates._id;
-      
+
       const result = await plaidTransactions.update(
-        { transaction_id: transactionId, userId }, 
+        { transaction_id: transactionId, userId },
         updates
       );
-      
+
       if (!result) {
         throw new CustomError('NOT_FOUND', 'Transaction not found or not updated');
       }
-      
+
       return result;
     } catch (error) {
+      // Idempotent: if transaction missing, upsert by creating it
+      if (error.message?.includes('No item found with filter') || error.code === 'NOT_FOUND') {
+        console.log(`Idempotent upsert: transaction ${transactionId} not found, creating`);
+        return await this.createTransaction({ ...updateData, transaction_id: transactionId, userId });
+      }
       console.error('Error updating transaction:', error);
       throw CustomError.createFormattedError(error, {
         transactionId,
@@ -280,11 +290,11 @@ class TransactionQueryService extends PlaidBaseService {
         successCount: 0,
         failedTransactions: []
       };
-      
+
       if (!transactions || transactions.length === 0) {
         return result;
       }
-      
+
       // Process transactions individually to track failures
       for (const transaction of transactions) {
         try {
@@ -294,14 +304,14 @@ class TransactionQueryService extends PlaidBaseService {
             cursor,
             syncTime
           };
-          
+
           // Attempt to update the transaction
           await this.updateTransaction(
             transaction.transaction_id,
             user._id,
             updateData
           );
-          
+
           // Increment success count
           result.successCount++;
         } catch (err) {
@@ -315,15 +325,15 @@ class TransactionQueryService extends PlaidBaseService {
             },
             transaction: { ...transaction } // Store original transaction data for retry
           });
-          
+
           console.error(`Error updating transaction ${transaction.transaction_id}:`, err.message);
         }
       }
-      
+
       return result;
     } catch (error) {
       console.error('Error in batch processing modified transactions:', error);
-      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+      throw new CustomError('TRANSACTION_BATCH_ERROR',
         `Failed to process batch of ${transactions?.length} modifications: ${error.message}`);
     }
   }
@@ -339,18 +349,25 @@ class TransactionQueryService extends PlaidBaseService {
       if (!transactionId || !userId) {
         throw new CustomError('INVALID_PARAMS', 'Missing required parameters');
       }
-      
+
       const result = await plaidTransactions.erase({
         transaction_id: transactionId,
         userId
       });
-      
+
       if (!result || !result.removed) {
-        throw new CustomError('NOT_FOUND', 'Transaction not found or not removed');
+        // Idempotent: if transaction already missing, treat as no-op success
+        console.log(`Idempotent no-op: transaction ${transactionId} already removed`);
+        return { removed: true, wasNoOp: true };
       }
-      
+
       return result;
     } catch (error) {
+      // Idempotent: if transaction not found during erase, treat as no-op
+      if (error.message?.includes('Item not found when trying to perform erase') || error.code === 'NOT_FOUND') {
+        console.log(`Idempotent no-op: transaction ${transactionId} not found for removal`);
+        return { removed: true, wasNoOp: true };
+      }
       console.error('Error removing transaction:', error);
       throw CustomError.createFormattedError(error, {
         transactionId,
@@ -373,20 +390,20 @@ class TransactionQueryService extends PlaidBaseService {
         successCount: 0,
         failedTransactions: []
       };
-      
+
       if (!transactionsToRemove || transactionsToRemove.length === 0) {
         return result;
       }
-      
+
       // Extract transaction IDs
       const transactionIds = transactionsToRemove.map(tx => tx.transaction_id);
-      
+
       // Process transactions individually to track failures
       for (const transactionId of transactionIds) {
         try {
           // Attempt to remove the transaction
           await this.removeTransaction(transactionId, userId);
-          
+
           // Increment success count
           result.successCount++;
         } catch (err) {
@@ -399,15 +416,15 @@ class TransactionQueryService extends PlaidBaseService {
               timestamp: new Date().toISOString()
             }
           });
-          
+
           console.error(`Error removing transaction ${transactionId}:`, err.message);
         }
       }
-      
+
       return result;
     } catch (error) {
       console.error('Error in batch processing removed transactions:', error);
-      throw new CustomError('TRANSACTION_BATCH_ERROR', 
+      throw new CustomError('TRANSACTION_BATCH_ERROR',
         `Failed to process batch of ${transactionsToRemove?.length} removals: ${error.message}`);
     }
   }

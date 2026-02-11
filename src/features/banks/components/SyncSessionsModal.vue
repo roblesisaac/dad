@@ -31,9 +31,12 @@
         :loading="loading.syncSessions"
         :error="error.syncSessions"
         :format-sync-date="formatSyncDate"
+        :loading-more="loadingMoreSessions"
+        :has-more="hasMoreSyncSessions"
         @refresh="handleRefresh"
         @sync="handleSync"
         @revert-to-session="handleRevertToSession"
+        @load-more="handleLoadMore"
       />
     </template>
   </BaseModal>
@@ -56,7 +59,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'data-changed']);
 
 // Use the banks composable for all functionality
 const {
@@ -64,7 +67,10 @@ const {
   loading,
   error,
   isSyncing,
+  loadingMoreSessions,
+  hasMoreSyncSessions,
   fetchSyncSessions,
+  fetchMoreSyncSessions,
   syncSelectedBank,
   revertToSession,
   formatSyncDate,
@@ -87,7 +93,10 @@ const closeModal = () => {
  * Handle sync action
  */
 const handleSync = async () => {
-  await syncSelectedBank();
+  const result = await syncSelectedBank();
+  if (result?.completed) {
+    emit('data-changed');
+  }
 };
 
 /**
@@ -103,6 +112,18 @@ const handleRefresh = async () => {
  * Handle revert to session action
  */
 const handleRevertToSession = async (session) => {
-  await revertToSession(session);
+  const result = await revertToSession(session);
+  if (result?.success) {
+    emit('data-changed');
+  }
+};
+
+/**
+ * Handle load more sessions (infinite scroll)
+ */
+const handleLoadMore = async () => {
+  if (props.bank?.itemId) {
+    await fetchMoreSyncSessions(props.bank.itemId);
+  }
 };
 </script> 

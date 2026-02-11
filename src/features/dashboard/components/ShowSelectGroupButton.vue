@@ -4,7 +4,6 @@
     class="h-full px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
   >
     <div class="flex items-center space-x-2">
-      <Users class="w-4 h-4 text-indigo-600" />
       <div class="font-bold text-gray-800" v-html="groupName"></div>
     </div>
     

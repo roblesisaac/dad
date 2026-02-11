@@ -91,7 +91,7 @@
           <!-- Last sync time -->
           <div>
             <span class="font-medium">Last sync:</span> 
-            {{ bank.lastSyncTime ? formatDate(bank.lastSyncTime) : 'Never' }}
+            {{ bank.syncData?.lastSyncTime ? formatDate(bank.syncData.lastSyncTime) : 'Never' }}
           </div>
         </div>
       </div>
