@@ -17,7 +17,7 @@ class PlaidLinkService extends PlaidBaseService {
     const clientUserId = this.generateClientUserId(user._id);
 
     const request = {
-      user: { 
+      user: {
         client_user_id: clientUserId
       },
       client_name: 'TrackTabs',
@@ -28,7 +28,10 @@ class PlaidLinkService extends PlaidBaseService {
 
     if (itemId) {
       try {
-        const item = await itemService.getUserItems(user._id, itemId);
+        const item = await itemService.getItem(itemId, user._id);
+        if (!item) {
+          throw new Error('Item not found');
+        }
         const access_token = itemService.decryptAccessToken(item, user);
         delete request.products;
         request.access_token = access_token;
