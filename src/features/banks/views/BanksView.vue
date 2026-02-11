@@ -81,9 +81,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
 import { useApi } from '@/shared/composables/useApi.js';
+import loadScript from '@/shared/utils/loadScript.js';
 import BankList from '../components/BankList.vue';
 import SyncSessionsModal from '../components/SyncSessionsModal.vue';
 import EditBankNameModal from '../components/EditBankNameModal.vue';
@@ -121,6 +122,9 @@ const downloadStatus = ref('');
 const deleteStatus = ref('');
 const downloadSummary = ref(null);
 const deleteSummary = ref(null);
+let reconnectPlaidHandler = null;
+
+const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
 
 // Initialize loading state for reconnect bank
 loading.value = {
@@ -217,36 +221,65 @@ const reconnectBank = async (bank) => {
   try {
     loading.value.reconnectBank = true;
     error.value.reconnectBank = null;
-    
-    // Get link token for reconnection
-    const response = await api.post(`plaid/connect/link/${bank.itemId}`);
-    
-    if (!response?.link_token) {
-      throw new Error('No link token received from server');
+
+    await loadScript(PLAID_SCRIPT_URL);
+
+    if (!window?.Plaid?.create) {
+      throw new Error('Plaid Link failed to load');
     }
     
-    // Create and open Plaid Link
-    // Note: This would require integration with Plaid Link in a real implementation
-    // For now, we'll simulate the process with a notification
-    showNotification('Reconnection process started. Please follow the prompts to update your credentials.', 'success');
+    // Get link token for reconnection
+    const { link_token } = await api.post(`plaid/connect/link/${bank.itemId}`);
     
-    // In a real implementation, you would:
-    // 1. Initialize Plaid Link with the token
-    // 2. Handle successful reconnection
-    // 3. Update the bank status
-    
-    // For demo purposes:
-    setTimeout(() => {
-      showNotification('Bank successfully reconnected!', 'success');
-      closeEditBankNameModal();
-      fetchBanks(); // Refresh banks list
-    }, 2000);
-    
+    if (!link_token) {
+      throw new Error('No link token received from server');
+    }
+
+    if (reconnectPlaidHandler?.destroy) {
+      reconnectPlaidHandler.destroy();
+      reconnectPlaidHandler = null;
+    }
+
+    reconnectPlaidHandler = window.Plaid.create({
+      token: link_token,
+      onSuccess: async (publicToken) => {
+        try {
+          await api.post('plaid/exchange/token', { publicToken });
+          await fetchBanks();
+          showNotification('Bank successfully reconnected!', 'success');
+          closeEditBankNameModal();
+        } catch (exchangeError) {
+          console.error('Error finalizing bank reconnection:', exchangeError);
+          error.value.reconnectBank = exchangeError.message || 'Failed to finalize bank reconnection';
+          showNotification(`Error reconnecting bank: ${error.value.reconnectBank}`, 'error');
+        } finally {
+          loading.value.reconnectBank = false;
+          if (reconnectPlaidHandler?.destroy) {
+            reconnectPlaidHandler.destroy();
+          }
+          reconnectPlaidHandler = null;
+        }
+      },
+      onExit: (err) => {
+        if (err) {
+          const message = err.display_message || err.error_message || err.error_code || 'Reconnection process was interrupted';
+          error.value.reconnectBank = message;
+          showNotification(`Error reconnecting bank: ${message}`, 'error');
+        }
+
+        loading.value.reconnectBank = false;
+        if (reconnectPlaidHandler?.destroy) {
+          reconnectPlaidHandler.destroy();
+        }
+        reconnectPlaidHandler = null;
+      }
+    });
+
+    reconnectPlaidHandler.open();
   } catch (err) {
     console.error('Error reconnecting bank:', err);
     error.value.reconnectBank = err.message || 'Failed to reconnect bank';
     showNotification(`Error reconnecting bank: ${error.value.reconnectBank}`, 'error');
-  } finally {
     loading.value.reconnectBank = false;
   }
 };
@@ -555,5 +588,16 @@ watch(() => notification.value.timeout, (newTimeout, oldTimeout) => {
   if (oldTimeout) {
     clearTimeout(oldTimeout);
   }
+});
+
+onUnmounted(() => {
+  if (notification.value.timeout) {
+    clearTimeout(notification.value.timeout);
+  }
+
+  if (reconnectPlaidHandler?.destroy) {
+    reconnectPlaidHandler.destroy();
+  }
+  reconnectPlaidHandler = null;
 });
 </script> 
