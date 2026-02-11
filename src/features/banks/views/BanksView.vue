@@ -42,9 +42,19 @@
       :bank="bankToEdit"
       :is-saving="loading.editBankName"
       :is-reconnecting="loading.reconnectBank"
+      :is-downloading="loading.downloadAllData"
+      :download-status="downloadStatus"
+      :is-deleting="loading.deleteSelectedData"
+      :delete-status="deleteStatus"
+      :is-resetting="loading.resetCursor"
+      :download-summary="downloadSummary"
+      :delete-summary="deleteSummary"
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="reconnectBank"
+      @download-all-data="downloadAllData"
+      @delete-selected-data="deleteSelectedData"
+      @reset-cursor="resetCursor"
     />
     
     <!-- Success notification -->
@@ -107,17 +117,27 @@ const notification = ref({
 const isSyncSessionsModalOpen = ref(false);
 const isEditBankNameModalOpen = ref(false);
 const bankToEdit = ref(null);
+const downloadStatus = ref('');
+const deleteStatus = ref('');
+const downloadSummary = ref(null);
+const deleteSummary = ref(null);
 
 // Initialize loading state for reconnect bank
 loading.value = {
   ...loading.value,
-  reconnectBank: false
+  reconnectBank: false,
+  downloadAllData: false,
+  deleteSelectedData: false,
+  resetCursor: false
 };
 
 // Initialize error state for reconnect bank
 error.value = {
   ...error.value,
-  reconnectBank: null
+  reconnectBank: null,
+  downloadAllData: null,
+  deleteSelectedData: null,
+  resetCursor: null
 };
 
 // Initialize data
@@ -228,6 +248,305 @@ const reconnectBank = async (bank) => {
     showNotification(`Error reconnecting bank: ${error.value.reconnectBank}`, 'error');
   } finally {
     loading.value.reconnectBank = false;
+  }
+};
+
+const DOWNLOAD_BATCH_SIZE = 1000;
+const MAX_DOWNLOAD_BATCH_REQUESTS = 2000;
+
+const buildDownloadSelection = (selectedData = {}) => ({
+  transactions: selectedData.transactions !== undefined ? Boolean(selectedData.transactions) : true,
+  items: selectedData.items !== undefined ? Boolean(selectedData.items) : false,
+  accounts: selectedData.accounts !== undefined ? Boolean(selectedData.accounts) : false,
+  accountGroups: selectedData.accountGroups !== undefined ? Boolean(selectedData.accountGroups) : false,
+  syncSessions: selectedData.syncSessions !== undefined ? Boolean(selectedData.syncSessions) : false
+});
+
+const downloadAllData = async (selectedData) => {
+  try {
+    const downloadSelection = buildDownloadSelection(selectedData);
+    const selectedTypes = Object.entries(downloadSelection)
+      .filter(([, isSelected]) => isSelected)
+      .map(([key]) => key);
+
+    if (selectedTypes.length === 0) {
+      showNotification('Select at least one data type to download.', 'error');
+      return;
+    }
+
+    loading.value.downloadAllData = true;
+    error.value.downloadAllData = null;
+    downloadStatus.value = 'Preparing export...';
+    downloadSummary.value = null;
+
+    const exportData = {
+      generatedAt: new Date().toISOString(),
+      userId: null,
+      includes: downloadSelection,
+      counts: {
+        items: 0,
+        transactions: 0,
+        accounts: 0,
+        accountGroups: 0,
+        syncSessions: 0
+      },
+      items: [],
+      transactions: [],
+      accounts: [],
+      accountGroups: [],
+      syncSessions: []
+    };
+
+    let pagination = {
+      itemsStart: null,
+      transactionsStart: null,
+      accountsStart: null,
+      accountGroupsStart: null,
+      syncSessionsStart: null,
+      hasMore: true
+    };
+    let batchRequests = 0;
+    let lastCursorSignature = null;
+
+    while (pagination.hasMore) {
+      if (batchRequests >= MAX_DOWNLOAD_BATCH_REQUESTS) {
+        throw new Error('Exceeded maximum batch requests while downloading data');
+      }
+
+      const queryParams = new URLSearchParams({
+        batchSize: String(DOWNLOAD_BATCH_SIZE),
+        includeItems: String(downloadSelection.items),
+        includeTransactions: String(downloadSelection.transactions),
+        includeAccounts: String(downloadSelection.accounts),
+        includeAccountGroups: String(downloadSelection.accountGroups),
+        includeSyncSessions: String(downloadSelection.syncSessions)
+      });
+
+      if (pagination.itemsStart) {
+        queryParams.set('itemsStart', pagination.itemsStart);
+      }
+      if (pagination.transactionsStart) {
+        queryParams.set('transactionsStart', pagination.transactionsStart);
+      }
+      if (pagination.accountsStart) {
+        queryParams.set('accountsStart', pagination.accountsStart);
+      }
+      if (pagination.accountGroupsStart) {
+        queryParams.set('accountGroupsStart', pagination.accountGroupsStart);
+      }
+      if (pagination.syncSessionsStart) {
+        queryParams.set('syncSessionsStart', pagination.syncSessionsStart);
+      }
+
+      downloadStatus.value = `Downloading batch ${batchRequests + 1} for ${selectedTypes.join(', ')}...`;
+      const batchResponse = await api.get(`plaid/download/all-data?${queryParams.toString()}`);
+
+      if (!exportData.userId && batchResponse?.userId) {
+        exportData.userId = batchResponse.userId;
+      }
+
+      if (downloadSelection.items && Array.isArray(batchResponse?.items)) {
+        exportData.items.push(...batchResponse.items);
+      }
+      if (downloadSelection.transactions && Array.isArray(batchResponse?.transactions)) {
+        exportData.transactions.push(...batchResponse.transactions);
+      }
+      if (downloadSelection.accounts && Array.isArray(batchResponse?.accounts)) {
+        exportData.accounts.push(...batchResponse.accounts);
+      }
+      if (downloadSelection.accountGroups && Array.isArray(batchResponse?.accountGroups)) {
+        exportData.accountGroups.push(...batchResponse.accountGroups);
+      }
+      if (downloadSelection.syncSessions && Array.isArray(batchResponse?.syncSessions)) {
+        exportData.syncSessions.push(...batchResponse.syncSessions);
+      }
+
+      pagination = {
+        itemsStart: batchResponse?.pagination?.itemsStart || null,
+        transactionsStart: batchResponse?.pagination?.transactionsStart || null,
+        accountsStart: batchResponse?.pagination?.accountsStart || null,
+        accountGroupsStart: batchResponse?.pagination?.accountGroupsStart || null,
+        syncSessionsStart: batchResponse?.pagination?.syncSessionsStart || null,
+        hasMore: Boolean(batchResponse?.pagination?.hasMore)
+      };
+
+      const currentCursorSignature = JSON.stringify({
+        itemsStart: pagination.itemsStart,
+        transactionsStart: pagination.transactionsStart,
+        accountsStart: pagination.accountsStart,
+        accountGroupsStart: pagination.accountGroupsStart,
+        syncSessionsStart: pagination.syncSessionsStart
+      });
+
+      if (pagination.hasMore && currentCursorSignature === lastCursorSignature) {
+        throw new Error('Export pagination stalled. Please try again.');
+      }
+      lastCursorSignature = currentCursorSignature;
+
+      batchRequests++;
+      downloadStatus.value = `Downloaded ${batchRequests} batches (${exportData.items.length} items, ${exportData.transactions.length} transactions, ${exportData.accounts.length} accounts, ${exportData.accountGroups.length} groups, ${exportData.syncSessions.length} sync sessions)...`;
+    }
+
+    exportData.counts = {
+      items: exportData.items.length,
+      transactions: exportData.transactions.length,
+      accounts: exportData.accounts.length,
+      accountGroups: exportData.accountGroups.length,
+      syncSessions: exportData.syncSessions.length
+    };
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const fileName = `plaid-data-${timestamp}.json`;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
+      type: 'application/json'
+    });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+
+    anchor.href = downloadUrl;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(downloadUrl);
+
+    downloadSummary.value = {
+      completedAt: new Date().toISOString(),
+      selectedTypes,
+      counts: { ...exportData.counts },
+      batches: batchRequests,
+      fileName
+    };
+
+    showNotification('Downloaded all Plaid data successfully.');
+  } catch (err) {
+    console.error('Error downloading all Plaid data:', err);
+    error.value.downloadAllData = err.message || 'Failed to download all data';
+    showNotification(`Error downloading data: ${error.value.downloadAllData}`, 'error');
+  } finally {
+    loading.value.downloadAllData = false;
+    downloadStatus.value = '';
+  }
+};
+
+const DELETE_BATCH_SIZE = 1000;
+const MAX_DELETE_BATCH_REQUESTS = 2000;
+
+const buildDeleteSelection = (selectedData = {}) => ({
+  transactions: selectedData.transactions !== undefined ? Boolean(selectedData.transactions) : true,
+  items: selectedData.items !== undefined ? Boolean(selectedData.items) : false,
+  accounts: selectedData.accounts !== undefined ? Boolean(selectedData.accounts) : false,
+  accountGroups: selectedData.accountGroups !== undefined ? Boolean(selectedData.accountGroups) : false,
+  syncSessions: selectedData.syncSessions !== undefined ? Boolean(selectedData.syncSessions) : false
+});
+
+const deleteSelectedData = async (selectedData) => {
+  try {
+    const deleteSelection = buildDeleteSelection(selectedData);
+    const selectedTypes = Object.entries(deleteSelection)
+      .filter(([, isSelected]) => isSelected)
+      .map(([key]) => key);
+
+    if (selectedTypes.length === 0) {
+      showNotification('Select at least one data type to delete.', 'error');
+      return;
+    }
+
+    loading.value.deleteSelectedData = true;
+    error.value.deleteSelectedData = null;
+    deleteStatus.value = 'Preparing deletion...';
+    deleteSummary.value = null;
+
+    const deletedTotals = {
+      items: 0,
+      transactions: 0,
+      accounts: 0,
+      accountGroups: 0,
+      syncSessions: 0
+    };
+
+    let batchRequests = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      if (batchRequests >= MAX_DELETE_BATCH_REQUESTS) {
+        throw new Error('Exceeded maximum batch requests while deleting data');
+      }
+
+      deleteStatus.value = `Deleting batch ${batchRequests + 1} for ${selectedTypes.join(', ')}...`;
+      const batchResponse = await api.post('plaid/delete/data', {
+        batchSize: DELETE_BATCH_SIZE,
+        includeItems: deleteSelection.items,
+        includeTransactions: deleteSelection.transactions,
+        includeAccounts: deleteSelection.accounts,
+        includeAccountGroups: deleteSelection.accountGroups,
+        includeSyncSessions: deleteSelection.syncSessions
+      });
+
+      const deletedThisBatch = batchResponse?.deleted || {};
+
+      deletedTotals.items += Number(deletedThisBatch.items || 0);
+      deletedTotals.transactions += Number(deletedThisBatch.transactions || 0);
+      deletedTotals.accounts += Number(deletedThisBatch.accounts || 0);
+      deletedTotals.accountGroups += Number(deletedThisBatch.accountGroups || 0);
+      deletedTotals.syncSessions += Number(deletedThisBatch.syncSessions || 0);
+
+      hasMore = Boolean(batchResponse?.hasMore);
+      batchRequests++;
+
+      const deletedCountThisBatch =
+        Number(deletedThisBatch.items || 0) +
+        Number(deletedThisBatch.transactions || 0) +
+        Number(deletedThisBatch.accounts || 0) +
+        Number(deletedThisBatch.accountGroups || 0) +
+        Number(deletedThisBatch.syncSessions || 0);
+
+      if (hasMore && deletedCountThisBatch === 0) {
+        throw new Error('Deletion stalled. Please try again.');
+      }
+
+      deleteStatus.value = `Deleted ${batchRequests} batches (${deletedTotals.items} items, ${deletedTotals.transactions} transactions, ${deletedTotals.accounts} accounts, ${deletedTotals.accountGroups} groups, ${deletedTotals.syncSessions} sync sessions)...`;
+    }
+
+    await fetchBanks();
+    deleteSummary.value = {
+      completedAt: new Date().toISOString(),
+      selectedTypes,
+      deleted: { ...deletedTotals },
+      batches: batchRequests
+    };
+    showNotification(
+      `Deleted data successfully: ${deletedTotals.transactions} transactions, ${deletedTotals.items} items, ${deletedTotals.accounts} accounts, ${deletedTotals.accountGroups} groups, ${deletedTotals.syncSessions} sync sessions.`
+    );
+  } catch (err) {
+    console.error('Error deleting selected Plaid data:', err);
+    error.value.deleteSelectedData = err.message || 'Failed to delete selected data';
+    showNotification(`Error deleting data: ${error.value.deleteSelectedData}`, 'error');
+  } finally {
+    loading.value.deleteSelectedData = false;
+    deleteStatus.value = '';
+  }
+};
+
+const resetCursor = async (bank) => {
+  if (!bank?.itemId) {
+    return;
+  }
+
+  try {
+    loading.value.resetCursor = true;
+    error.value.resetCursor = null;
+
+    await api.post(`plaid/items/${bank.itemId}/reset-cursor`);
+    await fetchBanks();
+
+    showNotification('Cursor reset successfully. Next sync will start from an empty cursor.');
+  } catch (err) {
+    console.error('Error resetting item cursor:', err);
+    error.value.resetCursor = err.message || 'Failed to reset cursor';
+    showNotification(`Error resetting cursor: ${error.value.resetCursor}`, 'error');
+  } finally {
+    loading.value.resetCursor = false;
   }
 };
 

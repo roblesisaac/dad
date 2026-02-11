@@ -249,6 +249,33 @@ class ItemService extends PlaidBaseService {
   }
 
   /**
+   * Resets a Plaid item's sync cursor to an empty string
+   * @param {string} itemId - Item ID
+   * @param {string} userId - User ID
+   * @returns {Promise<Object>} Updated item
+   */
+  async resetItemCursor(itemId, userId) {
+    try {
+      if (!itemId || !userId) {
+        throw new Error('INVALID_PARAMS: Missing itemId or userId');
+      }
+
+      const currentItem = await this.getItem(itemId, userId);
+
+      if (!currentItem) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item to reset cursor');
+      }
+
+      await this.updateItemSyncStatus(itemId, userId, { cursor: '' });
+
+      return await this.getItem(itemId, userId);
+    } catch (error) {
+      console.error('Error resetting item cursor:', error);
+      throw new Error(`ITEM_CURSOR_RESET_ERROR: ${error.message}`);
+    }
+  }
+
+  /**
    * Deletes a Plaid item and its associated data
    * @param {string} itemId - Item ID (Plaid item_id)
    * @param {string} userId - User ID

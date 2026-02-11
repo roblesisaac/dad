@@ -19,11 +19,6 @@
             Track Every <br class="hidden lg:block" />
             <span class="text-transparent bg-clip-text bg-gradient-to-br from-black to-gray-600">Penny.</span>
           </h1>
-          
-          <p class="text-xl md:text-2xl text-gray-600 font-medium max-w-xl mx-auto lg:mx-0 leading-relaxed">
-            Minimalist finance tracking for the modern age. 
-            No clutter, no ads, just clarity.
-          </p>
 
           <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-4">
             <button 
