@@ -203,6 +203,16 @@
           </button>
 
           <button
+            @click="encryptAccessToken"
+            class="w-full flex items-center justify-center px-4 py-2 border-2 border-indigo-700 shadow-[4px_4px_0px_0px_rgba(67,56,202,1)] font-bold rounded-none text-indigo-800 bg-white hover:bg-indigo-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(67,56,202,1)] transition-all uppercase tracking-wide"
+            :disabled="isEncrypting || !bank?.itemId"
+          >
+            <Loader v-if="isEncrypting" class="h-4 w-4 mr-2 animate-spin" />
+            <Lock v-else class="h-4 w-4 mr-2" />
+            {{ isEncrypting ? 'ENCRYPTING TOKEN...' : 'ONE-TIME TOKEN ENCRYPTION FIX' }}
+          </button>
+
+          <button
             @click="togglePlaidItemJson"
             class="w-full flex items-center justify-center px-4 py-2 border-2 border-emerald-700 shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] font-bold rounded-none text-emerald-800 bg-white hover:bg-emerald-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(4,120,87,1)] transition-all uppercase tracking-wide"
           >
@@ -241,7 +251,7 @@
 <script setup>
 import { ref, watch, computed, onUnmounted } from 'vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { RefreshCcw, AlertCircle, Loader, Download, Trash2 } from 'lucide-vue-next';
+import { RefreshCcw, AlertCircle, Loader, Download, Trash2, Lock } from 'lucide-vue-next';
 
 const props = defineProps({
   isOpen: {
@@ -280,6 +290,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  isEncrypting: {
+    type: Boolean,
+    default: false
+  },
   downloadSummary: {
     type: Object,
     default: null
@@ -290,7 +304,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'reset-cursor']);
+const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'reset-cursor', 'encrypt-access-token']);
 
 const bankName = ref('');
 const showDownloadOptions = ref(false);
@@ -429,6 +443,14 @@ const resetCursor = () => {
 
   clearResetCursorConfirmation();
   emit('reset-cursor', props.bank);
+};
+
+const encryptAccessToken = () => {
+  if (!props.bank?.itemId || props.isEncrypting) {
+    return;
+  }
+
+  emit('encrypt-access-token', props.bank);
 };
 
 const togglePlaidItemJson = () => {

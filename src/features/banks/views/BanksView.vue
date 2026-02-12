@@ -42,6 +42,7 @@
       :bank="bankToEdit"
       :is-saving="loading.editBankName"
       :is-reconnecting="loading.reconnectBank"
+      :is-encrypting="loading.encryptAccessToken"
       :is-downloading="loading.downloadAllData"
       :download-status="downloadStatus"
       :is-deleting="loading.deleteSelectedData"
@@ -52,6 +53,7 @@
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="reconnectBank"
+      @encrypt-access-token="encryptBankAccessToken"
       @download-all-data="downloadAllData"
       @delete-selected-data="deleteSelectedData"
       @reset-cursor="resetCursor"
@@ -130,6 +132,7 @@ const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.j
 loading.value = {
   ...loading.value,
   reconnectBank: false,
+  encryptAccessToken: false,
   downloadAllData: false,
   deleteSelectedData: false,
   resetCursor: false
@@ -139,6 +142,7 @@ loading.value = {
 error.value = {
   ...error.value,
   reconnectBank: null,
+  encryptAccessToken: null,
   downloadAllData: null,
   deleteSelectedData: null,
   resetCursor: null
@@ -281,6 +285,33 @@ const reconnectBank = async (bank) => {
     error.value.reconnectBank = err.message || 'Failed to reconnect bank';
     showNotification(`Error reconnecting bank: ${error.value.reconnectBank}`, 'error');
     loading.value.reconnectBank = false;
+  }
+};
+
+const encryptBankAccessToken = async (bank) => {
+  if (!bank?.itemId) {
+    return;
+  }
+
+  try {
+    loading.value.encryptAccessToken = true;
+    error.value.encryptAccessToken = null;
+
+    const response = await api.post(`plaid/items/${bank.itemId}/encrypt-access-token`);
+    await fetchBanks();
+
+    if (response?.alreadyEncrypted) {
+      showNotification('Access token was already encrypted. No changes were needed.');
+      return;
+    }
+
+    showNotification('Access token encryption fix completed successfully.');
+  } catch (err) {
+    console.error('Error encrypting bank access token:', err);
+    error.value.encryptAccessToken = err.message || 'Failed to encrypt access token';
+    showNotification(`Error encrypting access token: ${error.value.encryptAccessToken}`, 'error');
+  } finally {
+    loading.value.encryptAccessToken = false;
   }
 };
 

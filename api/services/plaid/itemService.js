@@ -271,6 +271,69 @@ class ItemService extends PlaidBaseService {
     }
   }
 
+  async encryptItemAccessTokenIfNeeded(itemId, user) {
+    try {
+      if (!itemId || !user?._id) {
+        throw new Error('INVALID_PARAMS: Missing itemId or user');
+      }
+
+      const item = await this.getItem(itemId, user._id);
+
+      if (!item) {
+        throw new Error('ITEM_NOT_FOUND: Could not find item');
+      }
+
+      if (!item.accessToken) {
+        throw new Error('TOKEN_MISSING: Item has no access token to encrypt');
+      }
+
+      try {
+        this.decryptAccessToken(item, user);
+        return {
+          itemId,
+          updated: false,
+          alreadyEncrypted: true
+        };
+      } catch {
+        // Continue into repair flow when decrypt fails.
+      }
+
+      let rawAccessToken = item.accessToken;
+
+      try {
+        const maybeRawToken = decrypt(item.accessToken);
+        if (typeof maybeRawToken === 'string' && maybeRawToken) {
+          rawAccessToken = maybeRawToken;
+        }
+      } catch {
+        // The token may already be plain text; keep original value.
+      }
+
+      if (!String(rawAccessToken).startsWith('access-')) {
+        throw new Error('TOKEN_FORMAT_ERROR: Could not determine raw access token format');
+      }
+
+      const encryptedAccessToken = this.encryptAccessToken(rawAccessToken, user);
+
+      // Validate before persisting to avoid writing an unusable value.
+      this.decryptAccessToken({ accessToken: encryptedAccessToken }, user);
+
+      await plaidItems.update(
+        { itemId, userId: user._id },
+        { accessToken: encryptedAccessToken }
+      );
+
+      return {
+        itemId,
+        updated: true,
+        alreadyEncrypted: false
+      };
+    } catch (error) {
+      console.error('Error encrypting item access token:', error);
+      throw new Error(`TOKEN_ENCRYPTION_ERROR: ${error.message}`);
+    }
+  }
+
   /**
    * Resets a Plaid item's sync cursor metadata
    * - syncData.cursor

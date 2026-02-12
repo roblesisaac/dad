@@ -198,5 +198,28 @@ export default {
         message: errorMessage
       });
     }
+  },
+
+  async encryptItemAccessToken(req, res) {
+    try {
+      const { _id: itemId } = req.params;
+
+      if (!itemId) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Item ID is required'
+        });
+      }
+
+      const result = await itemService.encryptItemAccessTokenIfNeeded(itemId, req.user);
+      res.status(200).json(result);
+    } catch (error) {
+      const [errorCode = 'TOKEN_ENCRYPTION_ERROR', errorMessage = error.message] = error.message.split(': ');
+
+      res.status(400).json({
+        error: errorCode,
+        message: errorMessage
+      });
+    }
   }
 };
