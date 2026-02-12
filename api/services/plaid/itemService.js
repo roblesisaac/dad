@@ -1,9 +1,31 @@
 import PlaidBaseService from './baseService.js';
 import plaidItems from '../../models/plaidItems.js';
-import { decrypt, decryptWithKey } from '../../utils/encryption.js';
+import { decrypt, decryptWithKey, encrypt, encryptWithKey } from '../../utils/encryption.js';
 import { CustomError } from './customError.js';
 
 class ItemService extends PlaidBaseService {
+  encryptAccessToken(accessToken, user) {
+    const { encryptedKey } = user || {};
+
+    if (!accessToken || !encryptedKey) {
+      throw new Error('ENCRYPT_ERROR: Missing required encryption data');
+    }
+
+    try {
+      const encryptionKey = decrypt(encryptedKey, 'buffer');
+      const userEncryptedToken = encryptWithKey(accessToken, encryptionKey);
+      const encryptedToken = encrypt(userEncryptedToken);
+
+      if (!encryptedToken) {
+        throw new Error('Encrypted token was empty');
+      }
+
+      return encryptedToken;
+    } catch (error) {
+      throw new Error(`ENCRYPT_ERROR: Failed to encrypt access token - ${error.message}`);
+    }
+  }
+
   decryptAccessToken(item, user) {
     const dblEncryptedAccessToken = item.accessToken;
     const { encryptedKey } = user;
@@ -140,9 +162,10 @@ class ItemService extends PlaidBaseService {
 
       let savedItem;
       if (existingItem) {
+        const encryptedAccessToken = this.encryptAccessToken(access_token, user);
         savedItem = await plaidItems.update(
           { itemId: item_id, userId: user._id },
-          itemData
+          { accessToken: encryptedAccessToken }
         );
       } else {
         savedItem = await plaidItems.save(itemData);
