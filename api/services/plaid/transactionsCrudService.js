@@ -50,8 +50,8 @@ class TransactionQueryService extends PlaidBaseService {
         delete query[key];
       });
 
-      // Execute the query
-      const res = await plaidTransactions.find(formattedQuery);
+      // Execute the query across all pages
+      const res = await plaidTransactions.findAll(formattedQuery);
       return Array.isArray(res) ? res : (res.items || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
