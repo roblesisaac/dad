@@ -3,6 +3,7 @@ import itemService from '../../services/plaid/itemService.js';
 import accountService from '../../services/plaid/accountService.js';
 import dataExportService from '../../services/plaid/dataExportService.js';
 import dataDeletionService from '../../services/plaid/dataDeletionService.js';
+import itemDeletionService from '../../services/plaid/itemDeletionService.js';
 import scrub from '../../utils/scrub';
 
 function parseBooleanFlag(value, defaultValue = true) {
@@ -112,6 +113,41 @@ export default {
       });
       
       res.status(400).json({ 
+        error: errorCode,
+        message: errorMessage
+      });
+    }
+  },
+
+  async deleteItemAndRelatedData(req, res) {
+    try {
+      const { _id: itemId } = req.params;
+
+      if (!itemId) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Item ID is required'
+        });
+      }
+
+      const payload = req.body || {};
+      const revokeAtPlaid = parseBooleanFlag(
+        payload.revokeAtPlaid ?? req.query.revokeAtPlaid,
+        true
+      );
+
+      const deletionResult = await itemDeletionService.deleteItemAndRelatedData({
+        itemId,
+        user: req.user,
+        revokeAtPlaid,
+        batchSize: payload.batchSize ?? req.query.batchSize
+      });
+
+      res.status(200).json(deletionResult);
+    } catch (error) {
+      const [errorCode = 'ITEM_DELETE_ERROR', errorMessage = error.message] = error.message.split(': ');
+
+      res.status(400).json({
         error: errorCode,
         message: errorMessage
       });

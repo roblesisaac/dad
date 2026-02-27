@@ -7,7 +7,10 @@
     @close="$emit('close')"
   >
     <template #content>
-      <BanksView @connect-bank-complete="$emit('connect-bank-complete')" />
+      <BanksView
+        @connect-bank-complete="$emit('connect-bank-complete')"
+        @banks-data-changed="$emit('banks-data-changed', $event)"
+      />
     </template>
   </BaseModal>
 </template>
@@ -23,5 +26,5 @@ defineProps({
   }
 });
 
-defineEmits(['close', 'connect-bank-complete']);
-</script> 
+defineEmits(['close', 'connect-bank-complete', 'banks-data-changed']);
+</script>

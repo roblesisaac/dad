@@ -47,15 +47,19 @@
       :download-status="downloadStatus"
       :is-deleting="loading.deleteSelectedData"
       :delete-status="deleteStatus"
+      :is-deleting-bank="loading.deleteBank"
+      :delete-bank-status="deleteBankStatus"
       :is-resetting="loading.resetCursor"
       :download-summary="downloadSummary"
       :delete-summary="deleteSummary"
+      :delete-bank-summary="deleteBankSummary"
       @close="closeEditBankNameModal"
       @save="saveBankName"
       @reconnect="reconnectBank"
       @encrypt-access-token="encryptBankAccessToken"
       @download-all-data="downloadAllData"
       @delete-selected-data="deleteSelectedData"
+      @delete-bank="deleteBank"
       @reset-cursor="resetCursor"
     />
     
@@ -92,7 +96,7 @@ import SyncSessionsModal from '../components/SyncSessionsModal.vue';
 import EditBankNameModal from '../components/EditBankNameModal.vue';
 import { CheckCircle, AlertCircle } from 'lucide-vue-next';
 
-const emit = defineEmits(['connect-bank-complete']);
+const emit = defineEmits(['connect-bank-complete', 'banks-data-changed']);
 const api = useApi();
 
 // Setup composable
@@ -122,8 +126,10 @@ const isEditBankNameModalOpen = ref(false);
 const bankToEdit = ref(null);
 const downloadStatus = ref('');
 const deleteStatus = ref('');
+const deleteBankStatus = ref('');
 const downloadSummary = ref(null);
 const deleteSummary = ref(null);
+const deleteBankSummary = ref(null);
 let reconnectPlaidHandler = null;
 
 const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
@@ -135,6 +141,7 @@ loading.value = {
   encryptAccessToken: false,
   downloadAllData: false,
   deleteSelectedData: false,
+  deleteBank: false,
   resetCursor: false
 };
 
@@ -145,6 +152,7 @@ error.value = {
   encryptAccessToken: null,
   downloadAllData: null,
   deleteSelectedData: null,
+  deleteBank: null,
   resetCursor: null
 };
 
@@ -589,6 +597,55 @@ const deleteSelectedData = async (selectedData) => {
   } finally {
     loading.value.deleteSelectedData = false;
     deleteStatus.value = '';
+  }
+};
+
+const deleteBank = async (bank) => {
+  if (!bank?.itemId) {
+    return;
+  }
+
+  try {
+    loading.value.deleteBank = true;
+    error.value.deleteBank = null;
+    deleteBankStatus.value = 'Deleting connected bank and related data...';
+    deleteBankSummary.value = null;
+
+    const response = await api.delete(`plaid/items/${bank.itemId}`, {
+      revokeAtPlaid: true
+    });
+
+    await fetchBanks();
+
+    if (selectedBank.value?.itemId === bank.itemId) {
+      selectedBank.value = null;
+    }
+
+    deleteBankSummary.value = {
+      ...response,
+      completedAt: new Date().toISOString()
+    };
+
+    closeEditBankNameModal();
+    emit('banks-data-changed', response);
+
+    if (response?.deleted === false && response?.reason === 'not_found') {
+      showNotification('This bank was already removed.');
+      return;
+    }
+
+    const counts = response?.counts || {};
+    const warningsCount = Array.isArray(response?.warnings) ? response.warnings.length : 0;
+    showNotification(
+      `Bank deleted: ${counts.transactions || 0} transactions, ${counts.accounts || 0} accounts, ${counts.syncSessions || 0} sync sessions, ${counts.groupsUpdated || 0} groups updated, ${counts.groupsDeleted || 0} groups deleted${warningsCount ? ` (${warningsCount} warnings)` : ''}.`
+    );
+  } catch (err) {
+    console.error('Error deleting connected bank:', err);
+    error.value.deleteBank = err.message || 'Failed to delete connected bank';
+    showNotification(`Error deleting connected bank: ${error.value.deleteBank}`, 'error');
+  } finally {
+    loading.value.deleteBank = false;
+    deleteBankStatus.value = '';
   }
 };
 

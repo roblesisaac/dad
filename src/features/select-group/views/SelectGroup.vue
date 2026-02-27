@@ -141,6 +141,7 @@
       :is-open="showBanksModal"
       @close="showBanksModal = false"
       @connect-bank-complete="handleBankConnected"
+      @banks-data-changed="handleBanksDataChanged"
     />
     
     <!-- Sync Sessions Modal for direct bank sync when only one bank exists -->
@@ -186,7 +187,7 @@ const router = useRouter();
 const { state } = useDashboardState();
 const editingGroup = ref(null);
 const { Draggable, dragOptions } = useDraggable();
-const { createNewGroup, selectGroup } = useSelectGroup();
+const { createNewGroup, selectGroup, fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
 
 // Collapsible sections state
 const showCustomGroups = ref(true);
@@ -299,6 +300,38 @@ const handleBankConnected = async () => {
     showBanksModal.value = false;
   } catch (error) {
     console.error('Error refreshing data after bank connection:', error);
+  }
+};
+
+const handleBanksDataChanged = async () => {
+  try {
+    const { groups, accounts, itemsNeedingReauth } = await fetchGroupsAndAccounts();
+
+    state.itemsNeedingReauth = itemsNeedingReauth || [];
+    state.allUserGroups = (groups || []).sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+    state.allUserAccounts = accounts || [];
+    setGroupsAndAccounts();
+
+    if (!state.allUserGroups.length || !state.allUserAccounts.length) {
+      showBanksModal.value = false;
+      emit('close');
+      router.push({ name: 'onboarding' });
+      return;
+    }
+
+    const selectedGroupId = state.selected.group?._id;
+    const selectedStillExists = Boolean(
+      selectedGroupId && state.allUserGroups.some(group => group._id === selectedGroupId)
+    );
+
+    if (!selectedStillExists) {
+      await selectGroup(state.allUserGroups[0]);
+      return;
+    }
+
+    await handleGroupChange();
+  } catch (error) {
+    console.error('Error refreshing groups and accounts after bank data change:', error);
   }
 };
 

@@ -13,6 +13,7 @@ export default function(api, baseUrl) {
 
   // Items and Accounts
   member.get('/plaid/items/:_id?', itemController.getUserItems);
+  member.delete('/plaid/items/:_id', itemController.deleteItemAndRelatedData);
   member.put('/plaid/items/:_id', itemController.updateItem);
   member.post('/plaid/items/:_id/encrypt-access-token', itemController.encryptItemAccessToken);
   member.post('/plaid/items/:_id/reset-cursor', itemController.resetItemCursor);

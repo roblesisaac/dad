@@ -5,7 +5,7 @@
     @close="$emit('close')"
   >
     <template #header>
-      <h3 class="text-lg font-bold text-black uppercase tracking-wider border-b-2 border-black pb-2">{{ modalTitle }}</h3>
+      <h3 class="text-lg font-medium text-gray-900 border-b border-gray-200 pb-2">{{ modalTitle }}</h3>
     </template>
 
     <template #content>
@@ -16,18 +16,18 @@
             type="text" 
             id="bank-name" 
             v-model="bankName" 
-            class="w-full px-3 py-2 border-2 border-black rounded-none shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] focus:outline-none focus:ring-1 focus:ring-black focus:border-black font-mono"
-            placeholder="ENTER BANK NAME"
+            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            placeholder="Enter bank name"
           />
         </div>
         
         <!-- Bank status info -->
-        <div v-if="bank && bank.status === 'error'" class="my-4 p-4 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-          <p class="text-black font-bold text-sm mb-2 uppercase flex items-center">
+        <div v-if="bank && bank.status === 'error'" class="my-4 p-4 bg-red-50 border border-red-200 rounded-md">
+          <p class="text-red-800 font-medium text-sm mb-2 flex items-center">
             <AlertCircle class="h-4 w-4 mr-2" />
             Connection Update Required
           </p>
-          <p class="text-sm text-black font-mono">
+          <p class="text-sm text-red-700">
             Your login credentials might have changed or additional authentication may be required.
           </p>
         </div>
@@ -36,39 +36,39 @@
           <!-- Save name button -->
           <button 
             @click="saveBankName" 
-            class="w-full px-4 py-2 border-2 border-black rounded-none text-white bg-black hover:bg-gray-800 focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all uppercase font-bold tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-black hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-black transition-colors"
             :disabled="!bankName.trim() || isSaving"
           >
-            {{ isSaving ? 'SAVING...' : 'SAVE NAME' }}
+            {{ isSaving ? 'Saving...' : 'Save Name' }}
           </button>
           
           <!-- Reconnect bank button -->
           <button 
             @click="reconnectBank" 
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold rounded-none text-black bg-white hover:bg-gray-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isReconnecting"
           >
             <RefreshCcw v-if="!isReconnecting" class="h-4 w-4 mr-2" />
             <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
-            {{ isReconnecting ? 'RECONNECTING...' : 'RECONNECT BANK' }}
+            {{ isReconnecting ? 'Reconnecting...' : 'Reconnect Bank' }}
           </button>
 
           <!-- Download all data button -->
           <button
             @click="toggleDownloadOptions"
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold rounded-none text-black bg-white hover:bg-gray-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isDownloading"
           >
             <Download v-if="!isDownloading" class="h-4 w-4 mr-2" />
             <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
-            {{ isDownloading ? 'DOWNLOADING...' : (showDownloadOptions ? 'HIDE DOWNLOAD OPTIONS' : 'DOWNLOAD DATA') }}
+            {{ isDownloading ? 'Downloading...' : (showDownloadOptions ? 'Hide Download Options' : 'Download Data') }}
           </button>
 
           <div
             v-if="showDownloadOptions"
-            class="w-full p-3 border-2 border-black rounded-none bg-white text-sm text-black font-mono shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            class="w-full p-3 border border-gray-200 rounded-md bg-white text-sm text-gray-700"
           >
-            <p class="font-bold uppercase mb-2">Select data to download</p>
+            <p class="font-medium mb-2 text-gray-900">Select data to download</p>
             <label class="flex items-center mb-2">
               <input v-model="downloadSelection.transactions" type="checkbox" class="mr-2" :disabled="isDownloading">
               Transactions
@@ -91,25 +91,25 @@
             </label>
             <button
               @click="downloadAllData"
-              class="w-full px-4 py-2 border-2 border-black rounded-none text-white bg-black hover:bg-gray-800 focus:outline-none disabled:bg-gray-500 uppercase font-bold tracking-wide"
+              class="w-full px-4 py-2 border-2 border-black rounded-none text-white bg-black hover:bg-gray-800 focus:outline-none disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
               :disabled="isDownloading || !hasSelectedDownloadType"
             >
-              {{ isDownloading ? 'DOWNLOADING...' : 'DOWNLOAD SELECTED DATA' }}
+              {{ isDownloading ? 'Downloading...' : 'Download Selected Data' }}
             </button>
           </div>
 
           <div
             v-if="isDownloading && downloadStatus"
-            class="w-full px-3 py-2 border-2 border-black rounded-none bg-white text-sm text-black font-mono shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            class="w-full px-3 py-2 border border-gray-200 rounded-md bg-white text-sm text-gray-700"
           >
             {{ downloadStatus }}
           </div>
 
           <div
             v-if="downloadSummary"
-            class="w-full p-3 border-2 border-black rounded-none bg-gray-50 text-sm text-black font-mono shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+            class="w-full p-3 border border-gray-200 rounded-md bg-gray-50 text-sm text-gray-700"
           >
-            <p class="font-bold uppercase mb-2">Last Download Summary</p>
+            <p class="font-medium mb-2 text-gray-900">Last Download Summary</p>
             <p class="mb-1">Completed: {{ formatSummaryTime(downloadSummary.completedAt) }}</p>
             <p class="mb-1">Batches: {{ downloadSummary.batches }}</p>
             <p v-if="downloadSummary.fileName" class="mb-1">File: {{ downloadSummary.fileName }}</p>
@@ -123,19 +123,19 @@
 
           <button
             @click="toggleDeleteOptions"
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-red-600 shadow-[4px_4px_0px_0px_rgba(220,38,38,1)] font-bold rounded-none text-red-700 bg-white hover:bg-red-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(220,38,38,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
             :disabled="isDeleting"
           >
             <Trash2 v-if="!isDeleting" class="h-4 w-4 mr-2" />
             <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
-            {{ isDeleting ? 'DELETING...' : (showDeleteOptions ? 'HIDE DELETE OPTIONS' : 'DELETE DATA') }}
+            {{ isDeleting ? 'Deleting...' : (showDeleteOptions ? 'Hide Delete Options' : 'Delete Data') }}
           </button>
 
           <div
             v-if="showDeleteOptions"
-            class="w-full p-3 border-2 border-red-600 rounded-none bg-white text-sm text-black font-mono shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]"
+            class="w-full p-3 border border-red-200 rounded-md bg-white text-sm text-gray-700"
           >
-            <p class="font-bold uppercase mb-2 text-red-700">Select data to delete</p>
+            <p class="font-medium mb-2 text-gray-900 text-red-700">Select data to delete</p>
             <p class="mb-2 text-xs text-red-600">This action is destructive and cannot be undone.</p>
             <label class="flex items-center mb-2">
               <input v-model="deleteSelection.transactions" type="checkbox" class="mr-2" :disabled="isDeleting">
@@ -159,25 +159,25 @@
             </label>
             <button
               @click="deleteSelectedData"
-              class="w-full px-4 py-2 border-2 border-red-700 rounded-none text-white bg-red-700 hover:bg-red-800 focus:outline-none disabled:bg-red-300 uppercase font-bold tracking-wide"
+              class="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               :disabled="isDeleting || !hasSelectedDeleteType"
             >
-              {{ isDeleting ? 'DELETING...' : 'DELETE SELECTED DATA' }}
+              {{ isDeleting ? 'Deleting...' : 'Delete Selected Data' }}
             </button>
           </div>
 
           <div
             v-if="isDeleting && deleteStatus"
-            class="w-full px-3 py-2 border-2 border-red-600 rounded-none bg-white text-sm text-red-700 font-mono shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]"
+            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
           >
             {{ deleteStatus }}
           </div>
 
           <div
             v-if="deleteSummary"
-            class="w-full p-3 border-2 border-red-600 rounded-none bg-red-50 text-sm text-red-700 font-mono shadow-[2px_2px_0px_0px_rgba(220,38,38,1)]"
+            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
           >
-            <p class="font-bold uppercase mb-2">Last Delete Summary</p>
+            <p class="font-medium mb-2 text-gray-900">Last Delete Summary</p>
             <p class="mb-1">Completed: {{ formatSummaryTime(deleteSummary.completedAt) }}</p>
             <p class="mb-1">Batches: {{ deleteSummary.batches }}</p>
             <p class="mb-1">Selected: {{ (deleteSummary.selectedTypes || []).join(', ') }}</p>
@@ -189,41 +189,102 @@
           </div>
 
           <button
+            @click="toggleDeleteBankOptions"
+            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            :disabled="isDeletingBank || !bank?.itemId"
+          >
+            <Trash2 v-if="!isDeletingBank" class="h-4 w-4 mr-2" />
+            <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
+            {{ isDeletingBank ? 'Deleting Bank...' : (showDeleteBankOptions ? 'Hide Delete Bank' : 'Delete Connected Bank') }}
+          </button>
+
+          <div
+            v-if="showDeleteBankOptions"
+            class="w-full p-3 border border-red-200 rounded-md bg-white text-sm text-gray-700"
+          >
+            <p class="font-medium mb-2 text-gray-900 text-red-800">Delete This Connected Bank</p>
+            <p class="mb-2 text-xs text-red-700">
+              This removes this bank and its related item, accounts, transactions, sync sessions, and linked customizations.
+            </p>
+            <p class="mb-2 text-xs text-red-700">
+              Type <span class="font-bold">DELETE</span> to confirm.
+            </p>
+            <input
+              v-model="deleteBankConfirmation"
+              type="text"
+              class="w-full px-3 py-2 mb-3 border border-red-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 uppercase"
+              placeholder="TYPE DELETE"
+              :disabled="isDeletingBank"
+            >
+            <button
+              @click="deleteBank"
+              class="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              :disabled="isDeletingBank || !hasDeleteBankConfirmation"
+            >
+              {{ isDeletingBank ? 'Deleting Bank...' : 'Delete Connected Bank Now' }}
+            </button>
+          </div>
+
+          <div
+            v-if="isDeletingBank && deleteBankStatus"
+            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+          >
+            {{ deleteBankStatus }}
+          </div>
+
+          <div
+            v-if="deleteBankSummary"
+            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+          >
+            <p class="font-medium mb-2 text-gray-900">Last Delete Bank Summary</p>
+            <p class="mb-1">Completed: {{ formatSummaryTime(deleteBankSummary.completedAt) }}</p>
+            <p class="mb-1">Item: {{ deleteBankSummary.itemId || 'Unknown' }}</p>
+            <p class="mb-1">Plaid Revoke: {{ deleteBankSummary.plaidRevoke?.succeeded ? 'Succeeded' : (deleteBankSummary.plaidRevoke?.attempted ? 'Failed' : 'Skipped') }}</p>
+            <p class="mb-1">Transactions: {{ deleteBankSummary.counts?.transactions || 0 }}</p>
+            <p class="mb-1">Accounts: {{ deleteBankSummary.counts?.accounts || 0 }}</p>
+            <p class="mb-1">Sync Sessions: {{ deleteBankSummary.counts?.syncSessions || 0 }}</p>
+            <p class="mb-1">Customizations: {{ deleteBankSummary.counts?.customizations || 0 }}</p>
+            <p class="mb-1">Groups Updated: {{ deleteBankSummary.counts?.groupsUpdated || 0 }}</p>
+            <p class="mb-1">Groups Deleted: {{ deleteBankSummary.counts?.groupsDeleted || 0 }}</p>
+            <p>Warnings: {{ (deleteBankSummary.warnings || []).length }}</p>
+          </div>
+
+          <button
             @click="resetCursor"
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-amber-600 shadow-[4px_4px_0px_0px_rgba(217,119,6,1)] font-bold rounded-none text-amber-800 bg-white hover:bg-amber-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(217,119,6,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-amber-200 rounded-md shadow-sm text-sm font-medium text-amber-600 bg-white hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 transition-colors"
             :disabled="isResetting || !bank?.itemId"
           >
             <Loader v-if="isResetting" class="h-4 w-4 mr-2 animate-spin" />
             <RefreshCcw v-else class="h-4 w-4 mr-2" />
             {{
               isResetting
-                ? 'RESETTING CURSOR...'
-                : (isResetCursorConfirming ? 'CLICK AGAIN TO CONFIRM RESET CURSOR' : 'RESET CURSOR')
+                ? 'Resetting Cursor...'
+                : (isResetCursorConfirming ? 'Click again to confirm reset cursor' : 'Reset Cursor')
             }}
           </button>
 
           <button
             @click="encryptAccessToken"
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-indigo-700 shadow-[4px_4px_0px_0px_rgba(67,56,202,1)] font-bold rounded-none text-indigo-800 bg-white hover:bg-indigo-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(67,56,202,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-indigo-200 rounded-md shadow-sm text-sm font-medium text-indigo-600 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
             :disabled="isEncrypting || !bank?.itemId"
           >
             <Loader v-if="isEncrypting" class="h-4 w-4 mr-2 animate-spin" />
             <Lock v-else class="h-4 w-4 mr-2" />
-            {{ isEncrypting ? 'ENCRYPTING TOKEN...' : 'ONE-TIME TOKEN ENCRYPTION FIX' }}
+            {{ isEncrypting ? 'Encrypting Token...' : 'One-Time Token Encryption Fix' }}
           </button>
 
           <button
             @click="togglePlaidItemJson"
-            class="w-full flex items-center justify-center px-4 py-2 border-2 border-emerald-700 shadow-[4px_4px_0px_0px_rgba(4,120,87,1)] font-bold rounded-none text-emerald-800 bg-white hover:bg-emerald-50 focus:outline-none active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(4,120,87,1)] transition-all uppercase tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-emerald-200 rounded-md shadow-sm text-sm font-medium text-emerald-600 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
           >
-            {{ showPlaidItemJson ? 'HIDE PLAID ITEM JSON' : 'SHOW PLAID ITEM JSON' }}
+            {{ showPlaidItemJson ? 'Hide Plaid Item JSON' : 'Show Plaid Item JSON' }}
           </button>
 
           <div
             v-if="showPlaidItemJson"
-            class="w-full p-3 border-2 border-emerald-700 rounded-none bg-emerald-50 text-xs text-emerald-900 font-mono shadow-[2px_2px_0px_0px_rgba(4,120,87,1)] overflow-x-auto"
+            class="w-full p-3 border border-emerald-200 rounded-md bg-emerald-50 text-xs text-emerald-900 overflow-x-auto"
           >
-            <p class="font-bold uppercase mb-2 text-sm">Plaid Item JSON</p>
+            <p class="font-medium mb-2 text-gray-900 text-sm">Plaid Item JSON</p>
             <pre class="whitespace-pre-wrap break-words">{{ plaidItemJson }}</pre>
           </div>
           
@@ -238,7 +299,7 @@
           <!-- Cancel button -->
           <button 
             @click="$emit('close')" 
-            class="w-full px-4 py-2 border-2 border-black rounded-none text-black bg-white hover:bg-gray-50 focus:outline-none shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all uppercase font-bold tracking-wide"
+            class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
           >
             CANCEL
           </button>
@@ -282,7 +343,15 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  isDeletingBank: {
+    type: Boolean,
+    default: false
+  },
   deleteStatus: {
+    type: String,
+    default: ''
+  },
+  deleteBankStatus: {
     type: String,
     default: ''
   },
@@ -301,10 +370,14 @@ const props = defineProps({
   deleteSummary: {
     type: Object,
     default: null
+  },
+  deleteBankSummary: {
+    type: Object,
+    default: null
   }
 });
 
-const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'reset-cursor', 'encrypt-access-token']);
+const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'delete-bank', 'reset-cursor', 'encrypt-access-token']);
 
 const bankName = ref('');
 const showDownloadOptions = ref(false);
@@ -323,6 +396,8 @@ const deleteSelection = ref({
   accountGroups: false,
   syncSessions: false
 });
+const showDeleteBankOptions = ref(false);
+const deleteBankConfirmation = ref('');
 const showPlaidItemJson = ref(false);
 const isResetCursorConfirming = ref(false);
 let resetCursorConfirmTimeout = null;
@@ -338,6 +413,7 @@ const hasSelectedDownloadType = computed(() => {
 const hasSelectedDeleteType = computed(() => {
   return Object.values(deleteSelection.value).some(Boolean);
 });
+const hasDeleteBankConfirmation = computed(() => deleteBankConfirmation.value === 'DELETE');
 const plaidItemJson = computed(() => {
   const currentItem = { ...(props.bank || {}) };
   delete currentItem.accessToken;
@@ -385,6 +461,8 @@ watch(() => props.isOpen, (isOpen) => {
       accountGroups: false,
       syncSessions: false
     };
+    showDeleteBankOptions.value = false;
+    deleteBankConfirmation.value = '';
     showPlaidItemJson.value = false;
     clearResetCursorConfirmation();
   }
@@ -420,12 +498,24 @@ const toggleDeleteOptions = () => {
   showDeleteOptions.value = !showDeleteOptions.value;
 };
 
+const toggleDeleteBankOptions = () => {
+  showDeleteBankOptions.value = !showDeleteBankOptions.value;
+};
+
 const downloadAllData = () => {
   emit('download-all-data', { ...downloadSelection.value });
 };
 
 const deleteSelectedData = () => {
   emit('delete-selected-data', { ...deleteSelection.value });
+};
+
+const deleteBank = () => {
+  if (!props.bank?.itemId || !hasDeleteBankConfirmation.value || props.isDeletingBank) {
+    return;
+  }
+
+  emit('delete-bank', props.bank);
 };
 
 const resetCursor = () => {

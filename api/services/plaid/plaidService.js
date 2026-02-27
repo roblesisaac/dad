@@ -3,6 +3,21 @@ import itemService from './itemService.js';
 
 class PlaidService extends PlaidBaseService {
   /**
+   * Revoke a Plaid item access token at Plaid
+   * @param {string} access_token - Plaid access token
+   * @returns {Promise<Object>} Plaid API response
+   */
+  async removeItem(access_token) {
+    if (!access_token) {
+      throw new Error('INVALID_ACCESS_TOKEN: Missing access token');
+    }
+
+    return await this.handleResponse(
+      this.client.itemRemove({ access_token })
+    );
+  }
+
+  /**
    * Fetch accounts from Plaid
    * @param {Object} item - Item data
    * @param {Object} user - User data

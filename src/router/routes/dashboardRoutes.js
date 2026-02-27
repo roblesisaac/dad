@@ -31,5 +31,15 @@ export default [
       requiresAuth: true,
       title: 'Reconnect Your Bank'
     }
+  },
+  {
+    path: '/reports',
+    name: 'reports',
+    component: () => import('@/features/reports/views/Reports.vue'),
+    beforeEnter: authGuard,
+    meta: {
+      requiresAuth: true,
+      title: 'Reports'
+    }
   }
-]; 
+];
