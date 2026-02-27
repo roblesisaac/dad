@@ -117,12 +117,28 @@ export function useTabProcessing() {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
 
     for (const ruleConfig of tabRules) {
-      const [ruleType, itemPropName, ruleMethodName, criterion, categorizeAs] = ruleConfig.rule;
+      const rule = Array.isArray(ruleConfig.rule) ? ruleConfig.rule : [];
+      const [
+        ruleType,
+        itemPropName,
+        ruleMethodName,
+        criterion,
+        categorizeAs,
+        combinator,
+        andItemPropName,
+        andRuleMethodName,
+        andCriterion
+      ] = rule;
 
-      const ruleMethod = (item) => {
-        const itemValue = getItemValue(item, itemPropName);
-        return ruleMethods[ruleMethodName]?.(itemValue, criterion);
-      };
+      const ruleMethod = buildRuleMethod({
+        itemPropName,
+        ruleMethodName,
+        criterion,
+        combinator,
+        andItemPropName,
+        andRuleMethodName,
+        andCriterion
+      });
 
       const { orderOfExecution, _isImportant } = ruleConfig;
 
@@ -140,6 +156,7 @@ export function useTabProcessing() {
           method: ruleMethod,
           categorizeAs,
           itemPropName, ruleMethodName, criterion,
+          combinator, andItemPropName, andRuleMethodName, andCriterion,
           orderOfExecution,
           _isImportant
         });
@@ -160,6 +177,48 @@ export function useTabProcessing() {
       filters.sort((a, b) => a.orderOfExecution - b.orderOfExecution),
       propToGroupBy
     ];
+  }
+
+  function buildRuleMethod({
+    itemPropName,
+    ruleMethodName,
+    criterion,
+    combinator,
+    andItemPropName,
+    andRuleMethodName,
+    andCriterion
+  }) {
+    const firstCondition = buildConditionMethod(itemPropName, ruleMethodName, criterion);
+    const isAndRule = String(combinator || '').toLowerCase() === 'and';
+
+    if (!isAndRule) {
+      return firstCondition;
+    }
+
+    const secondCondition = buildConditionMethod(andItemPropName, andRuleMethodName, andCriterion);
+
+    if (!secondCondition) {
+      return firstCondition;
+    }
+
+    return (item) => firstCondition(item) && secondCondition(item);
+  }
+
+  function buildConditionMethod(itemPropName, ruleMethodName, criterion) {
+    return (item) => {
+      if (!itemPropName || !ruleMethodName) {
+        return false;
+      }
+
+      const itemValue = getItemValue(item, itemPropName);
+      const method = ruleMethods[ruleMethodName];
+
+      if (!method) {
+        return false;
+      }
+
+      return method(itemValue, criterion);
+    };
   }
 
   function getItemValue(item, propName) {

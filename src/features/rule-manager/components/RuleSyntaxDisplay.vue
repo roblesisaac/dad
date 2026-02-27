@@ -19,6 +19,12 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
+      <template v-if="hasAndCondition(rule)">
+        <span class="font-medium mx-1">AND</span>
+        <span class="rule-part mr-1">{{ formatPropName(rule.rule[6]) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(rule.rule[7]) }}</span>
+        <span class="rule-part">{{ rule.rule[8] }}</span>
+      </template>
     </template>
     
     <!-- Categorize Rules -->
@@ -29,6 +35,12 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
+      <template v-if="hasAndCondition(rule)">
+        <span class="font-medium mx-1">AND</span>
+        <span class="rule-part mr-1">{{ formatPropName(rule.rule[6]) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(rule.rule[7]) }}</span>
+        <span class="rule-part">{{ rule.rule[8] }}</span>
+      </template>
     </template>
     
     <!-- Group By Rules -->
@@ -100,6 +112,14 @@ function formatMethodName(methodName) {
   };
   
   return methodMap[methodName] || methodName;
+}
+
+function hasAndCondition(rule) {
+  const [,,,,, combinator, andProp, andMethod, andValue] = rule.rule || [];
+  const hasAndKeyword = String(combinator || '').toLowerCase() === 'and';
+  const hasSecondCondition = andProp && andMethod && String(andValue || '').trim();
+
+  return hasAndKeyword && hasSecondCondition;
 }
 </script>
 

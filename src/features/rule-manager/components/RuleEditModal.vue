@@ -106,6 +106,72 @@
                 :placeholder="getCriterionPlaceholder()"
               />
             </div>
+
+            <!-- Optional AND condition for filter/categorize -->
+            <div v-if="supportsAndCondition" class="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3">
+              <div class="mb-3 flex items-center justify-between">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700">Add AND condition</label>
+                  <p class="text-xs text-gray-500">Both conditions must match</p>
+                </div>
+                <input
+                  v-model="useAndCondition"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </div>
+
+              <div v-if="useAndCondition" class="space-y-3">
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">
+                    AND Property
+                  </label>
+                  <select
+                    v-model="ruleData.rule[6]"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option value="amount">Amount</option>
+                    <option value="date">Date</option>
+                    <option value="name">Name</option>
+                    <option value="category">Category</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">
+                    AND Condition
+                  </label>
+                  <select
+                    v-model="ruleData.rule[7]"
+                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  >
+                    <option v-if="isNumericProperty(ruleData.rule[6])" value=">">is greater than</option>
+                    <option v-if="isNumericProperty(ruleData.rule[6])" value=">=">is greater than or equal to</option>
+                    <option v-if="isNumericProperty(ruleData.rule[6])" value="<">is less than</option>
+                    <option v-if="isNumericProperty(ruleData.rule[6])" value="<=">is less than or equal to</option>
+                    <option value="=">equals</option>
+                    <option value="is not">is not</option>
+                    <option v-if="isTextProperty(ruleData.rule[6])" value="contains">contains</option>
+                    <option v-if="isTextProperty(ruleData.rule[6])" value="startsWith">starts with</option>
+                    <option v-if="isTextProperty(ruleData.rule[6])" value="endsWith">ends with</option>
+                    <option v-if="isTextProperty(ruleData.rule[6])" value="includes">includes</option>
+                    <option v-if="isTextProperty(ruleData.rule[6])" value="excludes">excludes</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label class="mb-1 block text-sm font-medium text-gray-700">
+                    AND Value
+                  </label>
+                  <input
+                    v-model="ruleData.rule[8]"
+                    type="text"
+                    class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                    :placeholder="getCriterionPlaceholderForProperty(ruleData.rule[6])"
+                  />
+                </div>
+              </div>
+            </div>
             
             <!-- Category Name (only for categorize rules) -->
             <div v-if="ruleData.rule[0] === 'categorize'" class="mb-4">
@@ -238,6 +304,25 @@ const isGlobalRule = computed({
   }
 });
 
+const supportsAndCondition = computed(() =>
+  ['filter', 'categorize'].includes(ruleData.value.rule[0])
+);
+
+const useAndCondition = computed({
+  get: () => String(ruleData.value.rule[5] || '').toLowerCase() === 'and',
+  set: (value) => {
+    if (!value) {
+      clearAndCondition();
+      return;
+    }
+
+    ruleData.value.rule[5] = 'and';
+    ruleData.value.rule[6] = ruleData.value.rule[6] || ruleData.value.rule[1] || '';
+    ruleData.value.rule[7] = ruleData.value.rule[7] || ruleData.value.rule[2] || '';
+    ruleData.value.rule[8] = ruleData.value.rule[8] || '';
+  }
+});
+
 // Set default values when creating a new rule
 if (props.isNew) {
   // Nothing to do here now
@@ -254,6 +339,7 @@ function updateRuleType() {
   ruleData.value.rule[1] = '';
   ruleData.value.rule[2] = '';
   ruleData.value.rule[3] = '';
+  clearAndCondition();
   
   if (ruleData.value.rule[0] === 'categorize') {
     ruleData.value.rule[4] = '';
@@ -315,12 +401,15 @@ function getCriterionLabel() {
 // Get placeholder text for criterion field
 function getCriterionPlaceholder() {
   const ruleType = ruleData.value.rule[0];
-  const propType = ruleData.value.rule[1];
   
   if (ruleType === 'sort') {
     return 'Leave empty for default';
   }
-  
+
+  return getCriterionPlaceholderForProperty(ruleData.value.rule[1]);
+}
+
+function getCriterionPlaceholderForProperty(propType) {
   if (propType === 'amount') {
     return 'Enter numeric value';
   } else if (propType === 'date') {
@@ -346,6 +435,8 @@ function saveRule() {
   if (!validateRule()) {
     return;
   }
+
+  normalizeAndCondition();
   
   // If not a global rule, ensure current tab ID is in applyForTabs
   if (!isGlobalRule.value) {
@@ -379,7 +470,31 @@ function validateRule() {
     alert('Please select a comparison method');
     return false;
   }
+
+  if (useAndCondition.value) {
+    const andRuleHasAllFields = rule[6] && rule[7] && String(rule[8] || '').trim();
+    if (!andRuleHasAllFields) {
+      alert('Please complete all AND condition fields');
+      return false;
+    }
+  }
   
   return true;
+}
+
+function normalizeAndCondition() {
+  if (supportsAndCondition.value && useAndCondition.value) {
+    ruleData.value.rule[5] = 'and';
+    return;
+  }
+
+  clearAndCondition();
+}
+
+function clearAndCondition() {
+  ruleData.value.rule[5] = '';
+  ruleData.value.rule[6] = '';
+  ruleData.value.rule[7] = '';
+  ruleData.value.rule[8] = '';
 }
 </script> 

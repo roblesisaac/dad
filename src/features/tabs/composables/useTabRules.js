@@ -12,7 +12,10 @@ export function useTabRules() {
     '<=': (itemValue, valueToCheck) => parseFloat(itemValue) <= parseFloat(valueToCheck),
     '<': (itemValue, valueToCheck) => parseFloat(itemValue) < parseFloat(valueToCheck),
     includes,
-    excludes: (itemValue, valueToCheck) => !includes(itemValue, valueToCheck)
+    excludes: (itemValue, valueToCheck) => !includes(itemValue, valueToCheck),
+    contains: includes,
+    startsWith,
+    endsWith
   };
 
   function equals(itemValue, valueToCheck) {
@@ -28,6 +31,24 @@ export function useTabRules() {
     
     return makeArray(valueToCheck.split(',')).some(valueToCheckItem => 
       itemValue.includes(valueToCheckItem)
+    );
+  }
+
+  function startsWith(itemValue, valueToCheck) {
+    itemValue = String(itemValue || '').toLowerCase();
+    valueToCheck = String(valueToCheck || '').toLowerCase();
+
+    return makeArray(valueToCheck.split(',')).some(valueToCheckItem =>
+      itemValue.startsWith(valueToCheckItem.trim())
+    );
+  }
+
+  function endsWith(itemValue, valueToCheck) {
+    itemValue = String(itemValue || '').toLowerCase();
+    valueToCheck = String(valueToCheck || '').toLowerCase();
+
+    return makeArray(valueToCheck.split(',')).some(valueToCheckItem =>
+      itemValue.endsWith(valueToCheckItem.trim())
     );
   }
 

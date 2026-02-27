@@ -96,6 +96,12 @@
           <span class="font-semibold">{{ rule.rule[1] || 'property' }}</span>
           <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[2]) }}</span>
           <span class="font-semibold">{{ rule.rule[3] || 'value' }}</span>
+          <template v-if="hasAndCondition(rule)">
+            <span class="mx-1 text-xs font-semibold uppercase text-gray-500">AND</span>
+            <span class="font-semibold">{{ rule.rule[6] || 'property' }}</span>
+            <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[7]) }}</span>
+            <span class="font-semibold">{{ rule.rule[8] || 'value' }}</span>
+          </template>
         </div>
         
         <!-- Categorize Rule - Fixed array indices -->
@@ -109,6 +115,12 @@
             <span class="font-semibold">{{ rule.rule[1] || 'property' }}</span>
             <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[2]) }}</span>
             <span class="font-semibold">{{ rule.rule[3] || 'value' }}</span>
+            <template v-if="hasAndCondition(rule)">
+              <span class="mx-1 text-xs font-semibold uppercase text-gray-500">AND</span>
+              <span class="font-semibold">{{ rule.rule[6] || 'property' }}</span>
+              <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[7]) }}</span>
+              <span class="font-semibold">{{ rule.rule[8] || 'value' }}</span>
+            </template>
           </div>
         </div>
         
@@ -156,7 +168,7 @@
 <script setup>
 import { computed } from 'vue';
 import { 
-  ArrowUp, ArrowDown, Edit, Trash, Star, GripVertical,
+  ArrowUp, ArrowDown, Edit, Trash, GripVertical,
   SortAsc, Filter, Tags, Group // Additional icons for rule types
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
@@ -205,22 +217,28 @@ function getRuleTypeIcon() {
 // Get operator display text
 function getOperatorDisplay(operator) {
   const operators = {
-    '===': 'equals',
-    '!==': 'does not equal',
+    '=': 'equals',
+    'is not': 'does not equal',
     '>': 'is greater than',
     '<': 'is less than',
     '>=': 'is greater than or equal to',
     '<=': 'is less than or equal to',
+    'contains': 'contains',
     'includes': 'includes',
-    '!includes': 'does not include',
+    'excludes': 'does not include',
     'startsWith': 'starts with',
-    'endsWith': 'ends with',
-    'regex': 'matches pattern',
-    'exists': 'exists',
-    '!exists': 'does not exist'
+    'endsWith': 'ends with'
   };
   
   return operators[operator] || operator;
+}
+
+function hasAndCondition(rule) {
+  const [,,,,, combinator, andProp, andMethod, andValue] = rule.rule || [];
+  const hasAndKeyword = String(combinator || '').toLowerCase() === 'and';
+  const hasSecondCondition = andProp && andMethod && String(andValue || '').trim();
+
+  return hasAndKeyword && hasSecondCondition;
 }
 
 // Generate a readable name for the rule
