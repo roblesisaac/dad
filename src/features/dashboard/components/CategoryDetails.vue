@@ -1,25 +1,33 @@
 <template>
-  <div :id="id" class="group border-b-2 border-gray-50 bg-white last:border-b-0">
+  <div :id="id" class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300">
+    <!-- Active Category Indicator -->
+    <div v-if="isSelected" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
+
     <div 
       @click="selectCategory()" 
       :id="id+'title'" 
-      class="flex items-center justify-between w-full px-6 py-6 cursor-pointer transition-all duration-300 hover:bg-gray-50/50"
+      class="flex items-center justify-between w-full px-6 py-6 cursor-pointer"
     >
-      <div class="flex items-center gap-4">
-        <span class="px-2.5 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors">
+      <!-- Left side: Count & Name -->
+      <div class="flex items-center gap-4 flex-1 min-w-0">
+        <span class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0">
           {{ categoryItems.length }}
         </span>
-        <div class="flex flex-col">
-          <span class="text-lg font-black text-gray-900 first-letter:uppercase tracking-tight leading-none group-hover:text-black transition-colors">{{ categoryName }}</span>
-          <span :class="[fontColor(categoryTotal), 'text-xs font-bold mt-1 opacity-80']">{{ catTotal }}</span>
-        </div>
+        <span class="text-base font-black text-gray-900 first-letter:uppercase tracking-tight truncate group-hover:text-black transition-colors">{{ categoryName }}</span>
       </div>
-      <div class="text-gray-300 group-hover:text-black transition-colors">
-        <ChevronRight :class="['w-5 h-5 transition-transform duration-300', isSelected ? 'rotate-90 text-black' : '']" />
+
+      <!-- Right side: Total -->
+      <div class="flex items-center gap-4 ml-4 shrink-0">
+        <div class="text-right">
+          <span :class="[fontColor(categoryTotal), 'text-base font-black tracking-tight']">
+            {{ formatPrice(categoryTotal, { toFixed: 0 }) }}
+          </span>
+        </div>
       </div>
     </div>
     
-    <div v-if="isSelected" class="bg-gray-50/30 border-t-2 border-gray-50 p-6">
+    <!-- Expanded Content -->
+    <div v-if="isSelected" class="bg-gray-50/50 border-y-2 border-gray-50 p-6">
       <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
   </div>

@@ -1,122 +1,104 @@
 <template>
-<div class="relative w-full">
+<div class="relative w-full h-full">
   <!-- Date Range Summary (Clickable to expand) -->
-  <div 
+  <button 
     @click="toggleDatePicker"
-    class="w-full h-full flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
+    class="w-full h-full flex items-center justify-between px-4 sm:px-6 py-3 cursor-pointer hover:bg-gray-50/50 transition-all font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-100 group gap-4 rounded-b-xl sm:rounded-none sm:rounded-r-2xl"
   >
-    <div class="flex items-center">
-      <Calendar class="h-4 w-4 mr-2 text-gray-700" />
-      <span class="text-sm font-bold">{{ dateRangeSummary }}</span>
+    <div class="flex items-center min-w-0">
+      <Calendar class="h-4 w-4 mr-2 text-gray-400 group-hover:text-black transition-colors flex-shrink-0" />
+      <span class="text-sm truncate">{{ dateRangeSummary }}</span>
     </div>
     <ChevronDown 
-      class="h-4 w-4 text-gray-600 transition-transform duration-200"
-      :class="{ 'transform rotate-180': showDatePicker }"
+      class="h-4 w-4 text-gray-300 group-hover:text-black transition-all duration-300 flex-shrink-0"
+      :class="{ '-rotate-180': showDatePicker }"
     />
-  </div>
+  </button>
   
   <!-- Date Picker Modal -->
   <BaseModal
     :is-open="showDatePicker"
     title="Select Date Range"
     size="md"
+    :content-padding="false"
     @close="showDatePicker = false"
   >
     <template #content>
-      <!-- Quick Navigation Buttons -->
-      <div class="mb-6">
-        <div class="text-xs font-bold mb-2 text-gray-700 uppercase">Quick Select</div>
-        
-        <!-- Today -->
-        <div class="flex mb-3">
-          <button 
-            @click="quickSelect('today')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors"
-          >
-            Today
-          </button>
+      <!-- Scrollable content area -->
+      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto">
+        <!-- Quick Action Buttons -->
+        <div class="mb-8">
+          <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-3 px-2">Quick Select</div>
+          
+          <div class="grid grid-cols-2 gap-2">
+            <button 
+              @click="quickSelect('thisYear')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              This Year
+            </button>
+            <button 
+              @click="quickSelect('lastYear')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              Last Year
+            </button>
+            <button 
+              @click="quickSelect('thisMonth')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              This Month
+            </button>
+            <button 
+              @click="quickSelect('lastMonth')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              Last Month
+            </button>
+            <button 
+              @click="quickSelect('thisWeek')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              This Week
+            </button>
+            <button 
+              @click="quickSelect('today')" 
+              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+            >
+              Today
+            </button>
+          </div>
         </div>
         
-        <!-- Month Navigation -->
-        <div class="flex gap-2 mb-3">
-          <button 
-            @click="quickSelect('prevMonth')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors flex items-center justify-center"
-          >
-            <ChevronLeft class="h-4 w-4 mr-1" />
-            Previous Month
-          </button>
-          <button 
-            @click="quickSelect('nextMonth')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors flex items-center justify-center"
-          >
-            Next Month
-            <ChevronRight class="h-4 w-4 ml-1" />
-          </button>
-        </div>
-        
-        <!-- Year Navigation -->
-        <div class="flex gap-2 mb-3">
-          <button 
-            @click="quickSelect('prevYear')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors flex items-center justify-center"
-          >
-            <ChevronLeft class="h-4 w-4 mr-1" />
-            Previous Year
-          </button>
-          <button 
-            @click="quickSelect('nextYear')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors flex items-center justify-center"
-          >
-            Next Year
-            <ChevronRight class="h-4 w-4 ml-1" />
-          </button>
-        </div>
-        
-        <!-- Common Date Ranges -->
-        <div class="flex gap-2">
-          <button 
-            @click="quickSelect('last30Days')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors"
-          >
-            Last 30 Days
-          </button>
-          <button 
-            @click="quickSelect('last90Days')" 
-            class="flex-1 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-sm font-medium border border-gray-300 rounded transition-colors"
-          >
-            Last 90 Days
-          </button>
+        <!-- Custom Date Pickers -->
+        <div class="space-y-6">
+          <div>
+            <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-2 px-2">Start Date</div>
+            <DatePicker 
+              :date="tempDate" 
+              when="start" 
+              @date-selected="onDateSelected"
+            />
+          </div>
+          
+          <div>
+            <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-2 px-2">End Date</div>
+            <DatePicker 
+              :date="tempDate" 
+              when="end" 
+              @date-selected="onDateSelected"
+            />
+          </div>
         </div>
       </div>
       
-      <!-- Custom Date Pickers -->
-      <div class="mb-4">
-        <div class="text-xs font-bold mb-2 text-gray-700 uppercase">Start Date</div>
-        <DatePicker 
-          :date="tempDate" 
-          when="start" 
-          @date-selected="onDateSelected"
-        />
-      </div>
-      
-      <div class="border-t border-gray-300 my-4"></div>
-      
-      <div class="mb-4">
-        <div class="text-xs font-bold mb-2 text-gray-700 uppercase">End Date</div>
-        <DatePicker 
-          :date="tempDate" 
-          when="end" 
-          @date-selected="onDateSelected"
-        />
-      </div>
-      
-      <div class="flex justify-end mt-6">
+      <!-- Sticky Footer Actions -->
+      <div class="border-t-2 border-gray-100 bg-white/80 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
         <button 
           @click="onApplyDates" 
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 rounded"
+          class="w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-sm font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
         >
-          Apply
+          Apply Dates
         </button>
       </div>
     </template>
@@ -128,7 +110,7 @@
 import { ref, onMounted } from 'vue';
 import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { Calendar, ChevronDown } from 'lucide-vue-next';
 import { useDate } from '../composables/useDate.js';
 
 // Use the date composable

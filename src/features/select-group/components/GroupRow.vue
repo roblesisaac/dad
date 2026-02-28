@@ -1,93 +1,83 @@
 <template>
     <div :class="[
-        'flex items-center bg-white transition-all duration-200',
-        'border p-3 space-x-2',
-        isSelected ? 'border-indigo-300 bg-indigo-50 shadow-indigo-100' : 'border-gray-200 hover:border-gray-300',
-        editMode ? 'edit-mode-row' : ''
-    ]">
-        <!-- Drag Handle (only visible in edit mode) -->
-        <div v-if="editMode" class="flex-shrink-0 handler-group text-blue-400">
-            <GripVertical class="w-4 h-4 cursor-grab active:cursor-grabbing" />
-        </div>
-        
-        <!-- Actions Menu (only visible when not in edit mode) -->
-        <div v-if="!editMode" class="flex-shrink-0">
+        'flex items-center bg-white transition-all duration-300',
+        'border-2 px-4 py-4 rounded-2xl relative group',
+        isSelected 
+            ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] z-10' 
+            : 'border-gray-50 hover:border-gray-200',
+        editMode ? 'edit-mode-row cursor-move' : 'cursor-pointer'
+    ]"
+    @click="handleSelectGroup(element)"
+    >
+        <!-- Selection indicator (left bar) -->
+        <div v-if="isSelected && !editMode" class="absolute left-0 top-4 bottom-4 w-1 bg-black rounded-r-full"></div>
+
+        <!-- Drag Handle / Edit Icon -->
+        <div class="flex-shrink-0 flex items-center gap-2">
+            <div v-if="editMode" class="handler-group text-gray-400">
+                <GripVertical class="w-4 h-4" />
+            </div>
+            
             <button 
-                @click="emit('edit-group', element)" 
-                class="p-1.5 rounded-full text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                v-if="!editMode"
+                @click.stop="emit('edit-group', element)" 
+                class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-50 transition-colors"
                 aria-label="Edit group"
             >
                 <EllipsisVertical size="16" />
             </button>
         </div>
         
-        <!-- Content Area (clickable for selection) -->
-        <div 
-            @click="handleSelectGroup(element)" 
-            :class="[
-                'flex-1 min-w-0 flex items-center',
-                !editMode ? 'cursor-pointer' : ''
-            ]"
-        >
+        <!-- Content Area -->
+        <div class="flex-1 min-w-0 flex items-center justify-between">
             <!-- Left side: Name and details -->
             <div class="flex-1 min-w-0">
-                <!-- Group Name -->
-                <h3 class="font-medium text-gray-900 truncate">
-                    {{ element.name }}
-                </h3>
+                <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-black text-gray-900 truncate uppercase tracking-tight">
+                        {{ element.name }}
+                    </h3>
+                    <span v-if="element.accounts.length > 1" class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                        {{ element.accounts.length }} accounts
+                    </span>
+                </div>
                 
-                <!-- Account Type/Info -->
-                <div class="mt-1 flex flex-col">
-                    <span v-if="isDefaultName" class="text-xs text-gray-500">
+                <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span v-if="isDefaultName" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         {{ accountInfo }}
                     </span>
                     
-                    <span v-if="element.info" class="text-xs text-gray-500">
+                    <span v-if="element.info" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         {{ element.info }}
                     </span>
-                    
-                    <!-- Account numbers -->
-                    <div v-if="element.accounts.length > 1" class="flex items-center flex-wrap mt-1">
-                        <span class="text-xs font-medium text-gray-500 mr-1">Accounts:</span>
-                        <div class="flex flex-wrap">
-                            <span 
-                                v-for="(account, accountIndex) in element.accounts" 
-                                :key="account._id"
-                                class="inline-flex items-center text-xs"
-                            >
-                                #{{ account.mask }}
-                                <span v-if="accountIndex < element.accounts.length - 1" class="mx-1 text-gray-400">•</span>
-                            </span>
-                        </div>
-                    </div>
                 </div>
             </div>
             
-            <!-- Right side: Balance -->
-            <div class="flex-shrink-0 text-right ml-4">
+            <!-- Right side: Balances -->
+            <div class="flex-shrink-0 text-right flex flex-col items-end gap-1">
                 <!-- Available Balance -->
-                <div class="flex flex-col">
-                    <span :class="['font-medium text-gray-900', {'mb-0.5': !shouldShowCurrentBalance}]">
-                        <span :class="['text-sm', availableBalanceDisplay.color]">
-                            {{ availableBalanceDisplay.value }}
-                        </span>
+                <div class="flex flex-col items-end leading-none">
+                    <span :class="['text-base font-black tracking-tight', availableBalanceDisplay.color]">
+                        {{ availableBalanceDisplay.value }}
                     </span>
-                    <span class="text-xs text-gray-500">Available</span>
+                    <span class="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-1">Available</span>
                 </div>
                 
-                <!-- Current Balance - only shown if different from Available -->
-                <div v-if="shouldShowCurrentBalance" class="mt-1.5">
-                    <span :class="['text-sm', currentBalanceDisplay.color]">
+                <!-- Current Balance (Small) -->
+                <div v-if="shouldShowCurrentBalance" class="flex items-center gap-1.5 pt-1 border-t border-gray-50">
+                    <span class="text-[8px] font-black text-gray-300 uppercase tracking-widest">Current</span>
+                    <span :class="['text-[10px] font-black', currentBalanceDisplay.color]">
                         {{ currentBalanceDisplay.value }}
                     </span>
-                    <div class="text-xs text-gray-500">Current</div>
                 </div>
             </div>
         </div>
         
-        <!-- Selection Chevron (only visible in normal mode) -->
-        <div v-if="!editMode" class="flex-shrink-0">
-            <ChevronRight class="w-4 h-4 text-gray-400" />
+        <!-- Selection Dot (Right) -->
+        <div v-if="isSelected && !editMode" class="ml-4 flex-shrink-0">
+            <div class="w-2 h-2 bg-black rounded-full"></div>
+        </div>
+        <div v-else-if="!editMode" class="ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <ChevronRight class="w-4 h-4 text-gray-200" />
         </div>
     </div>
 </template>

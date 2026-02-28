@@ -1,82 +1,86 @@
 <template>
-  <div class="container mx-auto max-w-screen-lg bg-white border border-gray-200 shadow-sm">
-    <!-- Enabled Tabs Section -->
-    <div class="border-b border-gray-200 px-4 py-3 bg-blue-50">
-      <h2 class="font-medium text-blue-800">Enabled Tabs ({{ enabledTabs.length }})</h2>
+  <div class="bg-white max-h-[80vh] overflow-y-auto w-full">
+    <!-- Enabled Tabs Header -->
+    <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
+      <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
+      <span class="text-[10px] font-black text-gray-300">{{ enabledTabs.length }} enabled</span>
     </div>
     
-    <!-- Draggable list of enabled tabs - Only use Draggable when in edit mode -->
-    <div v-if="enabledTabs.length > 0">
-      <Draggable 
-        v-if="isEditMode"
-        v-model="state.selected.tabsForGroup" 
-        v-bind="dragOptions" 
-        handle=".handler-tab"
-        @end="handleDragEnd"
-        item-key="_id"
-      >
-        <template #item="{element}">
+    <!-- List of active tabs -->
+    <div class="py-2">
+      <div v-if="enabledTabs.length > 0">
+        <Draggable 
+          v-if="isEditMode"
+          v-model="state.selected.tabsForGroup" 
+          v-bind="dragOptions" 
+          handle=".handler-tab"
+          @end="handleDragEnd"
+          item-key="_id"
+        >
+          <template #item="{element}">
+            <AllTabRow
+              :element="element"
+              :key="element._id" 
+              :is-edit-mode="isEditMode"
+              @tab-selected="handleTabSelected"
+            />
+          </template>
+        </Draggable>
+        
+        <!-- Regular list -->
+        <div v-else>
           <AllTabRow
-            :element="element"
-            :key="element._id" 
-            :is-edit-mode="isEditMode"
-            @tab-selected="handleTabSelected"
-          />
-        </template>
-      </Draggable>
-      
-      <!-- Regular list when not in edit mode -->
-      <div v-else>
-        <div v-for="element in enabledTabs" :key="element._id">
-          <AllTabRow
+            v-for="element in enabledTabs"
+            :key="element._id"
             :element="element"
             :is-edit-mode="isEditMode"
             @tab-selected="handleTabSelected"
           />
         </div>
       </div>
-    </div>
-    <div v-else class="px-4 py-6 text-center text-gray-500 italic">
-      No enabled tabs for this group
+      <div v-else class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+        No enabled tabs
+      </div>
     </div>
 
     <!-- Disabled Tabs Section -->
-    <div class="border-t border-gray-200">
-      <div 
+    <div class="py-4 border-t-2 border-gray-50">
+      <button 
         @click="toggleDisabledSection" 
-        class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+        class="flex items-center justify-between w-full mb-4 px-6 group focus:outline-none"
       >
-        <h2 class="font-medium text-gray-700">Hidden Tabs ({{ disabledTabs.length }})</h2>
-        <div class="text-gray-500">
-          <ChevronDown v-if="showDisabledTabs" class="w-5 h-5" />
-          <ChevronRight v-else class="w-5 h-5" />
+        <div class="flex items-center gap-2">
+          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Hidden Tabs</h2>
+          <span class="text-[10px] font-black text-gray-300">{{ disabledTabs.length }}</span>
         </div>
-      </div>
+        <div class="text-gray-300 group-hover:text-black transition-colors">
+          <ChevronDown v-if="showDisabledTabs" class="w-4 h-4" />
+          <ChevronRight v-else class="w-4 h-4" />
+        </div>
+      </button>
       
-      <!-- Collapsible section of disabled tabs -->
       <div v-if="showDisabledTabs">
-        <div v-if="disabledTabs.length > 0">
-          <div v-for="tab in disabledTabs" :key="tab._id">
-            <AllTabRow 
-              :element="tab"
-              :is-edit-mode="isEditMode" 
-              @tab-selected="handleTabSelected"
-            />
-          </div>
-        </div>
-        <div v-else class="px-4 py-6 text-center text-gray-500 italic">
-          No hidden tabs for this group
+        <AllTabRow 
+          v-for="tab in disabledTabs"
+          :key="tab._id"
+          :element="tab"
+          :is-edit-mode="isEditMode" 
+          @tab-selected="handleTabSelected"
+        />
+        <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+          No hidden tabs
         </div>
       </div>
     </div>
 
     <!-- Create New Tab Button -->
-    <div class="border-t border-gray-200 p-4">
+    <div class="p-6 bg-gray-50/30 border-t-2 border-gray-100">
       <button 
         @click="handleCreateNew" 
-        class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors border border-blue-800 shadow-sm"
+        class="w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5"
       >
-        + New Tab
+        <span>+</span>
+        New Tab
       </button>
     </div>
   </div>

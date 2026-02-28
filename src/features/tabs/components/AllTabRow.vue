@@ -1,55 +1,64 @@
 <template>
 <div 
-  class="border-b border-gray-200 bg-white hover:bg-gray-50 transition-colors"
+  class="relative bg-white transition-all duration-300 w-full group shrink-0"
   @click.stop="!isEditMode && isEnabled && selectTabAndGoBack(element)"
-  :class="{ 'cursor-pointer': !isEditMode && isEnabled }"
+  :class="[
+    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-gray-50/50' : 'opacity-60 grayscale',
+    isActiveTab && !isEditMode ? 'bg-gray-50/30 active-z-index' : ''
+  ]"
 >
-  <div class="flex items-center justify-between px-4 py-3">
-    <!-- Drag Handle -->
-    <div class="flex items-center">
-      <div v-if="isEditMode && isEnabled" class="handler-tab cursor-grab text-gray-400 mr-3" @mousedown.stop>
-        <GripVertical size="16" />
+  <!-- Active Tab Indicator (Left Bar) -->
+  <div v-if="isActiveTab && !isEditMode" class="absolute left-0 top-0 bottom-0 w-1 bg-black"></div>
+
+  <div class="flex items-center justify-between px-6 py-5 w-full">
+    <div class="flex items-center min-w-0 flex-1">
+      <!-- Drag Handle -->
+      <div v-if="isEditMode && isEnabled" class="handler-tab cursor-grab text-gray-300 mr-4" @mousedown.stop>
+        <GripVertical size="18" />
       </div>
       
       <!-- Tab Info -->
-      <div class="flex flex-col">
-        <div class="flex items-center">
-          <span class="font-medium text-gray-800">{{ element.tabName }}</span>
-          <span v-if="element.total !== undefined" class="ml-2 text-sm" :class="fontColor(element.total)">
-            {{ formatPrice(element.total, { toFixed: 2 }) }}
-          </span>
-        </div>
-        <div class="text-xs text-gray-500">
-          {{ element.description || 'No description' }}
+      <div class="flex flex-col min-w-0">
+        <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">
+          {{ element.tabName }}
+        </h3>
+        <div v-if="element.description" class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-1 truncate">
+          {{ element.description }}
         </div>
       </div>
     </div>
     
-    <!-- ChevronRight - Only visible when NOT in edit mode -->
-    <div v-if="!isEditMode && isEnabled" class="flex items-center text-gray-400">
-      <ChevronRight size="20" />
-    </div>
-    
-    <!-- Actions - Only visible in edit mode -->
-    <div v-if="isEditMode || !isEnabled" class="flex items-center space-x-4">
-      <button 
-        v-if="isEnabled"
-        @click.stop="editTab(element._id)" 
-        class="text-blue-600 hover:text-blue-800 cursor-pointer"
-      >
-        <Edit2 size="16" />
-      </button>
-      
-      <!-- Using the reusable Switch component -->
-      <div v-if="isEditMode || !isEnabled" @click.stop>
-        <Switch 
-          :model-value="isEnabled"
-          :id="`toggle-${element._id}`"
-          @update:model-value="toggleTabVisibility(element._id)"
-        />
+    <!-- Right side: Total & Actions -->
+    <div class="flex items-center gap-4 ml-4 shrink-0">
+      <!-- Total Display -->
+      <div v-if="element.total !== undefined && !isEditMode" class="text-right">
+        <span class="text-base font-black tracking-tight" :class="fontColor(element.total)">
+          {{ formatPrice(element.total, { toFixed: 0 }) }}
+        </span>
+      </div>
+
+      <!-- Edit/Toggle (Edit Mode) -->
+      <div v-if="isEditMode || !isEnabled" class="flex items-center gap-3">
+        <button 
+          v-if="isEnabled"
+          @click.stop="editTab(element._id)" 
+          class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-50 transition-colors"
+          title="Edit tab rules"
+        >
+          <Settings size="16" />
+        </button>
+        
+        <div @click.stop>
+          <Switch 
+            :model-value="isEnabled"
+            :id="`toggle-${element._id}`"
+            @update:model-value="toggleTabVisibility(element._id)"
+          />
+        </div>
       </div>
     </div>
   </div>
+
   <!-- Rule Manager Modal -->
   <RuleManagerModal
     :is-open="showRuleManagerModal"
@@ -60,7 +69,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import { GripVertical, Edit2, ChevronRight } from 'lucide-vue-next';
+import { GripVertical, Edit2, ChevronRight, Settings } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
@@ -87,6 +96,11 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['tab-selected']);
+
+// Determine if this is the active tab
+const isActiveTab = computed(() => {
+  return state.selected.tab?._id === props.element._id;
+});
 
 // Determine if this tab is enabled for the current group
 const isEnabled = computed(() => {

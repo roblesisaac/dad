@@ -6,18 +6,18 @@
     @close="closeModal"
   >
     <template #header>
-      <div class="flex items-center justify-between flex-1">
-        <h3 class="text-lg font-semibold text-gray-800">Manage Tabs</h3>
+      <div class="flex items-center justify-between flex-1 pr-2">
+        <h3 class="text-[10px] font-black uppercase tracking-widest text-black">Manage Tabs</h3>
         <button 
           @click="toggleEditMode" 
-          class="flex items-center gap-2 px-3 py-1.5 rounded-md transition-colors text-sm font-medium"
+          class="flex items-center gap-2 px-4 py-2 rounded-xl transition-all text-[10px] font-black uppercase tracking-widest border-2"
           :class="isEditMode 
-            ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' 
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'"
+            ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)]' 
+            : 'bg-gray-50 text-gray-400 border-gray-100 hover:border-black hover:text-black'"
         >
-          <Edit2 v-if="isEditMode" size="16" />
-          <Settings v-else size="16" />
-          {{ isEditMode ? 'Exit Edit Mode' : 'Edit Tabs' }}
+          <Settings v-if="!isEditMode" size="14" />
+          <Edit2 v-else size="14" />
+          {{ isEditMode ? 'Exit Edit' : 'Edit' }}
         </button>
       </div>
     </template>

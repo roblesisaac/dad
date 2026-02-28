@@ -12,8 +12,6 @@ import {
   evaluateTabData
 } from '@/features/tabs/utils/tabEvaluator.js';
 
-const AUTOSAVE_DEBOUNCE_MS = 700;
-
 export function toYyyyMmDd(dateValue = new Date()) {
   return format(dateValue, 'yyyy-MM-dd');
 }
@@ -99,8 +97,6 @@ export function useReportsState() {
   });
 
   const transactionsCache = reactive({});
-  const saveTimers = new Map();
-  const saveSequenceByReportId = reactive({});
 
   const sortedTabs = computed(() =>
     [...state.allUserTabs].sort((a, b) => String(a.tabName || '').localeCompare(String(b.tabName || '')))
@@ -114,14 +110,6 @@ export function useReportsState() {
 
   function findReport(reportId) {
     return state.reports.find(report => report._id === reportId);
-  }
-
-  function clearSaveTimer(reportId) {
-    const timer = saveTimers.get(reportId);
-    if (timer) {
-      clearTimeout(timer);
-      saveTimers.delete(reportId);
-    }
   }
 
   function clearReportRowCaches(reportId) {
@@ -212,15 +200,8 @@ export function useReportsState() {
         }
       });
 
-      const deduped = new Map();
-      merged.forEach((transaction) => {
-        const key = transaction.transaction_id
-          || `${transaction.account_id}-${transaction.authorized_date}-${transaction.amount}-${transaction.name}`;
-
-        deduped.set(key, transaction);
-      });
-
-      const data = [...deduped.values()];
+      // Keep transaction arrays exactly as returned by the endpoint to match Dashboard behavior.
+      const data = merged;
       transactionsCache[cacheKey] = { data, promise: null };
       return data;
     })();
@@ -308,74 +289,41 @@ export function useReportsState() {
     }
   }
 
-  function queueReportSave(reportId) {
+  async function saveReport(reportId) {
     const report = findReport(reportId);
-    if (!report) return;
+    if (!report) return null;
 
-    clearSaveTimer(reportId);
-
-    const sequence = (saveSequenceByReportId[reportId] || 0) + 1;
-    saveSequenceByReportId[reportId] = sequence;
     state.saveStatusByReportId[reportId] = 'saving';
 
-    const timer = setTimeout(async () => {
-      const latestRequestedSequence = saveSequenceByReportId[reportId];
-      if (sequence !== latestRequestedSequence) {
-        return;
+    try {
+      const updated = await reportsAPI.updateReport(reportId, {
+        name: report.name,
+        rows: report.rows
+      });
+
+      const reportIndex = state.reports.findIndex(item => item._id === reportId);
+      if (reportIndex !== -1) {
+        state.reports[reportIndex] = {
+          ...updated,
+          rows: normalizeRowsForLocal(updated.rows)
+        };
       }
 
-      const reportToSave = findReport(reportId);
-      if (!reportToSave) {
-        return;
-      }
+      await refreshReportTotals(reportId);
 
-      try {
-        const updated = await reportsAPI.updateReport(reportId, {
-          name: reportToSave.name,
-          rows: reportToSave.rows
-        });
-
-        if (sequence !== saveSequenceByReportId[reportId]) {
-          return;
+      state.saveStatusByReportId[reportId] = 'saved';
+      setTimeout(() => {
+        if (state.saveStatusByReportId[reportId] === 'saved') {
+          state.saveStatusByReportId[reportId] = 'idle';
         }
+      }, 1200);
 
-        const reportIndex = state.reports.findIndex(item => item._id === reportId);
-        if (reportIndex !== -1) {
-          state.reports[reportIndex] = {
-            ...updated,
-            rows: normalizeRowsForLocal(updated.rows)
-          };
-        }
-
-        state.saveStatusByReportId[reportId] = 'saved';
-
-        setTimeout(() => {
-          if (state.saveStatusByReportId[reportId] === 'saved') {
-            state.saveStatusByReportId[reportId] = 'idle';
-          }
-        }, 1000);
-      } catch (error) {
-        console.error(`Failed to autosave report '${reportId}'`, error);
-        state.saveStatusByReportId[reportId] = 'error';
-      }
-    }, AUTOSAVE_DEBOUNCE_MS);
-
-    saveTimers.set(reportId, timer);
-  }
-
-  function updateReportLocal(reportId, updater, options = {}) {
-    const report = findReport(reportId);
-    if (!report) return;
-
-    updater(report);
-    report.rows = normalizeRowsForLocal(report.rows);
-
-    if (options.recalculateTotals) {
-      refreshReportTotals(reportId);
-    }
-
-    if (options.autoSave !== false) {
-      queueReportSave(reportId);
+      return updated;
+    } catch (error) {
+      console.error(`Failed to save report '${reportId}'`, error);
+      state.saveStatusByReportId[reportId] = 'error';
+      state.error = error.message || 'Failed to save report';
+      return null;
     }
   }
 
@@ -442,13 +390,11 @@ export function useReportsState() {
     try {
       await reportsAPI.deleteReport(reportId);
 
-      clearSaveTimer(reportId);
       clearReportRowCaches(reportId);
 
       state.reports = state.reports.filter(report => report._id !== reportId);
       delete state.saveStatusByReportId[reportId];
       delete state.reportTotalsById[reportId];
-      delete saveSequenceByReportId[reportId];
     } catch (error) {
       console.error(`Failed to delete report '${reportId}'`, error);
       state.error = error.message || 'Failed to delete report';
@@ -456,64 +402,86 @@ export function useReportsState() {
   }
 
   function updateReportName(reportId, name) {
-    updateReportLocal(reportId, (report) => {
-      report.name = name;
-    });
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.name = String(name || '').trim();
   }
 
   function addTabRow(reportId) {
-    updateReportLocal(reportId, (report) => {
-      report.rows.push(createDefaultTabRow(report.rows.length));
-    }, { recalculateTotals: true });
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const newRow = createDefaultTabRow(report.rows.length);
+    report.rows.push(newRow);
+    report.rows = normalizeRowsForLocal(report.rows);
+
+    return newRow;
   }
 
   function addManualRow(reportId) {
-    updateReportLocal(reportId, (report) => {
-      report.rows.push(createDefaultManualRow(report.rows.length));
-    }, { recalculateTotals: true });
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const newRow = createDefaultManualRow(report.rows.length);
+    report.rows.push(newRow);
+    report.rows = normalizeRowsForLocal(report.rows);
+
+    return newRow;
   }
 
-  function updateRow(reportId, rowId, updates) {
-    updateReportLocal(reportId, (report) => {
-      report.rows = report.rows.map((row) => {
-        if (row.rowId !== rowId) {
-          return row;
-        }
+  function updateRow(reportId, rowId, updates, options = {}) {
+    const report = findReport(reportId);
+    if (!report) return;
 
-        if (row.type === 'tab') {
-          return {
-            ...row,
-            tabId: typeof updates.tabId === 'string' ? updates.tabId : row.tabId,
-            groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
-            dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,
-            dateEnd: typeof updates.dateEnd === 'string' ? updates.dateEnd : row.dateEnd
-          };
-        }
-
-        if (row.type === 'manual') {
-          const nextAmount = Number(updates.amount);
-          return {
-            ...row,
-            title: typeof updates.title === 'string' ? updates.title : row.title,
-            amount: Number.isFinite(nextAmount) ? nextAmount : row.amount
-          };
-        }
-
+    report.rows = report.rows.map((row) => {
+      if (row.rowId !== rowId) {
         return row;
-      });
-    }, { recalculateTotals: true });
+      }
+
+      if (row.type === 'tab') {
+        return {
+          ...row,
+          tabId: typeof updates.tabId === 'string' ? updates.tabId : row.tabId,
+          groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
+          dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,
+          dateEnd: typeof updates.dateEnd === 'string' ? updates.dateEnd : row.dateEnd
+        };
+      }
+
+      if (row.type === 'manual') {
+        const nextAmount = Number(updates.amount);
+        return {
+          ...row,
+          title: typeof updates.title === 'string' ? updates.title : row.title,
+          amount: Number.isFinite(nextAmount) ? nextAmount : row.amount
+        };
+      }
+
+      return row;
+    });
+
+    report.rows = normalizeRowsForLocal(report.rows);
+    if (!options.skipRefresh) {
+      refreshReportTotals(reportId);
+    }
   }
 
-  function removeRow(reportId, rowId) {
-    updateReportLocal(reportId, (report) => {
-      report.rows = report.rows.filter(row => row.rowId !== rowId);
-    }, { recalculateTotals: true });
+  function removeRow(reportId, rowId, options = {}) {
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.rows = normalizeRowsForLocal(report.rows.filter(row => row.rowId !== rowId));
+    if (!options.skipRefresh) {
+      refreshReportTotals(reportId);
+    }
   }
 
   function reorderRows(reportId, rows) {
-    updateReportLocal(reportId, (report) => {
-      report.rows = normalizeRowsForLocal(rows);
-    }, { recalculateTotals: false });
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.rows = normalizeRowsForLocal(rows);
   }
 
   function getRowAmount(reportId, rowId) {
@@ -536,6 +504,7 @@ export function useReportsState() {
     initReports,
     createReport,
     deleteReport,
+    saveReport,
     updateReportName,
     addTabRow,
     addManualRow,

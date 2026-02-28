@@ -1,38 +1,37 @@
 <template>
-  <div class="container mx-auto max-w-screen-lg bg-white border border-gray-200 shadow-sm">
-    <!-- Net-worth Card -->
-    <div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-indigo-100">
-      <div class="flex items-center justify-between">
-        <h4 class="text-sm font-medium text-gray-500">Net Balance</h4>
-        <div class="text-lg font-bold text-indigo-700">
-          <NetBalance :accounts="state.allUserAccounts" :digits="0" />
-        </div>
+  <div class="bg-white max-h-[80vh] overflow-y-auto w-full">
+    <!-- Net-worth Header -->
+    <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
+      <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Net Balance</h4>
+      <div class="text-xl font-black text-black tracking-tight">
+        <NetBalance :accounts="state.allUserAccounts" :digits="0" />
       </div>
     </div>
 
     <!-- Custom Groups Section -->
-    <div class="border-b border-gray-200">
+    <div class="px-6 py-4">
       <div 
-        class="flex items-center justify-between px-4 py-3 bg-blue-50 cursor-pointer"
+        class="flex items-center justify-between mb-4 cursor-pointer group"
         @click="toggleCustomGroups"
       >
-        <div class="flex items-center">
-          <h2 class="font-medium text-blue-800">Custom Groups</h2>
-          <span class="ml-2 text-xs text-gray-500">{{ customGroups.length }} groups</span>
+        <div class="flex items-center gap-2">
+          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Banking Groups</h2>
+          <span class="text-[10px] font-black text-gray-300">{{ customGroups.length }}</span>
         </div>
-        <div class="text-gray-500">
-          <ChevronDown v-if="showCustomGroups" class="w-5 h-5" />
-          <ChevronRight v-else class="w-5 h-5" />
+        <div class="text-gray-300 group-hover:text-black transition-colors">
+          <ChevronDown v-if="showCustomGroups" class="w-4 h-4" />
+          <ChevronRight v-else class="w-4 h-4" />
         </div>
       </div>
       
-      <div v-if="showCustomGroups">
+      <div v-if="showCustomGroups" class="space-y-2">
         <Draggable 
           v-model="customGroups" 
           v-bind="dragOptions" 
           handle=".handler-group" 
           @end="updateGroupSorting"
           :disabled="!editMode"
+          class="space-y-2"
           :class="{'edit-mode-container': editMode}"
         >
           <template #item="{element}">
@@ -46,46 +45,47 @@
           </template>
         </Draggable>
         
-        <div v-if="customGroups.length === 0" class="px-4 py-6 text-center text-gray-500 italic">
-          No custom groups yet
+        <div v-if="customGroups.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+          No custom groups
         </div>
         
-        <!-- Create New Group Button -->
-        <div class="p-4 border-t border-gray-200">
+        <!-- Create New Group Button (Inside Custom Groups) -->
+        <div v-if="editMode" class="mt-4">
           <button 
             @click="handleCreateNewGroup" 
-            class="flex items-center justify-center w-full px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors border border-blue-800 shadow-sm"
+            class="group w-full px-6 py-3 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] flex items-center justify-center gap-2 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
           >
-            <PlusCircle class="w-4 h-4 mr-2" />
-            Create New Group
+            <PlusCircle class="w-3.5 h-3.5" />
+            Create Group
           </button>
         </div>
       </div>
     </div>
     
     <!-- Bank Accounts Section -->
-    <div class="border-b border-gray-200">
+    <div class="px-6 py-4 border-t-2 border-gray-50">
       <div 
-        class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+        class="flex items-center justify-between mb-4 cursor-pointer group"
         @click="toggleBankAccounts"
       >
-        <div class="flex items-center">
-          <h2 class="font-medium text-gray-700">Accounts & Cards</h2>
-          <span class="ml-2 text-xs text-gray-500">{{ bankAccounts.length }} accounts</span>
+        <div class="flex items-center gap-2">
+          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Raw Accounts</h2>
+          <span class="text-[10px] font-black text-gray-300">{{ bankAccounts.length }}</span>
         </div>
-        <div class="text-gray-500">
-          <ChevronDown v-if="showBankAccounts" class="w-5 h-5" />
-          <ChevronRight v-else class="w-5 h-5" />
+        <div class="text-gray-300 group-hover:text-black transition-colors">
+          <ChevronDown v-if="showBankAccounts" class="w-4 h-4" />
+          <ChevronRight v-else class="w-4 h-4" />
         </div>
       </div>
       
-      <div v-if="showBankAccounts">
+      <div v-if="showBankAccounts" class="space-y-2">
         <Draggable 
           v-model="bankAccounts" 
           v-bind="dragOptions" 
           handle=".handler-group" 
           @end="updateGroupSorting"
           :disabled="!editMode"
+          class="space-y-2"
           :class="{'edit-mode-container': editMode}"
         >
           <template #item="{element}">
@@ -99,28 +99,28 @@
           </template>
         </Draggable>
         
-        <div v-if="bankAccounts.length === 0" class="px-4 py-6 text-center text-gray-500 italic">
-          No bank accounts found
+        <div v-if="bankAccounts.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+          No bank accounts
         </div>
       </div>
     </div>
 
-    <!-- Action Buttons -->
-    <div v-if="!editMode" class="p-4 border-t border-gray-200">
-      <div class="grid grid-cols-1 gap-3">
+    <!-- Management Actions -->
+    <div v-if="!editMode" class="px-6 py-6 border-t-2 border-gray-100 bg-gray-50/30">
+      <div class="grid grid-cols-2 gap-3">
         <button 
           @click="goToOnboarding" 
-          class="w-full py-3 flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
         >
-          <RefreshCw class="w-4 h-4 mr-2" />
-          Update Existing Institutions
+          <RefreshCw class="w-4 h-4" />
+          Re-Sync All
         </button>
         
         <button 
           @click="handleManageBanks" 
-          class="w-full py-3 flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors shadow-sm"
+          class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
         >
-          <Building class="w-4 h-4 mr-2" />
+          <Building class="w-4 h-4" />
           Manage Banks
         </button>
       </div>

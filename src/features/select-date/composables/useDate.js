@@ -3,6 +3,7 @@ import {
   format, 
   isValid, 
   parseISO, 
+  startOfWeek,
   startOfMonth, 
   endOfMonth,
   subMonths,
@@ -101,6 +102,35 @@ export function useDate() {
     };
     
     switch (period) {
+      case 'thisYear':
+        tempDate.start = startOfYear(today);
+        tempDate.end = today;
+        break;
+
+      case 'lastYear': {
+        const lastYear = subYears(today, 1);
+        tempDate.start = startOfYear(lastYear);
+        tempDate.end = endOfYear(lastYear);
+        break;
+      }
+
+      case 'thisMonth':
+        tempDate.start = startOfMonth(today);
+        tempDate.end = today;
+        break;
+
+      case 'lastMonth': {
+        const lastMonth = subMonths(today, 1);
+        tempDate.start = startOfMonth(lastMonth);
+        tempDate.end = endOfMonth(lastMonth);
+        break;
+      }
+
+      case 'thisWeek':
+        tempDate.start = startOfWeek(today);
+        tempDate.end = today;
+        break;
+
       case 'today':
         // Set both start and end to today
         tempDate.start = new Date();
