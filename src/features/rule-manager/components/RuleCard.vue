@@ -90,7 +90,7 @@
     </div>
     
     <!-- Discreet Hover Action Bar -->
-    <div class="flex border-t-2 border-gray-50 bg-gray-50/20 opacity-0 group-hover:opacity-100 transition-opacity">
+    <div class="flex border-t-2 border-gray-50 bg-gray-50/20 transition-opacity">
       <button 
         @click="$emit('edit', rule)"
         class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black hover:bg-white transition-all border-r-2 border-gray-50 flex items-center justify-center gap-2"
