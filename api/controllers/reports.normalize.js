@@ -130,6 +130,17 @@ function normalizeManualRow(row, fallbackSort) {
   };
 }
 
+function normalizeReportRow(row, fallbackSort) {
+  return {
+    rowId: normalizeRowId(row?.rowId),
+    type: 'report',
+    reportId: nonEmptyString(row?.reportId, 'report row reportId'),
+    reportName: optionalString(row?.reportName),
+    savedTotal: parseOptionalNumber(row?.savedTotal, 'report row savedTotal', 0),
+    sort: normalizeSort(row?.sort, fallbackSort)
+  };
+}
+
 function normalizeRows(rows) {
   if (!Array.isArray(rows)) {
     throw makeError('rows must be an array');
@@ -144,6 +155,10 @@ function normalizeRows(rows) {
 
     if (type === 'manual') {
       return normalizeManualRow(row, index);
+    }
+
+    if (type === 'report') {
+      return normalizeReportRow(row, index);
     }
 
     throw makeError(`row type '${type || 'unknown'}' is invalid`);

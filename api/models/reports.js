@@ -4,12 +4,14 @@ const rowSchema = {
   rowId: String,
   type: {
     type: String,
-    enum: ['tab', 'manual']
+    enum: ['tab', 'manual', 'report']
   },
   tabId: String,
   groupId: String,
   dateStart: String,
   dateEnd: String,
+  reportId: String,
+  reportName: String,
   savedTotal: Number,
   title: String,
   amount: Number,

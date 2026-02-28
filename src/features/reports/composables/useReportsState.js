@@ -47,6 +47,17 @@ export function normalizeRowsForLocal(rows = []) {
       };
     }
 
+    if (row?.type === 'report') {
+      return {
+        rowId,
+        type: 'report',
+        reportId: typeof row.reportId === 'string' ? row.reportId : '',
+        reportName: typeof row.reportName === 'string' ? row.reportName : '',
+        savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0,
+        sort: Number.isFinite(row.sort) ? row.sort : index
+      };
+    }
+
     return {
       rowId,
       type: 'manual',
@@ -193,6 +204,13 @@ export function useReportsState() {
     return sortedTabs.value[0]?._id || '';
   }
 
+  function getDefaultReferenceReportId(currentReportId = '') {
+    const candidates = state.reports
+      .filter(report => report?._id && report._id !== currentReportId);
+
+    return candidates[0]?._id || '';
+  }
+
   function createDefaultTabRow(sort = 0) {
     return {
       rowId: `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
@@ -212,6 +230,20 @@ export function useReportsState() {
       type: 'manual',
       title: '',
       amount: 0,
+      sort
+    };
+  }
+
+  function createDefaultReportRow(currentReportId, sort = 0) {
+    const referenceReportId = getDefaultReferenceReportId(currentReportId);
+    const referenceReport = findReport(referenceReportId);
+
+    return {
+      rowId: `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      type: 'report',
+      reportId: referenceReportId,
+      reportName: referenceReport?.name || '',
+      savedTotal: Number(getReportTotal(referenceReportId)) || 0,
       sort
     };
   }
@@ -313,6 +345,36 @@ export function useReportsState() {
     }
   }
 
+  function evaluateReportRow(currentReportId, row) {
+    const linkedReportId = row?.reportId;
+
+    if (!linkedReportId) {
+      return { amount: 0, reportName: '', issue: 'Report is required' };
+    }
+
+    if (linkedReportId === currentReportId) {
+      return { amount: 0, reportName: '', issue: 'Cannot reference the same report' };
+    }
+
+    const linkedReport = findReport(linkedReportId);
+    if (!linkedReport) {
+      return {
+        amount: 0,
+        reportName: row?.reportName || '',
+        issue: 'Report not found'
+      };
+    }
+
+    const linkedTotal = Number(getReportTotal(linkedReportId));
+    const safeAmount = Number.isFinite(linkedTotal) ? linkedTotal : 0;
+
+    return {
+      amount: safeAmount,
+      reportName: linkedReport.name || row?.reportName || '',
+      issue: ''
+    };
+  }
+
   async function fetchReferenceData() {
     const [tabs, rules, groupData] = await Promise.all([
       tabsAPI.fetchUserTabs(),
@@ -326,7 +388,7 @@ export function useReportsState() {
     state.allUserAccounts = groupData.accounts || [];
   }
 
-  async function computeRowsWithSavedTotals(rows = []) {
+  async function computeRowsWithSavedTotals(reportId, rows = []) {
     const normalizedRows = normalizeRowsForLocal(rows);
     const issuesByRowId = {};
     const nextRows = [];
@@ -335,6 +397,17 @@ export function useReportsState() {
       if (row.type === 'manual') {
         issuesByRowId[row.rowId] = '';
         nextRows.push(row);
+        continue;
+      }
+
+      if (row.type === 'report') {
+        const { amount, reportName, issue } = evaluateReportRow(reportId, row);
+        issuesByRowId[row.rowId] = issue || '';
+        nextRows.push({
+          ...row,
+          reportName,
+          savedTotal: amount
+        });
         continue;
       }
 
@@ -383,7 +456,7 @@ export function useReportsState() {
         resetTransactionsCache();
       }
 
-      const { rows, issuesByRowId } = await computeRowsWithSavedTotals(report.rows);
+      const { rows, issuesByRowId } = await computeRowsWithSavedTotals(reportId, report.rows);
       report.rows = rows;
       applyRowIssues(reportId, issuesByRowId);
       setReportTotal(reportId);
@@ -554,6 +627,19 @@ export function useReportsState() {
     return newRow;
   }
 
+  function addReportRow(reportId) {
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const newRow = createDefaultReportRow(reportId, report.rows.length);
+    report.rows.push(newRow);
+    report.rows = normalizeRowsForLocal(report.rows);
+    setReportTotal(reportId);
+    state.rowIssuesByKey[buildRowStateKey(reportId, newRow.rowId)] = '';
+
+    return newRow;
+  }
+
   function updateRow(reportId, rowId, updates) {
     const report = findReport(reportId);
     if (!report) return;
@@ -580,6 +666,15 @@ export function useReportsState() {
           ...row,
           title: typeof updates.title === 'string' ? updates.title : row.title,
           amount: Number.isFinite(nextAmount) ? nextAmount : row.amount
+        };
+      }
+
+      if (row.type === 'report') {
+        return {
+          ...row,
+          reportId: typeof updates.reportId === 'string' ? updates.reportId : row.reportId,
+          reportName: typeof updates.reportName === 'string' ? updates.reportName : row.reportName,
+          savedTotal: Number.isFinite(Number(updates.savedTotal)) ? Number(updates.savedTotal) : row.savedTotal
         };
       }
 
@@ -753,6 +848,26 @@ export function useReportsState() {
       return row;
     }
 
+    if (row.type === 'report') {
+      const { amount, reportName, issue } = evaluateReportRow(reportId, row);
+      report.rows = normalizeRowsForLocal(report.rows.map((item) => {
+        if (item.rowId !== rowId) {
+          return item;
+        }
+
+        return {
+          ...item,
+          reportName,
+          savedTotal: amount
+        };
+      }));
+
+      state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = issue || '';
+      setReportTotal(reportId);
+
+      return report.rows.find(item => item.rowId === rowId) || null;
+    }
+
     const { amount, issue } = await evaluateTabRow(row);
     report.rows = normalizeRowsForLocal(report.rows.map((item) => {
       if (item.rowId !== rowId) {
@@ -794,6 +909,7 @@ export function useReportsState() {
     updateReportName,
     addTabRow,
     addManualRow,
+    addReportRow,
     updateRow,
     removeRow,
     reorderRows,

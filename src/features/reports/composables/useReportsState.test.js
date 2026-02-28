@@ -33,6 +33,14 @@ describe('useReportsState helpers', () => {
         ignore: true
       },
       {
+        type: 'report',
+        rowId: 'r1',
+        reportId: 'report-1',
+        reportName: 'Annual',
+        savedTotal: '40.1',
+        sort: 1
+      },
+      {
         type: 'tab',
         rowId: 't1',
         tabId: 'tab-1',
@@ -45,7 +53,7 @@ describe('useReportsState helpers', () => {
       }
     ]);
 
-    expect(normalized).toHaveLength(2);
+    expect(normalized).toHaveLength(3);
     expect(normalized[0]).toMatchObject({
       rowId: 't1',
       type: 'tab',
@@ -53,20 +61,29 @@ describe('useReportsState helpers', () => {
       sort: 0
     });
     expect(normalized[1]).toMatchObject({
+      rowId: 'r1',
+      type: 'report',
+      reportId: 'report-1',
+      reportName: 'Annual',
+      savedTotal: 40.1,
+      sort: 1
+    });
+    expect(normalized[2]).toMatchObject({
       rowId: 'm1',
       type: 'manual',
       amount: 12.4,
-      sort: 1
+      sort: 2
     });
   });
 
-  test('calculates report total using manual and tab rows', () => {
+  test('calculates report total using manual, tab, and report rows', () => {
     const total = calculateReportTotal([
       { rowId: 'tab-row', type: 'tab', savedTotal: 20.5 },
+      { rowId: 'report-row', type: 'report', savedTotal: 10 },
       { rowId: 'manual-row', type: 'manual', amount: -5 }
     ]);
 
-    expect(total).toBe(15.5);
+    expect(total).toBe(25.5);
   });
 
   test('builds stable cache and row state keys', () => {

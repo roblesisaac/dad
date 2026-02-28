@@ -15,6 +15,14 @@ describe('reports normalize', () => {
           ignoreMe: true
         },
         {
+          type: 'report',
+          reportId: 'report-2',
+          reportName: '  Net Worth ',
+          savedTotal: '55.5',
+          sort: 2,
+          unknownReportField: true
+        },
+        {
           type: 'tab',
           tabId: 'tab-1',
           groupId: 'group-1',
@@ -32,10 +40,11 @@ describe('reports normalize', () => {
 
     expect(normalized.name).toBe('Monthly');
     expect(normalized.sort).toBe(4);
-    expect(normalized.rows).toHaveLength(2);
+    expect(normalized.rows).toHaveLength(3);
 
     const tabRow = normalized.rows[0];
-    const manualRow = normalized.rows[1];
+    const reportRow = normalized.rows[1];
+    const manualRow = normalized.rows[2];
 
     expect(tabRow).toMatchObject({
       type: 'tab',
@@ -49,11 +58,20 @@ describe('reports normalize', () => {
 
     expect(tabRow).not.toHaveProperty('unknown');
 
+    expect(reportRow).toMatchObject({
+      type: 'report',
+      reportId: 'report-2',
+      reportName: 'Net Worth',
+      savedTotal: 55.5,
+      sort: 1
+    });
+    expect(reportRow).not.toHaveProperty('unknownReportField');
+
     expect(manualRow).toMatchObject({
       type: 'manual',
       title: 'Cash Adjustment',
       amount: 12.5,
-      sort: 1
+      sort: 2
     });
     expect(manualRow).not.toHaveProperty('ignoreMe');
   });
@@ -106,6 +124,21 @@ describe('reports normalize', () => {
         ]
       })
     ).toThrow('tab row savedTotal must be a valid number');
+  });
+
+  test('throws on invalid report row saved total', () => {
+    expect(() =>
+      normalizeReportPayload({
+        name: 'Bad',
+        rows: [
+          {
+            type: 'report',
+            reportId: 'report-2',
+            savedTotal: 'abc'
+          }
+        ]
+      })
+    ).toThrow('report row savedTotal must be a valid number');
   });
 
   test('throws on invalid report sort', () => {

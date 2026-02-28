@@ -260,7 +260,7 @@
               :class="isReorderingRows ? 'opacity-50 cursor-not-allowed' : ''"
               @click="showAddRowPicker = !showAddRowPicker"
             >
-              Add Tab Row
+              Add Row
             </button>
 
             <div
@@ -268,6 +268,13 @@
               class="mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
             >
               <button class="menu-item" @click="addAndEditRow('tab')">Select Existing Tab</button>
+              <button
+                class="menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="!hasSelectableLinkedReports"
+                @click="addAndEditRow('report')"
+              >
+                Use Existing Report Total
+              </button>
               <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
             </div>
           </div>
@@ -400,6 +407,26 @@
               </div>
             </template>
 
+            <template v-else-if="rowEditorDraft.type === 'report'">
+              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                Existing Report
+                <select v-model="rowEditorDraft.reportId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                  <option value="">Select report</option>
+                  <option
+                    v-for="report in selectableLinkedReports"
+                    :key="report._id"
+                    :value="report._id"
+                  >
+                    {{ report.name }}
+                  </option>
+                </select>
+              </label>
+
+              <p class="text-xs text-gray-500">
+                This row will save the selected report’s current total when you save.
+              </p>
+            </template>
+
             <template v-else>
               <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
                 Title
@@ -476,6 +503,7 @@ const {
   updateReportName,
   addTabRow,
   addManualRow,
+  addReportRow,
   updateRow,
   removeRow,
   reorderRows,
@@ -518,6 +546,16 @@ const selectedReport = computed(() =>
 
 const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
 const canCreateReport = computed(() => Boolean(createReportNameDraft.value.trim()));
+const selectableLinkedReports = computed(() => {
+  if (!selectedReport.value?._id) {
+    return [];
+  }
+
+  return [...state.reports]
+    .filter(report => report?._id && report._id !== selectedReport.value._id)
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+});
+const hasSelectableLinkedReports = computed(() => selectableLinkedReports.value.length > 0);
 
 const reportsForDrag = computed({
   get() {
@@ -563,12 +601,21 @@ function rowTitle(row) {
     return row.title || 'Untitled manual row';
   }
 
+  if (row.type === 'report') {
+    const linkedReport = state.reports.find(report => report._id === row.reportId);
+    return linkedReport?.name || row.reportName || 'Report not found';
+  }
+
   return tabName(row.tabId);
 }
 
 function rowSubtitle(row) {
   if (row.type === 'manual') {
     return 'Manual row';
+  }
+
+  if (row.type === 'report') {
+    return 'Existing report row';
   }
 
   return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}`;
@@ -774,7 +821,13 @@ function cancelDraftAndBack() {
 }
 
 function startRowEdit(row) {
-  rowEditorDraft.value = { ...row };
+  const nextDraft = { ...row };
+  if (nextDraft.type === 'report') {
+    const linkedReport = state.reports.find(report => report._id === nextDraft.reportId);
+    nextDraft.reportName = linkedReport?.name || nextDraft.reportName || '';
+  }
+
+  rowEditorDraft.value = nextDraft;
   editingRowId.value = row.rowId;
   editingRowWasNew.value = false;
   isRowEditorOpen.value = true;
@@ -783,10 +836,16 @@ function startRowEdit(row) {
 
 function addAndEditRow(type) {
   if (!selectedReport.value) return;
+  if (type === 'report' && !hasSelectableLinkedReports.value) return;
 
-  const newRow = type === 'tab'
-    ? addTabRow(selectedReport.value._id)
-    : addManualRow(selectedReport.value._id);
+  let newRow = null;
+  if (type === 'tab') {
+    newRow = addTabRow(selectedReport.value._id);
+  } else if (type === 'report') {
+    newRow = addReportRow(selectedReport.value._id);
+  } else {
+    newRow = addManualRow(selectedReport.value._id);
+  }
 
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
@@ -820,8 +879,14 @@ async function saveRowEditor() {
   try {
     const reportId = selectedReport.value._id;
     const rowId = editingRowId.value;
+    const payload = { ...rowEditorDraft.value };
 
-    updateRow(reportId, rowId, rowEditorDraft.value);
+    if (payload.type === 'report') {
+      const linkedReport = state.reports.find(report => report._id === payload.reportId);
+      payload.reportName = linkedReport?.name || payload.reportName || '';
+    }
+
+    updateRow(reportId, rowId, payload);
     await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
 
     if (!isDraftSelected.value) {
