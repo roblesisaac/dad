@@ -2,11 +2,13 @@
   <BaseModal 
     :is-open="isOpen" 
     size="xl"
-    :title="`Manage rules for ${state.selected.tab?.tabName || 'Tab'}`"
+    :content-padding="false"
+    :show-close-button="false"
+    :hide-header="true"
     @close="closeModal"
   >
     <template #content>
-      <RuleManager />
+      <RuleManager @close="closeModal" />
     </template>
   </BaseModal>
 </template>

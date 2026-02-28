@@ -1,72 +1,73 @@
 <template>
-  <div class="flex w-full bg-gray-100 border-b-2 border-black shadow-sm overflow-hidden">
-    <!-- Tab Navigation -->
-    <div class="flex-shrink-0 flex items-center border-r border-gray-300">
+  <div class="flex w-full bg-white transition-all items-stretch h-14">
+    <!-- Left Navigation -->
+    <div class="flex-shrink-0 flex items-center border-r-2 border-gray-50">
       <button 
         v-if="hasPreviousTab"
         @click="navigateToPreviousTab" 
-        class="px-3 py-2.5 hover:text-blue-600 transition-colors text-blue-800"
+        class="h-full px-5 hover:bg-gray-50 text-gray-400 hover:text-black transition-all flex items-center justify-center group"
       >
-        <ChevronLeft size="18" />
+        <ChevronLeft class="w-5 h-5 group-active:scale-95 transition-transform" />
       </button>
     </div>
     
     <!-- Active Tab Display -->
     <div 
-      class="flex-grow flex items-center justify-between overflow-hidden min-w-0 transition-colors"
+      class="flex-grow flex items-center justify-between overflow-hidden min-w-0"
     >
-      <div class="flex items-center px-4 py-2.5 overflow-hidden min-w-0">
-        <div class="flex items-center overflow-hidden min-w-0">
-          <Transition>
-            <span v-if="state.isLoading" class="font-bold text-blue-800 truncate leading-tight max-w-full">
-              Loading<LoadingDots />
+      <div class="flex items-center px-6 overflow-hidden min-w-0 w-full justify-between">
+        <div class="flex items-center overflow-hidden min-w-0 gap-3">
+          <Transition name="fade">
+            <span v-if="state.isLoading" class="text-xs font-black uppercase tracking-widest text-gray-300 flex items-center gap-2">
+              Syncing<LoadingDots />
             </span>
           </Transition>
 
-          <!-- Menu Button -->
-          <button 
-            v-if="!state.isLoading && state.selected.tab"
-            @click="showRuleManagerModal = true" 
-            class="mr-2 p-1 hover:bg-gray-200 rounded transition-colors text-gray-600 hover:text-blue-600 flex-shrink-0"
-            title="Manage tab rules"
-          >
-            <EllipsisVertical size="16" />
-          </button>
-          
-          <!-- Tab Name -->
-          <span v-if="!state.isLoading" class="font-semibold text-gray-800 truncate leading-tight max-w-full">
-            {{ state.selected.tab?.tabName || 'No tab selected' }}
-          </span>
-          <span 
-            v-if="state.selected.tab && !state.isLoading" 
-            class="font-bold leading-tight ml-2 flex-shrink-0" 
-            :class="fontColor(state.selected.tab.total)"
-          >
-            {{ tabTotal }}
-          </span>
+          <!-- Tab Name & Total -->
+          <div v-if="!state.isLoading" class="flex items-center gap-4 overflow-hidden">
+            <!-- Settings Button -->
+            <button 
+              @click="showRuleManagerModal = true" 
+              class="p-2 hover:bg-black hover:text-white rounded-xl transition-all text-gray-300 flex-shrink-0"
+              title="Manage tab rules"
+            >
+              <LayoutDashboard class="w-4 h-4" />
+            </button>
+
+            <span class="text-lg font-black text-gray-900 truncate tracking-tight">
+              {{ state.selected.tab?.tabName || 'No tab selected' }}
+            </span>
+            <span 
+              v-if="state.selected.tab" 
+              class="px-3 py-1 rounded-lg text-sm font-black transition-all bg-gray-50" 
+              :class="fontColor(state.selected.tab.total)"
+            >
+              {{ tabTotal }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
     
-    <!-- Tab Navigation -->
-    <div class="flex-shrink-0 flex items-center border-l border-gray-300">
+    <!-- Right Navigation -->
+    <div class="flex-shrink-0 flex items-center border-x-2 border-gray-50">
       <button 
         v-if="hasNextTab"
         @click="navigateToNextTab" 
-        class="px-3 py-2.5 hover:text-blue-600 transition-colors text-blue-800"
+        class="h-full px-5 hover:bg-gray-50 text-gray-400 hover:text-black transition-all flex items-center justify-center group"
       >
-        <ChevronRight size="18" />
+        <ChevronRight class="w-5 h-5 group-active:scale-95 transition-transform" />
       </button>
     </div>
 
-    <!-- Rules Manager Button -->
-    <div class="w-12 flex-shrink-0">
+    <!-- All Tabs Button -->
+    <div class="flex-shrink-0">
       <button 
         @click="showAllTabsModal = true"
-        class="h-full w-full bg-gray-300 border-l-2 border-black flex items-center justify-center hover:bg-gray-500 transition-colors"
-        title="Manage tab rules"
+        class="h-full px-6 bg-gray-50 hover:bg-black text-gray-400 hover:text-white transition-all flex items-center justify-center group"
+        title="View all tabs"
       >
-        <Folders size="16" />
+        <Layers class="w-5 h-5 group-active:scale-90 transition-transform" />
       </button>
     </div>
   </div>
@@ -88,7 +89,7 @@
 <script setup>
 import { useDashboardState } from '../composables/useDashboardState';
 import { useTabs } from '@/features/tabs/composables/useTabs';
-import { ChevronLeft, ChevronRight, EllipsisVertical, Folders } from 'lucide-vue-next';
+import { ChevronLeft, ChevronRight, LayoutDashboard, Layers } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { computed, ref, nextTick } from 'vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';

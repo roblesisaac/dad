@@ -2,250 +2,250 @@
   <BaseModal 
     :is-open="true" 
     size="md"
-    @close="$emit('close')"
-    :show-close-button="true"
+    :content-padding="false"
+    :show-close-button="false"
     :hide-header="true"
+    @close="$emit('close')"
   >
     <template #content>
-      <div>
-        <!-- Modal header -->
-        <div 
-          class="px-4 py-3 border-b flex justify-between items-center"
-          :class="{
-            'bg-teal-100 border-teal-200': ruleData.rule[0] === 'categorize',
-            'bg-cyan-100 border-cyan-200': ruleData.rule[0] === 'sort',
-            'bg-amber-100 border-amber-200': ruleData.rule[0] === 'filter',
-            'bg-indigo-100 border-indigo-200': ruleData.rule[0] === 'groupBy'
-          }"
-        >
-          <h3 
-            class="text-lg font-medium"
-            :class="{
-              'text-teal-800': ruleData.rule[0] === 'categorize',
-              'text-cyan-800': ruleData.rule[0] === 'sort',
-              'text-amber-800': ruleData.rule[0] === 'filter',
-              'text-indigo-800': ruleData.rule[0] === 'groupBy'
-            }"
-          >
-            {{ isNew ? 'Create New' : 'Edit' }} {{ capitalizeFirstLetter(ruleData.rule[0]) }} Rule
-          </h3>
-          <button 
-            @click="$emit('close')" 
-            class="rounded-full p-1 hover:bg-gray-200 transition-colors"
-          >
-            <X class="w-5 h-5 text-gray-500" />
-          </button>
-        </div>
-        
-        <!-- Modal body -->
-        <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <form @submit.prevent="saveRule">
-            <!-- Rule Type -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">Rule Type</label>
-              <select 
-                v-model="ruleData.rule[0]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                @change="updateRuleType"
-              >
-                <option value="categorize">Categorize</option>
-                <option value="sort">Sort</option>
-                <option value="filter">Filter</option>
-                <option value="groupBy">Group By</option>
-              </select>
+      <div class="flex flex-col bg-white min-h-screen">
+        <div class="max-w-3xl mx-auto w-full flex flex-col min-h-screen">
+          <!-- Modal header -->
+          <div class="px-6 py-8 border-b-2 border-gray-100 flex justify-between items-center bg-white">
+            <div>
+              <h3 class="text-2xl font-black text-gray-900 tracking-tight">
+                {{ isNew ? 'Create Automation Rule' : 'Edit Automation Rule' }}
+              </h3>
+              <p class="text-sm text-gray-400 mt-1 font-medium">
+                {{ isNew ? 'Set up a new rule' : 'Modify your existing rule' }} to automatically process transactions.
+              </p>
             </div>
-            
-            <!-- Property to check/sort/group by -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getPropertyLabel() }}
-              </label>
-              <select 
-                v-model="ruleData.rule[1]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option value="amount">Amount</option>
-                <option value="date">Date</option>
-                <option value="name">Name</option>
-                <option value="category">Category</option>
-              </select>
-            </div>
-            
-            <!-- Method (except for GroupBy where it might be optional) -->
-            <div v-if="ruleData.rule[0] !== 'groupBy'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getMethodLabel() }}
-              </label>
-              <select 
-                v-model="ruleData.rule[2]" 
-                class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              >
-                <option v-if="isNumericProperty(ruleData.rule[1])" value=">">is greater than</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value=">=">is greater than or equal to</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value="<">is less than</option>
-                <option v-if="isNumericProperty(ruleData.rule[1])" value="<=">is less than or equal to</option>
-                <option value="=">equals</option>
-                <option value="is not">is not</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="contains">contains</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="startsWith">starts with</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="endsWith">ends with</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="includes">includes</option>
-                <option v-if="isTextProperty(ruleData.rule[1])" value="excludes">excludes</option>
-              </select>
-            </div>
-            
-            <!-- Criterion/Value -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                {{ getCriterionLabel() }}
-              </label>
-              <input 
-                v-model="ruleData.rule[3]" 
-                type="text" 
-                class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                :placeholder="getCriterionPlaceholder()"
-              />
-            </div>
-
-            <!-- Optional AND condition for filter/categorize -->
-            <div v-if="supportsAndCondition" class="mb-4 rounded-md border border-gray-200 bg-gray-50 p-3">
-              <div class="mb-3 flex items-center justify-between">
-                <div>
-                  <label class="block text-sm font-medium text-gray-700">Add AND condition</label>
-                  <p class="text-xs text-gray-500">Both conditions must match</p>
+            <button 
+              @click="$emit('close')" 
+              class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
+            >
+              <X class="w-6 h-6" />
+            </button>
+          </div>
+          
+          <!-- Modal body -->
+          <div class="p-6 pb-24">
+            <form @submit.prevent="saveRule" class="space-y-10">
+              
+              <!-- Rule Action -->
+              <div class="space-y-4">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Rule Action</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <button
+                    v-for="t in ['categorize', 'sort', 'filter', 'groupBy']"
+                    :key="t"
+                    type="button"
+                    @click="ruleData.rule[0] = t; updateRuleType()"
+                    class="px-4 py-4 rounded-xl text-base font-bold transition-all border-2 text-center flex justify-center items-center"
+                    :class="ruleData.rule[0] === t 
+                      ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]' 
+                      : 'bg-white text-gray-500 border-gray-100 hover:border-black hover:text-black hover:bg-gray-50'"
+                  >
+                    {{ t === 'groupBy' ? 'Group By' : capitalizeFirstLetter(t) }}
+                  </button>
                 </div>
-                <input
-                  v-model="useAndCondition"
-                  type="checkbox"
-                  class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              </div>
+
+              <!-- Condition Builder -->
+              <div class="space-y-4">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">When Transaction Matches</label>
+                
+                <div class="bg-gray-50/50 rounded-2xl border-2 border-gray-100 p-6">
+                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <select 
+                      v-model="ruleData.rule[1]" 
+                      class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                    >
+                      <option value="" disabled selected>Select property...</option>
+                      <option value="amount">Amount</option>
+                      <option value="date">Date</option>
+                      <option value="name">Name</option>
+                      <option value="category">Category</option>
+                    </select>
+                    
+                    <select 
+                      v-if="ruleData.rule[0] !== 'groupBy'"
+                      v-model="ruleData.rule[2]" 
+                      class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                    >
+                      <option value="" disabled selected>Select method...</option>
+                      <option v-if="isNumericProperty(ruleData.rule[1])" value=">">greater than</option>
+                      <option v-if="isNumericProperty(ruleData.rule[1])" value=">=">greater/equal to</option>
+                      <option v-if="isNumericProperty(ruleData.rule[1])" value="<">less than</option>
+                      <option v-if="isNumericProperty(ruleData.rule[1])" value="<=">less/equal to</option>
+                      <option value="=">equals</option>
+                      <option value="is not">is not</option>
+                      <option v-if="isTextProperty(ruleData.rule[1])" value="contains">contains</option>
+                      <option v-if="isTextProperty(ruleData.rule[1])" value="startsWith">starts with</option>
+                      <option v-if="isTextProperty(ruleData.rule[1])" value="endsWith">ends with</option>
+                      <option v-if="isTextProperty(ruleData.rule[1])" value="includes">includes</option>
+                      <option v-if="isTextProperty(ruleData.rule[1])" value="excludes">excludes</option>
+                    </select>
+                    
+                    <input 
+                      v-model="ruleData.rule[3]" 
+                      type="text" 
+                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                      :class="{'sm:col-span-2': ruleData.rule[0] === 'groupBy'}"
+                      :placeholder="getCriterionPlaceholder()"
+                    />
+                  </div>
+
+                  <!-- AND condition -->
+                  <div v-if="supportsAndCondition" class="mt-6 pt-6 border-t-2 border-gray-100 border-dashed">
+                    <button 
+                      v-if="!hasAndConditions" 
+                      @click="addAndCondition" 
+                      type="button" 
+                      class="text-sm font-bold text-gray-400 bg-white border-2 border-gray-100 px-5 py-3 rounded-xl hover:border-black hover:text-black transition-all flex items-center gap-2"
+                    >
+                      <Plus class="w-4 h-4" />
+                      Add Second Condition
+                    </button>
+                    
+                    <div v-else class="space-y-4 relative">
+                      <div
+                        v-for="(condition, index) in andConditions"
+                        :key="`and-condition-${index}`"
+                        class="space-y-4"
+                      >
+                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border-2 border-gray-100 mb-2">
+                          <span class="text-[10px] font-black text-white bg-black px-3 py-1.5 rounded-lg inline-flex items-center uppercase tracking-[0.2em]">
+                            AND
+                          </span>
+                          <button 
+                            @click="removeAndCondition(index)" 
+                            type="button" 
+                            class="text-gray-400 hover:text-white bg-gray-50 hover:bg-black rounded-lg p-1.5 border-2 border-transparent transition-all flex items-center gap-1.5 text-[10px] font-black px-2.5 uppercase tracking-widest"
+                            title="Remove condition"
+                          >
+                            Remove
+                            <X class="w-3.5 h-3.5"/>
+                          </button>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          <select
+                            v-model="condition.property"
+                            class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                          >
+                            <option value="" disabled selected>Select property...</option>
+                            <option value="amount">Amount</option>
+                            <option value="date">Date</option>
+                            <option value="name">Name</option>
+                            <option value="category">Category</option>
+                          </select>
+
+                          <select
+                            v-model="condition.method"
+                            class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                          >
+                            <option value="" disabled selected>Select method...</option>
+                            <option v-if="isNumericProperty(condition.property)" value=">">greater than</option>
+                            <option v-if="isNumericProperty(condition.property)" value=">=">greater/equal to</option>
+                            <option v-if="isNumericProperty(condition.property)" value="<">less than</option>
+                            <option v-if="isNumericProperty(condition.property)" value="<=">less/equal to</option>
+                            <option value="=">equals</option>
+                            <option value="is not">is not</option>
+                            <option v-if="isTextProperty(condition.property)" value="contains">contains</option>
+                            <option v-if="isTextProperty(condition.property)" value="startsWith">starts with</option>
+                            <option v-if="isTextProperty(condition.property)" value="endsWith">ends with</option>
+                            <option v-if="isTextProperty(condition.property)" value="includes">includes</option>
+                            <option v-if="isTextProperty(condition.property)" value="excludes">excludes</option>
+                          </select>
+
+                          <input
+                            v-model="condition.value"
+                            type="text"
+                            class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                            :placeholder="getCriterionPlaceholderForProperty(condition.property)"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        @click="addAndCondition"
+                        type="button"
+                        class="text-sm font-bold text-gray-400 bg-white border-2 border-gray-100 px-5 py-3 rounded-xl hover:border-black hover:text-black transition-all flex items-center gap-2"
+                      >
+                        <Plus class="w-4 h-4" />
+                        Add Another Condition
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Result (Categorize specific) -->
+              <div v-if="ruleData.rule[0] === 'categorize'" class="space-y-4">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Assign to Category</label>
+                <input 
+                  v-model="ruleData.rule[4]" 
+                  type="text" 
+                  class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
+                  placeholder="e.g. Groceries"
                 />
               </div>
 
-              <div v-if="useAndCondition" class="space-y-3">
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-gray-700">
-                    AND Property
-                  </label>
-                  <select
-                    v-model="ruleData.rule[6]"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="amount">Amount</option>
-                    <option value="date">Date</option>
-                    <option value="name">Name</option>
-                    <option value="category">Category</option>
-                  </select>
+              <!-- Settings (Scope & Importance) -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div class="p-6 rounded-2xl border-2 border-gray-50 bg-white">
+                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">Apply To</label>
+                  <div class="space-y-4">
+                    <label class="flex items-center gap-4 cursor-pointer group">
+                      <input 
+                        v-model="isGlobalRule" 
+                        type="radio" 
+                        :value="true"
+                        class="w-5 h-5 text-black focus:ring-black border-2 border-gray-200 rounded-full bg-gray-50 transition-all"
+                      />
+                      <span class="text-sm font-bold text-gray-500 group-hover:text-black">All tabs (Global)</span>
+                    </label>
+                    <label class="flex items-center gap-4 cursor-pointer group">
+                      <input 
+                        v-model="isGlobalRule" 
+                        type="radio" 
+                        :value="false"
+                        class="w-5 h-5 text-black focus:ring-black border-2 border-gray-200 rounded-full bg-gray-50 transition-all"
+                      />
+                      <span class="text-sm font-bold text-gray-500 group-hover:text-black">
+                        Only "{{ state.selected.tab?.tabName || 'Current Tab' }}"
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-gray-700">
-                    AND Condition
-                  </label>
-                  <select
-                    v-model="ruleData.rule[7]"
-                    class="form-select w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option v-if="isNumericProperty(ruleData.rule[6])" value=">">is greater than</option>
-                    <option v-if="isNumericProperty(ruleData.rule[6])" value=">=">is greater than or equal to</option>
-                    <option v-if="isNumericProperty(ruleData.rule[6])" value="<">is less than</option>
-                    <option v-if="isNumericProperty(ruleData.rule[6])" value="<=">is less than or equal to</option>
-                    <option value="=">equals</option>
-                    <option value="is not">is not</option>
-                    <option v-if="isTextProperty(ruleData.rule[6])" value="contains">contains</option>
-                    <option v-if="isTextProperty(ruleData.rule[6])" value="startsWith">starts with</option>
-                    <option v-if="isTextProperty(ruleData.rule[6])" value="endsWith">ends with</option>
-                    <option v-if="isTextProperty(ruleData.rule[6])" value="includes">includes</option>
-                    <option v-if="isTextProperty(ruleData.rule[6])" value="excludes">excludes</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label class="mb-1 block text-sm font-medium text-gray-700">
-                    AND Value
-                  </label>
-                  <input
-                    v-model="ruleData.rule[8]"
-                    type="text"
-                    class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    :placeholder="getCriterionPlaceholderForProperty(ruleData.rule[6])"
+                <div class="p-6 rounded-2xl border-2 border-gray-50 bg-white flex flex-col justify-center">
+                  <ToggleSwitch 
+                    v-model="ruleData._isImportant"
+                    label="High Priority"
+                    description="Run this rule before others"
                   />
                 </div>
               </div>
-            </div>
-            
-            <!-- Category Name (only for categorize rules) -->
-            <div v-if="ruleData.rule[0] === 'categorize'" class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Category Name
-              </label>
-              <input 
-                v-model="ruleData.rule[4]" 
-                type="text" 
-                class="form-input w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder="Enter category name"
-              />
-            </div>
-            
-            <!-- Rule scope -->
-            <div class="mb-4">
-              <label class="block text-sm font-medium text-gray-700 mb-1">
-                Rule Scope
-              </label>
-              <div class="mt-2 space-y-2">
-                <div class="flex items-center">
-                  <input 
-                    id="scope-global" 
-                    v-model="isGlobalRule" 
-                    name="scope" 
-                    type="radio" 
-                    :value="true"
-                    class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-                  />
-                  <label for="scope-global" class="ml-2 block text-sm text-gray-700">
-                    Global (applies to all tabs)
-                  </label>
-                </div>
-                <div class="flex items-center">
-                  <input 
-                    id="scope-tab" 
-                    v-model="isGlobalRule" 
-                    name="scope" 
-                    type="radio" 
-                    :value="false"
-                    class="focus:ring-blue-500 h-4 w-4 text-blue-600 border-gray-300"
-                  />
-                  <label for="scope-tab" class="ml-2 block text-sm text-gray-700">
-                    Tab-specific (only for "{{ state.selected.tab?.tabName || 'Current Tab' }}")
-                  </label>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Rule is important -->
-            <div class="mb-4">
-              <ToggleSwitch 
-                v-model="ruleData._isImportant"
-                label="Mark as important"
-                description="Important rules take precedence over non-important rules"
-              />
-            </div>
-          </form>
-        </div>
-        
-        <!-- Modal footer -->
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-          <button 
-            @click="saveRule" 
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            {{ isNew ? 'Create' : 'Save' }}
-          </button>
-          <button 
-            @click="$emit('close')" 
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
-          >
-            Cancel
-          </button>
+            </form>
+          </div>
+          
+          <!-- Sticky Footer -->
+          <div class="mt-auto px-6 py-6 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex flex-col sm:flex-row justify-end gap-4">
+            <button 
+              @click="$emit('close')" 
+              type="button" 
+              class="px-8 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-bold text-gray-400 hover:border-black hover:text-black flex-1 sm:flex-none transition-all"
+            >
+              Cancel
+            </button>
+            <button 
+              @click="saveRule" 
+              type="button" 
+              class="px-10 py-4 bg-black border-2 border-black rounded-2xl text-base font-bold text-white hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex-1 sm:flex-none"
+            >
+              {{ isNew ? 'Create Rule' : 'Save Changes' }}
+            </button>
+          </div>
         </div>
       </div>
     </template>
@@ -254,7 +254,7 @@
 
 <script setup>
 import { ref, computed } from 'vue';
-import { X } from 'lucide-vue-next';
+import { X, Plus } from 'lucide-vue-next';
 import ToggleSwitch from '@/shared/components/ToggleSwitch.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
@@ -287,15 +287,12 @@ const isGlobalRule = computed({
   get: () => ruleData.value.applyForTabs.includes('_GLOBAL'),
   set: (value) => {
     if (value) {
-      // Add _GLOBAL if it's not already there
       if (!ruleData.value.applyForTabs.includes('_GLOBAL')) {
         ruleData.value.applyForTabs.push('_GLOBAL');
       }
     } else {
-      // Remove _GLOBAL
       ruleData.value.applyForTabs = ruleData.value.applyForTabs.filter(id => id !== '_GLOBAL');
       
-      // Ensure the current tab ID is included
       const tabId = state.selected.tab?._id;
       if (tabId && !ruleData.value.applyForTabs.includes(tabId)) {
         ruleData.value.applyForTabs.push(tabId);
@@ -308,34 +305,15 @@ const supportsAndCondition = computed(() =>
   ['filter', 'categorize'].includes(ruleData.value.rule[0])
 );
 
-const useAndCondition = computed({
-  get: () => String(ruleData.value.rule[5] || '').toLowerCase() === 'and',
-  set: (value) => {
-    if (!value) {
-      clearAndCondition();
-      return;
-    }
+const andConditions = ref(extractAndConditions(ruleData.value.rule));
 
-    ruleData.value.rule[5] = 'and';
-    ruleData.value.rule[6] = ruleData.value.rule[6] || ruleData.value.rule[1] || '';
-    ruleData.value.rule[7] = ruleData.value.rule[7] || ruleData.value.rule[2] || '';
-    ruleData.value.rule[8] = ruleData.value.rule[8] || '';
-  }
-});
+const hasAndConditions = computed(() => andConditions.value.length > 0);
 
-// Set default values when creating a new rule
-if (props.isNew) {
-  // Nothing to do here now
-}
-
-// Helper function to capitalize the first letter of a string
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-// Handle rule type changes
 function updateRuleType() {
-  // Reset other rule properties when type changes
   ruleData.value.rule[1] = '';
   ruleData.value.rule[2] = '';
   ruleData.value.rule[3] = '';
@@ -346,59 +324,6 @@ function updateRuleType() {
   }
 }
 
-// Get appropriate property label based on rule type
-function getPropertyLabel() {
-  const ruleType = ruleData.value.rule[0];
-  
-  switch(ruleType) {
-    case 'sort':
-      return 'Sort by Property';
-    case 'filter':
-      return 'Filter by Property';
-    case 'categorize':
-      return 'Property to Check';
-    case 'groupBy':
-      return 'Group by Property';
-    default:
-      return 'Property';
-  }
-}
-
-// Get appropriate method label based on rule type
-function getMethodLabel() {
-  const ruleType = ruleData.value.rule[0];
-  
-  switch(ruleType) {
-    case 'sort':
-      return 'Sort Direction';
-    case 'filter':
-      return 'Condition';
-    case 'categorize':
-      return 'Comparison';
-    default:
-      return 'Method';
-  }
-}
-
-// Get appropriate criterion label based on rule type
-function getCriterionLabel() {
-  const ruleType = ruleData.value.rule[0];
-  
-  switch(ruleType) {
-    case 'sort':
-      return 'Custom Value (Optional)';
-    case 'filter':
-      return 'Value to Compare';
-    case 'categorize':
-      return 'Value to Compare';
-    case 'groupBy':
-      return 'Group Format (Optional)';
-    default:
-      return 'Value';
-  }
-}
-
-// Get placeholder text for criterion field
 function getCriterionPlaceholder() {
   const ruleType = ruleData.value.rule[0];
   
@@ -419,26 +344,21 @@ function getCriterionPlaceholderForProperty(propType) {
   }
 }
 
-// Check if property is numeric
 function isNumericProperty(propName) {
   return propName === 'amount';
 }
 
-// Check if property is text-based
 function isTextProperty(propName) {
   return propName === 'name' || propName === 'category';
 }
 
-// Save the rule
 function saveRule() {
-  // Ensure all required fields are filled
   if (!validateRule()) {
     return;
   }
 
   normalizeAndCondition();
   
-  // If not a global rule, ensure current tab ID is in applyForTabs
   if (!isGlobalRule.value) {
     const tabId = state.selected.tab?._id;
     if (tabId && !ruleData.value.applyForTabs.includes(tabId)) {
@@ -449,31 +369,32 @@ function saveRule() {
   emit('save', ruleData.value);
 }
 
-// Validate the rule before saving
 function validateRule() {
   const rule = ruleData.value.rule;
   
-  // Basic validation for all rule types
   if (!rule[0] || !rule[1]) {
     alert('Please fill out all required fields');
     return false;
   }
   
-  // Specific validation for categorize rules
   if (rule[0] === 'categorize' && !rule[4]) {
     alert('Please provide a category name');
     return false;
   }
   
-  // Make sure the rule has a method (except for groupBy)
   if (rule[0] !== 'groupBy' && !rule[2]) {
     alert('Please select a comparison method');
     return false;
   }
 
-  if (useAndCondition.value) {
-    const andRuleHasAllFields = rule[6] && rule[7] && String(rule[8] || '').trim();
-    if (!andRuleHasAllFields) {
+  if (hasAndConditions.value) {
+    const allAndRulesComplete = andConditions.value.every(andCondition =>
+      andCondition.property &&
+      andCondition.method &&
+      String(andCondition.value || '').trim()
+    );
+
+    if (!allAndRulesComplete) {
       alert('Please complete all AND condition fields');
       return false;
     }
@@ -483,18 +404,55 @@ function validateRule() {
 }
 
 function normalizeAndCondition() {
-  if (supportsAndCondition.value && useAndCondition.value) {
-    ruleData.value.rule[5] = 'and';
-    return;
+  const normalizedRule = [...ruleData.value.rule.slice(0, 5)];
+
+  if (supportsAndCondition.value) {
+    for (const andCondition of andConditions.value) {
+      normalizedRule.push(
+        'and',
+        andCondition.property || '',
+        andCondition.method || '',
+        andCondition.value || ''
+      );
+    }
   }
 
-  clearAndCondition();
+  ruleData.value.rule = normalizedRule;
 }
 
 function clearAndCondition() {
-  ruleData.value.rule[5] = '';
-  ruleData.value.rule[6] = '';
-  ruleData.value.rule[7] = '';
-  ruleData.value.rule[8] = '';
+  andConditions.value = [];
+}
+
+function addAndCondition() {
+  andConditions.value.push({
+    property: ruleData.value.rule[1] || '',
+    method: ruleData.value.rule[2] || '',
+    value: ''
+  });
+}
+
+function removeAndCondition(index) {
+  andConditions.value.splice(index, 1);
+}
+
+function extractAndConditions(rule) {
+  const extractedAndConditions = [];
+
+  for (let i = 5; i < rule.length; i += 4) {
+    const combinator = String(rule[i] || '').toLowerCase();
+
+    if (combinator !== 'and') {
+      continue;
+    }
+
+    extractedAndConditions.push({
+      property: rule[i + 1] || '',
+      method: rule[i + 2] || '',
+      value: rule[i + 3] || ''
+    });
+  }
+
+  return extractedAndConditions;
 }
 </script> 

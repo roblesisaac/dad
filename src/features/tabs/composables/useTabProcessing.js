@@ -123,22 +123,12 @@ export function useTabProcessing() {
         itemPropName,
         ruleMethodName,
         criterion,
-        categorizeAs,
-        combinator,
-        andItemPropName,
-        andRuleMethodName,
-        andCriterion
+        categorizeAs
       ] = rule;
 
-      const ruleMethod = buildRuleMethod({
-        itemPropName,
-        ruleMethodName,
-        criterion,
-        combinator,
-        andItemPropName,
-        andRuleMethodName,
-        andCriterion
-      });
+      const ruleConditions = extractRuleConditions(rule);
+
+      const ruleMethod = buildRuleMethod(ruleConditions);
 
       const { orderOfExecution, _isImportant } = ruleConfig;
 
@@ -156,7 +146,7 @@ export function useTabProcessing() {
           method: ruleMethod,
           categorizeAs,
           itemPropName, ruleMethodName, criterion,
-          combinator, andItemPropName, andRuleMethodName, andCriterion,
+          ruleConditions,
           orderOfExecution,
           _isImportant
         });
@@ -179,37 +169,53 @@ export function useTabProcessing() {
     ];
   }
 
-  function buildRuleMethod({
-    itemPropName,
-    ruleMethodName,
-    criterion,
-    combinator,
-    andItemPropName,
-    andRuleMethodName,
-    andCriterion
-  }) {
-    const firstCondition = buildConditionMethod(itemPropName, ruleMethodName, criterion);
-    const isAndRule = String(combinator || '').toLowerCase() === 'and';
+  function extractRuleConditions(rule) {
+    const conditions = [{
+      itemPropName: rule[1],
+      ruleMethodName: rule[2],
+      criterion: rule[3]
+    }];
 
-    if (!isAndRule) {
-      return firstCondition;
+    for (let i = 5; i < rule.length; i += 4) {
+      const combinator = String(rule[i] || '').toLowerCase();
+      const itemPropName = rule[i + 1];
+      const ruleMethodName = rule[i + 2];
+      const criterion = rule[i + 3];
+
+      if (combinator !== 'and') {
+        continue;
+      }
+
+      conditions.push({
+        itemPropName,
+        ruleMethodName,
+        criterion
+      });
     }
 
-    const secondCondition = buildConditionMethod(andItemPropName, andRuleMethodName, andCriterion);
+    return conditions;
+  }
 
-    if (!secondCondition) {
-      return firstCondition;
+  function buildRuleMethod(ruleConditions) {
+    const conditionMethods = ruleConditions
+      .map(({ itemPropName, ruleMethodName, criterion }) =>
+        buildConditionMethod(itemPropName, ruleMethodName, criterion)
+      )
+      .filter(Boolean);
+
+    if (!conditionMethods.length) {
+      return () => false;
     }
 
-    return (item) => firstCondition(item) && secondCondition(item);
+    return (item) => conditionMethods.every(conditionMethod => conditionMethod(item));
   }
 
   function buildConditionMethod(itemPropName, ruleMethodName, criterion) {
-    return (item) => {
-      if (!itemPropName || !ruleMethodName) {
-        return false;
-      }
+    if (!itemPropName || !ruleMethodName) {
+      return null;
+    }
 
+    return (item) => {
       const itemValue = getItemValue(item, itemPropName);
       const method = ruleMethods[ruleMethodName];
 

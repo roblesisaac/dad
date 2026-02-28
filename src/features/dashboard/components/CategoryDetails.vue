@@ -1,27 +1,26 @@
 <template>
-  <div :id="id" class="overflow-hidden bg-white border-b border-gray-200">
+  <div :id="id" class="group border-b-2 border-gray-50 bg-white last:border-b-0">
     <div 
       @click="selectCategory()" 
       :id="id+'title'" 
-      class="flex items-center justify-between w-full px-5 py-5 cursor-pointer transition-colors duration-150 hover:bg-gray-50"
+      class="flex items-center justify-between w-full px-6 py-6 cursor-pointer transition-all duration-300 hover:bg-gray-50/50"
     >
-      <div class="flex items-center space-x-3">
-        <span class="px-2 py-0.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-md">
+      <div class="flex items-center gap-4">
+        <span class="px-2.5 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors">
           {{ categoryItems.length }}
         </span>
-        <span class="font-medium text-gray-800 first-letter:uppercase">{{ categoryName }}</span>
-        <span :class="[fontColor(categoryTotal), 'text-sm font-medium']">{{ catTotal }}</span>
+        <div class="flex flex-col">
+          <span class="text-lg font-black text-gray-900 first-letter:uppercase tracking-tight leading-none group-hover:text-black transition-colors">{{ categoryName }}</span>
+          <span :class="[fontColor(categoryTotal), 'text-xs font-bold mt-1 opacity-80']">{{ catTotal }}</span>
+        </div>
       </div>
-      <div class="text-gray-500">
-        <span class="flex items-center justify-center w-5 h-5">
-          <ChevronDown v-if="isSelected" class="w-4 h-4" />
-          <ChevronRight v-else class="w-4 h-4" />
-        </span>
+      <div class="text-gray-300 group-hover:text-black transition-colors">
+        <ChevronRight :class="['w-5 h-5 transition-transform duration-300', isSelected ? 'rotate-90 text-black' : '']" />
       </div>
     </div>
     
-    <div v-if="isSelected" class="border-t border-gray-200">
-      <SelectedItems :state="state" :categoryName="categoryName" class="p-4" />
+    <div v-if="isSelected" class="bg-gray-50/30 border-t-2 border-gray-50 p-6">
+      <SelectedItems :state="state" :categoryName="categoryName" />
     </div>
   </div>
 </template>

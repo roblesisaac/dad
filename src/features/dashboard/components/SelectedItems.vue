@@ -1,61 +1,58 @@
 <template>
-  <div v-if="items.length" class="p-5 bg-gray-50 rounded-lg shadow-inner">
-    <div class="space-y-4">
-      <div 
-        v-for="(item, i) in items"
-        :key="item._id"
-        :class="[
-          'bg-white rounded-md shadow-sm transition-all duration-200',
-          itemIsSelected(item._id) ? 'border-l-4 border-indigo-500' : 'hover:shadow-md'
-        ]" 
-      >
-        <div class="w-full">
-          <!-- Transaction Header -->
-          <div 
-            @click="selectTransaction(item)" 
-            class="grid grid-cols-12 p-3 cursor-pointer"
-          >
-            <!-- Logo section -->
-            <div class="col-span-2 flex items-center justify-center">
-              <div class="bg-gray-100 rounded-full p-2 flex items-center justify-center">
-                <img v-if="item.logo_url" :src="item.logo_url" class="h-8 w-8 object-contain" alt="Logo" />
-                <img v-else :src="'/chart.svg'" class="h-8 w-8 object-contain" />
-              </div>
-            </div>
-            
-            <!-- Info section -->
-            <div class="col-span-7 flex flex-col justify-center">
-              <div class="text-xs text-emerald-600 font-medium">
-                {{ item.authorized_date }}
-              </div>
-              <div class="text-gray-800 font-medium text-transform-capitalize">
-                {{ item.name }} <span v-if="item.check_number?.length" class="text-gray-500 text-sm">#{{ item.check_number }}</span>
-              </div>
-              <div v-if="item.pending" class="text-xs text-gray-500 mt-1">
-                <span class="inline-flex items-center">
-                  <span class="h-2 w-2 rounded-full bg-amber-400 mr-1"></span>
-                  Pending
-                </span>
-              </div>
-            </div>
-            
-            <!-- Amount section -->
-            <div class="col-span-3 flex flex-col items-end justify-center">
-              <div :class="['font-semibold text-right', fontColor(item.amount)]">
-                {{ formatPrice(item.amount) }}
-              </div>
-              <div class="text-xs text-gray-500 mt-1">#{{ i + 1 }}</div>
-            </div>
-
-            <!-- Expand/Collapse indicator -->
-            <div class="absolute right-4">
-              <ChevronDown v-if="itemIsSelected(item._id)" class="w-5 h-5 text-gray-400" />
-              <ChevronRight v-else class="w-5 h-5 text-gray-400" />
+  <div v-if="items.length" class="space-y-3">
+    <div 
+      v-for="(item, i) in items"
+      :key="item._id"
+      class="bg-white rounded-2xl border-2 transition-all duration-300 relative overflow-hidden"
+      :class="[
+        itemIsSelected(item._id) 
+          ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)]' 
+          : 'border-gray-100 hover:border-gray-200'
+      ]"
+    >
+      <div class="w-full">
+        <!-- Transaction Header -->
+        <div 
+          @click="selectTransaction(item)" 
+          class="flex items-center gap-4 p-4 cursor-pointer"
+        >
+          <!-- Logo section -->
+          <div class="flex-shrink-0">
+            <div class="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden">
+              <img v-if="item.logo_url" :src="item.logo_url" class="h-8 w-8 object-contain" alt="Logo" />
+              <div v-else class="text-[10px] font-black text-gray-300 uppercase">TX</div>
             </div>
           </div>
+          
+          <!-- Info section -->
+          <div class="flex-grow min-w-0">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+                {{ item.authorized_date }}
+              </span>
+              <span v-if="item.pending" class="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>
+                Pending
+              </span>
+            </div>
+            <div class="text-sm font-black text-gray-900 truncate tracking-tight">
+              {{ item.name }}
+              <span v-if="item.check_number?.length" class="text-gray-400 font-bold ml-1">#{{ item.check_number }}</span>
+            </div>
+          </div>
+          
+          <!-- Amount section -->
+          <div class="flex-shrink-0 text-right">
+            <div class="text-lg font-black tracking-tight" :class="fontColor(item.amount)">
+              {{ formatPrice(item.amount) }}
+            </div>
+            <div class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">#{{ i + 1 }}</div>
+          </div>
+        </div>
 
-          <!-- Expanded Transaction -->
-          <TransactionDetails v-if="itemIsSelected(item._id)" :state="state" :item="item" />
+        <!-- Expanded Transaction -->
+        <div v-if="itemIsSelected(item._id)" class="border-t-2 border-gray-50 bg-gray-50/20">
+          <TransactionDetails :state="state" :item="item" />
         </div>
       </div>
     </div>

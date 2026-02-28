@@ -1,7 +1,7 @@
 <template>
-  <NavMain v-if="!State.showingOffCanvasLinks" />
+  <NavMain v-if="!State.showingOffCanvasLinks && !route.meta.hideNav" />
   <Transition>
-  <OffCanvasLinks v-if="State.showingOffCanvasLinks" />
+    <OffCanvasLinks v-if="State.showingOffCanvasLinks" />
   </Transition>
 
   <router-view v-if="!State.showingOffCanvasLinks" />
@@ -10,9 +10,11 @@
 <script setup>
 import NavMain from './shared/components/NavMain.vue';
 import OffCanvasLinks from './shared/components/OffCanvasLinks.vue';
-
+import { useRoute } from 'vue-router';
 import { useAppStore } from './stores/state';
+
 const { State } = useAppStore();
+const route = useRoute();
 
 </script>
 

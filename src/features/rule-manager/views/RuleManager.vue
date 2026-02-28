@@ -1,139 +1,156 @@
 <template>
-  <div class="bg-gray-50">
-    <div class="bg-white overflow-hidden">
-      <!-- Header with tab name -->
-      <div class="flex items-center justify-between bg-blue-600 text-white p-4">
-        <div class="flex items-center space-x-3">
-          <div v-if="isEditingTabName" class="flex items-center">
-            <input 
-              ref="tabNameInput"
-              v-model="editedTabName" 
-              class="px-2 py-1 text-xl font-semibold bg-blue-700 text-white border border-blue-400 rounded focus:outline-none focus:ring-2 focus:ring-white"
-              @keyup.enter="saveTabName"
-              @keyup.esc="cancelTabNameEdit"
-              @blur="saveTabName"
-            />
-          </div>
-          <div v-else class="flex items-center">
-          <h1 class="text-xl font-semibold">Rules for "{{ state.selected.tab?.tabName || 'Tab' }}"</h1>
+  <div class="flex flex-col bg-white min-h-screen">
+    <div class="max-w-3xl mx-auto w-full flex flex-col min-h-screen">
+      <!-- Header Area -->
+      <div class="px-6 py-8 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/90">
+        <div class="flex-1">
+          <div class="flex items-center gap-3">
+            <h1 v-if="!isEditingTabName" class="text-3xl font-black text-gray-900 tracking-tight leading-tight">
+              Rules for <span class="text-gray-400">"{{ state.selected.tab?.tabName || 'Current Tab' }}"</span>
+            </h1>
+            <div v-else class="flex-1 max-w-md">
+              <input 
+                ref="tabNameInput"
+                v-model="editedTabName" 
+                class="w-full px-3 py-2 text-2xl font-black bg-gray-50 border-2 border-black rounded-xl focus:outline-none focus:ring-0 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]"
+                @keyup.enter="saveTabName"
+                @keyup.esc="cancelTabNameEdit"
+                @blur="saveTabName"
+              />
+            </div>
             <button 
+              v-if="!isEditingTabName"
               @click="startTabNameEdit" 
-              class="ml-2 p-1 text-blue-200 hover:text-white rounded-full focus:outline-none"
+              class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all"
               title="Edit tab name"
             >
-              <Edit class="w-4 h-4" />
+              <Edit class="w-5 h-5" />
             </button>
           </div>
+          <p class="text-sm text-gray-400 mt-1 font-medium">Manage how transactions are automatically processed in this tab.</p>
         </div>
+        <button 
+          @click="$emit('close')" 
+          class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
+        >
+          <X class="w-6 h-6" />
+        </button>
       </div>
-      
+
       <!-- Main Content Area -->
-      <div class="max-h-[65vh] overflow-auto">
-        <!-- Enabled Rules -->
-        <div class="pb-2">
-          <!-- Rule Type Collapsible Sections -->
-          <div v-for="ruleType in ruleTypes" :key="ruleType.id" class="border-b border-gray-200">
+      <div class="p-6 pb-32">
+        <div class="space-y-12">
+          <!-- Rule Sections -->
+          <div v-for="ruleType in ruleTypes" :key="ruleType.id" class="space-y-4">
             <div 
               @click="toggleRuleTypeCollapse(ruleType.id)"
-              class="flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50"
+              class="flex items-center justify-between cursor-pointer group"
             >
-              <div class="flex items-center space-x-2">
-                <component :is="ruleType.icon" :class="`text-${ruleType.color}-600 w-5 h-5`" />
-                <h3 class="font-medium text-gray-800">{{ ruleType.name }}</h3>
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg transition-colors bg-gray-50 group-hover:bg-black group-hover:text-white text-gray-400">
+                  <component :is="ruleType.icon" class="w-5 h-5" />
+                </div>
+                <h3 class="text-sm font-black uppercase tracking-[0.2em] text-gray-400 group-hover:text-black transition-colors">
+                  {{ ruleType.name }}
+                </h3>
                 <span 
                   v-if="getRuleCountByType(ruleType.id, true) > 0" 
-                  :class="`bg-${ruleType.color}-100 text-${ruleType.color}-800 text-xs font-medium px-2.5 py-0.5 rounded-full`"
+                  class="bg-gray-100 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest"
                 >
                   {{ getRuleCountByType(ruleType.id, true) }}
                 </span>
               </div>
               <ChevronDown 
-            :class="[
-                  'w-5 h-5 transition-transform', 
-                  collapsedSections[ruleType.id] ? '' : 'transform rotate-180'
+                :class="[
+                  'w-5 h-5 text-gray-300 transition-all duration-300 group-hover:text-black', 
+                  collapsedSections[ruleType.id] ? '' : 'rotate-180'
                 ]" 
               />
             </div>
             
-            <!-- Rules of this type -->
-            <div v-if="!collapsedSections[ruleType.id]" class="px-4 pb-4">
-              <!-- Enabled Rules -->
-              <div v-if="getEnabledRulesByType(ruleType.id).length === 0" class="text-center py-8">
-                <p class="text-gray-500">No enabled {{ ruleType.name.toLowerCase() }} for this tab</p>
-              </div>
-              
-              <div v-else>
-                <draggable 
-                  v-model="enabledRulesByTypeComputed[ruleType.id]" 
-                  item-key="_id"
-                  class="space-y-3"
-                  handle=".drag-handle"
-                  @end="onDragEnd"
-                  :data-rule-type="ruleType.id"
+            <transition name="list-fade">
+              <div v-if="!collapsedSections[ruleType.id]" class="space-y-3">
+                <!-- No Rules Empty State -->
+                <div 
+                  v-if="getEnabledRulesByType(ruleType.id).length === 0" 
+                  class="py-12 px-6 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-3"
                 >
-                  <template #item="{ element }">
+                  <p class="text-sm font-bold text-gray-300">No active {{ ruleType.name.toLowerCase() }}</p>
+                  <button 
+                    @click="createNewRuleWithType(ruleType.id)"
+                    class="text-xs font-black uppercase tracking-widest text-black hover:text-gray-500 py-2"
+                  >
+                    + Add Rule
+                  </button>
+                </div>
+                
+                <!-- Draggable Rule List -->
+                <div v-else>
+                  <draggable 
+                    v-model="enabledRulesByTypeComputed[ruleType.id]" 
+                    item-key="_id"
+                    class="space-y-3"
+                    handle=".drag-handle"
+                    @end="onDragEnd"
+                    :data-rule-type="ruleType.id"
+                  >
+                    <template #item="{ element }">
+                      <RuleCard 
+                        :rule="element"
+                        :rule-type="ruleType"
+                        @edit="editRule"
+                        @toggle="toggleRuleContextStatus"
+                        @delete="confirmDeleteRule"
+                      />
+                    </template>
+                  </draggable>
+                </div>
+
+                <!-- Disabled categorization rules (hidden in sub-section) -->
+                <div v-if="ruleType.id === 'categorize' && getDisabledRulesByType('categorize').length > 0" class="mt-8">
+                  <button 
+                    @click="toggleDisabledSection"
+                    class="w-full flex items-center gap-4 group py-4"
+                  >
+                    <div class="h-[2px] flex-1 bg-gray-50"></div>
+                    <div class="text-[10px] font-black text-gray-300 group-hover:text-black transition-colors uppercase tracking-[0.3em] flex items-center gap-2">
+                       Disabled ({{ getDisabledRulesByType('categorize').length }})
+                       <ChevronDown :class="['w-3 h-3 transition-transform', disabledSectionCollapsed ? '' : 'rotate-180']" />
+                    </div>
+                    <div class="h-[2px] flex-1 bg-gray-50"></div>
+                  </button>
+                  
+                  <div v-if="!disabledSectionCollapsed" class="space-y-3 mt-4">
                     <RuleCard 
-                      :rule="element"
+                      v-for="rule in getDisabledRulesByType('categorize')" 
+                      :key="rule._id"
+                      :rule="rule"
                       :rule-type="ruleType"
                       @edit="editRule"
                       @toggle="toggleRuleContextStatus"
                       @delete="confirmDeleteRule"
                     />
-                  </template>
-                </draggable>
-      </div>
-      
-              <!-- For categorize rules, also show disabled rules -->
-              <div v-if="ruleType.id === 'categorize' && getDisabledRulesByType('categorize').length > 0" class="mt-8">
-                <div 
-                  @click="toggleDisabledSection"
-                  class="flex items-center mb-3 cursor-pointer hover:bg-gray-50 p-2 rounded"
-                >
-                  <div class="flex-grow border-t border-gray-200"></div>
-                  <div class="flex-shrink mx-4 text-sm text-gray-500 flex items-center">
-                    <ChevronDown 
-                      :class="[
-                        'w-4 h-4 mr-1 transition-transform', 
-                        disabledSectionCollapsed ? '' : 'transform rotate-180'
-                      ]" 
-                    />
-                    <span>Disabled Categorize Rules ({{ getDisabledRulesByType('categorize').length }})</span>
                   </div>
-                  <div class="flex-grow border-t border-gray-200"></div>
-          </div>
-          
-                <div v-if="!disabledSectionCollapsed" class="space-y-3">
-                  <RuleCard 
-                    v-for="rule in getDisabledRulesByType('categorize')" 
-                    :key="rule._id"
-                    :rule="rule"
-                    :rule-type="ruleType"
-                    @edit="editRule"
-                    @toggle="toggleRuleContextStatus"
-                    @delete="confirmDeleteRule"
-            />
+                </div>
+              </div>
+            </transition>
           </div>
         </div>
       </div>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Action Buttons -->
-      <div class="bg-gray-50 px-4 py-4 border-t border-gray-200">
-        <div class="flex justify-end">
-          <button
-            @click="createNewRule"
-            class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <Plus class="w-4 h-4 mr-2" />
-            Create New Rule
-          </button>
-        </div>
+
+      <!-- Action Footer -->
+      <div class="mt-auto px-6 py-8 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex justify-center z-20">
+        <button
+          @click="createNewRule"
+          class="w-full max-w-sm px-8 py-5 bg-black border-2 border-black rounded-2xl text-base font-black text-white hover:bg-gray-800 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex justify-center items-center gap-3"
+        >
+          <Plus class="w-6 h-6" />
+          Create New Rule
+        </button>
       </div>
     </div>
     
-    <!-- Rule Edit Modal -->
+    <!-- Modals -->
     <RuleEditModal
       v-if="showRuleEditModal"
       :rule="currentRule"
@@ -142,7 +159,6 @@
       @save="saveRule"
     />
     
-    <!-- Delete Confirmation Modal -->
     <DeleteConfirmModal
       v-if="showDeleteModal"
       :rule="ruleToDelete"
@@ -155,7 +171,7 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
 import { 
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRuleManager } from '../composables/useRuleManager';
@@ -175,6 +191,8 @@ const {
   toggleRuleContext,
   updateRuleOrder
 } = useRuleManager();
+
+defineEmits(['close']);
 
 // UI State 
 const showRuleEditModal = ref(false);
@@ -199,34 +217,10 @@ const collapsedSections = ref({
 
 // Define rule types with their properties
 const ruleTypes = [
-  { 
-    id: 'sort', 
-    name: 'Sort Rules', 
-    color: 'cyan', 
-    icon: SortAsc,
-    description: 'Define how items are ordered' 
-  },
-  { 
-    id: 'categorize', 
-    name: 'Categorize Rules', 
-    color: 'teal', 
-    icon: FolderCheck,
-    description: 'Assign categories to items' 
-  },
-  { 
-    id: 'filter', 
-    name: 'Filter Rules', 
-    color: 'amber', 
-    icon: Filter,
-    description: 'Control which items are displayed'
-  },
-  { 
-    id: 'groupBy', 
-    name: 'Group Rules', 
-    color: 'indigo', 
-    icon: Group,
-    description: 'Determine how items are grouped'
-  }
+  { id: 'sort', name: 'Sort Rules', icon: SortAsc, description: 'Define how items are ordered' },
+  { id: 'categorize', name: 'Categorize Rules', icon: FolderCheck, description: 'Assign categories to items' },
+  { id: 'filter', name: 'Filter Rules', icon: Filter, description: 'Control which items are displayed' },
+  { id: 'groupBy', name: 'Group Rules', icon: Group, description: 'Determine how items are grouped' }
 ];
 
 // Toggle functions
@@ -243,14 +237,7 @@ function startTabNameEdit() {
   if (state.selected.tab) {
     editedTabName.value = state.selected.tab.tabName || '';
     isEditingTabName.value = true;
-    
-    // Focus the input after rendering
-    nextTick(() => {
-      if (tabNameInput.value) {
-        tabNameInput.value.focus();
-        tabNameInput.value.select();
-      }
-    });
+    nextTick(() => tabNameInput.value?.focus());
   }
 }
 
@@ -288,12 +275,17 @@ const disabledRules = computed(() => {
 });
 
 // Computed property for draggable to use
-const enabledRulesByTypeComputed = computed(() => {
-  const result = {};
-  ruleTypes.forEach(type => {
-    result[type.id] = getEnabledRulesByType(type.id);
-  });
-  return result;
+const enabledRulesByTypeComputed = computed({
+  get: () => {
+    const result = {};
+    ruleTypes.forEach(type => {
+      result[type.id] = getEnabledRulesByType(type.id);
+    });
+    return result;
+  },
+  set: (newValue) => {
+    // This setter is needed for draggable but reordering is handled in onDragEnd
+  }
 });
 
 // Get enabled rules by type
@@ -321,17 +313,17 @@ async function onDragEnd(event) {
   if (newIndex === oldIndex) return;
   
   // Determine which rule type was reordered
-  const ruleTypeId = from.getAttribute('data-rule-type') || 
-    Object.keys(enabledRulesByTypeComputed.value).find(key => 
-      enabledRulesByTypeComputed.value[key].length > 0 && 
-      enabledRulesByTypeComputed.value[key][0].rule[0] === enabledRulesByTypeComputed.value[key][0].rule[0]
-    );
+  const ruleTypeId = from.getAttribute('data-rule-type');
   
   if (!ruleTypeId) return;
   
   // Update order of execution for all rules of this type
-  const rules = enabledRulesByTypeComputed.value[ruleTypeId];
+  const rules = getEnabledRulesByType(ruleTypeId); // Get the current ordered list
   
+  // Reorder locally first to reflect the change immediately
+  const [removed] = rules.splice(oldIndex, 1);
+  rules.splice(newIndex, 0, removed);
+
   // Update all rules with new execution order
   for (let i = 0; i < rules.length; i++) {
     if (rules[i].orderOfExecution !== i) {
@@ -347,8 +339,12 @@ function createNewRule() {
     getRuleCountByType(type.id, true) > 0
   )?.id || 'categorize';
   
+  createNewRuleWithType(defaultRuleType);
+}
+
+function createNewRuleWithType(typeId) {
   currentRule.value = {
-    rule: [defaultRuleType, '', '', '', ''],
+    rule: [typeId, '', '', '', ''],
     applyForTabs: state.selected.tab?._id ? [state.selected.tab._id] : ['_GLOBAL'],
     _isImportant: false,
     orderOfExecution: enabledRules.value.length
@@ -415,4 +411,16 @@ async function deleteRule() {
     console.error('Error deleting rule:', error);
   }
 }
-</script> 
+</script>
+
+<style scoped>
+.list-fade-enter-active,
+.list-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+.list-fade-enter-from,
+.list-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
+}
+</style>

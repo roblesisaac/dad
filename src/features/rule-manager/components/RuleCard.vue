@@ -1,165 +1,109 @@
 <template>
   <div 
-    class="rule-card bg-white rounded-lg shadow-sm border-l-4 transition-all hover:shadow"
+    class="rule-card bg-white rounded-2xl border-2 transition-all duration-300 relative group"
     :class="[
-      isGlobalRule || isTabSpecificRule 
-        ? `border-l-${ruleType.color}-500` 
-        : 'border-l-gray-300',
-      isEnabledForCurrentTab ? 'opacity-100' : 'opacity-60'
+      isEnabledForCurrentTab 
+        ? 'border-gray-100 hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)]' 
+        : 'border-gray-50 opacity-60 grayscale'
     ]"
   >
-    <!-- Rule Type Indicator and Actions Row -->
-    <div class="flex items-center justify-between p-3 border-b border-gray-100">
-      <!-- Left side with rule type and scope -->
-      <div class="flex items-center gap-2">
-        <!-- Rule type icon -->
-        <div 
-          class="p-1.5 rounded-md"
-          :class="`bg-${ruleType.color}-100 text-${ruleType.color}-700`"
-        >
-          <component 
-            :is="getRuleTypeIcon()" 
-            class="w-4 h-4" 
+    <!-- Combined Header & Info -->
+    <div class="p-5">
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex items-start gap-4 flex-grow min-w-0">
+          <!-- Rule Type Icon -->
+          <div 
+            class="mt-0.5 p-2 rounded-xl transition-colors border-2 flex-shrink-0"
+            :class="`bg-${ruleType.color}-50/50 border-${ruleType.color}-100 text-${ruleType.color}-600`"
+          >
+            <component :is="getRuleTypeIcon()" class="w-4 h-4" />
+          </div>
+
+          <div class="min-w-0">
+            <div class="flex flex-wrap items-center gap-2 mb-1">
+              <h4 class="text-base font-black text-gray-900 tracking-tight leading-none group-hover:text-black transition-colors truncate">
+                {{ getRuleDisplayName() }}
+              </h4>
+              <!-- Indicators -->
+              <span v-if="rule._isImportant" class="text-[8px] font-black uppercase tracking-tighter bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-md">Priority</span>
+              <span v-if="isGlobalRule" class="text-[8px] font-black uppercase tracking-tighter bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-md">Global</span>
+            </div>
+            <p class="text-xs text-gray-400 font-medium truncate">{{ getRuleDescription() }}</p>
+          </div>
+        </div>
+
+        <div class="flex flex-col items-end gap-3 flex-shrink-0">
+          <Switch 
+            :model-value="isEnabledForCurrentTab" 
+            @update:model-value="$emit('toggle', rule)" 
           />
-        </div>
-        
-        <!-- Badge indicators -->
-        <div class="flex gap-1">
-          <span 
-            v-if="rule._isImportant" 
-            class="px-1.5 py-0.5 rounded-sm bg-amber-100 text-amber-800 text-xs font-medium"
-            title="Important rule"
-          >
-            Priority
-          </span>
-          <span
-            v-if="isGlobalRule"
-            class="px-1.5 py-0.5 rounded-sm bg-purple-100 text-purple-800 text-xs font-medium"
-          >
-            Global
-          </span>
-          <span
-            v-if="isTabSpecificRule"
-            class="px-1.5 py-0.5 rounded-sm bg-blue-100 text-blue-800 text-xs font-medium"
-          >
-            Tab
-          </span>
+          <div class="drag-handle cursor-move p-1 text-gray-100 group-hover:text-gray-300 hover:text-black transition-colors" title="Drag to reorder">
+            <GripVertical class="w-4 h-4" />
+          </div>
         </div>
       </div>
-      
-      <!-- Right side with toggle switch -->
-      <div class="flex items-center">
-        <div 
-          class="px-1.5 rounded text-xs font-medium mr-1"
-          :class="isEnabledForCurrentTab 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-gray-100 text-gray-500'"
-        >
-          {{ isEnabledForCurrentTab ? 'Active' : 'Inactive' }}
-        </div>
-        <Switch 
-          :model-value="isEnabledForCurrentTab" 
-          @update:model-value="$emit('toggle', rule)" 
-        />
-      </div>
-    </div>
-    
-    <!-- Rule Content -->
-    <div class="p-3">
-      <!-- Rule Name and Order -->
-      <div class="flex justify-between items-center mb-2">
-        <h4 class="font-medium text-gray-900">{{ getRuleDisplayName() }}</h4>
-        <span class="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-          Order: {{ rule.orderOfExecution || 0 }}
-        </span>
-      </div>
-      
-      <!-- Rule Description -->
-      <p class="text-sm text-gray-600 mb-2">{{ getRuleDescription() }}</p>
-      
-      <!-- Rule Criteria -->
+
+      <!-- Simplified Logic Visualization -->
       <div 
         v-if="rule.rule.length > 1"
-        class="text-sm border-l-2 pl-2 mb-2 py-1"
-        :class="`border-l-${ruleType.color}-300`"
+        class="mt-4 pt-4 border-t-2 border-gray-50 group-hover:border-gray-100 transition-colors"
       >
         <!-- Sort Rule -->
-        <div v-if="ruleType.id === 'sort'" class="flex items-center gap-1">
-          <span class="text-gray-600">Sort by:</span>
-          <span class="font-semibold">{{ rule.rule[1] || 'Property' }}</span>
-          <ArrowDown v-if="rule.rule[2] === 'desc'" class="w-3.5 h-3.5 text-gray-500" title="Descending" />
-          <ArrowUp v-else class="w-3.5 h-3.5 text-gray-500" title="Ascending" />
+        <div v-if="ruleType.id === 'sort'" class="flex items-center gap-2 text-xs">
+          <span class="text-gray-400 font-black uppercase text-[9px] tracking-widest">Order by</span>
+          <span class="font-black text-gray-800">{{ rule.rule[1] }}</span>
+          <span class="text-gray-300">/</span>
+          <span class="font-black text-gray-800 uppercase text-[10px]">{{ rule.rule[2] === 'desc' ? 'Desc' : 'Asc' }}</span>
         </div>
         
         <!-- Filter Rule -->
-        <div v-else-if="ruleType.id === 'filter'" class="flex flex-wrap items-center gap-1">
-          <span class="font-semibold">{{ rule.rule[1] || 'property' }}</span>
-          <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[2]) }}</span>
-          <span class="font-semibold">{{ rule.rule[3] || 'value' }}</span>
-          <template v-if="hasAndCondition(rule)">
-            <span class="mx-1 text-xs font-semibold uppercase text-gray-500">AND</span>
-            <span class="font-semibold">{{ rule.rule[6] || 'property' }}</span>
-            <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[7]) }}</span>
-            <span class="font-semibold">{{ rule.rule[8] || 'value' }}</span>
+        <div v-else-if="ruleType.id === 'filter'" class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="font-black text-gray-800">{{ rule.rule[1] }}</span>
+          <span class="text-[10px] font-bold text-gray-400 uppercase">{{ getOperatorDisplay(rule.rule[2]) }}</span>
+          <span class="font-black text-black">{{ rule.rule[3] }}</span>
+          <template v-for="(andCondition, index) in getAndConditions(rule)" :key="index">
+            <span class="text-[9px] font-black uppercase text-gray-300">AND</span>
+            <span class="font-black text-gray-800">{{ andCondition.property }}</span>
+            <span class="text-[10px] font-bold text-gray-400 uppercase">{{ getOperatorDisplay(andCondition.method) }}</span>
+            <span class="font-black text-black">{{ andCondition.value }}</span>
           </template>
         </div>
         
-        <!-- Categorize Rule - Fixed array indices -->
-        <div v-else-if="ruleType.id === 'categorize'" class="flex flex-col gap-1">
-          <div class="flex items-center gap-1">
-            <span class="text-gray-600">Category:</span>
-            <span class="font-semibold">{{ rule.rule[4] || 'category' }}</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <span class="text-gray-600">When:</span>
-            <span class="font-semibold">{{ rule.rule[1] || 'property' }}</span>
-            <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[2]) }}</span>
-            <span class="font-semibold">{{ rule.rule[3] || 'value' }}</span>
-            <template v-if="hasAndCondition(rule)">
-              <span class="mx-1 text-xs font-semibold uppercase text-gray-500">AND</span>
-              <span class="font-semibold">{{ rule.rule[6] || 'property' }}</span>
-              <span class="text-gray-600">{{ getOperatorDisplay(rule.rule[7]) }}</span>
-              <span class="font-semibold">{{ rule.rule[8] || 'value' }}</span>
-            </template>
-          </div>
+        <!-- Categorize Rule -->
+        <div v-else-if="ruleType.id === 'categorize'" class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-gray-400 font-black uppercase text-[9px] tracking-widest">If</span>
+          <span class="font-black text-gray-800">{{ rule.rule[1] }}</span>
+          <span class="text-[9px] font-black text-gray-400 uppercase">{{ getOperatorDisplay(rule.rule[2]) }}</span>
+          <span class="font-black text-gray-800">{{ rule.rule[3] }}</span>
+          <span class="text-black inline-flex items-center gap-1">
+            <span class="w-2 h-px bg-gray-300"></span>
+            <span class="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 rounded-lg ml-1">{{ rule.rule[4] }}</span>
+          </span>
         </div>
         
         <!-- Group By Rule -->
-        <div v-else-if="ruleType.id === 'groupBy'" class="flex items-center gap-1">
-          <span class="text-gray-600">Group by:</span>
-          <span class="font-semibold">{{ rule.rule[1] || 'property' }}</span>
+        <div v-else-if="ruleType.id === 'groupBy'" class="flex items-center gap-2 text-xs">
+          <span class="text-gray-400 font-black uppercase text-[9px] tracking-widest">Aggregate by</span>
+          <span class="font-black text-gray-800">{{ rule.rule[1] }}</span>
         </div>
       </div>
     </div>
     
-    <!-- Action Bar -->
-    <div class="flex border-t border-gray-100">
-      <!-- Drag Handle -->
-      <div 
-        class="drag-handle cursor-move p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors"
-        title="Drag to reorder"
-      >
-        <GripVertical class="w-4 h-4" />
-      </div>
-      
-      <div class="flex-grow"></div>
-      
-      <!-- Edit button -->
+    <!-- Discreet Hover Action Bar -->
+    <div class="flex border-t-2 border-gray-50 bg-gray-50/20 opacity-0 group-hover:opacity-100 transition-opacity">
       <button 
         @click="$emit('edit', rule)"
-        class="p-2 text-gray-500 hover:bg-gray-50 hover:text-blue-600 transition-colors"
-        title="Edit rule"
+        class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black hover:bg-white transition-all border-r-2 border-gray-50 flex items-center justify-center gap-2"
       >
-        <Edit class="w-4 h-4" />
+        <Edit class="w-3.5 h-3.5" />
+        Edit
       </button>
-      
-      <!-- Delete button -->
       <button 
         @click="$emit('delete', rule)"
-        class="p-2 text-gray-500 hover:bg-gray-50 hover:text-red-600 transition-colors rounded-br-lg"
-        title="Delete rule"
+        class="flex-1 py-3 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-red-500 hover:bg-red-50/50 transition-all flex items-center justify-center gap-2"
       >
-        <Trash class="w-4 h-4" />
+        <Trash class="w-3.5 h-3.5" />
+        Remove
       </button>
     </div>
   </div>
@@ -233,12 +177,25 @@ function getOperatorDisplay(operator) {
   return operators[operator] || operator;
 }
 
-function hasAndCondition(rule) {
-  const [,,,,, combinator, andProp, andMethod, andValue] = rule.rule || [];
-  const hasAndKeyword = String(combinator || '').toLowerCase() === 'and';
-  const hasSecondCondition = andProp && andMethod && String(andValue || '').trim();
+function getAndConditions(rule) {
+  const conditions = [];
+  const ruleValues = rule.rule || [];
 
-  return hasAndKeyword && hasSecondCondition;
+  for (let i = 5; i < ruleValues.length; i += 4) {
+    const combinator = String(ruleValues[i] || '').toLowerCase();
+
+    if (combinator !== 'and') {
+      continue;
+    }
+
+    conditions.push({
+      property: ruleValues[i + 1] || '',
+      method: ruleValues[i + 2] || '',
+      value: ruleValues[i + 3] || ''
+    });
+  }
+
+  return conditions;
 }
 
 // Generate a readable name for the rule

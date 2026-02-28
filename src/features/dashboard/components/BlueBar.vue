@@ -1,12 +1,26 @@
 <template>
-<Transition>
-<div v-if="state.blueBar.message" class="w-full bg-indigo-700 border-b border-indigo-900 px-4 py-1.5">
-    <div class="font-medium">
-    <small class="text-indigo-100">{{ state.blueBar.message }}<LoadingDots v-if="state.blueBar.loading" /></small>
+<Transition name="slide-down">
+<div v-if="state.blueBar.message" class="w-full bg-black text-white px-4 py-2 flex justify-center items-center gap-2 sticky top-0 z-[100]">
+    <div class="text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+      {{ state.blueBar.message }}
+      <LoadingDots v-if="state.blueBar.loading" />
     </div>
 </div>
 </Transition>
+
 </template>
+
+<style scoped>
+.slide-down-enter-active,
+.slide-down-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-down-enter-from,
+.slide-down-leave-to {
+  transform: translateY(-100%);
+}
+</style>
 
 <script setup>
 import { useDashboardState } from '../composables/useDashboardState';

@@ -19,11 +19,11 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
-      <template v-if="hasAndCondition(rule)">
+      <template v-for="(andCondition, index) in getAndConditions(rule)" :key="`filter-and-${index}`">
         <span class="font-medium mx-1">AND</span>
-        <span class="rule-part mr-1">{{ formatPropName(rule.rule[6]) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(rule.rule[7]) }}</span>
-        <span class="rule-part">{{ rule.rule[8] }}</span>
+        <span class="rule-part mr-1">{{ formatPropName(andCondition.property) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(andCondition.method) }}</span>
+        <span class="rule-part">{{ andCondition.value }}</span>
       </template>
     </template>
     
@@ -35,11 +35,11 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
-      <template v-if="hasAndCondition(rule)">
+      <template v-for="(andCondition, index) in getAndConditions(rule)" :key="`categorize-and-${index}`">
         <span class="font-medium mx-1">AND</span>
-        <span class="rule-part mr-1">{{ formatPropName(rule.rule[6]) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(rule.rule[7]) }}</span>
-        <span class="rule-part">{{ rule.rule[8] }}</span>
+        <span class="rule-part mr-1">{{ formatPropName(andCondition.property) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(andCondition.method) }}</span>
+        <span class="rule-part">{{ andCondition.value }}</span>
       </template>
     </template>
     
@@ -114,12 +114,25 @@ function formatMethodName(methodName) {
   return methodMap[methodName] || methodName;
 }
 
-function hasAndCondition(rule) {
-  const [,,,,, combinator, andProp, andMethod, andValue] = rule.rule || [];
-  const hasAndKeyword = String(combinator || '').toLowerCase() === 'and';
-  const hasSecondCondition = andProp && andMethod && String(andValue || '').trim();
+function getAndConditions(rule) {
+  const conditions = [];
+  const ruleValues = rule.rule || [];
 
-  return hasAndKeyword && hasSecondCondition;
+  for (let i = 5; i < ruleValues.length; i += 4) {
+    const combinator = String(ruleValues[i] || '').toLowerCase();
+
+    if (combinator !== 'and') {
+      continue;
+    }
+
+    conditions.push({
+      property: ruleValues[i + 1] || '',
+      method: ruleValues[i + 2] || '',
+      value: ruleValues[i + 3] || ''
+    });
+  }
+
+  return conditions;
 }
 </script>
 

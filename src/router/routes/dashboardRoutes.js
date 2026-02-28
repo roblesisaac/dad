@@ -9,6 +9,7 @@ export default [
     meta: {
       requiresAuth: true,
       requiresPlaidItems: true,
+      hideNav: true,
       title: 'Spending Report'
     }
   },
