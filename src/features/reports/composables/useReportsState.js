@@ -1,11 +1,11 @@
 import { computed, reactive } from 'vue';
 import { format, startOfMonth } from 'date-fns';
-import { useApi } from '@/shared/composables/useApi';
 import { useReportsAPI } from '@/features/reports/composables/useReportsAPI.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
+import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
 import {
   buildDefaultRuleMethods,
   buildTabRulesForId,
@@ -95,12 +95,12 @@ export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
 }
 
 export function useReportsState() {
-  const api = useApi();
   const reportsAPI = useReportsAPI();
   const tabsAPI = useTabsAPI();
   const rulesAPI = useRulesAPI();
   const groupsAPI = useGroupsAPI();
   const { state: dashboardState } = useDashboardState();
+  const { fetchTransactions } = useTransactions();
 
   const ruleMethods = buildDefaultRuleMethods();
 
@@ -240,9 +240,7 @@ export function useReportsState() {
       const accountRequests = accounts
         .map(account => account.account_id)
         .filter(Boolean)
-        .map(accountId =>
-          api.get(`plaid/transactions?account_id=${encodeURIComponent(accountId)}&date=${encodeURIComponent(queryDate)}`)
-        );
+        .map(accountId => fetchTransactions(accountId, queryDate));
 
       const responses = await Promise.all(accountRequests);
       const merged = [];
@@ -469,29 +467,19 @@ export function useReportsState() {
     }
   }
 
-  async function createReport() {
+  async function createReport(name) {
     try {
-      const reportName = `Report ${state.reports.length + 1}`;
-      const draftId = `draft_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-      const shiftedReports = state.reports.map(report => ({
-        ...report,
-        sort: Number(report.sort || 0) + 1
-      }));
-      const draft = {
-        _id: draftId,
-        name: reportName,
+      const nextName = String(name || '').trim() || `Report ${state.reports.length + 1}`;
+      const created = await reportsAPI.createReport({
+        name: nextName,
         rows: [],
-        isDraft: true,
-        sort: 0,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+        sort: state.reports.length
+      });
 
-      replaceReports([draft, ...shiftedReports]);
-      state.saveStatusByReportId[draftId] = 'idle';
-      state.reportTotalsById[draftId] = 0;
+      replaceReports([...state.reports, created]);
+      state.saveStatusByReportId[created._id] = 'idle';
 
-      return draft;
+      return findReport(created._id) || created;
     } catch (error) {
       console.error('Failed to create report', error);
       state.error = error.message || 'Failed to create report';

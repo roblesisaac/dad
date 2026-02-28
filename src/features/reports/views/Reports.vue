@@ -280,6 +280,37 @@
       </template>
 
       <div
+        v-if="isCreateReportModalOpen"
+        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="cancelCreateReport"
+      >
+        <div class="w-full max-w-md bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
+          <h2 class="text-lg font-black text-gray-900">What do you want to call this report?</h2>
+
+          <label class="block mt-4 text-xs font-black uppercase tracking-wider text-gray-500">
+            Report Name
+            <input
+              v-model="createReportNameDraft"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="Monthly Budget"
+              @keydown.enter.prevent="confirmCreateReport"
+            />
+          </label>
+
+          <div class="mt-5 flex items-center justify-end gap-2">
+            <button class="btn-secondary" @click="cancelCreateReport">Cancel</button>
+            <button
+              class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="!canCreateReport || isCreatingReport"
+              @click="confirmCreateReport"
+            >
+              {{ isCreatingReport ? 'Saving...' : 'Save' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div
         v-if="isRowEditorOpen && rowEditorDraft"
         class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-end md:items-center justify-center p-4"
         @click.self="cancelRowEditor"
@@ -344,8 +375,20 @@
           </div>
 
           <div class="mt-6 flex items-center justify-end gap-2">
-            <button class="btn-secondary" @click="cancelRowEditor">Cancel</button>
-            <button class="btn-primary" @click="saveRowEditor">Save</button>
+            <button
+              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isSavingRow"
+              @click="cancelRowEditor"
+            >
+              Cancel
+            </button>
+            <button
+              class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isSavingRow"
+              @click="saveRowEditor"
+            >
+              {{ isSavingRow ? 'Saving...' : 'Save' }}
+            </button>
           </div>
         </div>
       </div>
@@ -422,6 +465,10 @@ const rowEditorDraft = ref(null);
 const editingRowId = ref('');
 const editingRowWasNew = ref(false);
 const showQuickSelect = ref(false);
+const isSavingRow = ref(false);
+const isCreateReportModalOpen = ref(false);
+const createReportNameDraft = ref('');
+const isCreatingReport = ref(false);
 const isReorderingReports = ref(false);
 const isReorderingRows = ref(false);
 
@@ -430,6 +477,7 @@ const selectedReport = computed(() =>
 );
 
 const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
+const canCreateReport = computed(() => Boolean(createReportNameDraft.value.trim()));
 
 const reportsForDrag = computed({
   get() {
@@ -568,19 +616,39 @@ async function finishReorderRows() {
 }
 
 async function createFirstReport() {
-  isReorderingReports.value = false;
-  const report = await createReport();
-  if (report?._id) {
-    openReport(report._id);
-  }
+  openCreateReportModal();
 }
 
 async function createNewReportFromFab() {
+  openCreateReportModal();
+}
+
+function openCreateReportModal() {
   isReorderingReports.value = false;
-  const report = await createReport();
-  if (report?._id) {
-    openReport(report._id);
-  }
+  showListMenu.value = false;
+  activeReportMenuId.value = '';
+  createReportNameDraft.value = '';
+  isCreateReportModalOpen.value = true;
+}
+
+function cancelCreateReport() {
+  if (isCreatingReport.value) return;
+  isCreateReportModalOpen.value = false;
+  createReportNameDraft.value = '';
+}
+
+async function confirmCreateReport() {
+  if (!canCreateReport.value || isCreatingReport.value) return;
+
+  isCreatingReport.value = true;
+  const report = await createReport(createReportNameDraft.value.trim());
+  isCreatingReport.value = false;
+
+  if (!report?._id) return;
+
+  isCreateReportModalOpen.value = false;
+  createReportNameDraft.value = '';
+  openReport(report._id);
 }
 
 function startRenameFromList(report) {
@@ -669,6 +737,8 @@ function addAndEditRow(type) {
 }
 
 function cancelRowEditor() {
+  if (isSavingRow.value) return;
+
   if (selectedReport.value && editingRowWasNew.value && editingRowId.value) {
     removeRow(selectedReport.value._id, editingRowId.value);
   }
@@ -681,26 +751,32 @@ function cancelRowEditor() {
 }
 
 async function saveRowEditor() {
-  if (!selectedReport.value || !rowEditorDraft.value || !editingRowId.value) return;
+  if (!selectedReport.value || !rowEditorDraft.value || !editingRowId.value || isSavingRow.value) return;
 
-  const reportId = selectedReport.value._id;
-  const rowId = editingRowId.value;
+  isSavingRow.value = true;
 
-  updateRow(reportId, rowId, rowEditorDraft.value);
-  await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
+  try {
+    const reportId = selectedReport.value._id;
+    const rowId = editingRowId.value;
 
-  if (!isDraftSelected.value) {
-    const saved = await saveReport(reportId);
-    if (saved?._id) {
-      selectedReportId.value = saved._id;
+    updateRow(reportId, rowId, rowEditorDraft.value);
+    await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
+
+    if (!isDraftSelected.value) {
+      const saved = await saveReport(reportId);
+      if (saved?._id) {
+        selectedReportId.value = saved._id;
+      }
     }
-  }
 
-  rowEditorDraft.value = null;
-  editingRowId.value = '';
-  editingRowWasNew.value = false;
-  isRowEditorOpen.value = false;
-  showQuickSelect.value = false;
+    rowEditorDraft.value = null;
+    editingRowId.value = '';
+    editingRowWasNew.value = false;
+    isRowEditorOpen.value = false;
+    showQuickSelect.value = false;
+  } finally {
+    isSavingRow.value = false;
+  }
 }
 
 async function refreshSelectedReport() {
