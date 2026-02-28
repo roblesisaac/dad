@@ -263,8 +263,8 @@
               v-if="showAddRowPicker"
               class="mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
             >
-              <button class="menu-item" @click="addAndEditRow('tab')">Tab-based Row</button>
-              <button class="menu-item" @click="addAndEditRow('manual')">Manual Row</button>
+              <button class="menu-item" @click="addAndEditRow('tab')">Select Existing Tab</button>
+              <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
             </div>
           </div>
         </div>
