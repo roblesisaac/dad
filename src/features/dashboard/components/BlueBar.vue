@@ -1,7 +1,7 @@
 <template>
 <Transition name="slide-down">
-<div v-if="state.blueBar.message" class="w-full bg-black text-white px-4 py-2 flex justify-center items-center gap-2 sticky top-0 z-[100]">
-    <div class="text-[10px] font-black uppercase tracking-[0.3em] flex items-center gap-2">
+<div v-if="state.blueBar.message" class="w-full text-black px-4 py-2 flex justify-center items-center gap-2 sticky top-0 z-[100]">
+    <div class="text-[10px] font-black proper tracking-[0.3em] flex items-center gap-2">
       {{ state.blueBar.message }}
       <LoadingDots v-if="state.blueBar.loading" />
     </div>

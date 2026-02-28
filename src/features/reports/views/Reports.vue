@@ -347,16 +347,51 @@
                 </label>
               </div>
 
-              <div>
-                <button class="btn-secondary" @click="showQuickSelect = !showQuickSelect">Quick Select</button>
-                <div v-if="showQuickSelect" class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
-                  <button class="chip-btn" @click="applyQuickSelect('today')">Today</button>
-                  <button class="chip-btn" @click="applyQuickSelect('prevMonth')">Prev Month</button>
-                  <button class="chip-btn" @click="applyQuickSelect('nextMonth')">Next Month</button>
-                  <button class="chip-btn" @click="applyQuickSelect('prevYear')">Prev Year</button>
-                  <button class="chip-btn" @click="applyQuickSelect('nextYear')">Next Year</button>
-                  <button class="chip-btn" @click="applyQuickSelect('last30Days')">Last 30</button>
-                  <button class="chip-btn" @click="applyQuickSelect('last90Days')">Last 90</button>
+              <div class="mt-4">
+                <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-3 px-2">Quick Select</div>
+                <div class="grid grid-cols-2 gap-2">
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('today')"
+                  >
+                    Today
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('prevMonth')"
+                  >
+                    Prev Month
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('nextMonth')"
+                  >
+                    Next Month
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('prevYear')"
+                  >
+                    Prev Year
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('nextYear')"
+                  >
+                    Next Year
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('last30Days')"
+                  >
+                    Last 30
+                  </button>
+                  <button 
+                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
+                    @click="applyQuickSelect('last90Days')"
+                  >
+                    Last 90
+                  </button>
                 </div>
               </div>
             </template>
@@ -464,7 +499,6 @@ const isRowEditorOpen = ref(false);
 const rowEditorDraft = ref(null);
 const editingRowId = ref('');
 const editingRowWasNew = ref(false);
-const showQuickSelect = ref(false);
 const isSavingRow = ref(false);
 const isCreateReportModalOpen = ref(false);
 const createReportNameDraft = ref('');
@@ -714,7 +748,6 @@ function startRowEdit(row) {
   editingRowWasNew.value = false;
   isRowEditorOpen.value = true;
   activeRowMenuId.value = '';
-  showQuickSelect.value = false;
 }
 
 function addAndEditRow(type) {
@@ -733,7 +766,6 @@ function addAndEditRow(type) {
   editingRowId.value = newRow.rowId;
   editingRowWasNew.value = true;
   isRowEditorOpen.value = true;
-  showQuickSelect.value = false;
 }
 
 function cancelRowEditor() {
@@ -747,7 +779,6 @@ function cancelRowEditor() {
   editingRowId.value = '';
   editingRowWasNew.value = false;
   isRowEditorOpen.value = false;
-  showQuickSelect.value = false;
 }
 
 async function saveRowEditor() {
@@ -773,7 +804,6 @@ async function saveRowEditor() {
     editingRowId.value = '';
     editingRowWasNew.value = false;
     isRowEditorOpen.value = false;
-    showQuickSelect.value = false;
   } finally {
     isSavingRow.value = false;
   }
@@ -930,17 +960,5 @@ onMounted(() => {
   background: #f9fafb;
 }
 
-.chip-btn {
-  border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  padding: 0.45rem 0.55rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #374151;
-  background: #fff;
-}
 
-.chip-btn:hover {
-  background: #f9fafb;
-}
 </style>
