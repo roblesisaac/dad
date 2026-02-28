@@ -37,6 +37,7 @@ describe('useReportsState helpers', () => {
         groupId: 'group-1',
         dateStart: '2026-01-01',
         dateEnd: '2026-01-31',
+        savedTotal: '99.9',
         sort: 0,
         extra: 'x'
       }
@@ -46,6 +47,7 @@ describe('useReportsState helpers', () => {
     expect(normalized[0]).toMatchObject({
       rowId: 't1',
       type: 'tab',
+      savedTotal: 99.9,
       sort: 0
     });
     expect(normalized[1]).toMatchObject({
@@ -58,11 +60,9 @@ describe('useReportsState helpers', () => {
 
   test('calculates report total using manual and tab rows', () => {
     const total = calculateReportTotal([
-      { rowId: 'tab-row', type: 'tab' },
+      { rowId: 'tab-row', type: 'tab', savedTotal: 20.5 },
       { rowId: 'manual-row', type: 'manual', amount: -5 }
-    ], {
-      'tab-row': 20.5
-    });
+    ]);
 
     expect(total).toBe(15.5);
   });

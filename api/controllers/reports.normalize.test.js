@@ -19,6 +19,7 @@ describe('reports normalize', () => {
           groupId: 'group-1',
           dateStart: '2026-01-01',
           dateEnd: '2026-01-31',
+          savedTotal: '77.5',
           sort: 1,
           unknown: 'x'
         }
@@ -40,6 +41,7 @@ describe('reports normalize', () => {
       groupId: 'group-1',
       dateStart: '2026-01-01',
       dateEnd: '2026-01-31',
+      savedTotal: 77.5,
       sort: 0
     });
 
@@ -84,6 +86,24 @@ describe('reports normalize', () => {
         ]
       })
     ).toThrow('manual row amount must be a valid number');
+  });
+
+  test('throws on invalid tab saved total', () => {
+    expect(() =>
+      normalizeReportPayload({
+        name: 'Bad',
+        rows: [
+          {
+            type: 'tab',
+            tabId: 'tab-1',
+            groupId: 'group-1',
+            dateStart: '2026-01-01',
+            dateEnd: '2026-01-02',
+            savedTotal: 'abc'
+          }
+        ]
+      })
+    ).toThrow('tab row savedTotal must be a valid number');
   });
 
   test('checks ownership helper', () => {

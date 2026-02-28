@@ -1,71 +1,49 @@
 <template>
-  <div class="sticky top-4 z-10 border-2 border-gray-100 rounded-2xl bg-white shadow-sm flex flex-col transition-all">
-    <!-- Row 1: Group & Tab Information -->
-    <div class="flex items-center justify-between px-4 py-3 sm:px-6 sm:py-5 border-b-2 border-gray-100">
-      <div class="flex items-center gap-2 sm:gap-4 flex-grow min-w-0">
-        <!-- Group Selection -->
-        <button 
-          @click="showGroupModal = true" 
-          class="flex items-baseline gap-1.5 hover:opacity-70 transition-opacity flex-shrink min-w-0 truncate text-left group"
-        >
-          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-widest truncate transition-colors">
-            {{ state.selected.group?.name || 'Account' }}
-          </span>
-          <span class="font-black text-gray-900 text-sm sm:text-lg tracking-tight">
-            <NetBalance :accounts="state.selected?.group?.accounts" :state="state" :digits="0" />
-          </span>
-        </button>
-
-        <!-- Minimalist Divider -->
-        <span class="text-gray-100 font-black text-xl flex-shrink-0">/</span>
-
-        <!-- Tab Selection -->
-        <button 
-          @click="showAllTabsModal = true" 
-          class="flex items-baseline gap-1.5 hover:opacity-70 transition-opacity flex-shrink min-w-0 truncate text-left group"
-        >
-          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-widest truncate transition-colors">
-            {{ state.selected.tab?.tabName || 'Tab' }}
-          </span>
-          <span class="font-black text-sm sm:text-lg tracking-tight" :class="fontColor(state.selected.tab?.total || 0)">
-            {{ formatPrice(state.selected.tab?.total || 0, { toFixed: 0 }) }}
-          </span>
-        </button>
-      </div>
-
-      <!-- Syncing Indicator (Desktop) -->
-      <Transition name="fade">
-        <div v-if="state.isLoading" class="hidden sm:flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-          Syncing<LoadingDots />
-        </div>
-      </Transition>
-    </div>
-
-    <!-- Row 2: Date Picker & Navigation -->
-    <div class="flex items-stretch h-12 sm:h-14">
-      <!-- Prev Tab (Left) -->
+  <div class="flex flex-col transition-all pb-12 sm:pb-20 bg-transparent">
+    <!-- Row 1: Top Navigation (Group & Date) -->
+    <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-8 sm:mb-12 transition-all">
+      <!-- Group Selection (Left) -->
       <button 
-        v-if="hasPreviousTab"
-        @click="navigateToPreviousTab" 
-        class="px-5 sm:px-6 hover:bg-black hover:text-white text-gray-300 transition-all flex items-center justify-center border-r-2 border-gray-100 group shrink-0"
-        title="Previous tab"
+        @click="showGroupModal = true" 
+        class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
       >
-        <ChevronLeft class="w-6 h-6 group-active:scale-90 transition-transform" />
+        <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+          {{ state.selected.group?.name || 'Account' }}
+        </span>
+        <ChevronDown class="w-3 h-3 text-gray-300 group-hover:text-black transition-colors" />
       </button>
 
-      <!-- Date Selection (Middle) -->
-      <div class="flex-grow min-w-0">
+      <!-- Syncing Indicator (Subtle Center) -->
+      <Transition name="fade">
+        <div v-if="state.isLoading" class="absolute left-1/2 -translate-x-1/2">
+          <LoadingDots />
+        </div>
+      </Transition>
+
+      <!-- Date Selection (Right) -->
+      <div class="flex-shrink-0">
         <SelectDate />
       </div>
+    </div>
 
-      <!-- Next Tab (Right) -->
+    <!-- Row 2: Hero Section (Active Tab Total & Name) -->
+    <div class="flex flex-col items-center justify-center text-center">
       <button 
-        v-if="hasNextTab"
-        @click="navigateToNextTab" 
-        class="px-5 sm:px-12 bg-gray-50/50 hover:bg-black hover:text-white text-gray-400 transition-all flex items-center justify-center border-l-2 border-gray-100 group shrink-0 rounded-br-[inherit]"
-        title="Next tab"
+        @click="showAllTabsModal = true" 
+        class="flex flex-col items-center group hover:opacity-80 transition-opacity focus:outline-none"
       >
-        <ChevronRight class="w-6 h-6 group-active:translate-x-1 transition-transform" />
+        <!-- Large Tab Amount -->
+        <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4 transition-all group-active:scale-[0.98]">
+          {{ formatPrice(state.selected.tab?.total || 0, { toFixed: 0 }) }}
+        </span>
+        
+        <!-- Tab Label -->
+        <div class="flex items-center gap-2">
+          <span class="text-md uppercase tracking-[0.4em]">
+            {{ state.selected.tab?.tabName || 'Tab' }}
+          </span>
+          <ChevronDown class="w-3 h-3 text-gray-200 group-hover:text-gray-400 transition-colors" />
+        </div>
       </button>
     </div>
 
@@ -80,16 +58,14 @@ import { computed, ref, nextTick } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '@/features/tabs/composables/useTabs';
 import { useUtils } from '@/shared/composables/useUtils';
-import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
+import { ChevronDown } from 'lucide-vue-next';
 
-import NetBalance from '@/features/select-group/components/NetBalance.vue';
 import SelectGroupModal from '@/features/select-group/components/SelectGroupModal.vue';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { state } = useDashboardState();
-const { selectTab } = useTabs();
 const { fontColor, formatPrice } = useUtils();
 
 const showGroupModal = ref(false);

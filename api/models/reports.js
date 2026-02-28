@@ -10,6 +10,7 @@ const rowSchema = {
   groupId: String,
   dateStart: String,
   dateEnd: String,
+  savedTotal: Number,
   title: String,
   amount: Number,
   sort: Number

@@ -36,6 +36,19 @@ function parseAmount(value) {
   return amount;
 }
 
+function parseOptionalNumber(value, fieldName, fallback = 0) {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+
+  const parsed = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw makeError(`${fieldName} must be a valid number`);
+  }
+
+  return parsed;
+}
+
 function isValidDateString(value) {
   if (typeof value !== 'string' || !DATE_PATTERN.test(value)) {
     return false;
@@ -83,6 +96,7 @@ function normalizeTabRow(row, fallbackSort) {
     groupId: nonEmptyString(row?.groupId, 'tab row groupId'),
     dateStart: normalizeDate(row?.dateStart, 'tab row dateStart'),
     dateEnd: normalizeDate(row?.dateEnd, 'tab row dateEnd'),
+    savedTotal: parseOptionalNumber(row?.savedTotal, 'tab row savedTotal', 0),
     sort: normalizeSort(row?.sort, fallbackSort)
   };
 

@@ -27,9 +27,7 @@
             @click="openReport(report._id)"
           >
             <div class="flex items-start justify-between gap-3">
-              <div>
-                <h2 class="text-xl font-black text-gray-900">{{ report.name }}</h2>
-              </div>
+              <h2 class="text-xl font-black text-gray-900 truncate">{{ report.name }}</h2>
 
               <div class="flex items-center gap-2">
                 <span class="text-sm font-black" :class="fontColor(getReportTotal(report._id))">
@@ -48,7 +46,8 @@
                     class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                     @click.stop
                   >
-                    <button class="menu-item" @click="startRenameFromList(report)">Rename</button>
+                    <button class="menu-item" @click="startRenameFromList(report)">Edit report name</button>
+                    <button class="menu-item" @click="refreshReportFromList(report._id)">Refresh totals</button>
                     <button class="menu-item" @click="confirmDeleteReport(report._id)">Delete</button>
                   </div>
                 </div>
@@ -88,25 +87,33 @@
                 <h1 class="text-3xl font-black tracking-tight text-gray-900 truncate">{{ selectedReport.name }}</h1>
                 <p class="text-xs text-gray-500 mt-1">
                   {{ selectedReport.rows.length }} row{{ selectedReport.rows.length === 1 ? '' : 's' }}
-                  <span v-if="saveStateLabel" class="ml-2">· {{ saveStateLabel }}</span>
+                  <span v-if="isDraftSelected" class="ml-2 text-amber-700 font-bold">· Unsaved</span>
+                  <span v-else-if="saveStateLabel" class="ml-2">· {{ saveStateLabel }}</span>
                 </p>
               </template>
             </div>
           </div>
 
-          <div class="relative">
-            <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showDetailReportMenu = !showDetailReportMenu">
-              <MoreVertical class="w-5 h-5" />
-            </button>
+          <div class="flex items-center gap-2">
+            <template v-if="isDraftSelected">
+              <button class="btn-secondary" @click="cancelDraftAndBack">Cancel</button>
+              <button class="btn-primary" @click="saveDraftReport">Save</button>
+            </template>
 
-            <div
-              v-if="showDetailReportMenu"
-              class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-            >
-              <button class="menu-item" @click="startReportNameEdit">Edit report name</button>
-              <button class="menu-item" @click="addAndEditRow('tab')">Add tab row</button>
-              <button class="menu-item" @click="addAndEditRow('manual')">Add manual row</button>
-              <button class="menu-item" @click="confirmDeleteReport(selectedReport._id)">Delete report</button>
+            <div class="relative">
+              <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showDetailReportMenu = !showDetailReportMenu">
+                <MoreVertical class="w-5 h-5" />
+              </button>
+
+              <div
+                v-if="showDetailReportMenu"
+                class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                @click.stop
+              >
+                <button class="menu-item" @click="startReportNameEdit">Edit report name</button>
+                <button class="menu-item" @click="refreshSelectedReport">Refresh totals</button>
+                <button class="menu-item" @click="confirmDeleteReport(selectedReport._id)">Delete</button>
+              </div>
             </div>
           </div>
         </header>
@@ -153,16 +160,24 @@
           </article>
 
           <div v-if="!selectedReport.rows.length" class="text-center text-sm text-gray-500 italic py-10">
-            No rows yet. Open the menu to add a row.
+            No rows yet. Add a row below.
           </div>
 
-          <div class="pt-2">
+          <div class="pt-2 relative">
             <button
               class="w-full border border-gray-300 rounded-xl py-3 text-sm font-black text-gray-800 hover:bg-gray-50"
-              @click="addAndEditRow('tab')"
+              @click="showAddRowPicker = !showAddRowPicker"
             >
               Add Tab Row
             </button>
+
+            <div
+              v-if="showAddRowPicker"
+              class="mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+            >
+              <button class="menu-item" @click="addAndEditRow('tab')">Tab-based Row</button>
+              <button class="menu-item" @click="addAndEditRow('manual')">Manual Row</button>
+            </div>
           </div>
         </div>
 
@@ -212,6 +227,19 @@
                   <input type="date" v-model="rowEditorDraft.dateEnd" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
                 </label>
               </div>
+
+              <div>
+                <button class="btn-secondary" @click="showQuickSelect = !showQuickSelect">Quick Select</button>
+                <div v-if="showQuickSelect" class="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                  <button class="chip-btn" @click="applyQuickSelect('today')">Today</button>
+                  <button class="chip-btn" @click="applyQuickSelect('prevMonth')">Prev Month</button>
+                  <button class="chip-btn" @click="applyQuickSelect('nextMonth')">Next Month</button>
+                  <button class="chip-btn" @click="applyQuickSelect('prevYear')">Prev Year</button>
+                  <button class="chip-btn" @click="applyQuickSelect('nextYear')">Next Year</button>
+                  <button class="chip-btn" @click="applyQuickSelect('last30Days')">Last 30</button>
+                  <button class="chip-btn" @click="applyQuickSelect('last90Days')">Last 90</button>
+                </div>
+              </div>
             </template>
 
             <template v-else>
@@ -239,6 +267,22 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
+import {
+  addMonths,
+  addYears,
+  endOfMonth,
+  endOfYear,
+  format as formatDate,
+  isSameMonth,
+  isSameYear,
+  isValid,
+  parseISO,
+  startOfMonth,
+  startOfYear,
+  subDays,
+  subMonths,
+  subYears
+} from 'date-fns';
 import { ChevronLeft, MoreVertical, Plus } from 'lucide-vue-next';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
@@ -250,8 +294,10 @@ const {
   sortedTabs,
   sortedGroups,
   hasReports,
+  isDraftReport,
   initReports,
   createReport,
+  cancelDraftReport,
   deleteReport,
   saveReport,
   updateReportName,
@@ -259,9 +305,11 @@ const {
   addManualRow,
   updateRow,
   removeRow,
+  refreshRowTotal,
   getRowAmount,
   getRowIssue,
-  getReportTotal
+  getReportTotal,
+  refreshReportTotals
 } = useReportsState();
 
 const { formatPrice, fontColor } = useUtils();
@@ -269,6 +317,7 @@ const { formatPrice, fontColor } = useUtils();
 const selectedReportId = ref('');
 const activeReportMenuId = ref('');
 const activeRowMenuId = ref('');
+const showAddRowPicker = ref(false);
 
 const showDetailReportMenu = ref(false);
 const isEditingReportName = ref(false);
@@ -278,15 +327,19 @@ const isRowEditorOpen = ref(false);
 const rowEditorDraft = ref(null);
 const editingRowId = ref('');
 const editingRowWasNew = ref(false);
+const showQuickSelect = ref(false);
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
 );
 
+const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
+
 const saveStateLabel = computed(() => {
   if (!selectedReport.value) return '';
 
   const status = state.saveStatusByReportId[selectedReport.value._id];
+  if (status === 'refreshing') return 'Refreshing totals...';
   if (status === 'saving') return 'Saving...';
   if (status === 'saved') return 'Saved';
   if (status === 'error') return 'Save failed';
@@ -326,13 +379,24 @@ function openReport(reportId) {
   activeReportMenuId.value = '';
   activeRowMenuId.value = '';
   showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
 }
 
 function backToList() {
+  if (isDraftSelected.value) {
+    const shouldDiscard = confirm('Discard this new report?');
+    if (!shouldDiscard) {
+      return;
+    }
+
+    cancelDraftReport(selectedReport.value._id);
+  }
+
   selectedReportId.value = '';
   activeReportMenuId.value = '';
   activeRowMenuId.value = '';
   showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
   cancelReportNameEdit();
   cancelRowEditor();
 }
@@ -381,11 +445,38 @@ async function saveReportName() {
   if (!selectedReport.value) return;
 
   updateReportName(selectedReport.value._id, reportNameDraft.value);
-  const saved = await saveReport(selectedReport.value._id);
 
-  if (saved) {
+  if (isDraftSelected.value) {
+    cancelReportNameEdit();
+    return;
+  }
+
+  const saved = await saveReport(selectedReport.value._id);
+  if (saved?._id) {
+    selectedReportId.value = saved._id;
     cancelReportNameEdit();
   }
+}
+
+async function saveDraftReport() {
+  if (!selectedReport.value || !isDraftSelected.value) return;
+
+  const saved = await saveReport(selectedReport.value._id);
+  if (saved?._id) {
+    selectedReportId.value = saved._id;
+  }
+}
+
+function cancelDraftAndBack() {
+  if (!selectedReport.value || !isDraftSelected.value) return;
+
+  const shouldDiscard = confirm('Discard this new report?');
+  if (!shouldDiscard) return;
+
+  cancelDraftReport(selectedReport.value._id);
+  selectedReportId.value = '';
+  showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
 }
 
 function startRowEdit(row) {
@@ -394,6 +485,7 @@ function startRowEdit(row) {
   editingRowWasNew.value = false;
   isRowEditorOpen.value = true;
   activeRowMenuId.value = '';
+  showQuickSelect.value = false;
 }
 
 function addAndEditRow(type) {
@@ -404,6 +496,7 @@ function addAndEditRow(type) {
     : addManualRow(selectedReport.value._id);
 
   showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
 
   if (!newRow) return;
 
@@ -411,17 +504,19 @@ function addAndEditRow(type) {
   editingRowId.value = newRow.rowId;
   editingRowWasNew.value = true;
   isRowEditorOpen.value = true;
+  showQuickSelect.value = false;
 }
 
 function cancelRowEditor() {
   if (selectedReport.value && editingRowWasNew.value && editingRowId.value) {
-    removeRow(selectedReport.value._id, editingRowId.value, { skipRefresh: true });
+    removeRow(selectedReport.value._id, editingRowId.value);
   }
 
   rowEditorDraft.value = null;
   editingRowId.value = '';
   editingRowWasNew.value = false;
   isRowEditorOpen.value = false;
+  showQuickSelect.value = false;
 }
 
 async function saveRowEditor() {
@@ -430,38 +525,126 @@ async function saveRowEditor() {
   const reportId = selectedReport.value._id;
   const rowId = editingRowId.value;
 
-  updateRow(reportId, rowId, rowEditorDraft.value, { skipRefresh: true });
-  const saved = await saveReport(reportId);
+  updateRow(reportId, rowId, rowEditorDraft.value);
+  await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
 
-  if (saved) {
-    rowEditorDraft.value = null;
-    editingRowId.value = '';
-    editingRowWasNew.value = false;
-    isRowEditorOpen.value = false;
+  if (!isDraftSelected.value) {
+    const saved = await saveReport(reportId);
+    if (saved?._id) {
+      selectedReportId.value = saved._id;
+    }
   }
+
+  rowEditorDraft.value = null;
+  editingRowId.value = '';
+  editingRowWasNew.value = false;
+  isRowEditorOpen.value = false;
+  showQuickSelect.value = false;
+}
+
+async function refreshSelectedReport() {
+  if (!selectedReport.value) return;
+
+  showDetailReportMenu.value = false;
+  await refreshReportTotals(selectedReport.value._id);
+}
+
+async function refreshReportFromList(reportId) {
+  activeReportMenuId.value = '';
+  await refreshReportTotals(reportId);
 }
 
 async function deleteRowAndSave(rowId) {
   if (!selectedReport.value) return;
 
-  removeRow(selectedReport.value._id, rowId, { skipRefresh: true });
+  removeRow(selectedReport.value._id, rowId);
   activeRowMenuId.value = '';
-  await saveReport(selectedReport.value._id);
+
+  if (!isDraftSelected.value) {
+    await saveReport(selectedReport.value._id);
+  }
 }
 
 async function confirmDeleteReport(reportId) {
-  if (!confirm('Delete this report?')) {
+  const shouldDelete = confirm('Delete this report?');
+  if (!shouldDelete) {
     return;
   }
 
   await deleteReport(reportId);
 
   if (selectedReportId.value === reportId) {
-    backToList();
+    selectedReportId.value = '';
   }
 
   activeReportMenuId.value = '';
   showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
+}
+
+function parseDateInput(value) {
+  if (!value) return new Date();
+  const parsed = parseISO(value);
+  return isValid(parsed) ? parsed : new Date();
+}
+
+function setDraftDateRange(startDate, endDate) {
+  if (!rowEditorDraft.value || rowEditorDraft.value.type !== 'tab') return;
+
+  rowEditorDraft.value.dateStart = formatDate(startDate, 'yyyy-MM-dd');
+  rowEditorDraft.value.dateEnd = formatDate(endDate, 'yyyy-MM-dd');
+}
+
+function applyQuickSelect(period) {
+  if (!rowEditorDraft.value || rowEditorDraft.value.type !== 'tab') return;
+
+  const today = new Date();
+  const currentStart = parseDateInput(rowEditorDraft.value.dateStart);
+  const currentEnd = parseDateInput(rowEditorDraft.value.dateEnd);
+
+  const monthRange =
+    isSameMonth(currentStart, currentEnd)
+    && formatDate(currentStart, 'yyyy-MM-dd') === formatDate(startOfMonth(currentStart), 'yyyy-MM-dd')
+    && formatDate(currentEnd, 'yyyy-MM-dd') === formatDate(endOfMonth(currentEnd), 'yyyy-MM-dd');
+
+  const yearRange =
+    isSameYear(currentStart, currentEnd)
+    && formatDate(currentStart, 'yyyy-MM-dd') === formatDate(startOfYear(currentStart), 'yyyy-MM-dd')
+    && formatDate(currentEnd, 'yyyy-MM-dd') === formatDate(endOfYear(currentEnd), 'yyyy-MM-dd');
+
+  switch (period) {
+    case 'today':
+      setDraftDateRange(today, today);
+      break;
+    case 'prevMonth': {
+      const base = monthRange ? subMonths(currentStart, 1) : subMonths(today, 1);
+      setDraftDateRange(startOfMonth(base), endOfMonth(base));
+      break;
+    }
+    case 'nextMonth': {
+      const base = monthRange ? addMonths(currentStart, 1) : addMonths(today, 1);
+      setDraftDateRange(startOfMonth(base), endOfMonth(base));
+      break;
+    }
+    case 'prevYear': {
+      const base = yearRange ? subYears(currentStart, 1) : subYears(today, 1);
+      setDraftDateRange(startOfYear(base), endOfYear(base));
+      break;
+    }
+    case 'nextYear': {
+      const base = yearRange ? addYears(currentStart, 1) : addYears(today, 1);
+      setDraftDateRange(startOfYear(base), endOfYear(base));
+      break;
+    }
+    case 'last30Days':
+      setDraftDateRange(subDays(today, 30), today);
+      break;
+    case 'last90Days':
+      setDraftDateRange(subDays(today, 90), today);
+      break;
+    default:
+      break;
+  }
 }
 
 onMounted(() => {
@@ -507,6 +690,20 @@ onMounted(() => {
 }
 
 .btn-secondary:hover {
+  background: #f9fafb;
+}
+
+.chip-btn {
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #374151;
+  background: #fff;
+}
+
+.chip-btn:hover {
   background: #f9fafb;
 }
 </style>

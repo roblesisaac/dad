@@ -42,6 +42,7 @@ export function normalizeRowsForLocal(rows = []) {
         groupId: typeof row.groupId === 'string' ? row.groupId : '',
         dateStart: typeof row.dateStart === 'string' ? row.dateStart : '',
         dateEnd: typeof row.dateEnd === 'string' ? row.dateEnd : '',
+        savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0,
         sort: Number.isFinite(row.sort) ? row.sort : index
       };
     }
@@ -60,14 +61,16 @@ export function normalizeRowsForLocal(rows = []) {
     .map((row, index) => ({ ...row, sort: index }));
 }
 
-export function calculateReportTotal(rows = [], rowAmountByRowId = {}) {
+export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
   return rows.reduce((total, row) => {
     if (row.type === 'manual') {
       const manualAmount = Number(row.amount);
       return total + (Number.isFinite(manualAmount) ? manualAmount : 0);
     }
 
-    const rowAmount = Number(rowAmountByRowId[row.rowId]);
+    const mappedAmount = rowAmountByRowId ? Number(rowAmountByRowId[row.rowId]) : Number.NaN;
+    const savedAmount = Number(row.savedTotal);
+    const rowAmount = Number.isFinite(mappedAmount) ? mappedAmount : savedAmount;
     return total + (Number.isFinite(rowAmount) ? rowAmount : 0);
   }, 0);
 }
@@ -91,7 +94,6 @@ export function useReportsState() {
     allUserGroups: [],
     allUserAccounts: [],
     reportTotalsById: {},
-    rowAmountsByKey: {},
     rowIssuesByKey: {},
     saveStatusByReportId: {}
   });
@@ -112,19 +114,38 @@ export function useReportsState() {
     return state.reports.find(report => report._id === reportId);
   }
 
-  function clearReportRowCaches(reportId) {
-    const prefix = `${reportId}:`;
+  function isDraftReport(report) {
+    return Boolean(report?.isDraft || String(report?._id || '').startsWith('draft_'));
+  }
 
-    Object.keys(state.rowAmountsByKey).forEach((key) => {
-      if (key.startsWith(prefix)) {
-        delete state.rowAmountsByKey[key];
-      }
-    });
+  function clearReportRowIssues(reportId) {
+    const prefix = `${reportId}:`;
 
     Object.keys(state.rowIssuesByKey).forEach((key) => {
       if (key.startsWith(prefix)) {
         delete state.rowIssuesByKey[key];
       }
+    });
+  }
+
+  function resetTransactionsCache() {
+    Object.keys(transactionsCache).forEach((key) => {
+      delete transactionsCache[key];
+    });
+  }
+
+  function setReportTotal(reportId) {
+    const report = findReport(reportId);
+    if (!report) return;
+
+    state.reportTotalsById[reportId] = calculateReportTotal(report.rows);
+  }
+
+  function applyRowIssues(reportId, issuesByRowId = {}) {
+    clearReportRowIssues(reportId);
+
+    Object.entries(issuesByRowId).forEach(([rowId, issue]) => {
+      state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = issue || '';
     });
   }
 
@@ -149,6 +170,7 @@ export function useReportsState() {
       groupId: getDefaultGroupId(),
       dateStart: toYyyyMmDd(startOfMonth(new Date())),
       dateEnd: toYyyyMmDd(new Date()),
+      savedTotal: 0,
       sort
     };
   }
@@ -200,8 +222,15 @@ export function useReportsState() {
         }
       });
 
-      // Keep transaction arrays exactly as returned by the endpoint to match Dashboard behavior.
-      const data = merged;
+      const deduped = new Map();
+      merged.forEach((transaction) => {
+        const key = transaction.transaction_id
+          || `${transaction.account_id}-${transaction.authorized_date}-${transaction.amount}-${transaction.name}`;
+
+        deduped.set(key, transaction);
+      });
+
+      const data = [...deduped.values()];
       transactionsCache[cacheKey] = { data, promise: null };
       return data;
     })();
@@ -216,7 +245,7 @@ export function useReportsState() {
     }
   }
 
-  async function evaluateTabRow(reportId, row) {
+  async function evaluateTabRow(row) {
     const tab = state.allUserTabs.find(item => item._id === row.tabId);
     const group = state.allUserGroups.find(item => item._id === row.groupId);
 
@@ -250,55 +279,121 @@ export function useReportsState() {
       const safeAmount = Number.isFinite(Number(result.tabTotal)) ? Number(result.tabTotal) : 0;
       return { amount: safeAmount, issue: '' };
     } catch (error) {
-      console.error(`Failed to evaluate report row '${reportId}:${row.rowId}'`, error);
+      console.error(`Failed to evaluate report row '${row.rowId}'`, error);
       return { amount: 0, issue: 'Failed to load transactions' };
     }
   }
 
-  async function refreshReportTotals(reportId) {
-    const report = findReport(reportId);
-    if (!report) return;
+  async function fetchReferenceData() {
+    const [tabs, rules, groupData] = await Promise.all([
+      tabsAPI.fetchUserTabs(),
+      rulesAPI.fetchUserRules(),
+      groupsAPI.fetchGroupsAndAccounts()
+    ]);
 
-    clearReportRowCaches(reportId);
+    state.allUserTabs = tabs || [];
+    state.allUserRules = rules || [];
+    state.allUserGroups = (groupData.groups || []).sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0));
+    state.allUserAccounts = groupData.accounts || [];
+  }
 
-    const rowAmountsByRowId = {};
+  async function computeRowsWithSavedTotals(rows = []) {
+    const normalizedRows = normalizeRowsForLocal(rows);
+    const issuesByRowId = {};
+    const nextRows = [];
 
-    for (const row of report.rows) {
-      const rowKey = buildRowStateKey(reportId, row.rowId);
-
+    for (const row of normalizedRows) {
       if (row.type === 'manual') {
-        const amount = Number.isFinite(Number(row.amount)) ? Number(row.amount) : 0;
-        state.rowAmountsByKey[rowKey] = amount;
-        state.rowIssuesByKey[rowKey] = '';
-        rowAmountsByRowId[row.rowId] = amount;
+        issuesByRowId[row.rowId] = '';
+        nextRows.push(row);
         continue;
       }
 
-      const { amount, issue } = await evaluateTabRow(reportId, row);
-      state.rowAmountsByKey[rowKey] = amount;
-      state.rowIssuesByKey[rowKey] = issue || '';
-      rowAmountsByRowId[row.rowId] = amount;
+      const { amount, issue } = await evaluateTabRow(row);
+      issuesByRowId[row.rowId] = issue || '';
+      nextRows.push({
+        ...row,
+        savedTotal: amount
+      });
     }
 
-    state.reportTotalsById[reportId] = calculateReportTotal(report.rows, rowAmountsByRowId);
+    return {
+      rows: normalizeRowsForLocal(nextRows),
+      issuesByRowId
+    };
   }
 
-  async function refreshAllReportTotals() {
-    for (const report of state.reports) {
-      await refreshReportTotals(report._id);
-    }
+  function markSavedStatus(reportId) {
+    state.saveStatusByReportId[reportId] = 'saved';
+    setTimeout(() => {
+      if (state.saveStatusByReportId[reportId] === 'saved') {
+        state.saveStatusByReportId[reportId] = 'idle';
+      }
+    }, 1200);
   }
 
-  async function saveReport(reportId) {
+  async function saveReport(reportId, options = {}) {
     const report = findReport(reportId);
     if (!report) return null;
 
-    state.saveStatusByReportId[reportId] = 'saving';
+    const {
+      status = 'saving',
+      refreshDependencies = false,
+      forceTransactionReload = false,
+      localOnlyForDraft = false
+    } = options;
+
+    state.saveStatusByReportId[reportId] = status;
 
     try {
+      if (refreshDependencies) {
+        await fetchReferenceData();
+      }
+
+      if (forceTransactionReload) {
+        resetTransactionsCache();
+      }
+
+      const { rows, issuesByRowId } = await computeRowsWithSavedTotals(report.rows);
+      report.rows = rows;
+      applyRowIssues(reportId, issuesByRowId);
+      setReportTotal(reportId);
+
+      if (isDraftReport(report)) {
+        if (localOnlyForDraft) {
+          markSavedStatus(reportId);
+          return report;
+        }
+
+        const created = await reportsAPI.createReport({
+          name: report.name,
+          rows
+        });
+
+        const normalizedCreated = {
+          ...created,
+          rows: normalizeRowsForLocal(created.rows)
+        };
+
+        const reportIndex = state.reports.findIndex(item => item._id === reportId);
+        if (reportIndex !== -1) {
+          state.reports[reportIndex] = normalizedCreated;
+        }
+
+        clearReportRowIssues(reportId);
+        delete state.reportTotalsById[reportId];
+        delete state.saveStatusByReportId[reportId];
+
+        applyRowIssues(normalizedCreated._id, issuesByRowId);
+        setReportTotal(normalizedCreated._id);
+        markSavedStatus(normalizedCreated._id);
+
+        return normalizedCreated;
+      }
+
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
-        rows: report.rows
+        rows
       });
 
       const reportIndex = state.reports.findIndex(item => item._id === reportId);
@@ -309,14 +404,8 @@ export function useReportsState() {
         };
       }
 
-      await refreshReportTotals(reportId);
-
-      state.saveStatusByReportId[reportId] = 'saved';
-      setTimeout(() => {
-        if (state.saveStatusByReportId[reportId] === 'saved') {
-          state.saveStatusByReportId[reportId] = 'idle';
-        }
-      }, 1200);
+      setReportTotal(reportId);
+      markSavedStatus(reportId);
 
       return updated;
     } catch (error) {
@@ -332,17 +421,10 @@ export function useReportsState() {
     state.error = null;
 
     try {
-      const [tabs, rules, groupData, reports] = await Promise.all([
-        tabsAPI.fetchUserTabs(),
-        rulesAPI.fetchUserRules(),
-        groupsAPI.fetchGroupsAndAccounts(),
-        reportsAPI.fetchReports()
+      const [reports] = await Promise.all([
+        reportsAPI.fetchReports(),
+        fetchReferenceData()
       ]);
-
-      state.allUserTabs = tabs || [];
-      state.allUserRules = rules || [];
-      state.allUserGroups = (groupData.groups || []).sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0));
-      state.allUserAccounts = groupData.accounts || [];
       state.reports = (reports || []).map(report => ({
         ...report,
         rows: normalizeRowsForLocal(report.rows)
@@ -350,9 +432,8 @@ export function useReportsState() {
 
       state.reports.forEach((report) => {
         state.saveStatusByReportId[report._id] = 'idle';
+        setReportTotal(report._id);
       });
-
-      await refreshAllReportTotals();
     } catch (error) {
       console.error('Failed to initialize reports', error);
       state.error = error.message || 'Failed to initialize reports';
@@ -364,21 +445,21 @@ export function useReportsState() {
   async function createReport() {
     try {
       const reportName = `Report ${state.reports.length + 1}`;
-      const created = await reportsAPI.createReport({
+      const draftId = `draft_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const draft = {
+        _id: draftId,
         name: reportName,
-        rows: []
-      });
-
-      const normalized = {
-        ...created,
-        rows: normalizeRowsForLocal(created.rows)
+        rows: [],
+        isDraft: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       };
 
-      state.reports.unshift(normalized);
-      state.saveStatusByReportId[normalized._id] = 'idle';
-      state.reportTotalsById[normalized._id] = 0;
+      state.reports.unshift(draft);
+      state.saveStatusByReportId[draftId] = 'idle';
+      state.reportTotalsById[draftId] = 0;
 
-      return normalized;
+      return draft;
     } catch (error) {
       console.error('Failed to create report', error);
       state.error = error.message || 'Failed to create report';
@@ -386,11 +467,30 @@ export function useReportsState() {
     }
   }
 
+  function cancelDraftReport(reportId) {
+    const report = findReport(reportId);
+    if (!report || !isDraftReport(report)) {
+      return false;
+    }
+
+    clearReportRowIssues(reportId);
+    state.reports = state.reports.filter(item => item._id !== reportId);
+    delete state.saveStatusByReportId[reportId];
+    delete state.reportTotalsById[reportId];
+    return true;
+  }
+
   async function deleteReport(reportId) {
     try {
+      const report = findReport(reportId);
+      if (isDraftReport(report)) {
+        cancelDraftReport(reportId);
+        return;
+      }
+
       await reportsAPI.deleteReport(reportId);
 
-      clearReportRowCaches(reportId);
+      clearReportRowIssues(reportId);
 
       state.reports = state.reports.filter(report => report._id !== reportId);
       delete state.saveStatusByReportId[reportId];
@@ -415,6 +515,8 @@ export function useReportsState() {
     const newRow = createDefaultTabRow(report.rows.length);
     report.rows.push(newRow);
     report.rows = normalizeRowsForLocal(report.rows);
+    setReportTotal(reportId);
+    state.rowIssuesByKey[buildRowStateKey(reportId, newRow.rowId)] = '';
 
     return newRow;
   }
@@ -426,11 +528,13 @@ export function useReportsState() {
     const newRow = createDefaultManualRow(report.rows.length);
     report.rows.push(newRow);
     report.rows = normalizeRowsForLocal(report.rows);
+    setReportTotal(reportId);
+    state.rowIssuesByKey[buildRowStateKey(reportId, newRow.rowId)] = '';
 
     return newRow;
   }
 
-  function updateRow(reportId, rowId, updates, options = {}) {
+  function updateRow(reportId, rowId, updates) {
     const report = findReport(reportId);
     if (!report) return;
 
@@ -445,7 +549,8 @@ export function useReportsState() {
           tabId: typeof updates.tabId === 'string' ? updates.tabId : row.tabId,
           groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
           dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,
-          dateEnd: typeof updates.dateEnd === 'string' ? updates.dateEnd : row.dateEnd
+          dateEnd: typeof updates.dateEnd === 'string' ? updates.dateEnd : row.dateEnd,
+          savedTotal: Number.isFinite(Number(updates.savedTotal)) ? Number(updates.savedTotal) : row.savedTotal
         };
       }
 
@@ -462,19 +567,17 @@ export function useReportsState() {
     });
 
     report.rows = normalizeRowsForLocal(report.rows);
-    if (!options.skipRefresh) {
-      refreshReportTotals(reportId);
-    }
+    setReportTotal(reportId);
+    state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = '';
   }
 
-  function removeRow(reportId, rowId, options = {}) {
+  function removeRow(reportId, rowId) {
     const report = findReport(reportId);
     if (!report) return;
 
     report.rows = normalizeRowsForLocal(report.rows.filter(row => row.rowId !== rowId));
-    if (!options.skipRefresh) {
-      refreshReportTotals(reportId);
-    }
+    delete state.rowIssuesByKey[buildRowStateKey(reportId, rowId)];
+    setReportTotal(reportId);
   }
 
   function reorderRows(reportId, rows) {
@@ -482,10 +585,23 @@ export function useReportsState() {
     if (!report) return;
 
     report.rows = normalizeRowsForLocal(rows);
+    setReportTotal(reportId);
   }
 
   function getRowAmount(reportId, rowId) {
-    return state.rowAmountsByKey[buildRowStateKey(reportId, rowId)] ?? 0;
+    const report = findReport(reportId);
+    if (!report) return 0;
+
+    const row = report.rows.find(item => item.rowId === rowId);
+    if (!row) return 0;
+
+    if (row.type === 'manual') {
+      const manualAmount = Number(row.amount);
+      return Number.isFinite(manualAmount) ? manualAmount : 0;
+    }
+
+    const savedAmount = Number(row.savedTotal);
+    return Number.isFinite(savedAmount) ? savedAmount : 0;
   }
 
   function getRowIssue(reportId, rowId) {
@@ -496,13 +612,68 @@ export function useReportsState() {
     return state.reportTotalsById[reportId] ?? 0;
   }
 
+  async function refreshRowTotal(reportId, rowId, options = {}) {
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const row = report.rows.find(item => item.rowId === rowId);
+    if (!row) return null;
+
+    const {
+      refreshDependencies = false,
+      forceTransactionReload = false
+    } = options;
+
+    if (refreshDependencies) {
+      await fetchReferenceData();
+    }
+
+    if (forceTransactionReload) {
+      resetTransactionsCache();
+    }
+
+    if (row.type === 'manual') {
+      state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = '';
+      setReportTotal(reportId);
+      return row;
+    }
+
+    const { amount, issue } = await evaluateTabRow(row);
+    report.rows = normalizeRowsForLocal(report.rows.map((item) => {
+      if (item.rowId !== rowId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        savedTotal: amount
+      };
+    }));
+
+    state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = issue || '';
+    setReportTotal(reportId);
+
+    return report.rows.find(item => item.rowId === rowId) || null;
+  }
+
+  async function refreshReportTotals(reportId) {
+    return await saveReport(reportId, {
+      status: 'refreshing',
+      refreshDependencies: true,
+      forceTransactionReload: true,
+      localOnlyForDraft: true
+    });
+  }
+
   return {
     state,
     sortedTabs,
     sortedGroups,
     hasReports,
+    isDraftReport,
     initReports,
     createReport,
+    cancelDraftReport,
     deleteReport,
     saveReport,
     updateReportName,
@@ -511,6 +682,7 @@ export function useReportsState() {
     updateRow,
     removeRow,
     reorderRows,
+    refreshRowTotal,
     getRowAmount,
     getRowIssue,
     getReportTotal,

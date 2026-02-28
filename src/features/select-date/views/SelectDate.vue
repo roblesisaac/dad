@@ -3,14 +3,13 @@
   <!-- Date Range Summary (Clickable to expand) -->
   <button 
     @click="toggleDatePicker"
-    class="w-full h-full flex items-center justify-between px-4 sm:px-6 py-3 cursor-pointer hover:bg-gray-50/50 transition-all font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-gray-100 group gap-4 rounded-b-xl sm:rounded-none sm:rounded-r-2xl"
+    class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
   >
-    <div class="flex items-center min-w-0">
-      <Calendar class="h-4 w-4 mr-2 text-gray-400 group-hover:text-black transition-colors flex-shrink-0" />
-      <span class="text-sm truncate">{{ dateRangeSummary }}</span>
-    </div>
+    <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em] truncate">
+      {{ dateRangeSummary }}
+    </span>
     <ChevronDown 
-      class="h-4 w-4 text-gray-300 group-hover:text-black transition-all duration-300 flex-shrink-0"
+      class="h-3 w-3 text-gray-300 group-hover:text-black transition-all duration-300 flex-shrink-0"
       :class="{ '-rotate-180': showDatePicker }"
     />
   </button>

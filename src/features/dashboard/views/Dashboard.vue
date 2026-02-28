@@ -4,15 +4,15 @@
     <BlueBar />
 
     <!-- Dashboard Container -->
-    <div class="max-w-5xl mx-auto w-full px-4 md:px-6 relative">
+    <div class="max-w-5xl mx-auto w-full relative">
 
       <!-- Unified Header -->
-      <div class="mt-6">
+      <div>
         <DashboardHeader />
       </div>
 
       <!-- Category Content -->
-      <div class="mt-8 pb-32">
+      <div class="mt-4 pb-32">
         <Transition name="fade">
           <div v-if="!state.isLoading && state.selected.tab" class="w-full">
             <CategoriesWrapper />
@@ -25,16 +25,32 @@
         </Transition>
       </div>
 
-      <!-- Floating Action Button: Tab Rules (Bottom Left) -->
-      <div class="fixed bottom-8 left-8 z-50">
-        <button 
-          @click="showRuleManagerModal = true"
-          class="w-14 h-14 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] hover:-translate-y-1 active:translate-y-0 active:shadow-none transition-all duration-300 group"
-          title="Tab rules"
-        >
-          <Filter class="w-6 h-6 group-active:scale-95 transition-transform" />
-        </button>
-      </div>
+      <!-- Fixed Footer: Filters & Reports -->
+      <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md border-t-2 border-gray-50/50">
+        <div class="max-w-5xl mx-auto w-full px-6 py-6 sm:py-8 flex items-center justify-between">
+          <!-- Left: Filters -->
+          <button 
+            @click="showRuleManagerModal = true"
+            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+          >
+            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+              Filters
+            </span>
+            <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
+          </button>
+
+          <!-- Right: Reports -->
+          <button 
+            @click="router.push('/reports')"
+            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+          >
+            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+              Reports
+            </span>
+            <ChevronRight class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
+          </button>
+        </div>
+      </footer>
 
       <!-- Modals -->
       <RuleManagerModal 
@@ -59,9 +75,10 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
-import { Filter } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 // Core Components
 import BlueBar from '../components/BlueBar.vue';
@@ -70,6 +87,7 @@ import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
+const router = useRouter();
 const { state } = useDashboardState();
 const { init } = useInit();
 const showRuleManagerModal = ref(false);
