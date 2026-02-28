@@ -4,33 +4,69 @@
       <!-- Header Area -->
       <div class="px-6 py-8 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/90">
         <div class="flex-1">
-          <div class="flex items-center gap-3">
-            <h1 v-if="!isEditingTabName" class="text-3xl font-black text-gray-900 tracking-tight leading-tight">
-              Rules for <span class="text-gray-400">"{{ state.selected.tab?.tabName || 'Current Tab' }}"</span>
+          <div class="flex items-center gap-2">
+            <div v-if="state.selected.tab && !isEditingTabName" class="relative">
+              <button
+                @click="toggleTabActionsMenu"
+                class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all"
+                title="Tab actions"
+              >
+                <MoreVertical class="w-5 h-5" />
+              </button>
+
+              <div
+                v-if="showTabActionsMenu"
+                class="absolute left-0 mt-2 min-w-[180px] bg-white border-2 border-gray-100 rounded-xl shadow-[4px_4px_0px_0px_rgba(0,0,0,0.06)] p-1 z-30"
+              >
+                <button
+                  @click="startTabNameEdit"
+                  class="w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest text-gray-600 hover:text-black hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Edit class="w-4 h-4" />
+                  Edit Name
+                </button>
+              </div>
+            </div>
+
+            <h1 class="text-3xl font-bold zfont-black text-gray-900 tracking-tight leading-tight">
+              {{ state.selected.tab?.tabName || 'Current Tab' }}
             </h1>
-            <div v-else class="flex-1 max-w-md">
-              <input 
+          </div>
+          <div
+            v-if="state.selected.tab && isEditingTabName"
+            class="mt-4 rounded-2xl border-2 border-gray-100 bg-gray-50/50 p-4"
+          >
+            <label class="text-[10px] font-black uppercase tracking-[0.25em] text-gray-400">Tab Name</label>
+            <div class="mt-2 flex flex-col sm:flex-row gap-2">
+              <input
                 ref="tabNameInput"
-                v-model="editedTabName" 
-                class="w-full px-3 py-2 text-2xl font-black bg-gray-50 border-2 border-black rounded-xl focus:outline-none focus:ring-0 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]"
+                v-model="editedTabName"
+                class="w-full px-3 py-2 text-sm font-black bg-white border-2 border-black rounded-xl focus:outline-none focus:ring-0"
                 @keyup.enter="saveTabName"
                 @keyup.esc="cancelTabNameEdit"
-                @blur="saveTabName"
               />
+              <div class="flex items-center gap-2 shrink-0">
+                <button
+                  @click="saveTabName"
+                  :disabled="isSavingTabName || !canSaveTabName"
+                  class="px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl border-2 transition-all flex items-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed bg-black text-white border-black hover:bg-gray-800"
+                >
+                  <Check class="w-4 h-4" />
+                  {{ isSavingTabName ? 'Saving...' : 'Save' }}
+                </button>
+                <button
+                  @click="cancelTabNameEdit"
+                  :disabled="isSavingTabName"
+                  class="px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl border-2 border-gray-200 text-gray-500 hover:border-black hover:text-black transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <button 
-              v-if="!isEditingTabName"
-              @click="startTabNameEdit" 
-              class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all"
-              title="Edit tab name"
-            >
-              <Edit class="w-5 h-5" />
-            </button>
           </div>
-          <p class="text-sm text-gray-400 mt-1 font-medium">Manage how transactions are automatically processed in this tab.</p>
         </div>
         <button 
-          @click="$emit('close')" 
+          @click="emit('close')"
           class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
         >
           <X class="w-6 h-6" />
@@ -135,6 +171,24 @@
               </div>
             </transition>
           </div>
+
+          <div
+            v-if="state.selected.tab"
+            class="pt-8 mt-4 border-t border-red-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div>
+              <p class="text-xs font-black uppercase tracking-[0.2em] text-red-500">Danger Zone</p>
+              <p class="text-xs text-gray-500 mt-1">Delete this tab and remove its tab-specific rule assignments.</p>
+            </div>
+            <button
+              @click="deleteCurrentTab"
+              :disabled="isDeletingTab"
+              class="px-4 py-2 rounded-xl border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <Trash2 class="w-4 h-4" />
+              {{ isDeletingTab ? 'Deleting...' : 'Delete Tab' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -171,11 +225,13 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue';
 import { 
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useRuleManager } from '../composables/useRuleManager';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
+import { useRulesAPI } from '../composables/useRulesAPI';
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 import draggable from 'vuedraggable';
 
 import RuleCard from '../components/RuleCard.vue';
@@ -183,7 +239,9 @@ import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
 
 const { state } = useDashboardState();
-const { updateTabName } = useTabsAPI();
+const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
+const rulesAPI = useRulesAPI();
+const { processAllTabsForSelectedGroup } = useTabProcessing();
 const { 
   createRule,
   updateRule,
@@ -192,7 +250,7 @@ const {
   updateRuleOrder
 } = useRuleManager();
 
-defineEmits(['close']);
+const emit = defineEmits(['close']);
 
 // UI State 
 const showRuleEditModal = ref(false);
@@ -206,6 +264,9 @@ const disabledSectionCollapsed = ref(true);
 const isEditingTabName = ref(false);
 const editedTabName = ref('');
 const tabNameInput = ref(null);
+const isSavingTabName = ref(false);
+const isDeletingTab = ref(false);
+const showTabActionsMenu = ref(false);
 
 // Collapsible sections state
 const collapsedSections = ref({
@@ -223,6 +284,16 @@ const ruleTypes = [
   { id: 'groupBy', name: 'Group Rules', icon: Group, description: 'Determine how items are grouped' }
 ];
 
+const canSaveTabName = computed(() => {
+  if (!state.selected.tab) return false;
+
+  const nextTabName = editedTabName.value.trim();
+  const currentTabName = (state.selected.tab.tabName || '').trim();
+  if (!nextTabName) return false;
+
+  return nextTabName !== currentTabName;
+});
+
 // Toggle functions
 function toggleRuleTypeCollapse(typeId) {
   collapsedSections.value[typeId] = !collapsedSections.value[typeId];
@@ -235,23 +306,116 @@ function toggleDisabledSection() {
 // Tab name editing functions
 function startTabNameEdit() {
   if (state.selected.tab) {
+    showTabActionsMenu.value = false;
     editedTabName.value = state.selected.tab.tabName || '';
     isEditingTabName.value = true;
-    nextTick(() => tabNameInput.value?.focus());
+    nextTick(() => {
+      tabNameInput.value?.focus();
+      tabNameInput.value?.select?.();
+    });
   }
 }
 
-function saveTabName() {
-  if (state.selected.tab && editedTabName.value.trim()) {
-    state.selected.tab.tabName = editedTabName.value.trim();
-    
-    updateTabName(state.selected.tab._id, editedTabName.value.trim());
+async function saveTabName() {
+  if (!state.selected.tab || isSavingTabName.value) return;
+
+  const nextTabName = editedTabName.value.trim();
+  const previousTabName = state.selected.tab.tabName || '';
+
+  if (!nextTabName) {
+    editedTabName.value = previousTabName;
+    isEditingTabName.value = false;
+    return;
   }
-  isEditingTabName.value = false;
+
+  if (!canSaveTabName.value) {
+    isEditingTabName.value = false;
+    return;
+  }
+
+  isSavingTabName.value = true;
+  state.selected.tab.tabName = nextTabName;
+
+  try {
+    await updateTabName(state.selected.tab._id, nextTabName);
+    editedTabName.value = nextTabName;
+    isEditingTabName.value = false;
+  } catch (error) {
+    state.selected.tab.tabName = previousTabName;
+    editedTabName.value = previousTabName;
+    console.error('Error updating tab name:', error);
+  } finally {
+    isSavingTabName.value = false;
+  }
 }
 
 function cancelTabNameEdit() {
+  editedTabName.value = state.selected.tab?.tabName || '';
   isEditingTabName.value = false;
+}
+
+function toggleTabActionsMenu() {
+  showTabActionsMenu.value = !showTabActionsMenu.value;
+}
+
+async function cleanupRulesAfterTabDelete(tabId) {
+  const rulesToUpdate = state.allUserRules.filter(rule =>
+    Array.isArray(rule.applyForTabs) && rule.applyForTabs.includes(tabId)
+  );
+
+  for (const rule of rulesToUpdate) {
+    const applyForTabs = rule.applyForTabs.filter(id => id !== tabId);
+
+    if (!applyForTabs.length) {
+      await rulesAPI.deleteRule(rule._id);
+      state.allUserRules = state.allUserRules.filter(existingRule => existingRule._id !== rule._id);
+      continue;
+    }
+
+    const updatedRule = await rulesAPI.updateRule(rule._id, { applyForTabs });
+    const updatedRuleIndex = state.allUserRules.findIndex(existingRule => existingRule._id === rule._id);
+
+    if (updatedRuleIndex !== -1) {
+      state.allUserRules[updatedRuleIndex] = updatedRule || {
+        ...state.allUserRules[updatedRuleIndex],
+        applyForTabs
+      };
+    }
+  }
+}
+
+async function deleteCurrentTab() {
+  if (!state.selected.tab || isDeletingTab.value) return;
+
+  const tabToDelete = state.selected.tab;
+  const tabName = tabToDelete.tabName || 'this tab';
+  const shouldDelete = confirm(`Delete "${tabName}"? This cannot be undone.`);
+  if (!shouldDelete) return;
+
+  isDeletingTab.value = true;
+  state.blueBar.message = `Deleting "${tabName}"...`;
+  state.blueBar.loading = true;
+
+  try {
+    await deleteTabById(tabToDelete._id);
+    state.allUserTabs = state.allUserTabs.filter(tab => tab._id !== tabToDelete._id);
+
+    await cleanupRulesAfterTabDelete(tabToDelete._id);
+
+    if (state.selected.tabsForGroup.length > 0) {
+      await processAllTabsForSelectedGroup();
+    } else {
+      state.isLoading = false;
+    }
+
+    emit('close');
+  } catch (error) {
+    console.error('Error deleting tab:', error);
+  } finally {
+    state.blueBar.loading = false;
+    state.blueBar.message = '';
+    isDeletingTab.value = false;
+  }
 }
 
 // Get enabled rules (rules that apply to current tab or are global)

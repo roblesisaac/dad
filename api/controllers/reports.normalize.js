@@ -88,6 +88,19 @@ function normalizeSort(sort, fallback) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
+function parseOptionalSort(sort) {
+  if (sort === undefined || sort === null || sort === '') {
+    return undefined;
+  }
+
+  const parsed = Number(sort);
+  if (!Number.isFinite(parsed)) {
+    throw makeError('sort must be a valid number');
+  }
+
+  return parsed;
+}
+
 function normalizeTabRow(row, fallbackSort) {
   const normalized = {
     rowId: normalizeRowId(row?.rowId),
@@ -148,11 +161,18 @@ export function normalizeReportPayload(payload) {
 
   const name = nonEmptyString(payload.name, 'name');
   const rows = normalizeRows(payload.rows);
+  const sort = parseOptionalSort(payload.sort);
 
-  return {
+  const normalized = {
     name,
     rows
   };
+
+  if (sort !== undefined) {
+    normalized.sort = sort;
+  }
+
+  return normalized;
 }
 
 export function isReportOwnedByUser(report, userId) {

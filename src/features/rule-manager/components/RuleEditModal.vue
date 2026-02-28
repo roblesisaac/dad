@@ -87,13 +87,15 @@
                       <option v-if="isTextProperty(ruleData.rule[1])" value="excludes">excludes</option>
                     </select>
                     
-                    <input 
+                    <textarea 
                       v-model="ruleData.rule[3]" 
-                      type="text" 
-                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                      ref="criterionInput"
+                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors resize-none overflow-hidden"
                       :class="{'sm:col-span-2': ruleData.rule[0] === 'groupBy'}"
                       :placeholder="getCriterionPlaceholder()"
-                    />
+                      rows="1"
+                      @input="adjustHeight"
+                    ></textarea>
                   </div>
 
                   <!-- AND condition -->
@@ -253,7 +255,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { X, Plus } from 'lucide-vue-next';
 import ToggleSwitch from '@/shared/components/ToggleSwitch.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
@@ -281,6 +283,32 @@ const emit = defineEmits(['close', 'save']);
 
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
+
+const criterionInput = ref(null);
+
+function adjustHeight(el) {
+  const target = el?.target || el;
+  if (!target) return;
+  target.style.height = 'auto';
+  target.style.height = target.scrollHeight + 'px';
+}
+
+onMounted(() => {
+  nextTick(() => {
+    if (criterionInput.value) {
+      adjustHeight(criterionInput.value);
+    }
+  });
+});
+
+// Also watch for changes in the rule type that might clear the input
+watch(() => ruleData.value.rule[3], () => {
+  nextTick(() => {
+    if (criterionInput.value) {
+      adjustHeight(criterionInput.value);
+    }
+  });
+});
 
 // Track whether this is a global or tab-specific rule
 const isGlobalRule = computed({

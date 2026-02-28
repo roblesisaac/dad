@@ -34,7 +34,7 @@
             class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
           >
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-              Filters
+              Edit Tab
             </span>
             <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
           </button>

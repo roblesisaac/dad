@@ -37,6 +37,19 @@ export default {
 
       const reports = await Reports.findAll({ userId });
       reports.sort((a, b) => {
+        const aSort = Number(a?.sort);
+        const bSort = Number(b?.sort);
+        const aHasSort = Number.isFinite(aSort);
+        const bHasSort = Number.isFinite(bSort);
+
+        if (aHasSort && bHasSort && aSort !== bSort) {
+          return aSort - bSort;
+        }
+
+        if (aHasSort !== bHasSort) {
+          return aHasSort ? -1 : 1;
+        }
+
         const aTime = new Date(a.updatedAt || a.createdAt || 0).getTime();
         const bTime = new Date(b.updatedAt || b.createdAt || 0).getTime();
         return bTime - aTime;
@@ -52,9 +65,22 @@ export default {
     try {
       const normalized = normalizeReportPayload(req.body);
       const now = new Date().toISOString();
+      const userId = req.user._id;
+      const hasSort = Number.isFinite(Number(normalized.sort));
+
+      let nextSort = hasSort ? Number(normalized.sort) : 0;
+      if (!hasSort) {
+        const existingReports = await Reports.findAll({ userId }) || [];
+        const maxSort = existingReports.reduce((max, report) => {
+          const value = Number(report?.sort);
+          return Number.isFinite(value) ? Math.max(max, value) : max;
+        }, -1);
+        nextSort = maxSort + 1;
+      }
 
       const saved = await Reports.save({
         ...normalized,
+        sort: nextSort,
         createdAt: now,
         updatedAt: now,
         req: { user: req.user }
@@ -74,10 +100,18 @@ export default {
       await fetchOwnedReport(_reportId, userId);
 
       const normalized = normalizeReportPayload(req.body);
-      const updated = await Reports.update(_reportId, {
+      const updates = {
         ...normalized,
         updatedAt: new Date().toISOString()
-      });
+      };
+
+      if (!Number.isFinite(Number(normalized.sort))) {
+        delete updates.sort;
+      } else {
+        updates.sort = Number(normalized.sort);
+      }
+
+      const updated = await Reports.update(_reportId, updates);
 
       return res.json(updated);
     } catch (error) {

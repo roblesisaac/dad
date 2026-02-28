@@ -13,13 +13,6 @@
         <ChevronDown class="w-3 h-3 text-gray-300 group-hover:text-black transition-colors" />
       </button>
 
-      <!-- Syncing Indicator (Subtle Center) -->
-      <Transition name="fade">
-        <div v-if="state.isLoading" class="absolute left-1/2 -translate-x-1/2">
-          <LoadingDots />
-        </div>
-      </Transition>
-
       <!-- Date Selection (Right) -->
       <div class="flex-shrink-0">
         <SelectDate />
@@ -63,7 +56,6 @@ import { ChevronDown } from 'lucide-vue-next';
 import SelectGroupModal from '@/features/select-group/components/SelectGroupModal.vue';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
-import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();

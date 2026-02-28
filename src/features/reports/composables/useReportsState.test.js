@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, test } from 'vitest';
 
 let normalizeRowsForLocal;
+let normalizeReportsForLocal;
 let calculateReportTotal;
 let buildTransactionsCacheKey;
 let buildRowStateKey;
@@ -14,6 +15,7 @@ beforeAll(async () => {
 
   const helpers = await import('./useReportsState.js');
   normalizeRowsForLocal = helpers.normalizeRowsForLocal;
+  normalizeReportsForLocal = helpers.normalizeReportsForLocal;
   calculateReportTotal = helpers.calculateReportTotal;
   buildTransactionsCacheKey = helpers.buildTransactionsCacheKey;
   buildRowStateKey = helpers.buildRowStateKey;
@@ -70,5 +72,15 @@ describe('useReportsState helpers', () => {
   test('builds stable cache and row state keys', () => {
     expect(buildTransactionsCacheKey('g1', '2026-01-01', '2026-01-31')).toBe('g1|2026-01-01|2026-01-31');
     expect(buildRowStateKey('r1', 'row-1')).toBe('r1:row-1');
+  });
+
+  test('normalizes report list sort order', () => {
+    const normalized = normalizeReportsForLocal([
+      { _id: 'r2', name: 'B', sort: 5, rows: [] },
+      { _id: 'r1', name: 'A', sort: 1, rows: [] }
+    ]);
+
+    expect(normalized[0]).toMatchObject({ _id: 'r1', sort: 0 });
+    expect(normalized[1]).toMatchObject({ _id: 'r2', sort: 1 });
   });
 });

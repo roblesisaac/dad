@@ -5,6 +5,7 @@ describe('reports normalize', () => {
   test('normalizes mixed rows and strips unknown fields', () => {
     const payload = {
       name: '  Monthly  ',
+      sort: '4',
       rows: [
         {
           type: 'manual',
@@ -30,6 +31,7 @@ describe('reports normalize', () => {
     const normalized = normalizeReportPayload(payload);
 
     expect(normalized.name).toBe('Monthly');
+    expect(normalized.sort).toBe(4);
     expect(normalized.rows).toHaveLength(2);
 
     const tabRow = normalized.rows[0];
@@ -104,6 +106,16 @@ describe('reports normalize', () => {
         ]
       })
     ).toThrow('tab row savedTotal must be a valid number');
+  });
+
+  test('throws on invalid report sort', () => {
+    expect(() =>
+      normalizeReportPayload({
+        name: 'Bad',
+        sort: 'abc',
+        rows: []
+      })
+    ).toThrow('sort must be a valid number');
   });
 
   test('checks ownership helper', () => {

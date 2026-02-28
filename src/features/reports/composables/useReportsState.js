@@ -61,6 +61,25 @@ export function normalizeRowsForLocal(rows = []) {
     .map((row, index) => ({ ...row, sort: index }));
 }
 
+export function normalizeReportsForLocal(reports = []) {
+  if (!Array.isArray(reports)) {
+    return [];
+  }
+
+  const normalized = reports.map((report, index) => ({
+    ...report,
+    sort: Number.isFinite(Number(report?.sort)) ? Number(report.sort) : index,
+    rows: normalizeRowsForLocal(report?.rows)
+  }));
+
+  return normalized
+    .sort((a, b) => a.sort - b.sort)
+    .map((report, index) => ({
+      ...report,
+      sort: index
+    }));
+}
+
 export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
   return rows.reduce((total, row) => {
     if (row.type === 'manual') {
@@ -146,6 +165,18 @@ export function useReportsState() {
 
     Object.entries(issuesByRowId).forEach(([rowId, issue]) => {
       state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = issue || '';
+    });
+  }
+
+  function replaceReports(nextReports = []) {
+    state.reports = normalizeReportsForLocal(nextReports);
+
+    state.reports.forEach((report) => {
+      if (!state.saveStatusByReportId[report._id]) {
+        state.saveStatusByReportId[report._id] = 'idle';
+      }
+
+      setReportTotal(report._id);
     });
   }
 
@@ -367,7 +398,8 @@ export function useReportsState() {
 
         const created = await reportsAPI.createReport({
           name: report.name,
-          rows
+          rows,
+          sort: report.sort
         });
 
         const normalizedCreated = {
@@ -379,6 +411,8 @@ export function useReportsState() {
         if (reportIndex !== -1) {
           state.reports[reportIndex] = normalizedCreated;
         }
+
+        replaceReports(state.reports);
 
         clearReportRowIssues(reportId);
         delete state.reportTotalsById[reportId];
@@ -393,7 +427,8 @@ export function useReportsState() {
 
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
-        rows
+        rows,
+        sort: report.sort
       });
 
       const reportIndex = state.reports.findIndex(item => item._id === reportId);
@@ -404,7 +439,7 @@ export function useReportsState() {
         };
       }
 
-      setReportTotal(reportId);
+      replaceReports(state.reports);
       markSavedStatus(reportId);
 
       return updated;
@@ -425,15 +460,7 @@ export function useReportsState() {
         reportsAPI.fetchReports(),
         fetchReferenceData()
       ]);
-      state.reports = (reports || []).map(report => ({
-        ...report,
-        rows: normalizeRowsForLocal(report.rows)
-      }));
-
-      state.reports.forEach((report) => {
-        state.saveStatusByReportId[report._id] = 'idle';
-        setReportTotal(report._id);
-      });
+      replaceReports(reports || []);
     } catch (error) {
       console.error('Failed to initialize reports', error);
       state.error = error.message || 'Failed to initialize reports';
@@ -446,16 +473,21 @@ export function useReportsState() {
     try {
       const reportName = `Report ${state.reports.length + 1}`;
       const draftId = `draft_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      const shiftedReports = state.reports.map(report => ({
+        ...report,
+        sort: Number(report.sort || 0) + 1
+      }));
       const draft = {
         _id: draftId,
         name: reportName,
         rows: [],
         isDraft: true,
+        sort: 0,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      state.reports.unshift(draft);
+      replaceReports([draft, ...shiftedReports]);
       state.saveStatusByReportId[draftId] = 'idle';
       state.reportTotalsById[draftId] = 0;
 
@@ -474,7 +506,7 @@ export function useReportsState() {
     }
 
     clearReportRowIssues(reportId);
-    state.reports = state.reports.filter(item => item._id !== reportId);
+    replaceReports(state.reports.filter(item => item._id !== reportId));
     delete state.saveStatusByReportId[reportId];
     delete state.reportTotalsById[reportId];
     return true;
@@ -492,7 +524,7 @@ export function useReportsState() {
 
       clearReportRowIssues(reportId);
 
-      state.reports = state.reports.filter(report => report._id !== reportId);
+      replaceReports(state.reports.filter(report => report._id !== reportId));
       delete state.saveStatusByReportId[reportId];
       delete state.reportTotalsById[reportId];
     } catch (error) {
@@ -584,8 +616,103 @@ export function useReportsState() {
     const report = findReport(reportId);
     if (!report) return;
 
-    report.rows = normalizeRowsForLocal(rows);
+    const reindexedRows = (Array.isArray(rows) ? rows : []).map((row, index) => ({
+      ...row,
+      sort: index
+    }));
+
+    report.rows = normalizeRowsForLocal(reindexedRows);
     setReportTotal(reportId);
+  }
+
+  function reorderReports(reports) {
+    const reindexedReports = (Array.isArray(reports) ? reports : []).map((report, index) => ({
+      ...report,
+      sort: index
+    }));
+
+    replaceReports(reindexedReports);
+  }
+
+  async function saveReportLayout(reportId, options = {}) {
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    if (isDraftReport(report)) {
+      return await saveReport(reportId, {
+        ...options,
+        localOnlyForDraft: true
+      });
+    }
+
+    const { status = 'saving' } = options;
+    state.saveStatusByReportId[reportId] = status;
+
+    try {
+      const updated = await reportsAPI.updateReport(reportId, {
+        name: report.name,
+        rows: report.rows,
+        sort: report.sort
+      });
+
+      const reportIndex = state.reports.findIndex(item => item._id === reportId);
+      if (reportIndex !== -1) {
+        state.reports[reportIndex] = {
+          ...updated,
+          rows: normalizeRowsForLocal(updated.rows)
+        };
+      }
+
+      replaceReports(state.reports);
+      markSavedStatus(reportId);
+
+      return updated;
+    } catch (error) {
+      console.error(`Failed to save report layout '${reportId}'`, error);
+      state.saveStatusByReportId[reportId] = 'error';
+      state.error = error.message || 'Failed to save report layout';
+      return null;
+    }
+  }
+
+  async function saveReportsOrder() {
+    const reportsToPersist = normalizeReportsForLocal(state.reports)
+      .filter(report => !isDraftReport(report));
+
+    if (!reportsToPersist.length) {
+      return [];
+    }
+
+    try {
+      const updatedReports = await Promise.all(
+        reportsToPersist.map(async report =>
+          await reportsAPI.updateReport(report._id, {
+            name: report.name,
+            rows: report.rows,
+            sort: report.sort
+          })
+        )
+      );
+
+      const updatedById = new Map(updatedReports.map(report => [report._id, report]));
+      replaceReports(state.reports.map((report) => {
+        if (!updatedById.has(report._id)) {
+          return report;
+        }
+
+        const updated = updatedById.get(report._id);
+        return {
+          ...updated,
+          rows: normalizeRowsForLocal(updated.rows)
+        };
+      }));
+
+      return updatedReports;
+    } catch (error) {
+      console.error('Failed to save reports order', error);
+      state.error = error.message || 'Failed to save reports order';
+      return [];
+    }
   }
 
   function getRowAmount(reportId, rowId) {
@@ -682,6 +809,9 @@ export function useReportsState() {
     updateRow,
     removeRow,
     reorderRows,
+    reorderReports,
+    saveReportLayout,
+    saveReportsOrder,
     refreshRowTotal,
     getRowAmount,
     getRowIssue,

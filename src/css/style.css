@@ -1,8 +1,9 @@
 :root {
   /* font-family: "Avenir Next W01", "Avenir Next", Helvetica, sans-serif; */
   line-height: 1.5;
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
+  color-scheme: light;
+  color: #213547;
+  background-color: #f3f3ee;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -13,6 +14,7 @@
 
 body {
   font-family: 'Sometype Mono Variable', monospace;
+  background-color: inherit;
 }
 
 #app {
@@ -24,6 +26,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -33,6 +36,7 @@ a {
   color: #646cff;
   text-decoration: inherit;
 }
+
 a:hover {
   color: #535bf2;
 }
@@ -53,7 +57,7 @@ button {
 }
 
 
-button > *:nth-child(n) {
+button>*:nth-child(n) {
   vertical-align: middle;
 }
 
@@ -73,17 +77,23 @@ fieldset {
   border: none;
 }
 
-h1,h2,h3,h4,h5 {
+h1,
+h2,
+h3,
+h4,
+h5 {
   margin: 0 0 0.5em 0;
 }
 
-input[type="text"], input[type="number"], input[type="password"] {
+input[type="text"],
+input[type="number"],
+input[type="password"] {
   display: block;
   width: 100%;
   padding: 12px;
   font-size: 16px;
   line-height: 1.1;
-  border: 1px solid #ddd;
+  border: 1px solid #d5d5c5;
   border-radius: 4px;
   box-shadow: none;
   box-sizing: border-box;
@@ -110,7 +120,7 @@ label {
   display: block;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: #52524a;
   text-align: left;
 }
 
@@ -122,10 +132,6 @@ legend {
 }
 
 @media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
-  }
   a:hover {
     color: #747bff;
   }

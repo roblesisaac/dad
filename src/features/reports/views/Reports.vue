@@ -14,50 +14,100 @@
       </template>
 
       <template v-else-if="!selectedReport">
-        <header class="mb-6">
-          <h1 class="text-3xl font-black tracking-tight text-gray-900">Reports</h1>
-          <p class="text-sm text-gray-500 mt-1">Tap a report to see all rows and totals.</p>
+        <header class="mb-6 flex items-start justify-between gap-3">
+          <div>
+            <h1 class="text-3xl font-black tracking-tight text-gray-900">Reports</h1>
+            <p class="text-sm text-gray-500 mt-1">
+              {{ isReorderingReports ? 'Drag reports to rearrange, then tap done.' : 'Tap a report to see all rows and totals.' }}
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <button
+              v-if="isReorderingReports"
+              class="btn-primary"
+              @click="finishReorderReports"
+            >
+              Done
+            </button>
+
+            <div class="relative">
+              <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showListMenu = !showListMenu">
+                <MoreVertical class="w-5 h-5" />
+              </button>
+
+              <div
+                v-if="showListMenu"
+                class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+              >
+                <button class="menu-item" @click="toggleReorderReports">
+                  {{ isReorderingReports ? 'Stop Rearranging' : 'Rearrange Reports' }}
+                </button>
+              </div>
+            </div>
+          </div>
         </header>
 
-        <div class="space-y-4">
-          <article
-            v-for="report in state.reports"
-            :key="report._id"
-            class="relative border-2 border-gray-100 rounded-2xl p-4 bg-white shadow-sm cursor-pointer hover:border-gray-200 transition-colors"
-            @click="openReport(report._id)"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <h2 class="text-xl font-black text-gray-900 truncate">{{ report.name }}</h2>
-
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-black" :class="fontColor(getReportTotal(report._id))">
-                  {{ formatPrice(getReportTotal(report._id), { toFixed: 2 }) }}
-                </span>
-                <div class="relative">
+        <draggable
+          v-model="reportsForDrag"
+          item-key="_id"
+          class="space-y-4"
+          handle=".drag-handle"
+          :disabled="!isReorderingReports"
+          @end="onReportsDragEnd"
+        >
+          <template #item="{ element: report }">
+            <article
+              class="relative border-2 border-gray-100 rounded-2xl p-4 bg-white shadow-sm transition-colors"
+              :class="isReorderingReports ? 'border-dashed border-gray-300' : 'cursor-pointer hover:border-gray-200'"
+              @click="openReportFromList(report._id)"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-2 min-w-0">
                   <button
-                    class="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-                    @click.stop="toggleReportMenu(report._id)"
+                    v-if="isReorderingReports"
+                    class="drag-handle mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                    @click.stop
+                    title="Drag to reorder"
                   >
-                    <MoreVertical class="w-4 h-4" />
+                    <GripVertical class="w-4 h-4" />
                   </button>
 
-                  <div
-                    v-if="activeReportMenuId === report._id"
-                    class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-                    @click.stop
-                  >
-                    <button class="menu-item" @click="startRenameFromList(report)">Edit report name</button>
-                    <button class="menu-item" @click="refreshReportFromList(report._id)">Refresh totals</button>
-                    <button class="menu-item" @click="confirmDeleteReport(report._id)">Delete</button>
+                  <h2 class="text-xl font-black text-gray-900 truncate">{{ report.name }}</h2>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-black" :class="fontColor(getReportTotal(report._id))">
+                    {{ formatPrice(getReportTotal(report._id), { toFixed: 2 }) }}
+                  </span>
+                  <div v-if="!isReorderingReports" class="relative">
+                    <button
+                      class="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                      @click.stop="toggleReportMenu(report._id)"
+                    >
+                      <MoreVertical class="w-4 h-4" />
+                    </button>
+
+                    <div
+                      v-if="activeReportMenuId === report._id"
+                      class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                      @click.stop
+                    >
+                      <button class="menu-item" @click="startRenameFromList(report)">Edit report name</button>
+                      <button class="menu-item" @click="refreshReportFromList(report._id)">Refresh totals</button>
+                      <button class="menu-item" @click="confirmDeleteReport(report._id)">Delete</button>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </article>
-        </div>
+            </article>
+          </template>
+        </draggable>
 
         <button
           class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black text-white shadow-xl hover:bg-gray-800 flex items-center justify-center"
+          :class="isReorderingReports ? 'opacity-50 cursor-not-allowed' : ''"
+          :disabled="isReorderingReports"
           @click="createNewReportFromFab"
           title="Create report"
         >
@@ -100,6 +150,14 @@
               <button class="btn-primary" @click="saveDraftReport">Save</button>
             </template>
 
+            <button
+              v-if="isReorderingRows && !isDraftSelected"
+              class="btn-primary"
+              @click="finishReorderRows"
+            >
+              Done
+            </button>
+
             <div class="relative">
               <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showDetailReportMenu = !showDetailReportMenu">
                 <MoreVertical class="w-5 h-5" />
@@ -112,6 +170,9 @@
               >
                 <button class="menu-item" @click="startReportNameEdit">Edit report name</button>
                 <button class="menu-item" @click="refreshSelectedReport">Refresh totals</button>
+                <button class="menu-item" @click="toggleReorderRows">
+                  {{ isReorderingRows ? 'Stop Rearranging Rows' : 'Rearrange Rows' }}
+                </button>
                 <button class="menu-item" @click="confirmDeleteReport(selectedReport._id)">Delete</button>
               </div>
             </div>
@@ -119,45 +180,70 @@
         </header>
 
         <div class="space-y-3 pb-20">
-          <article
-            v-for="row in sortedRows(selectedReport.rows)"
-            :key="row.rowId"
-            class="relative border border-gray-200 rounded-xl px-4 py-3 bg-white"
+          <p v-if="isReorderingRows" class="text-xs text-gray-500 px-1">
+            Drag rows to rearrange order, then tap done.
+          </p>
+
+          <draggable
+            v-model="rowsForDrag"
+            item-key="rowId"
+            class="space-y-3"
+            handle=".drag-handle"
+            :disabled="!isReorderingRows"
+            @end="onRowsDragEnd"
           >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-sm font-bold text-gray-900 truncate">
-                  {{ rowTitle(row) }}
-                </div>
-                <p class="text-xs text-gray-500 mt-1">
-                  {{ rowSubtitle(row) }}
-                </p>
-                <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-red-600 mt-1">
-                  {{ getRowIssue(selectedReport._id, row.rowId) }}
-                </p>
-              </div>
+            <template #item="{ element: row }">
+              <article
+                class="relative border rounded-xl px-4 py-3 bg-white"
+                :class="isReorderingRows ? 'border-dashed border-gray-300' : 'border-gray-200'"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 flex items-start gap-2">
+                    <button
+                      v-if="isReorderingRows"
+                      class="drag-handle mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                      @click.stop
+                      title="Drag to reorder"
+                    >
+                      <GripVertical class="w-4 h-4" />
+                    </button>
 
-              <div class="flex items-center gap-2">
-                <span class="text-sm font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
-                  {{ formatPrice(getRowAmount(selectedReport._id, row.rowId), { toFixed: 2 }) }}
-                </span>
+                    <div class="min-w-0">
+                      <div class="text-sm font-bold text-gray-900 truncate">
+                        {{ rowTitle(row) }}
+                      </div>
+                      <p class="text-xs text-gray-500 mt-1">
+                        {{ rowSubtitle(row) }}
+                      </p>
+                      <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-red-600 mt-1">
+                        {{ getRowIssue(selectedReport._id, row.rowId) }}
+                      </p>
+                    </div>
+                  </div>
 
-                <div class="relative">
-                  <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" @click="toggleRowMenu(row.rowId)">
-                    <MoreVertical class="w-4 h-4" />
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <span class="text-sm font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
+                      {{ formatPrice(getRowAmount(selectedReport._id, row.rowId), { toFixed: 2 }) }}
+                    </span>
 
-                  <div
-                    v-if="activeRowMenuId === row.rowId"
-                    class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-                  >
-                    <button class="menu-item" @click="startRowEdit(row)">Edit</button>
-                    <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
+                    <div v-if="!isReorderingRows" class="relative">
+                      <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" @click="toggleRowMenu(row.rowId)">
+                        <MoreVertical class="w-4 h-4" />
+                      </button>
+
+                      <div
+                        v-if="activeRowMenuId === row.rowId"
+                        class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                      >
+                        <button class="menu-item" @click="startRowEdit(row)">Edit</button>
+                        <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </article>
+              </article>
+            </template>
+          </draggable>
 
           <div v-if="!selectedReport.rows.length" class="text-center text-sm text-gray-500 italic py-10">
             No rows yet. Add a row below.
@@ -165,7 +251,9 @@
 
           <div class="pt-2 relative">
             <button
+              :disabled="isReorderingRows"
               class="w-full border border-gray-300 rounded-xl py-3 text-sm font-black text-gray-800 hover:bg-gray-50"
+              :class="isReorderingRows ? 'opacity-50 cursor-not-allowed' : ''"
               @click="showAddRowPicker = !showAddRowPicker"
             >
               Add Tab Row
@@ -283,7 +371,8 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { ChevronLeft, MoreVertical, Plus } from 'lucide-vue-next';
+import { ChevronLeft, GripVertical, MoreVertical, Plus } from 'lucide-vue-next';
+import draggable from 'vuedraggable';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { useReportsState } from '@/features/reports/composables/useReportsState.js';
@@ -305,6 +394,10 @@ const {
   addManualRow,
   updateRow,
   removeRow,
+  reorderRows,
+  reorderReports,
+  saveReportLayout,
+  saveReportsOrder,
   refreshRowTotal,
   getRowAmount,
   getRowIssue,
@@ -318,6 +411,7 @@ const selectedReportId = ref('');
 const activeReportMenuId = ref('');
 const activeRowMenuId = ref('');
 const showAddRowPicker = ref(false);
+const showListMenu = ref(false);
 
 const showDetailReportMenu = ref(false);
 const isEditingReportName = ref(false);
@@ -328,12 +422,34 @@ const rowEditorDraft = ref(null);
 const editingRowId = ref('');
 const editingRowWasNew = ref(false);
 const showQuickSelect = ref(false);
+const isReorderingReports = ref(false);
+const isReorderingRows = ref(false);
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
 );
 
 const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
+
+const reportsForDrag = computed({
+  get() {
+    return [...state.reports].sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0));
+  },
+  set(nextReports) {
+    reorderReports(nextReports);
+  }
+});
+
+const rowsForDrag = computed({
+  get() {
+    if (!selectedReport.value) return [];
+    return [...selectedReport.value.rows].sort((a, b) => a.sort - b.sort);
+  },
+  set(nextRows) {
+    if (!selectedReport.value) return;
+    reorderRows(selectedReport.value._id, nextRows);
+  }
+});
 
 const saveStateLabel = computed(() => {
   if (!selectedReport.value) return '';
@@ -345,10 +461,6 @@ const saveStateLabel = computed(() => {
   if (status === 'error') return 'Save failed';
   return '';
 });
-
-function sortedRows(rows) {
-  return [...(rows || [])].sort((a, b) => a.sort - b.sort);
-}
 
 function tabName(tabId) {
   return sortedTabs.value.find(tab => tab._id === tabId)?.tabName || 'Tab not found';
@@ -378,8 +490,15 @@ function openReport(reportId) {
   selectedReportId.value = reportId;
   activeReportMenuId.value = '';
   activeRowMenuId.value = '';
+  showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  isReorderingRows.value = false;
+}
+
+function openReportFromList(reportId) {
+  if (isReorderingReports.value) return;
+  openReport(reportId);
 }
 
 function backToList() {
@@ -395,21 +514,61 @@ function backToList() {
   selectedReportId.value = '';
   activeReportMenuId.value = '';
   activeRowMenuId.value = '';
+  showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  isReorderingRows.value = false;
   cancelReportNameEdit();
   cancelRowEditor();
 }
 
 function toggleReportMenu(reportId) {
+  if (isReorderingReports.value) return;
   activeReportMenuId.value = activeReportMenuId.value === reportId ? '' : reportId;
 }
 
 function toggleRowMenu(rowId) {
+  if (isReorderingRows.value) return;
   activeRowMenuId.value = activeRowMenuId.value === rowId ? '' : rowId;
 }
 
+function toggleReorderReports() {
+  isReorderingReports.value = !isReorderingReports.value;
+  showListMenu.value = false;
+  activeReportMenuId.value = '';
+}
+
+async function onReportsDragEnd() {
+  if (!isReorderingReports.value) return;
+  await saveReportsOrder();
+}
+
+async function finishReorderReports() {
+  if (!isReorderingReports.value) return;
+  await saveReportsOrder();
+  isReorderingReports.value = false;
+}
+
+function toggleReorderRows() {
+  isReorderingRows.value = !isReorderingRows.value;
+  activeRowMenuId.value = '';
+  showAddRowPicker.value = false;
+  showDetailReportMenu.value = false;
+}
+
+async function onRowsDragEnd() {
+  if (!selectedReport.value || !isReorderingRows.value) return;
+  await saveReportLayout(selectedReport.value._id);
+}
+
+async function finishReorderRows() {
+  if (!selectedReport.value) return;
+  await saveReportLayout(selectedReport.value._id);
+  isReorderingRows.value = false;
+}
+
 async function createFirstReport() {
+  isReorderingReports.value = false;
   const report = await createReport();
   if (report?._id) {
     openReport(report._id);
@@ -417,6 +576,7 @@ async function createFirstReport() {
 }
 
 async function createNewReportFromFab() {
+  isReorderingReports.value = false;
   const report = await createReport();
   if (report?._id) {
     openReport(report._id);
@@ -431,6 +591,7 @@ function startRenameFromList(report) {
 function startReportNameEdit() {
   if (!selectedReport.value) return;
 
+  isReorderingRows.value = false;
   isEditingReportName.value = true;
   reportNameDraft.value = selectedReport.value.name;
   showDetailReportMenu.value = false;

@@ -80,7 +80,7 @@
 
 .bgDarkestPurple {
     background-color: var(--darkest-purple);
-} 
+}
 
 .bgDarkPurple {
     background-color: var(--dark-purple);
@@ -95,7 +95,7 @@
 }
 
 .bgBleach {
-    background-color: #fff;
+    background-color: #f3f3ee;
 }
 
 .bgJet {
@@ -106,7 +106,7 @@
     background-color: var(--f1);
 }
 
-.bgF2{
+.bgF2 {
     background-color: var(--f2);
 }
 
@@ -208,7 +208,7 @@
 
 .colorDarkestPurple {
     color: var(--darkest-purple)
-}  
+}
 
 .colorDarkPurple {
     color: var(--dark-purple);
@@ -234,7 +234,7 @@
     color: var(--f1);
 }
 
-.colorF2{
+.colorF2 {
     color: var(--f2);
 }
 

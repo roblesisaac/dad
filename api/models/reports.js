@@ -22,6 +22,7 @@ const reportSchema = {
   },
   name: String,
   rows: [rowSchema],
+  sort: Number,
   createdAt: String,
   updatedAt: String,
   label1: 'userId',
