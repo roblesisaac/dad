@@ -27,7 +27,7 @@
 
       <!-- Fixed Footer: Filters & Reports -->
       <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md border-t-2 border-gray-50/50">
-        <div class="max-w-5xl mx-auto w-full px-6 py-6 sm:py-8 flex items-center justify-between">
+        <div class="max-w-5xl mx-auto w-full px-6 py-4 flex items-center justify-between">
           <!-- Left: Filters -->
           <button 
             @click="showRuleManagerModal = true"
@@ -175,7 +175,7 @@ async function applyReportRowContextFromQuery(context) {
     }
   }
 
-  if (!didRunGroupChange && !context.groupId && context.hasValidDateRange && state.selected.group) {
+  if (!didRunGroupChange && context.hasValidDateRange && state.selected.group) {
     await handleGroupChange();
   }
 
