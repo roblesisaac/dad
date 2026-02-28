@@ -7,6 +7,115 @@ import { CustomError } from './customError.js';
  * Handles search, filtering, and specialized queries
  */
 class TransactionQueryService extends PlaidBaseService {
+  _datePattern = /^\d{4}-\d{2}-\d{2}$/;
+  _pageLimit = 250;
+
+  _isValidIsoDate(date) {
+    return typeof date === 'string' && this._datePattern.test(date);
+  }
+
+  _parseDateRange(dateRange) {
+    if (!dateRange || typeof dateRange !== 'string') {
+      return null;
+    }
+
+    const [startDateRaw, endDateRaw] = dateRange.split('_');
+    const startDate = startDateRaw?.trim();
+    const endDate = endDateRaw?.trim();
+
+    if (!this._isValidIsoDate(startDate)) {
+      return null;
+    }
+
+    if (endDate && !this._isValidIsoDate(endDate)) {
+      return null;
+    }
+
+    return { startDate, endDate: endDate || null };
+  }
+
+  _buildMonthPrefixes(startDate, endDate) {
+    const prefixes = [];
+    const start = new Date(`${startDate}T00:00:00.000Z`);
+    const end = new Date(`${endDate}T00:00:00.000Z`);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) {
+      return prefixes;
+    }
+
+    let cursorYear = start.getUTCFullYear();
+    let cursorMonth = start.getUTCMonth() + 1;
+    const endYear = end.getUTCFullYear();
+    const endMonth = end.getUTCMonth() + 1;
+
+    while (cursorYear < endYear || (cursorYear === endYear && cursorMonth <= endMonth)) {
+      prefixes.push(`${cursorYear}-${String(cursorMonth).padStart(2, '0')}`);
+      cursorMonth += 1;
+      if (cursorMonth > 12) {
+        cursorMonth = 1;
+        cursorYear += 1;
+      }
+    }
+
+    return prefixes;
+  }
+
+  _getTransactionDate(transaction = {}) {
+    return transaction.authorized_date || transaction.date || '';
+  }
+
+  _isTransactionInRange(transaction, startDate, endDate) {
+    const txDate = this._getTransactionDate(transaction);
+    if (!this._isValidIsoDate(txDate)) {
+      return false;
+    }
+
+    if (txDate < startDate) {
+      return false;
+    }
+
+    if (endDate && txDate > endDate) {
+      return false;
+    }
+
+    return true;
+  }
+
+  _buildDedupeKey(transaction = {}) {
+    return transaction.transaction_id
+      || `${transaction.account_id || ''}-${transaction.authorized_date || transaction.date || ''}-${transaction.amount || ''}-${transaction.name || ''}`;
+  }
+
+  async _fetchTransactionsForMonthPrefix(userId, accountId, monthPrefix) {
+    return await plaidTransactions.findAll({
+      userId,
+      accountdate: `${accountId}:${monthPrefix}*`
+    }, {
+      limit: this._pageLimit
+    });
+  }
+
+  async _fetchTransactionsByMonthRange(userId, accountId, startDate, endDate) {
+    const monthPrefixes = this._buildMonthPrefixes(startDate, endDate);
+    const deduped = new Map();
+
+    for (const monthPrefix of monthPrefixes) {
+      const monthTransactions = await this._fetchTransactionsForMonthPrefix(userId, accountId, monthPrefix);
+
+      for (const transaction of monthTransactions) {
+        if (!transaction) {
+          continue;
+        }
+
+        deduped.set(this._buildDedupeKey(transaction), transaction);
+      }
+    }
+
+    return [...deduped.values()].filter(transaction =>
+      this._isTransactionInRange(transaction, startDate, endDate)
+    );
+  }
+
   /**
    * Format a date range query for specific account
    * @private
@@ -29,32 +138,55 @@ class TransactionQueryService extends PlaidBaseService {
   }
   async fetchTransactions(user, query) {
     try {
-      // Initialize the formatted query with the user ID
-      const formattedQuery = { userId: user._id };
-
-      // Format account_id if present
-      if (query.account_id) {
-        formattedQuery.account_id = `${query.account_id}:${query.account_id}*`;
+      const userId = user?._id;
+      if (!userId) {
+        throw new CustomError('INVALID_USER', 'Missing user identifier');
       }
 
+      const accountId = query?.account_id;
+      const parsedDateRange = this._parseDateRange(query?.date);
+
+      // Primary strategy for bounded ranges: query month prefixes (YYYY-MM*)
+      // to avoid large single-range lookups and edge-case range parsing failures.
+      if (accountId && parsedDateRange?.startDate && parsedDateRange?.endDate) {
+        return await this._fetchTransactionsByMonthRange(
+          userId,
+          accountId,
+          parsedDateRange.startDate,
+          parsedDateRange.endDate
+        );
+      }
+
+      // Initialize the formatted query with the user ID
+      const formattedQuery = { userId };
+
       // Format date range for accountdate if present
-      if (query.date && query.account_id) {
-        const formattedDate = this._formatDateForQuery(query.account_id, query.date);
+      if (query?.date && accountId) {
+        const formattedDate = this._formatDateForQuery(accountId, query.date);
         if (formattedDate) {
           formattedQuery.accountdate = formattedDate;
         }
+      } else if (accountId) {
+        // Account-only query fallback uses accountdate label prefix directly.
+        formattedQuery.accountdate = `${accountId}:*`;
       }
 
-      // Remove any keys that shouldn't be in the final query
-      ['date', 'select'].forEach(key => {
-        delete query[key];
-      });
-
       // Execute the query across all pages
-      const res = await plaidTransactions.findAll(formattedQuery);
+      const res = await plaidTransactions.findAll(formattedQuery, {
+        limit: this._pageLimit
+      });
       return Array.isArray(res) ? res : (res.items || []);
     } catch (error) {
       console.error('Error fetching transactions:', error);
+
+      if (error.message?.includes('Pagination cursor repeated')) {
+        throw new CustomError('PAGINATION_CURSOR_LOOP', error.message);
+      }
+
+      if (error.message?.includes('Pagination exceeded safe limit')) {
+        throw new CustomError('PAGINATION_LIMIT_EXCEEDED', error.message);
+      }
+
       throw new CustomError('FETCH_ERROR', error.message);
     }
   }

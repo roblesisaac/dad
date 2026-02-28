@@ -52,16 +52,18 @@ export default function(collectionName, config) {
   }
 
   function createLabelValue(_id, labelName, labelValue) {
+    const normalizedLabelValue = String(labelValue || '');
+
     // Check if the value includes any comparison operators
     const comparisonOperators = ['>=', '>', '<=', '<'];
     let hasComparisonOperator = false;
     let comparisonOperator = '';
     
     for (const operator of comparisonOperators) {
-      if (labelValue.includes(operator)) {
+      if (normalizedLabelValue.includes(operator)) {
         hasComparisonOperator = true;
         comparisonOperator = operator;
-        labelValue = labelValue.replace(operator,'');
+        labelValue = normalizedLabelValue.replace(operator, '');
         break;
       }
     }
@@ -69,8 +71,14 @@ export default function(collectionName, config) {
     if (hasComparisonOperator) {
       return `${_id}:${comparisonOperator}${labelName}_${labelValue}`;
     }
+
+    // Range queries use "start|end" syntax and should not include wildcard suffixes.
+    if (normalizedLabelValue.includes('|')) {
+      return `${_id}:${labelName}_${normalizedLabelValue}`;
+    }
     
     // Original behavior for non-comparison values
+    labelValue = normalizedLabelValue;
     if (!labelValue.includes('*')) labelValue += '*';
     return `${_id}:${labelName}_${labelValue}`;
   }

@@ -164,4 +164,15 @@ describe('labelsMap', () => {
     });
   });
 
+  test('labelsMap.getArgumentsForGetByLabel keeps range queries without wildcard suffix', () => {
+    const args = labelsMap.getArgumentsForGetByLabel('testcollection', {
+      user_details: `${testItem.name}:2025-01-01|user_details_${testItem.name}:2025-12-31`
+    });
+
+    expect(args).toEqual({
+      labelNumber: 'label3',
+      labelValue: `${collectionName}:user_details_${testItem.name}:2025-01-01|user_details_${testItem.name}:2025-12-31`
+    });
+  });
+
 });

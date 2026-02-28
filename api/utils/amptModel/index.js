@@ -159,16 +159,44 @@ export default function(collectionNameConfig, schemaConfig, globalConfig) {
   }
 
   async function findAll(filter, options) {
+    const MAX_PAGINATION_REQUESTS = 10000;
+    const normalizeCursor = (cursor) => {
+      if (!cursor) return '';
+      return typeof cursor === 'string'
+        ? cursor
+        : JSON.stringify(cursor, Object.keys(cursor).sort());
+    };
+
+    const seenCursors = new Set();
     let response = await find(filter, options);
-    let allItems = [...response.items];
-    
-    while (response.lastKey) {
-      response = await find(filter, { start: response.lastKey });
-      const items = response.items || response;
-      allItems = [...allItems, ...items];
+    let allItems = [...(response.items || [])];
+    let requests = 0;
+
+    while (response?.lastKey) {
+      const normalizedCursor = normalizeCursor(response.lastKey);
+
+      if (seenCursors.has(normalizedCursor)) {
+        throw new Error(
+          `Pagination cursor repeated while querying '${collectionNameConfig}'. Last cursor: ${normalizedCursor}`
+        );
+      }
+
+      seenCursors.add(normalizedCursor);
+
+      if (requests >= MAX_PAGINATION_REQUESTS) {
+        throw new Error(`Pagination exceeded safe limit (${MAX_PAGINATION_REQUESTS}) for '${collectionNameConfig}'`);
+      }
+
+      response = await find(filter, {
+        ...(options || {}),
+        start: response.lastKey
+      });
+
+      allItems = [...allItems, ...(response.items || [])];
+      requests++;
     }
 
-    return allItems;  
+    return allItems;
   }
 
   async function findOne(filter) {

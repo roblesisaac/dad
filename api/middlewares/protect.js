@@ -18,17 +18,30 @@ const protect = function() {
   }
 
   function buildHandler(api, collectionName, baseUrl, requiredRoles, httpMethod) {
+    const wrapAsyncMiddleware = (middleware) => {
+      return (req, res, next) => {
+        try {
+          const maybePromise = middleware(req, res, next);
+
+          if (maybePromise && typeof maybePromise.then === 'function') {
+            maybePromise.catch(next);
+          }
+        } catch (error) {
+          next(error);
+        }
+      };
+    };
+
     return (url, ...middlewares) => {
-      const handler = middlewares[middlewares.length-1];
       const routeMiddlewares = [
         checkJWT,
         checkLoggedIn,
         permit(requiredRoles),
         defineParam(collectionName),
         ...middlewares
-      ];
+      ].map(wrapAsyncMiddleware);
   
-      return api[httpMethod](baseUrl + url, ...routeMiddlewares, handler);
+      return api[httpMethod](baseUrl + url, ...routeMiddlewares);
     };
   }
 

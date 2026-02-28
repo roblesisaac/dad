@@ -28,6 +28,25 @@ export default (app) => {
         // db
     ].forEach(route => route(api, '/api'));
 
+    api.use((error, req, res, next) => {
+        console.error('Unhandled API error:', {
+            method: req.method,
+            url: req.originalUrl,
+            message: error?.message,
+            code: error?.code,
+            stack: error?.stack
+        });
+
+        if (res.headersSent) {
+            return next(error);
+        }
+
+        return res.status(error?.status || 500).json({
+            error: error?.code || 'INTERNAL_SERVER_ERROR',
+            message: error?.message || 'Internal Server Error'
+        });
+    });
+
     // Api catch all
     api.get('/api/*', (req, res) => {
         res.json(`Collection named '${req.params[0]}' not found`);

@@ -32,37 +32,37 @@
           <div class="grid grid-cols-2 gap-2">
             <button 
               @click="quickSelect('thisYear')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               This Year
             </button>
             <button 
               @click="quickSelect('lastYear')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               Last Year
             </button>
             <button 
               @click="quickSelect('thisMonth')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               This Month
             </button>
             <button 
               @click="quickSelect('lastMonth')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               Last Month
             </button>
             <button 
               @click="quickSelect('thisWeek')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               This Week
             </button>
             <button 
               @click="quickSelect('today')" 
-              class="px-4 py-3 bg-gray-50 hover:bg-black text-gray-600 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
             >
               Today
             </button>
