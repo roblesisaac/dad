@@ -1,104 +1,117 @@
 <template>
-  <div class="text-left">
+  <div class="text-left w-full">
     <!-- Group Form -->
-    <div class="space-y-6">
+    <div class="space-y-8">
       <!-- Group Name -->
-      <div>
-        <label for="group-name" class="block text-sm font-medium text-gray-700 mb-1">Nickname</label>
+      <div class="px-6">
+        <label for="group-name" class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Nickname</label>
         <input 
           type="text" 
           id="group-name"
           v-model="props.group.name" 
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          class="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-black tracking-tight placeholder:text-gray-200 focus:outline-none focus:border-black transition-all"
           placeholder="Enter group name" 
         />
       </div>
       
       <!-- Group Info (Description) -->
-      <div>
-        <label for="group-info" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+      <div class="px-6">
+        <label for="group-info" class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">Description</label>
         <textarea 
           id="group-info"
           v-model="props.group.info" 
           rows="2"
-          class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+          class="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-black tracking-tight placeholder:text-gray-200 focus:outline-none focus:border-black transition-all resize-none"
           placeholder="Add optional description"
         ></textarea>
       </div>
       
       <!-- Accounts In Group Section -->
-      <div class="border border-gray-200 rounded-md shadow-sm">
-        <div class="border-b border-gray-200 px-4 py-3 bg-indigo-50">
-          <h2 class="font-medium text-indigo-800">Accounts In Group ({{ props.group.accounts.length }})</h2>
+      <div class="border-t-2 border-gray-50 pt-8">
+        <div class="px-6 mb-4 flex items-center justify-between">
+          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Accounts In Group</h2>
+          <span class="text-[10px] font-black text-gray-300">{{ props.group.accounts.length }} assigned</span>
         </div>
         
-        <div v-if="props.group.accounts.length > 0" class="p-4">
-          <div v-for="account in props.group.accounts" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
-            <div class="flex items-center">
-              <HashIcon class="w-4 h-4 mr-2 text-indigo-500" />
-              <span class="text-sm font-medium">{{ account.mask }}</span>
+        <div v-if="props.group.accounts.length > 0">
+          <div 
+            v-for="account in props.group.accounts" 
+            :key="account._id" 
+            class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group"
+          >
+            <div class="flex flex-col">
+              <span class="text-base font-black text-gray-900 tracking-tight">{{ account.officialName || account.name }}</span>
+              <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
             </div>
             <Switch 
               :model-value="true" 
+              :id="`acc-in-${account._id}`"
               @update:model-value="toggleAccountInGroup(account)" 
             />
           </div>
         </div>
         
-        <div v-else class="px-4 py-6 text-center text-gray-500 italic">
+        <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
           No accounts in this group
         </div>
       </div>
       
       <!-- Available Accounts Section -->
-      <div class="border border-gray-200 rounded-md shadow-sm">
-        <div 
+      <div class="border-t-2 border-gray-50 pt-4">
+        <button 
           @click="toggleAvailableAccounts" 
-          class="flex items-center justify-between px-4 py-3 bg-gray-100 cursor-pointer hover:bg-gray-200 transition-colors"
+          class="flex items-center justify-between w-full px-6 py-4 hover:bg-gray-50/50 transition-all group focus:outline-none"
         >
-          <h2 class="font-medium text-gray-700">Available Accounts ({{ accountsNotInGroup.length }})</h2>
-          <div class="text-gray-500">
-            <ChevronDown v-if="showAvailableAccounts" class="w-5 h-5" />
-            <ChevronRight v-else class="w-5 h-5" />
+          <div class="flex items-center gap-2">
+            <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Available Accounts</h2>
+            <span class="text-[10px] font-black text-gray-300">{{ accountsNotInGroup.length }}</span>
           </div>
-        </div>
+          <div class="text-gray-200 group-hover:text-black transition-colors">
+            <ChevronDown v-if="showAvailableAccounts" class="w-4 h-4" />
+            <ChevronRight v-else class="w-4 h-4" />
+          </div>
+        </button>
         
-        <div v-if="showAvailableAccounts">
-          <div v-if="accountsNotInGroup.length > 0" class="p-4">
-            <div v-for="account in accountsNotInGroup" :key="account._id" class="flex items-center justify-between p-2 mb-2 border border-gray-200 rounded-md">
-              <div class="flex items-center">
-                <HashIcon class="w-4 h-4 mr-2 text-gray-500" />
-                <span class="text-sm font-medium">{{ account.mask }}</span>
+        <div v-if="showAvailableAccounts" class="pb-4">
+          <div v-if="accountsNotInGroup.length > 0">
+            <div 
+              v-for="account in accountsNotInGroup" 
+              :key="account._id" 
+              class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors group"
+            >
+              <div class="flex flex-col">
+                <span class="text-base font-black text-gray-900 tracking-tight">{{ account.officialName || account.name }}</span>
+                <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
               </div>
               <Switch 
                 :model-value="false" 
+                :id="`acc-avail-${account._id}`"
                 @update:model-value="toggleAccountInGroup(account)" 
               />
             </div>
           </div>
           
-          <div v-else class="px-4 py-6 text-center text-gray-500 italic">
-            <CheckCircle class="w-4 h-4 mx-auto mb-2 text-green-500" />
+          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
             All accounts assigned
           </div>
         </div>
       </div>
       
       <!-- Action Buttons -->
-      <div class="pt-4 flex justify-between">
+      <div class="px-6 py-8 border-t-2 border-gray-50 flex items-center gap-3">
         <button 
           @click="emit('close')" 
-          class="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          class="flex-grow px-6 py-4 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-black text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
         >
           Cancel
         </button>
         
         <button 
           @click="handleDeleteGroup" 
-          class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          class="px-6 py-4 bg-red-50 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2"
         >
-          <Trash2 class="w-4 h-4 mr-1 inline-block" />
-          Delete Group
+          <Trash2 class="w-3.5 h-3.5" />
+          Delete
         </button>
       </div>
     </div>

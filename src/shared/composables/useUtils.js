@@ -49,11 +49,12 @@ export function useUtils() {
   }
 
   function fontColor(amt) {
-    return amt > 0
-      ? 'text-blue-800' 
-      : amt === 0
-      ? 'text-gray-700'
-      : 'text-red-500'
+    return 'text-black'
+    // return amt > 0
+    //   ? 'text-blue-800' 
+    //   : amt === 0
+    //   ? 'text-gray-700'
+    //   : 'text-red-500'
   }
 
   function formatPrice(amt=0, { toFixed = 2 } = {}) {

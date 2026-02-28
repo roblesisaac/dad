@@ -36,22 +36,7 @@
         </button>
       </div>
 
-      <!-- Floating Action Button: Manage Tabs (Bottom Right) -->
-      <div class="fixed bottom-8 right-8 z-50">
-        <button 
-          @click="showAllTabsModal = true"
-          class="w-14 h-14 bg-black hover:bg-gray-800 text-white rounded-full flex items-center justify-center shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.2)] hover:-translate-y-1 active:translate-y-0 active:shadow-none transition-all duration-300 group"
-          title="Manage tabs"
-        >
-          <Layers class="w-6 h-6 group-active:scale-95 transition-transform" />
-        </button>
-      </div>
-
       <!-- Modals -->
-      <AllTabsModal 
-        :is-open="showAllTabsModal" 
-        @close="showAllTabsModal = false" 
-      />
       <RuleManagerModal 
         :is-open="showRuleManagerModal" 
         @close="showRuleManagerModal = false" 
@@ -76,19 +61,17 @@
 import { onMounted, ref } from 'vue';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
-import { Layers, Filter } from 'lucide-vue-next';
+import { Filter } from 'lucide-vue-next';
 
 // Core Components
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
-import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
 const { state } = useDashboardState();
 const { init } = useInit();
-const showAllTabsModal = ref(false);
 const showRuleManagerModal = ref(false);
 
 onMounted(async () => {

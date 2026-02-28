@@ -8,7 +8,7 @@
           @click="showGroupModal = true" 
           class="flex items-baseline gap-1.5 hover:opacity-70 transition-opacity flex-shrink min-w-0 truncate text-left group"
         >
-          <span class="font-black text-gray-400 text-[10px] sm:text-xs uppercase tracking-widest truncate group-hover:text-black transition-colors">
+          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-widest truncate transition-colors">
             {{ state.selected.group?.name || 'Account' }}
           </span>
           <span class="font-black text-gray-900 text-sm sm:text-lg tracking-tight">
@@ -24,7 +24,7 @@
           @click="showAllTabsModal = true" 
           class="flex items-baseline gap-1.5 hover:opacity-70 transition-opacity flex-shrink min-w-0 truncate text-left group"
         >
-          <span class="font-black text-gray-400 text-[10px] sm:text-xs uppercase tracking-widest truncate group-hover:text-black transition-colors">
+          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-widest truncate transition-colors">
             {{ state.selected.tab?.tabName || 'Tab' }}
           </span>
           <span class="font-black text-sm sm:text-lg tracking-tight" :class="fontColor(state.selected.tab?.total || 0)">
@@ -71,6 +71,7 @@
 
     <!-- Modals -->
     <SelectGroupModal :is-open="showGroupModal" @close="showGroupModal = false" />
+    <AllTabsModal :is-open="showAllTabsModal" @close="showAllTabsModal = false" />
   </div>
 </template>
 
@@ -84,6 +85,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import NetBalance from '@/features/select-group/components/NetBalance.vue';
 import SelectGroupModal from '@/features/select-group/components/SelectGroupModal.vue';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
+import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { state } = useDashboardState();
@@ -91,6 +93,7 @@ const { selectTab } = useTabs();
 const { fontColor, formatPrice } = useUtils();
 
 const showGroupModal = ref(false);
+const showAllTabsModal = ref(false);
 
 const currentTabIndex = computed(() => {
   if (!state.selected.tab || state.selected.tabsForGroup.length === 0) return -1;
