@@ -4,6 +4,7 @@ import { Router } from 'express';
 // import db from './db';
 import groups from './groups';
 import plaid from './plaid';
+import reports from './reports';
 import rules from './rules';
 import tabs from './tabs';
 import transactions from './transactions';
@@ -20,6 +21,7 @@ export default (app) => {
     [
         groups,
         plaid,
+        reports,
         rules,
         tabs,
         transactions,

@@ -1,0 +1,146 @@
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function makeError(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  return error;
+}
+
+function nonEmptyString(value, fieldName) {
+  if (typeof value !== 'string') {
+    throw makeError(`${fieldName} must be a string`);
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw makeError(`${fieldName} is required`);
+  }
+
+  return trimmed;
+}
+
+function optionalString(value, fallback = '') {
+  if (typeof value !== 'string') {
+    return fallback;
+  }
+
+  return value.trim();
+}
+
+function parseAmount(value) {
+  const amount = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(amount)) {
+    throw makeError('manual row amount must be a valid number');
+  }
+
+  return amount;
+}
+
+function isValidDateString(value) {
+  if (typeof value !== 'string' || !DATE_PATTERN.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) {
+    return false;
+  }
+
+  return date.toISOString().slice(0, 10) === value;
+}
+
+function normalizeDate(value, fieldName) {
+  const date = nonEmptyString(value, fieldName);
+  if (!isValidDateString(date)) {
+    throw makeError(`${fieldName} must be a valid date in YYYY-MM-DD format`);
+  }
+
+  return date;
+}
+
+function normalizeRowId(rowId) {
+  if (typeof rowId === 'string' && rowId.trim()) {
+    return rowId.trim();
+  }
+
+  return `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeSort(sort, fallback) {
+  if (Number.isFinite(sort)) {
+    return Number(sort);
+  }
+
+  const parsed = Number(sort);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function normalizeTabRow(row, fallbackSort) {
+  const normalized = {
+    rowId: normalizeRowId(row?.rowId),
+    type: 'tab',
+    tabId: nonEmptyString(row?.tabId, 'tab row tabId'),
+    groupId: nonEmptyString(row?.groupId, 'tab row groupId'),
+    dateStart: normalizeDate(row?.dateStart, 'tab row dateStart'),
+    dateEnd: normalizeDate(row?.dateEnd, 'tab row dateEnd'),
+    sort: normalizeSort(row?.sort, fallbackSort)
+  };
+
+  if (normalized.dateStart > normalized.dateEnd) {
+    throw makeError('tab row dateStart must be less than or equal to dateEnd');
+  }
+
+  return normalized;
+}
+
+function normalizeManualRow(row, fallbackSort) {
+  return {
+    rowId: normalizeRowId(row?.rowId),
+    type: 'manual',
+    title: nonEmptyString(row?.title, 'manual row title'),
+    amount: parseAmount(row?.amount),
+    sort: normalizeSort(row?.sort, fallbackSort)
+  };
+}
+
+function normalizeRows(rows) {
+  if (!Array.isArray(rows)) {
+    throw makeError('rows must be an array');
+  }
+
+  const normalizedRows = rows.map((row, index) => {
+    const type = optionalString(row?.type);
+
+    if (type === 'tab') {
+      return normalizeTabRow(row, index);
+    }
+
+    if (type === 'manual') {
+      return normalizeManualRow(row, index);
+    }
+
+    throw makeError(`row type '${type || 'unknown'}' is invalid`);
+  });
+
+  return normalizedRows
+    .sort((a, b) => a.sort - b.sort)
+    .map((row, index) => ({ ...row, sort: index }));
+}
+
+export function normalizeReportPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    throw makeError('report payload is required');
+  }
+
+  const name = nonEmptyString(payload.name, 'name');
+  const rows = normalizeRows(payload.rows);
+
+  return {
+    name,
+    rows
+  };
+}
+
+export function isReportOwnedByUser(report, userId) {
+  return Boolean(report && report.userId === userId);
+}

@@ -5,19 +5,11 @@
 
     <!-- Dashboard Container -->
     <div class="max-w-5xl mx-auto w-full px-4 md:px-6">
-      <!-- Dashboard Navigation Row (Group + Date) -->
-      <div class="mt-6 border-2 border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm flex flex-col sm:flex-row">
-        <ShowSelectGroupButton class="flex-1 border-b-2 sm:border-b-0 sm:border-r-2 border-gray-100" />
-        <div class="flex-1">          
-          <SelectDate />
-        </div>
-      </div>
 
-      <!-- Active Tab Display -->
-      <div class="mt-6 sticky top-4 z-10">
-        <div class="border-2 border-gray-100 rounded-2xl overflow-hidden bg-white shadow-sm">
-          <ActiveTabDisplay />
-        </div>
+
+      <!-- Unified Header -->
+      <div class="mt-6">
+        <DashboardHeader />
       </div>
 
       <!-- Category Content -->
@@ -57,10 +49,8 @@ import { useInit } from '../composables/useInit.js';
 // Core Components
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
-import SelectDate from '../../select-date/views/SelectDate.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
-import ShowSelectGroupButton from '../components/ShowSelectGroupButton.vue';
-import ActiveTabDisplay from '../components/ActiveTabDisplay.vue';
+import DashboardHeader from '../components/DashboardHeader.vue';
 
 const { state } = useDashboardState();
 const { init } = useInit();

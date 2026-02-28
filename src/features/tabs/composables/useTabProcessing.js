@@ -4,6 +4,7 @@ import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabRules } from '@/features/tabs/composables/useTabRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
+import { evaluateTabData } from '@/features/tabs/utils/tabEvaluator.js';
 
 /**
  * Convert a date value to a Date object.
@@ -36,65 +37,14 @@ export function useTabProcessing() {
 
     const tabRules = combinedRulesForTab(tab._id);
 
-    // Build rule methods based on tab rules
-    const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules);
-
-    // Apply sorting
-    const dataCopy = sort(data);
-    const categorizedItems = [];
-    let tabTotal = 0;
-
-    // Process each transaction
-    for (const item of dataCopy) {
-      // Transform amount (negative becomes positive, positive becomes negative)
-      item.amount *= -1;
-
-      // Apply categorization rules
-      categorize(item);
-
-      // Determine how to group this item
-      const typeToGroupBy = groupBy(item);
-
-      // Skip items that don't pass filters
-      if (!filter(item)) continue;
-
-      // Calculate running total
-      const amt = parseFloat(item.amount);
-      tabTotal += amt;
-
-      // Skip detailed categorization if the tab isn't selected
-      if (!tab.isSelected) continue;
-
-      // Find or create category group
-      const storedCategory = categorizedItems.find(([storedGroupByName]) =>
-        storedGroupByName === typeToGroupBy
-      );
-
-      if (storedCategory) {
-        // Add to existing category
-        let [_, storedTransactions, storedTotal] = storedCategory;
-        storedTransactions.push(item);
-        storedCategory[2] = storedTotal + amt;
-      } else {
-        // Create new category
-        categorizedItems.push([typeToGroupBy, [item], amt]);
-      }
-    }
-
-    // Sort the grouped items
-    if (!['year', 'month', 'day', 'year_month'].includes(propToGroupBy)) {
-      // Sort by amount
-      if (tabTotal > 0) {
-        categorizedItems.sort((a, b) => b[2] - a[2]);
-      } else {
-        categorizedItems.sort((a, b) => a[2] - b[2]);
-      }
-    } else {
-      // Sort by date
-      categorizedItems.sort(groupByDate);
-    }
-
-    return { tabTotal, categorizedItems };
+    return evaluateTabData({
+      tab,
+      transactions: data,
+      tabRules,
+      ruleMethods,
+      getDayOfWeekPST,
+      months
+    });
   }
 
   function groupByDate(a, b) {
