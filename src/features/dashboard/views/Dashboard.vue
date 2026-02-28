@@ -75,9 +75,12 @@
 
 <script setup>
 import { onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { isValid, parseISO } from 'date-fns';
+import { useRoute, useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
+import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
+import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 // Core Components
@@ -88,11 +91,120 @@ import DashboardHeader from '../components/DashboardHeader.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 
 const router = useRouter();
+const route = useRoute();
 const { state } = useDashboardState();
 const { init } = useInit();
+const { selectGroup, handleGroupChange } = useSelectGroup();
+const { selectTab } = useTabs();
 const showRuleManagerModal = ref(false);
 
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function queryValue(key) {
+  const value = route.query[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function parseReportDate(value) {
+  if (!ISO_DATE_PATTERN.test(value)) {
+    return null;
+  }
+
+  const parsed = parseISO(value);
+  return isValid(parsed) ? parsed : null;
+}
+
+function parseReportRowTotal(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getReportContextFromQuery() {
+  const groupId = queryValue('reportGroupId');
+  const tabId = queryValue('reportTabId');
+  const dateStartRaw = queryValue('reportDateStart');
+  const dateEndRaw = queryValue('reportDateEnd');
+  const rowTotalRaw = queryValue('reportRowTotal');
+
+  const dateStart = parseReportDate(dateStartRaw);
+  const dateEnd = parseReportDate(dateEndRaw);
+  const hasValidDateRange = Boolean(dateStart && dateEnd && dateStart <= dateEnd);
+  const rowTotal = parseReportRowTotal(rowTotalRaw);
+  const hasContext = Boolean(groupId || tabId || dateStartRaw || dateEndRaw || rowTotalRaw);
+
+  return {
+    groupId,
+    tabId,
+    dateStart,
+    dateEnd,
+    hasValidDateRange,
+    rowTotal,
+    hasContext
+  };
+}
+
+const reportContext = getReportContextFromQuery();
+
+if (reportContext.hasValidDateRange) {
+  state.date.start = reportContext.dateStart;
+  state.date.end = reportContext.dateEnd;
+}
+
+state.reportRowTotalOverride = Number.isFinite(reportContext.rowTotal)
+  ? reportContext.rowTotal
+  : null;
+
+async function applyReportRowContextFromQuery(context) {
+  if (!context?.hasContext) {
+    return;
+  }
+
+  if (context.hasValidDateRange) {
+    state.date.start = context.dateStart;
+    state.date.end = context.dateEnd;
+  }
+
+  let didRunGroupChange = false;
+  if (context.groupId) {
+    const targetGroup = state.allUserGroups.find(group => group._id === context.groupId);
+    if (targetGroup) {
+      if (state.selected.group?._id !== targetGroup._id) {
+        await selectGroup(targetGroup);
+        didRunGroupChange = true;
+      }
+    }
+  }
+
+  if (!didRunGroupChange && !context.groupId && context.hasValidDateRange && state.selected.group) {
+    await handleGroupChange();
+  }
+
+  if (context.tabId) {
+    const targetTab = state.selected.tabsForGroup.find(tab => tab._id === context.tabId);
+    if (targetTab) {
+      await selectTab(targetTab);
+    }
+  }
+
+  const nextQuery = { ...route.query };
+  delete nextQuery.reportGroupId;
+  delete nextQuery.reportTabId;
+  delete nextQuery.reportDateStart;
+  delete nextQuery.reportDateEnd;
+  delete nextQuery.reportRowTotal;
+
+  await router.replace({
+    name: 'dashboard',
+    query: Object.keys(nextQuery).length ? nextQuery : undefined
+  });
+
+  state.reportRowTotalOverride = null;
+}
+
 onMounted(async () => {
-  await init();
+  await init({
+    preferredGroupId: reportContext.groupId
+  });
+  await applyReportRowContextFromQuery(reportContext);
 });
 </script>

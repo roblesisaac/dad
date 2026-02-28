@@ -27,7 +27,7 @@
       >
         <!-- Large Tab Amount -->
         <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4 transition-all group-active:scale-[0.98]">
-          {{ formatPrice(state.selected.tab?.total || 0, { toFixed: 0 }) }}
+          {{ formatPrice(headerTotal, { toFixed: 0 }) }}
         </span>
         
         <!-- Tab Label -->
@@ -62,6 +62,16 @@ const { fontColor, formatPrice } = useUtils();
 
 const showGroupModal = ref(false);
 const showAllTabsModal = ref(false);
+
+const headerTotal = computed(() => {
+  const overrideTotal = Number(state.reportRowTotalOverride);
+  if (state.isLoading && Number.isFinite(overrideTotal)) {
+    return overrideTotal;
+  }
+
+  const liveTotal = Number(state.selected.tab?.total);
+  return Number.isFinite(liveTotal) ? liveTotal : 0;
+});
 
 const currentTabIndex = computed(() => {
   if (!state.selected.tab || state.selected.tabsForGroup.length === 0) return -1;

@@ -77,7 +77,7 @@
                 </div>
 
                 <div class="flex items-center gap-2">
-                  <span class="text-sm font-black" :class="fontColor(getReportTotal(report._id))">
+                  <span class="text-lg font-black" :class="fontColor(getReportTotal(report._id))">
                     {{ formatPrice(getReportTotal(report._id), { toFixed: 2 }) }}
                   </span>
                   <div v-if="!isReorderingReports" class="relative">
@@ -195,7 +195,9 @@
             <template #item="{ element: row }">
               <article
                 class="relative border rounded-xl px-4 py-3 bg-white"
-                :class="isReorderingRows ? 'border-dashed border-gray-300' : 'border-gray-200'"
+                :class="[
+                  isReorderingRows ? 'border-dashed border-gray-300' : 'border-gray-200'
+                ]"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex items-start gap-2">
@@ -209,10 +211,10 @@
                     </button>
 
                     <div class="min-w-0">
-                      <div class="text-sm font-bold text-gray-900 truncate">
+                      <div class="text-lg font-bold text-gray-900 truncate">
                         {{ rowTitle(row) }}
                       </div>
-                      <p class="text-xs text-gray-500 mt-1">
+                      <p class="text-sm text-gray-500 mt-1">
                         {{ rowSubtitle(row) }}
                       </p>
                       <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-red-600 mt-1">
@@ -222,19 +224,21 @@
                   </div>
 
                   <div class="flex items-center gap-2">
-                    <span class="text-sm font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
+                    <span class="text-xl font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
                       {{ formatPrice(getRowAmount(selectedReport._id, row.rowId), { toFixed: 2 }) }}
                     </span>
 
                     <div v-if="!isReorderingRows" class="relative">
-                      <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" @click="toggleRowMenu(row.rowId)">
+                      <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" @click.stop="toggleRowMenu(row.rowId)">
                         <MoreVertical class="w-4 h-4" />
                       </button>
 
                       <div
                         v-if="activeRowMenuId === row.rowId"
-                        class="absolute right-0 mt-1 w-36 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                        @click.stop
                       >
+                        <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
                         <button class="menu-item" @click="startRowEdit(row)">Edit</button>
                         <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
                       </div>
@@ -451,11 +455,13 @@ import {
 } from 'date-fns';
 import { ChevronLeft, GripVertical, MoreVertical, Plus } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
+import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
+const router = useRouter();
 const {
   state,
   sortedTabs,
@@ -566,6 +572,31 @@ function rowSubtitle(row) {
   }
 
   return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}`;
+}
+
+function openDashboardFromRow(row) {
+  if (!row || isReorderingRows.value || row.type !== 'tab') {
+    return;
+  }
+
+  activeRowMenuId.value = '';
+
+  if (!row.groupId || !row.tabId || !row.dateStart || !row.dateEnd) {
+    return;
+  }
+
+  const rowTotal = Number(getRowAmount(selectedReport.value?._id, row.rowId));
+
+  router.push({
+    name: 'dashboard',
+    query: {
+      reportGroupId: row.groupId,
+      reportTabId: row.tabId,
+      reportDateStart: row.dateStart,
+      reportDateEnd: row.dateEnd,
+      reportRowTotal: Number.isFinite(rowTotal) ? String(rowTotal) : '0'
+    }
+  });
 }
 
 function openReport(reportId) {

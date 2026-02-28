@@ -1,10 +1,32 @@
 import { useUtils } from '../../../shared/composables/useUtils.js';
 import { useApi } from '@/shared/composables/useApi.js';
 
+const ACCOUNT_DATE_IN_FLIGHT_REQUESTS = new Map();
+const ACCOUNT_DATE_RESPONSE_CACHE = new Map();
+const REQUEST_CACHE_TTL_MS = 10000;
+
 export function useTransactions() {
   const api = useApi();
   const { extractDateRange } = useUtils();
   const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+  function buildRequestCacheKey(account_id, dateRange) {
+    return `${account_id || ''}|${dateRange || ''}`;
+  }
+
+  function getCachedResponse(cacheKey) {
+    const cached = ACCOUNT_DATE_RESPONSE_CACHE.get(cacheKey);
+    if (!cached) {
+      return null;
+    }
+
+    if (cached.expiresAt <= Date.now()) {
+      ACCOUNT_DATE_RESPONSE_CACHE.delete(cacheKey);
+      return null;
+    }
+
+    return cached.data;
+  }
 
   function isIsoDate(dateString) {
     return typeof dateString === 'string' && ISO_DATE_PATTERN.test(dateString);
@@ -80,16 +102,50 @@ export function useTransactions() {
     return [...deduped.values()];
   }
 
-  async function fetchTransactionsForDateRange(account_id, dateRange) {
+  async function fetchTransactionsForDateRange(account_id, dateRange, options = {}) {
+    const { forceRefresh = false } = options;
     const baseUrl = 'plaid/transactions';
     const query = `?account_id=${encodeURIComponent(account_id)}&date=${encodeURIComponent(dateRange)}`;
-    return await api.get(baseUrl + query);
+    const requestUrl = baseUrl + query;
+    const cacheKey = buildRequestCacheKey(account_id, dateRange);
+
+    if (!forceRefresh) {
+      const cachedResponse = getCachedResponse(cacheKey);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+
+      const inFlightRequest = ACCOUNT_DATE_IN_FLIGHT_REQUESTS.get(cacheKey);
+      if (inFlightRequest) {
+        return await inFlightRequest;
+      }
+    }
+
+    const requestPromise = (async () => {
+      const response = await api.get(requestUrl);
+      const safeResponse = Array.isArray(response) ? response : [];
+      ACCOUNT_DATE_RESPONSE_CACHE.set(cacheKey, {
+        data: safeResponse,
+        expiresAt: Date.now() + REQUEST_CACHE_TTL_MS
+      });
+      return safeResponse;
+    })();
+
+    ACCOUNT_DATE_IN_FLIGHT_REQUESTS.set(cacheKey, requestPromise);
+
+    try {
+      return await requestPromise;
+    } finally {
+      if (ACCOUNT_DATE_IN_FLIGHT_REQUESTS.get(cacheKey) === requestPromise) {
+        ACCOUNT_DATE_IN_FLIGHT_REQUESTS.delete(cacheKey);
+      }
+    }
   }
 
   /**
    * Fetch transactions for a specific account and date range
    */
-  async function fetchTransactions(account_id, dateRange) {
+  async function fetchTransactions(account_id, dateRange, options = {}) {
     if(!account_id || !dateRange) {
       return [];
     }
@@ -97,13 +153,13 @@ export function useTransactions() {
     const parsedRange = parseDateRange(dateRange);
 
     if (!parsedRange) {
-      return await fetchTransactionsForDateRange(account_id, dateRange);
+      return await fetchTransactionsForDateRange(account_id, dateRange, options);
     }
 
     const monthlyRanges = buildMonthlyDateRanges(parsedRange.start, parsedRange.end);
 
     if (monthlyRanges.length <= 1) {
-      return await fetchTransactionsForDateRange(account_id, dateRange);
+      return await fetchTransactionsForDateRange(account_id, dateRange, options);
     }
 
     const allTransactions = [];
@@ -111,7 +167,7 @@ export function useTransactions() {
     for (const monthlyRange of monthlyRanges) {
       let result;
       try {
-        result = await fetchTransactionsForDateRange(account_id, monthlyRange);
+        result = await fetchTransactionsForDateRange(account_id, monthlyRange, options);
       } catch (error) {
         throw new Error(`Failed to load account ${account_id} for range ${monthlyRange}: ${error.message}`);
       }
@@ -127,16 +183,21 @@ export function useTransactions() {
   /**
    * Fetch all transactions for all accounts in a group
    */
-  async function fetchTransactionsForGroup(group, dateRangeState) {
+  async function fetchTransactionsForGroup(group, dateRangeState, options = {}) {
     if (!group || !group.accounts || !group.accounts.length) {
       return [];
     }
     
     const dateRange = extractDateRange(dateRangeState);
     let allTransactions = [];
+    const uniqueAccountIds = [...new Set(
+      group.accounts
+        .map(account => account?.account_id)
+        .filter(Boolean)
+    )];
 
-    for (const account of group.accounts) {
-      const transactions = await fetchTransactions(account.account_id, dateRange);
+    for (const accountId of uniqueAccountIds) {
+      const transactions = await fetchTransactions(accountId, dateRange, options);
       if (transactions && transactions.length) {
         allTransactions = [...allTransactions, ...transactions];
       }

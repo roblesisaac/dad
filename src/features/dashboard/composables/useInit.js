@@ -24,7 +24,27 @@ export function useInit() {
   const rulesAPI = useRulesAPI(api);
   const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
 
-  async function init() {
+  function applyPreferredGroupSelection(groups, preferredGroupId) {
+    if (!Array.isArray(groups) || !groups.length) {
+      return;
+    }
+
+    if (!preferredGroupId) {
+      return;
+    }
+
+    const preferredGroup = groups.find(group => group?._id === preferredGroupId);
+    if (!preferredGroup) {
+      return;
+    }
+
+    groups.forEach((group) => {
+      group.isSelected = group._id === preferredGroupId;
+    });
+  }
+
+  async function init(options = {}) {
+    const { preferredGroupId = '' } = options;
     try {
       state.isInitialized = false;
       state.blueBar.message = 'Beginning sync';
@@ -61,6 +81,8 @@ export function useInit() {
           router.push(routeParams);
           return;
         }
+
+        applyPreferredGroupSelection(groups, preferredGroupId);
 
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
