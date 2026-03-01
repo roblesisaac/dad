@@ -80,36 +80,99 @@
             v-model="reportReorderItems"
             item-key="key"
             class="space-y-4"
-            handle=".drag-handle"
+            handle=".drag-handle-top"
           >
             <template #item="{ element: item }">
               <article
+                v-if="item.type === 'report'"
                 class="relative border-2 border-dashed border-gray-300 rounded-2xl p-4 bg-white shadow-sm transition-colors"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start gap-2 min-w-0">
                     <button
-                      class="drag-handle mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                      class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
                       @click.stop
                       title="Drag to reorder"
                     >
                       <GripVertical class="w-4 h-4" />
                     </button>
 
-                    <Folder v-if="item.type === 'folder'" class="mt-1 w-4 h-4 text-gray-500 flex-shrink-0" />
                     <h2 class="text-xl font-black text-gray-900 truncate">
-                      {{ item.type === 'folder' ? item.folderName : item.reportName }}
+                      {{ item.reportName }}
                     </h2>
                   </div>
 
-                  <span v-if="item.type === 'folder'" class="text-xs font-bold text-gray-500">
-                    {{ item.reportCount }} reports
-                  </span>
-                  <span v-else class="text-lg font-black" :class="fontColor(getReportTotal(item.reportId))">
+                  <span class="text-lg font-black" :class="fontColor(getReportTotal(item.reportId))">
                     {{ formatPrice(getReportTotal(item.reportId), { toFixed: 2 }) }}
                   </span>
                 </div>
               </article>
+
+              <section
+                v-else
+                class="border-2 border-dashed border-gray-300 rounded-2xl bg-white shadow-sm"
+              >
+                <div class="w-full px-4 py-3 flex items-center justify-between rounded-2xl">
+                  <div class="flex items-center gap-2 min-w-0 flex-1">
+                    <button
+                      class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                      @click.stop
+                      title="Drag folder to reorder"
+                    >
+                      <GripVertical class="w-4 h-4" />
+                    </button>
+
+                    <button
+                      class="flex items-center gap-2 min-w-0 flex-1 text-left"
+                      @click="toggleFolderExpansion(item.folderName)"
+                    >
+                      <ChevronDown
+                        v-if="folderIsExpanded(item.folderName)"
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                      <ChevronRight
+                        v-else
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                      <Folder class="w-4 h-4 text-gray-500 flex-shrink-0" />
+                      <span class="text-base font-black text-gray-900 truncate">{{ item.folderName }}</span>
+                    </button>
+                  </div>
+
+                  <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
+                </div>
+
+                <div v-if="folderIsExpanded(item.folderName)" class="px-3 pb-3">
+                  <draggable
+                    v-model="item.reports"
+                    item-key="key"
+                    class="space-y-2"
+                    handle=".drag-handle-nested"
+                  >
+                    <template #item="{ element: folderReport }">
+                      <article class="relative border border-gray-200 rounded-xl p-3 bg-white">
+                        <div class="flex items-start justify-between gap-3">
+                          <div class="flex items-start gap-2 min-w-0">
+                            <button
+                              class="drag-handle-nested mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                              @click.stop
+                              title="Drag to reorder"
+                            >
+                              <GripVertical class="w-4 h-4" />
+                            </button>
+
+                            <h3 class="text-base font-black text-gray-900 truncate">{{ folderReport.reportName }}</h3>
+                          </div>
+
+                          <span class="text-base font-black" :class="fontColor(getReportTotal(folderReport.reportId))">
+                            {{ formatPrice(getReportTotal(folderReport.reportId), { toFixed: 2 }) }}
+                          </span>
+                        </div>
+                      </article>
+                    </template>
+                  </draggable>
+                </div>
+              </section>
             </template>
           </draggable>
         </template>
@@ -971,11 +1034,21 @@ function linkedReportOptionLabel(report) {
 }
 
 function buildReportReorderItems() {
-  const folderCounts = new Map();
+  const folderReports = new Map();
   sortedReports.value.forEach((report) => {
     const folderName = String(report?.folderName || '').trim();
     if (!folderName) return;
-    folderCounts.set(folderName, (folderCounts.get(folderName) || 0) + 1);
+
+    if (!folderReports.has(folderName)) {
+      folderReports.set(folderName, []);
+    }
+
+    folderReports.get(folderName).push({
+      key: `report:${report._id}`,
+      type: 'report',
+      reportId: report._id,
+      reportName: report.name || 'Untitled report'
+    });
   });
 
   const seenFolders = new Set();
@@ -1003,7 +1076,7 @@ function buildReportReorderItems() {
       key: `folder:${folderName}`,
       type: 'folder',
       folderName,
-      reportCount: folderCounts.get(folderName) || 0
+      reports: folderReports.get(folderName) || []
     });
   });
 
@@ -1044,6 +1117,17 @@ function applyReportReorderItems() {
     }
 
     const groupedReports = folderReports.get(item.folderName) || [];
+    const reorderedFolderItems = Array.isArray(item.reports) ? item.reports : [];
+    const groupedReportsById = new Map(groupedReports.map(report => [report._id, report]));
+
+    reorderedFolderItems.forEach((folderReportItem) => {
+      const report = reportById.get(folderReportItem.reportId) || groupedReportsById.get(folderReportItem.reportId);
+      if (report && !addedReportIds.has(report._id)) {
+        nextReports.push(report);
+        addedReportIds.add(report._id);
+      }
+    });
+
     groupedReports.forEach((report) => {
       if (!addedReportIds.has(report._id)) {
         nextReports.push(report);
