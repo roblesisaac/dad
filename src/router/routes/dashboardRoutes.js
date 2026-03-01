@@ -40,6 +40,7 @@ export default [
     beforeEnter: authGuard,
     meta: {
       requiresAuth: true,
+      hideNav: true,
       title: 'Reports'
     }
   }

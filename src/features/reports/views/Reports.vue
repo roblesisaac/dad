@@ -1,6 +1,32 @@
 <template>
   <main class="min-h-screen bg-white pb-28">
-    <section class="max-w-5xl mx-auto px-4 py-8">
+    <div class="max-w-5xl mx-auto w-full relative">
+      <!-- Sticky Navigation Header -->
+      <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
+        <!-- Left: Dashboard -->
+        <button 
+          @click="router.push('/dashboard')" 
+          class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
+        >
+          <ChevronLeft class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
+            Dashboard
+          </span>
+        </button>
+
+        <!-- Right: Logout -->
+        <button 
+          @click="logoutUser" 
+          class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
+        >
+          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
+            Logout
+          </span>
+          <LogOut class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+        </button>
+      </div>
+
+      <section class="px-4 py-4">
       <div v-if="state.isLoading" class="py-24 flex justify-center">
         <LoadingDots />
       </div>
@@ -687,6 +713,7 @@
         </div>
       </div>
     </section>
+    </div>
   </main>
 </template>
 
@@ -708,15 +735,17 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Folder, GripVertical, MoreVertical, Plus } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Folder, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
+import { useAuth } from '@/shared/composables/useAuth';
 
 const router = useRouter();
+const { logoutUser } = useAuth();
 const {
   state,
   sortedTabs,
@@ -1622,7 +1651,10 @@ async function saveRowEditor() {
     await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
 
     if (!isDraftSelected.value) {
-      const saved = await saveReport(reportId);
+      const saved = editingRowWasNew.value
+        ? await saveReportLayout(reportId)
+        : await saveReport(reportId);
+
       if (saved?._id) {
         selectedReportId.value = saved._id;
       }
