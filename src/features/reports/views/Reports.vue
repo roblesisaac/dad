@@ -38,6 +38,7 @@
 
               <div
                 v-if="showListMenu"
+                data-dropdown-panel
                 class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
               >
                 <button class="menu-item" @click="toggleReorderReports">
@@ -113,6 +114,7 @@
 
                       <div
                         v-if="activeReportMenuId === item.report._id"
+                        data-dropdown-panel
                         class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                         @click.stop
                       >
@@ -160,6 +162,7 @@
 
                       <div
                         v-if="activeFolderMenuName === item.folderName"
+                        data-dropdown-panel
                         class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                         @click.stop
                       >
@@ -195,6 +198,7 @@
 
                           <div
                             v-if="activeReportMenuId === report._id"
+                            data-dropdown-panel
                             class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                             @click.stop
                           >
@@ -275,6 +279,7 @@
 
               <div
                 v-if="showDetailReportMenu"
+                data-dropdown-panel
                 class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                 @click.stop
               >
@@ -346,6 +351,7 @@
 
                       <div
                         v-if="activeRowMenuId === row.rowId"
+                        data-dropdown-panel
                         class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                         @click.stop
                       >
@@ -376,6 +382,7 @@
 
             <div
               v-if="showAddRowPicker"
+              data-dropdown-panel
               class="mt-2 w-full bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden"
             >
               <button class="menu-item" @click="addAndEditRow('tab')">Select Existing Tab</button>
@@ -384,7 +391,7 @@
                 :disabled="!hasSelectableLinkedReports"
                 @click="addAndEditRow('report')"
               >
-                Use Existing Report Total
+                Select Existing Report
               </button>
               <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
             </div>
@@ -601,7 +608,7 @@
                     :key="report._id"
                     :value="report._id"
                   >
-                    {{ report.name }}
+                    {{ linkedReportOptionLabel(report) }}
                   </option>
                 </select>
               </label>
@@ -752,7 +759,16 @@ const selectableLinkedReports = computed(() => {
 
   return [...state.reports]
     .filter(report => report?._id && report._id !== selectedReport.value._id)
-    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+    .sort((a, b) => {
+      const folderA = String(a.folderName || '').trim();
+      const folderB = String(b.folderName || '').trim();
+
+      if (folderA !== folderB) {
+        return folderA.localeCompare(folderB);
+      }
+
+      return String(a.name || '').localeCompare(String(b.name || ''));
+    });
 });
 const hasSelectableLinkedReports = computed(() => selectableLinkedReports.value.length > 0);
 const sortedReports = computed(() =>
@@ -856,6 +872,16 @@ function toggleFolderExpansion(folderName) {
 function ensureFolderExpanded(folderName) {
   if (!folderName) return;
   expandedFoldersByName.value[folderName] = true;
+}
+
+function linkedReportOptionLabel(report) {
+  const reportName = String(report?.name || '').trim() || 'Untitled report';
+  const folderName = String(report?.folderName || '').trim();
+  if (!folderName) {
+    return reportName;
+  }
+
+  return `${folderName} / ${reportName}`;
 }
 
 function buildReportReorderItems() {
@@ -1092,6 +1118,7 @@ function closeDropdownMenus() {
   activeRowMenuId.value = '';
   showListMenu.value = false;
   showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
 }
 
 function handleGlobalPointerDown(event) {
@@ -1100,7 +1127,8 @@ function handleGlobalPointerDown(event) {
     return;
   }
 
-  if (target.closest('[data-dropdown-root]')) {
+  const dropdownRoot = target.closest('[data-dropdown-root]');
+  if (dropdownRoot instanceof Element && dropdownRoot.querySelector('[data-dropdown-panel]')) {
     return;
   }
 
