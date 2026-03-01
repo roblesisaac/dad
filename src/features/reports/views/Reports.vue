@@ -94,6 +94,7 @@
                       @click.stop
                     >
                       <button class="menu-item" @click="startRenameFromList(report)">Edit report name</button>
+                      <button class="menu-item" @click="copyReport(report._id)">Create copy</button>
                       <button class="menu-item" @click="refreshReportFromList(report._id)">Refresh totals</button>
                       <button class="menu-item" @click="confirmDeleteReport(report._id)">Delete</button>
                     </div>
@@ -169,6 +170,7 @@
                 @click.stop
               >
                 <button class="menu-item" @click="startReportNameEdit">Edit report name</button>
+                <button class="menu-item" @click="copyReport(selectedReport._id)">Create copy</button>
                 <button class="menu-item" @click="refreshSelectedReport">Refresh totals</button>
                 <button class="menu-item" @click="toggleReorderRows">
                   {{ isReorderingRows ? 'Stop Rearranging Rows' : 'Rearrange Rows' }}
@@ -497,6 +499,7 @@ const {
   isDraftReport,
   initReports,
   createReport,
+  duplicateReport,
   cancelDraftReport,
   deleteReport,
   saveReport,
@@ -537,6 +540,7 @@ const isSavingRow = ref(false);
 const isCreateReportModalOpen = ref(false);
 const createReportNameDraft = ref('');
 const isCreatingReport = ref(false);
+const duplicatingReportId = ref('');
 const isReorderingReports = ref(false);
 const isReorderingRows = ref(false);
 
@@ -910,6 +914,22 @@ async function refreshSelectedReport() {
 
   showDetailReportMenu.value = false;
   await refreshReportTotals(selectedReport.value._id);
+}
+
+async function copyReport(reportId) {
+  if (!reportId || duplicatingReportId.value) return;
+
+  duplicatingReportId.value = reportId;
+  const copied = await duplicateReport(reportId);
+  duplicatingReportId.value = '';
+
+  if (!copied?._id) {
+    return;
+  }
+
+  activeReportMenuId.value = '';
+  showDetailReportMenu.value = false;
+  openReport(copied._id);
 }
 
 async function refreshReportFromList(reportId) {

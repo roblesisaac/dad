@@ -560,6 +560,47 @@ export function useReportsState() {
     }
   }
 
+  function buildCopyName(sourceName = '') {
+    const normalizedSourceName = String(sourceName || '').trim() || 'Report';
+    const baseName = `Copy of ${normalizedSourceName}`;
+    const existingNames = new Set(
+      state.reports.map(report => String(report?.name || '').trim().toLowerCase())
+    );
+
+    if (!existingNames.has(baseName.toLowerCase())) {
+      return baseName;
+    }
+
+    let suffix = 2;
+    while (existingNames.has(`${baseName} (${suffix})`.toLowerCase())) {
+      suffix += 1;
+    }
+
+    return `${baseName} (${suffix})`;
+  }
+
+  async function duplicateReport(reportId) {
+    const sourceReport = findReport(reportId);
+    if (!sourceReport) return null;
+
+    try {
+      const created = await reportsAPI.createReport({
+        name: buildCopyName(sourceReport.name),
+        rows: normalizeRowsForLocal(sourceReport.rows),
+        sort: state.reports.length
+      });
+
+      replaceReports([...state.reports, created]);
+      state.saveStatusByReportId[created._id] = 'idle';
+
+      return findReport(created._id) || created;
+    } catch (error) {
+      console.error('Failed to duplicate report', error);
+      state.error = error.message || 'Failed to duplicate report';
+      return null;
+    }
+  }
+
   function cancelDraftReport(reportId) {
     const report = findReport(reportId);
     if (!report || !isDraftReport(report)) {
@@ -903,6 +944,7 @@ export function useReportsState() {
     isDraftReport,
     initReports,
     createReport,
+    duplicateReport,
     cancelDraftReport,
     deleteReport,
     saveReport,
