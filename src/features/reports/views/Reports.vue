@@ -393,6 +393,13 @@
               >
                 Select Existing Report
               </button>
+              <button
+                class="menu-item disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="!hasExistingRows"
+                @click="openExistingRowPickerModal"
+              >
+                Select Existing Row
+              </button>
               <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
             </div>
           </div>
@@ -407,6 +414,36 @@
           </div>
         </div>
       </template>
+
+      <div
+        v-if="isExistingRowPickerModalOpen"
+        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="closeExistingRowPickerModal"
+      >
+        <div class="w-full max-w-2xl bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
+          <h2 class="text-lg font-black text-gray-900">Select Existing Row</h2>
+
+          <div class="mt-4 border border-gray-200 rounded-xl overflow-hidden max-h-[60vh] overflow-y-auto">
+            <template v-if="hasExistingRows">
+              <button
+                v-for="option in existingRowOptions"
+                :key="option.key"
+                class="menu-item border-b border-gray-100 last:border-b-0"
+                @click="addExistingRowFromOption(option.key)"
+              >
+                {{ option.label }}
+              </button>
+            </template>
+            <p v-else class="px-4 py-3 text-sm text-gray-500">
+              No rows available.
+            </p>
+          </div>
+
+          <div class="mt-4 flex justify-end">
+            <button class="btn-secondary" @click="closeExistingRowPickerModal">Cancel</button>
+          </div>
+        </div>
+      </div>
 
       <div
         v-if="isCreateReportModalOpen"
@@ -720,6 +757,7 @@ const activeReportMenuId = ref('');
 const activeFolderMenuName = ref('');
 const activeRowMenuId = ref('');
 const showAddRowPicker = ref(false);
+const isExistingRowPickerModalOpen = ref(false);
 const showListMenu = ref(false);
 
 const showDetailReportMenu = ref(false);
@@ -771,6 +809,25 @@ const selectableLinkedReports = computed(() => {
     });
 });
 const hasSelectableLinkedReports = computed(() => selectableLinkedReports.value.length > 0);
+const existingRowOptions = computed(() => {
+  const options = [];
+
+  sortedReports.value.forEach((report) => {
+    (Array.isArray(report?.rows) ? report.rows : []).forEach((row) => {
+      if (!row?.rowId || typeof row.rowId !== 'string') {
+        return;
+      }
+
+      options.push({
+        key: `${report._id}::${row.rowId}`,
+        label: existingRowBreadcrumbLabel(report, row)
+      });
+    });
+  });
+
+  return options;
+});
+const hasExistingRows = computed(() => existingRowOptions.value.length > 0);
 const sortedReports = computed(() =>
   [...state.reports].sort((a, b) => Number(a.sort || 0) - Number(b.sort || 0))
 );
@@ -1009,6 +1066,142 @@ function rowSubtitle(row) {
   return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}`;
 }
 
+function existingRowTypeLabel(row) {
+  if (row?.type === 'tab') {
+    return 'Tab';
+  }
+
+  if (row?.type === 'report') {
+    return 'Report';
+  }
+
+  return 'Manual';
+}
+
+function existingRowBreadcrumbLabel(report, row) {
+  const folderName = String(report?.folderName || '').trim();
+  const reportName = String(report?.name || '').trim() || 'Untitled report';
+  const typeLabel = existingRowTypeLabel(row);
+  const rowName = rowTitle(row);
+
+  const parts = [];
+  if (folderName) {
+    parts.push(folderName);
+  }
+
+  parts.push(reportName, typeLabel, rowName);
+  return parts.join(' / ');
+}
+
+function findExistingRowOption(optionKey) {
+  const [reportId, rowId] = String(optionKey || '').split('::');
+  if (!reportId || !rowId) {
+    return null;
+  }
+
+  const report = state.reports.find(item => item._id === reportId);
+  if (!report) {
+    return null;
+  }
+
+  const row = report.rows.find(item => item.rowId === rowId);
+  if (!row) {
+    return null;
+  }
+
+  return { report, row };
+}
+
+function createRowByType(reportId, type) {
+  if (type === 'tab') {
+    return addTabRow(reportId);
+  }
+
+  if (type === 'report') {
+    return addReportRow(reportId);
+  }
+
+  return addManualRow(reportId);
+}
+
+function buildRowCopyPayload(row) {
+  if (row?.type === 'tab') {
+    return {
+      type: 'tab',
+      tabId: row.tabId || '',
+      groupId: row.groupId || '',
+      dateStart: row.dateStart || '',
+      dateEnd: row.dateEnd || '',
+      savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0
+    };
+  }
+
+  if (row?.type === 'report') {
+    const linkedReport = state.reports.find(report => report._id === row.reportId);
+    return {
+      type: 'report',
+      reportId: row.reportId || '',
+      reportName: linkedReport?.name || row.reportName || '',
+      savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0
+    };
+  }
+
+  const amount = Number(row?.amount);
+  return {
+    type: 'manual',
+    title: row?.title || '',
+    amount: Number.isFinite(amount) ? amount : 0
+  };
+}
+
+function openExistingRowPickerModal() {
+  if (!hasExistingRows.value || !selectedReport.value?._id) {
+    return;
+  }
+
+  showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
+  isExistingRowPickerModalOpen.value = true;
+}
+
+function closeExistingRowPickerModal() {
+  isExistingRowPickerModalOpen.value = false;
+}
+
+function addExistingRowFromOption(optionKey) {
+  if (!selectedReport.value?._id) {
+    closeExistingRowPickerModal();
+    return;
+  }
+
+  const selectedOption = findExistingRowOption(optionKey);
+  if (!selectedOption) {
+    closeExistingRowPickerModal();
+    return;
+  }
+
+  const nextRow = createRowByType(selectedReport.value._id, selectedOption.row.type);
+  if (!nextRow) {
+    closeExistingRowPickerModal();
+    return;
+  }
+
+  updateRow(
+    selectedReport.value._id,
+    nextRow.rowId,
+    buildRowCopyPayload(selectedOption.row)
+  );
+
+  const copiedRow = selectedReport.value.rows.find(row => row.rowId === nextRow.rowId);
+  rowEditorDraft.value = copiedRow ? { ...copiedRow } : { ...nextRow };
+  editingRowId.value = nextRow.rowId;
+  editingRowWasNew.value = true;
+  isRowEditorOpen.value = true;
+  showDetailReportMenu.value = false;
+  showAddRowPicker.value = false;
+  closeExistingRowPickerModal();
+}
+
 function openDashboardFromRow(row) {
   if (!row || isReorderingRows.value || row.type !== 'tab') {
     return;
@@ -1042,6 +1235,7 @@ function openReport(reportId) {
   showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  closeExistingRowPickerModal();
   isMoveToFolderModalOpen.value = false;
   isReorderingRows.value = false;
 }
@@ -1068,6 +1262,7 @@ function backToList() {
   showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  closeExistingRowPickerModal();
   closeMoveToFolderModal();
   isReorderingRows.value = false;
   cancelReportNameEdit();
@@ -1247,6 +1442,7 @@ function toggleReorderRows() {
   activeRowMenuId.value = '';
   showAddRowPicker.value = false;
   showDetailReportMenu.value = false;
+  closeExistingRowPickerModal();
 }
 
 async function onRowsDragEnd() {
@@ -1272,6 +1468,7 @@ function openCreateReportModal() {
   isReorderingReports.value = false;
   showListMenu.value = false;
   activeReportMenuId.value = '';
+  closeExistingRowPickerModal();
   createReportNameDraft.value = '';
   isCreateReportModalOpen.value = true;
 }
@@ -1351,6 +1548,7 @@ function cancelDraftAndBack() {
   selectedReportId.value = '';
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  closeExistingRowPickerModal();
 }
 
 function startRowEdit(row) {
@@ -1382,6 +1580,7 @@ function addAndEditRow(type) {
 
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+  closeExistingRowPickerModal();
 
   if (!newRow) return;
 
