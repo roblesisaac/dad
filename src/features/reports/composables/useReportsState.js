@@ -79,6 +79,7 @@ export function normalizeReportsForLocal(reports = []) {
 
   const normalized = reports.map((report, index) => ({
     ...report,
+    folderName: typeof report?.folderName === 'string' ? report.folderName.trim() : '',
     sort: Number.isFinite(Number(report?.sort)) ? Number(report.sort) : index,
     rows: normalizeRowsForLocal(report?.rows)
   }));
@@ -469,6 +470,7 @@ export function useReportsState() {
 
         const created = await reportsAPI.createReport({
           name: report.name,
+          folderName: report.folderName || '',
           rows,
           sort: report.sort
         });
@@ -498,6 +500,7 @@ export function useReportsState() {
 
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
+        folderName: report.folderName || '',
         rows,
         sort: report.sort
       });
@@ -545,6 +548,7 @@ export function useReportsState() {
       const nextName = String(name || '').trim() || `Report ${state.reports.length + 1}`;
       const created = await reportsAPI.createReport({
         name: nextName,
+        folderName: '',
         rows: [],
         sort: state.reports.length
       });
@@ -586,6 +590,7 @@ export function useReportsState() {
     try {
       const created = await reportsAPI.createReport({
         name: buildCopyName(sourceReport.name),
+        folderName: sourceReport.folderName || '',
         rows: normalizeRowsForLocal(sourceReport.rows),
         sort: state.reports.length
       });
@@ -640,6 +645,95 @@ export function useReportsState() {
     if (!report) return;
 
     report.name = String(name || '').trim();
+  }
+
+  function updateReportFolderName(reportId, folderName) {
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.folderName = String(folderName || '').trim();
+  }
+
+  async function moveReportToFolder(reportId, folderName) {
+    updateReportFolderName(reportId, folderName);
+    return await saveReportLayout(reportId);
+  }
+
+  async function removeReportFromFolder(reportId) {
+    updateReportFolderName(reportId, '');
+    return await saveReportLayout(reportId);
+  }
+
+  async function renameFolder(currentFolderName, nextFolderName) {
+    const fromFolderName = String(currentFolderName || '').trim();
+    const toFolderName = String(nextFolderName || '').trim();
+
+    if (!fromFolderName || !toFolderName || fromFolderName === toFolderName) {
+      return [];
+    }
+
+    const reportsInFolder = state.reports.filter(
+      report => String(report?.folderName || '').trim() === fromFolderName
+    );
+
+    if (!reportsInFolder.length) {
+      return [];
+    }
+
+    reportsInFolder.forEach((report) => {
+      report.folderName = toFolderName;
+    });
+
+    try {
+      const saved = [];
+      for (const report of reportsInFolder) {
+        const updated = await saveReportLayout(report._id);
+        if (updated) {
+          saved.push(updated);
+        }
+      }
+
+      return saved;
+    } catch (error) {
+      console.error(`Failed to rename folder '${fromFolderName}'`, error);
+      state.error = error.message || 'Failed to rename folder';
+      return [];
+    }
+  }
+
+  async function removeFolder(folderName) {
+    const normalizedFolderName = String(folderName || '').trim();
+    if (!normalizedFolderName) {
+      return [];
+    }
+
+    const reportsInFolder = state.reports.filter(
+      report => String(report?.folderName || '').trim() === normalizedFolderName
+    );
+
+    if (!reportsInFolder.length) {
+      return [];
+    }
+
+    reportsInFolder.forEach((report) => {
+      report.folderName = '';
+    });
+
+    try {
+      const saved = [];
+      for (const report of reportsInFolder) {
+        const updated = await saveReportLayout(report._id);
+        if (updated) {
+          saved.push(updated);
+        }
+      }
+
+      return saved;
+    } catch (error) {
+      console.error(`Failed to remove folder '${normalizedFolderName}'`, error);
+      state.error = error.message || 'Failed to remove folder';
+      return [];
+    }
   }
 
   function addTabRow(reportId) {
@@ -775,6 +869,7 @@ export function useReportsState() {
     try {
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
+        folderName: report.folderName || '',
         rows: report.rows,
         sort: report.sort
       });
@@ -812,6 +907,7 @@ export function useReportsState() {
         reportsToPersist.map(async report =>
           await reportsAPI.updateReport(report._id, {
             name: report.name,
+            folderName: report.folderName || '',
             rows: report.rows,
             sort: report.sort
           })
@@ -949,6 +1045,11 @@ export function useReportsState() {
     deleteReport,
     saveReport,
     updateReportName,
+    updateReportFolderName,
+    moveReportToFolder,
+    removeReportFromFolder,
+    renameFolder,
+    removeFolder,
     addTabRow,
     addManualRow,
     addReportRow,

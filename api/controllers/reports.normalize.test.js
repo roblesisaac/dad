@@ -5,6 +5,7 @@ describe('reports normalize', () => {
   test('normalizes mixed rows and strips unknown fields', () => {
     const payload = {
       name: '  Monthly  ',
+      folderName: '  Planning  ',
       sort: '4',
       rows: [
         {
@@ -39,6 +40,7 @@ describe('reports normalize', () => {
     const normalized = normalizeReportPayload(payload);
 
     expect(normalized.name).toBe('Monthly');
+    expect(normalized.folderName).toBe('Planning');
     expect(normalized.sort).toBe(4);
     expect(normalized.rows).toHaveLength(3);
 

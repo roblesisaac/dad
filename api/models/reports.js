@@ -23,6 +23,7 @@ const reportSchema = {
     set: (_, { req }) => req.user._id
   },
   name: String,
+  folderName: String,
   rows: [rowSchema],
   sort: Number,
   createdAt: String,

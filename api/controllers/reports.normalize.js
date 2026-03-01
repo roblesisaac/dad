@@ -175,11 +175,13 @@ export function normalizeReportPayload(payload) {
   }
 
   const name = nonEmptyString(payload.name, 'name');
+  const folderName = optionalString(payload.folderName);
   const rows = normalizeRows(payload.rows);
   const sort = parseOptionalSort(payload.sort);
 
   const normalized = {
     name,
+    folderName,
     rows
   };
 

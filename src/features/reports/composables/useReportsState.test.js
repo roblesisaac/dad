@@ -93,11 +93,11 @@ describe('useReportsState helpers', () => {
 
   test('normalizes report list sort order', () => {
     const normalized = normalizeReportsForLocal([
-      { _id: 'r2', name: 'B', sort: 5, rows: [] },
+      { _id: 'r2', name: 'B', folderName: '  Ops ', sort: 5, rows: [] },
       { _id: 'r1', name: 'A', sort: 1, rows: [] }
     ]);
 
     expect(normalized[0]).toMatchObject({ _id: 'r1', sort: 0 });
-    expect(normalized[1]).toMatchObject({ _id: 'r2', sort: 1 });
+    expect(normalized[1]).toMatchObject({ _id: 'r2', sort: 1, folderName: 'Ops' });
   });
 });
