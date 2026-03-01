@@ -1635,7 +1635,7 @@ async function saveReportName() {
     return;
   }
 
-  const saved = await saveReport(selectedReport.value._id);
+  const saved = await saveReportLayout(selectedReport.value._id);
   if (saved?._id) {
     selectedReportId.value = saved._id;
     cancelReportNameEdit();
