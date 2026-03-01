@@ -948,7 +948,7 @@ const saveStateLabel = computed(() => {
 });
 
 function folderIsExpanded(folderName) {
-  return expandedFoldersByName.value[folderName] !== false;
+  return expandedFoldersByName.value[folderName] === true;
 }
 
 function toggleFolderExpansion(folderName) {
