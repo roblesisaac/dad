@@ -1,16 +1,20 @@
 <template>
   <div :class="containerClasses">
     <!-- Enabled Tabs Header -->
-    <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
+    <div
+      v-if="!isDashboardVariant"
+      class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between"
+    >
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
       <span class="text-[10px] font-black text-gray-300">{{ enabledTabs.length }} enabled</span>
     </div>
     
     <!-- List of active tabs -->
-    <div class="py-2">
+    <div :class="isDashboardVariant ? '' : 'py-2'">
+
       <div v-if="enabledTabs.length > 0">
         <Draggable 
-          v-if="isEditMode"
+          v-if="effectiveEditMode"
           v-model="state.selected.tabsForGroup" 
           v-bind="dragOptions" 
           handle=".handler-tab"
@@ -21,7 +25,7 @@
             <AllTabRow
               :element="element"
               :key="element._id" 
-              :is-edit-mode="isEditMode"
+              :is-edit-mode="effectiveEditMode"
               @tab-selected="handleTabSelected"
             />
           </template>
@@ -33,7 +37,7 @@
             v-for="element in enabledTabs"
             :key="element._id"
             :element="element"
-            :is-edit-mode="isEditMode"
+            :is-edit-mode="effectiveEditMode"
             @tab-selected="handleTabSelected"
           />
         </div>
@@ -44,14 +48,16 @@
     </div>
 
     <!-- Disabled Tabs Section -->
-    <div class="py-4 border-t-2 border-gray-50">
+    <div :class="isDashboardVariant ? 'border-t-2 border-gray-50' : 'py-4 border-t-2 border-gray-50'">
       <button 
         @click="toggleDisabledSection" 
-        class="flex items-center justify-between w-full mb-4 px-6 group focus:outline-none"
+        :class="isDashboardVariant
+          ? 'flex items-center justify-between w-full px-6 py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none'
+          : 'flex items-center justify-between w-full mb-4 px-6 group focus:outline-none'"
       >
         <div class="flex items-center gap-2">
-          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Hidden Tabs</h2>
-          <span class="text-[10px] font-black text-gray-300">{{ disabledTabs.length }}</span>
+          <h2 :class="isDashboardVariant ? 'text-base font-black text-gray-900 uppercase tracking-tight' : 'text-[10px] font-black uppercase tracking-widest text-black'">Hidden Tabs</h2>
+          <span :class="isDashboardVariant ? 'text-sm font-black text-gray-300' : 'text-[10px] font-black text-gray-300'">{{ disabledTabs.length }}</span>
         </div>
         <div class="text-gray-300 group-hover:text-black transition-colors">
           <ChevronDown v-if="showDisabledTabs" class="w-4 h-4" />
@@ -64,7 +70,7 @@
           v-for="tab in disabledTabs"
           :key="tab._id"
           :element="tab"
-          :is-edit-mode="isEditMode" 
+          :is-edit-mode="effectiveEditMode" 
           @tab-selected="handleTabSelected"
         />
         <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
@@ -74,21 +80,39 @@
     </div>
 
     <!-- Create New Tab Button -->
-    <div class="p-6 bg-gray-50/30 border-t-2 border-gray-100">
+    <div :class="isDashboardVariant ? 'border-t-2 border-gray-50' : 'p-6 bg-gray-50/30 border-t-2 border-gray-100'">
       <button 
         @click="handleCreateNew" 
-        class="w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5"
+        :class="isDashboardVariant
+          ? 'w-full px-6 py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none'
+          : 'w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
       >
-        <span>+</span>
-        New Tab
+        <template v-if="isDashboardVariant">
+          <span class="text-base font-black text-gray-900 uppercase tracking-tight">New Tab</span>
+          <span class="text-gray-300 group-hover:text-black transition-colors text-lg leading-none">+</span>
+        </template>
+        <template v-else>
+          <span>+</span>
+          New Tab
+        </template>
       </button>
     </div>
   </div>
+  <button
+  v-if="isDashboardVariant"
+  class="w-full px-6 py-6 border-b-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
+  @click="toggleDashboardReorder"
+>
+  <span class="text-base font-black text-gray-900 uppercase tracking-tight">
+    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange Tabs' }}
+  </span>
+  <GripVertical class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+</button>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, GripVertical } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
@@ -112,10 +136,14 @@ const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 const showDisabledTabs = ref(false);
+const dashboardEditMode = ref(false);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
+const effectiveEditMode = computed(() => {
+  return isDashboardVariant.value ? dashboardEditMode.value : props.isEditMode;
+});
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
-    return 'bg-white w-full border-2 border-gray-100 rounded-2xl overflow-hidden';
+    return 'bg-white w-full';
   }
 
   return 'bg-white max-h-[80vh] overflow-y-auto w-full';
@@ -143,6 +171,11 @@ function handleCreateNew() {
 
 function handleTabSelected(tab) {
   emit('tab-selected', tab);
+}
+
+function toggleDashboardReorder() {
+  if (!isDashboardVariant.value) return;
+  dashboardEditMode.value = !dashboardEditMode.value;
 }
 
 // Handle drag end event

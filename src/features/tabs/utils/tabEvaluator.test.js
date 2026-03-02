@@ -254,6 +254,50 @@ describe('tabEvaluator', () => {
     expect(visibleTransactionIds).toEqual(['early', 'middle']);
   });
 
+  test('supports date-specific operators inside categorize rules', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'early',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'middle',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'ENTERTAINMENT' }
+        },
+        {
+          transaction_id: 'late',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'GROCERIES' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'c-date-operators',
+          orderOfExecution: 0,
+          rule: [
+            'categorize', 'date', 'is after', '2026-01-01', 'recent',
+            'and', 'date', 'is before', '2026-01-03'
+          ]
+        }
+      ]
+    });
+
+    const recentGroup = result.categorizedItems.find(([categoryName]) => categoryName === 'recent');
+    const recentIds = recentGroup ? recentGroup[1].map(item => item.transaction_id).sort() : [];
+
+    expect(recentIds).toEqual(['middle']);
+  });
+
   test('supports OR conditions inside a single categorize rule', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

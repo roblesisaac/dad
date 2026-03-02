@@ -169,7 +169,7 @@ export function useSelectGroup() {
    * Handle group selection change
    */
   async function handleGroupChange(options = {}) {
-    const { forceRefresh = false } = options;
+    const { forceRefresh = false, preserveSelectedTab = false } = options;
     let selectedGroup = state.selected.group;
     const tabsForGroup = state.selected.tabsForGroup;
 
@@ -184,10 +184,12 @@ export function useSelectGroup() {
     }
 
     state.isLoading = true;
-    clearSelectedTabsForGroup(selectedGroup);
+    if (!preserveSelectedTab) {
+      clearSelectedTabsForGroup(selectedGroup);
+    }
 
     const dateRange = extractDateRange(state.date);
-    const requestKey = `${selectedGroup?._id || ''}|${dateRange}`;
+    const requestKey = `${selectedGroup?._id || ''}|${dateRange}|${preserveSelectedTab ? 'keep' : 'reset'}`;
 
     if (!forceRefresh) {
       const inFlightRequest = GROUP_CHANGE_IN_FLIGHT_REQUESTS.get(requestKey);

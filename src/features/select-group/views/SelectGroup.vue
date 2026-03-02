@@ -1,130 +1,198 @@
 <template>
   <div :class="containerClasses">
-    <!-- Net-worth Header -->
-    <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
-      <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Net Balance</h4>
-      <div class="text-xl font-black text-black tracking-tight">
-        <NetBalance :accounts="state.allUserAccounts" :digits="0" />
-      </div>
-    </div>
+    <template v-if="isDashboardVariant">
+      <div class="w-full">
 
-    <!-- Custom Groups Section -->
-    <div class="px-6 py-4">
-      <div 
-        class="flex items-center justify-between mb-4 cursor-pointer group"
-        @click="toggleCustomGroups"
-      >
-        <div class="flex items-center gap-2">
-          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Banking Groups</h2>
-          <span class="text-[10px] font-black text-gray-300">{{ customGroups.length }}</span>
+        <div v-if="dashboardGroups.length">
+          <Draggable
+            v-if="dashboardEditMode"
+            v-model="state.allUserGroups"
+            v-bind="dragOptions"
+            handle=".handler-group"
+            @end="updateDashboardGroupSorting"
+            class="w-full"
+            item-key="_id"
+          >
+            <template #item="{element}">
+              <GroupRow
+                :key="element._id"
+                :element="element"
+                variant="dashboard"
+                :edit-mode="dashboardEditMode"
+                @select-group="handleSelectGroup(element)"
+              />
+            </template>
+          </Draggable>
+
+          <div v-else>
+            <GroupRow
+              v-for="group in dashboardGroups"
+              :key="group._id"
+              :element="group"
+              variant="dashboard"
+              @select-group="handleSelectGroup(group)"
+            />
+          </div>
         </div>
-        <div class="text-gray-300 group-hover:text-black transition-colors">
-          <ChevronDown v-if="showCustomGroups" class="w-4 h-4" />
-          <ChevronRight v-else class="w-4 h-4" />
+        <div v-else class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+          No accounts
+        </div>
+
+        <div class="border-t-2 border-gray-50">
+          <button
+            @click="goToOnboarding"
+            class="w-full px-6 py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
+          >
+            <span class="text-base font-black text-gray-900 uppercase tracking-tight">Re-Sync All</span>
+            <RefreshCw class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          </button>
+          <button
+            @click="handleManageBanks"
+            class="w-full px-6 py-6 border-t-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
+          >
+            <span class="text-base font-black text-gray-900 uppercase tracking-tight">Manage Banks</span>
+            <Building class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          </button>
+          <button
+          class="w-full px-6 py-6 border-b-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
+          @click="toggleDashboardReorder"
+        >
+          <span class="text-base font-black text-gray-900 uppercase tracking-tight">
+            {{ dashboardEditMode ? 'Done Rearranging' : 'Rearrange Accounts' }}
+          </span>
+          <GripVertical class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+        </button>
         </div>
       </div>
-      
-      <div v-if="showCustomGroups" class="space-y-2">
-        <Draggable 
-          v-model="customGroups" 
-          v-bind="dragOptions" 
-          handle=".handler-group" 
-          @end="updateGroupSorting"
-          :disabled="!editMode"
-          class="space-y-2"
-          :class="{'edit-mode-container': editMode}"
-        >
-          <template #item="{element}">
-            <GroupRow 
-              :key="element._id" 
-              :element="element" 
-              :editMode="editMode"
-              @edit-group="openEditGroupModal(element)" 
-              @select-group="handleSelectGroup(element)"
-            />
-          </template>
-        </Draggable>
-        
-        <div v-if="customGroups.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
-          No custom groups
+    </template>
+
+    <template v-else>
+      <!-- Net-worth Header -->
+      <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
+        <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Net Balance</h4>
+        <div class="text-xl font-black text-black tracking-tight">
+          <NetBalance :accounts="state.allUserAccounts" :digits="0" />
         </div>
-        
-        <!-- Create New Group Button (Inside Custom Groups) -->
-        <div v-if="editMode" class="mt-4">
-          <button 
-            @click="handleCreateNewGroup" 
-            class="group w-full px-6 py-3 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] flex items-center justify-center gap-2 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+      </div>
+
+      <!-- Custom Groups Section -->
+      <div class="px-6 py-4">
+        <div
+          class="flex items-center justify-between mb-4 cursor-pointer group"
+          @click="toggleCustomGroups"
+        >
+          <div class="flex items-center gap-2">
+            <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Banking Groups</h2>
+            <span class="text-[10px] font-black text-gray-300">{{ customGroups.length }}</span>
+          </div>
+          <div class="text-gray-300 group-hover:text-black transition-colors">
+            <ChevronDown v-if="showCustomGroups" class="w-4 h-4" />
+            <ChevronRight v-else class="w-4 h-4" />
+          </div>
+        </div>
+
+        <div v-if="showCustomGroups" class="space-y-2">
+          <Draggable
+            v-model="customGroups"
+            v-bind="dragOptions"
+            handle=".handler-group"
+            @end="updateGroupSorting"
+            :disabled="!editMode"
+            class="space-y-2"
+            :class="{'edit-mode-container': editMode}"
           >
-            <PlusCircle class="w-3.5 h-3.5" />
-            Create Group
+            <template #item="{element}">
+              <GroupRow
+                :key="element._id"
+                :element="element"
+                :editMode="editMode"
+                @edit-group="openEditGroupModal(element)"
+                @select-group="handleSelectGroup(element)"
+              />
+            </template>
+          </Draggable>
+
+          <div v-if="customGroups.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+            No custom groups
+          </div>
+
+          <!-- Create New Group Button (Inside Custom Groups) -->
+          <div v-if="editMode" class="mt-4">
+            <button
+              @click="handleCreateNewGroup"
+              class="group w-full px-6 py-3 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] flex items-center justify-center gap-2 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+            >
+              <PlusCircle class="w-3.5 h-3.5" />
+              Create Group
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bank Accounts Section -->
+      <div class="px-6 py-4 border-t-2 border-gray-50">
+        <div
+          class="flex items-center justify-between mb-4 cursor-pointer group"
+          @click="toggleBankAccounts"
+        >
+          <div class="flex items-center gap-2">
+            <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Raw Accounts</h2>
+            <span class="text-[10px] font-black text-gray-300">{{ bankAccounts.length }}</span>
+          </div>
+          <div class="text-gray-300 group-hover:text-black transition-colors">
+            <ChevronDown v-if="showBankAccounts" class="w-4 h-4" />
+            <ChevronRight v-else class="w-4 h-4" />
+          </div>
+        </div>
+
+        <div v-if="showBankAccounts" class="space-y-2">
+          <Draggable
+            v-model="bankAccounts"
+            v-bind="dragOptions"
+            handle=".handler-group"
+            @end="updateGroupSorting"
+            :disabled="!editMode"
+            class="space-y-2"
+            :class="{'edit-mode-container': editMode}"
+          >
+            <template #item="{element}">
+              <GroupRow
+                :key="element._id"
+                :element="element"
+                :editMode="editMode"
+                @edit-group="openEditGroupModal(element)"
+                @select-group="handleSelectGroup(element)"
+              />
+            </template>
+          </Draggable>
+
+          <div v-if="bankAccounts.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+            No bank accounts
+          </div>
+        </div>
+      </div>
+
+      <!-- Management Actions -->
+      <div v-if="!editMode" class="px-6 py-6 border-t-2 border-gray-100 bg-gray-50/30">
+        <div class="grid grid-cols-2 gap-3">
+          <button
+            @click="goToOnboarding"
+            class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
+          >
+            <RefreshCw class="w-4 h-4" />
+            Re-Sync All
+          </button>
+
+          <button
+            @click="handleManageBanks"
+            class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
+          >
+            <Building class="w-4 h-4" />
+            Manage Banks
           </button>
         </div>
       </div>
-    </div>
-    
-    <!-- Bank Accounts Section -->
-    <div class="px-6 py-4 border-t-2 border-gray-50">
-      <div 
-        class="flex items-center justify-between mb-4 cursor-pointer group"
-        @click="toggleBankAccounts"
-      >
-        <div class="flex items-center gap-2">
-          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Raw Accounts</h2>
-          <span class="text-[10px] font-black text-gray-300">{{ bankAccounts.length }}</span>
-        </div>
-        <div class="text-gray-300 group-hover:text-black transition-colors">
-          <ChevronDown v-if="showBankAccounts" class="w-4 h-4" />
-          <ChevronRight v-else class="w-4 h-4" />
-        </div>
-      </div>
-      
-      <div v-if="showBankAccounts" class="space-y-2">
-        <Draggable 
-          v-model="bankAccounts" 
-          v-bind="dragOptions" 
-          handle=".handler-group" 
-          @end="updateGroupSorting"
-          :disabled="!editMode"
-          class="space-y-2"
-          :class="{'edit-mode-container': editMode}"
-        >
-          <template #item="{element}">
-            <GroupRow 
-              :key="element._id" 
-              :element="element" 
-              :editMode="editMode"
-              @edit-group="openEditGroupModal(element)" 
-              @select-group="handleSelectGroup(element)"
-            />
-          </template>
-        </Draggable>
-        
-        <div v-if="bankAccounts.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
-          No bank accounts
-        </div>
-      </div>
-    </div>
-
-    <!-- Management Actions -->
-    <div v-if="!editMode" class="px-6 py-6 border-t-2 border-gray-100 bg-gray-50/30">
-      <div class="grid grid-cols-2 gap-3">
-        <button 
-          @click="goToOnboarding" 
-          class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
-        >
-          <RefreshCw class="w-4 h-4" />
-          Re-Sync All
-        </button>
-        
-        <button 
-          @click="handleManageBanks" 
-          class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
-        >
-          <Building class="w-4 h-4" />
-          Manage Banks
-        </button>
-      </div>
-    </div>
+    </template>
 
     <!-- Edit Group Modal -->
     <EditGroupModal
@@ -163,7 +231,7 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 
 import GroupRow from '../components/GroupRow.vue';
 import NetBalance from '../components/NetBalance.vue';
-import { PlusCircle, RefreshCw, ChevronDown, ChevronRight, Building } from 'lucide-vue-next';
+import { PlusCircle, RefreshCw, ChevronDown, ChevronRight, Building, GripVertical } from 'lucide-vue-next';
 
 // Modals
 import EditGroupModal from '../components/EditGroupModal.vue';
@@ -197,14 +265,22 @@ const { createNewGroup, selectGroup, fetchGroupsAndAccounts, handleGroupChange }
 // Collapsible sections state
 const showCustomGroups = ref(true);
 const showBankAccounts = ref(true);
+const dashboardEditMode = ref(false);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
-    return 'bg-white w-full border-2 border-gray-100 rounded-2xl overflow-hidden';
+    return 'bg-white w-full';
   }
 
   return 'bg-white max-h-[80vh] overflow-y-auto w-full';
 });
+const dashboardGroups = computed(() => {
+  return [...state.allUserGroups].sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+});
+
+const toggleDashboardReorder = () => {
+  dashboardEditMode.value = !dashboardEditMode.value;
+};
 
 // Computed properties to split groups into two categories
 const customGroups = ref([]);
@@ -230,6 +306,14 @@ const updateGroupSorting = () => {
   
   const allGroups = [...customGroups.value, ...bankAccounts.value];
   allGroups.forEach((group, index) => {
+    group.sort = index;
+  });
+};
+
+const updateDashboardGroupSorting = () => {
+  if (!dashboardEditMode.value) return;
+
+  state.allUserGroups.forEach((group, index) => {
     group.sort = index;
   });
 };

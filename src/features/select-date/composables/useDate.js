@@ -208,7 +208,7 @@ export function useDate() {
   const applyDates = () => {
     state.date.start = tempDate.start;
     state.date.end = tempDate.end;
-    handleGroupChange();
+    handleGroupChange({ preserveSelectedTab: true });
     return false; // To close modal in component
   };
 

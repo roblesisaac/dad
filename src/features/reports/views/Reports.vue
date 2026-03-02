@@ -3,26 +3,20 @@
     <div class="max-w-5xl mx-auto w-full relative">
       <!-- Sticky Navigation Header -->
       <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
-        <!-- Left: Dashboard -->
+        <!-- Left: Theme -->
+        <div class="flex items-center">
+          <ThemeCycleButton />
+        </div>
+
+        <!-- Right: Dashboard -->
         <button 
           @click="router.push('/dashboard')" 
           class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
         >
-          <ChevronLeft class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
           <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
             Dashboard
           </span>
-        </button>
-
-        <!-- Right: Logout -->
-        <button 
-          @click="logoutUser" 
-          class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
-        >
-          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
-            Logout
-          </span>
-          <LogOut class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          <ChevronRight class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
         </button>
       </div>
 
@@ -308,7 +302,7 @@
         </template>
 
         <button
-          class="fixed bottom-8 right-8 w-14 h-14 rounded-full bg-black text-white shadow-xl hover:bg-gray-800 flex items-center justify-center"
+          class="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-black text-white shadow-xl hover:bg-gray-800 flex items-center justify-center"
           :class="isReorderingReports ? 'opacity-50 cursor-not-allowed' : ''"
           :disabled="isReorderingReports"
           @click="createNewReportFromFab"
@@ -494,18 +488,28 @@
           </div>
         </div>
 
-        <div class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white">
-          <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
+      </template>
+
+      <div class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white z-30">
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
+          <div v-if="selectedReport" class="flex items-center gap-3 min-w-0">
             <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Report Total</span>
-            <span class="text-xl font-black" :class="fontColor(getReportTotal(selectedReport._id))">
+            <span class="text-xl font-black truncate" :class="fontColor(getReportTotal(selectedReport._id))">
               {{ formatPrice(getReportTotal(selectedReport._id), { toFixed: 2 }) }}
             </span>
           </div>
-        </div>
-      </template>
+          <div v-else />
 
-      <div class="fixed bottom-8 left-4 sm:left-8 z-30">
-        <ThemeCycleButton />
+          <button
+            @click="logoutUser"
+            class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none flex-shrink-0"
+          >
+            <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
+              Logout
+            </span>
+            <LogOut class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          </button>
+        </div>
       </div>
 
       <div

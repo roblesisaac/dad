@@ -54,7 +54,7 @@
         v-if="!state.isLoading && isCategoryView"
         class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
-        <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-3 items-center">
+        <div class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center justify-between">
           <!-- Left: Filters -->
           <button 
             @click="showRuleManagerModal = true"
@@ -65,10 +65,6 @@
             </span>
             <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
           </button>
-
-          <div class="justify-self-center">
-            <ThemeCycleButton />
-          </div>
 
           <!-- Right: Reports -->
           <button 
@@ -122,7 +118,6 @@ import DashboardHeader from '../components/DashboardHeader.vue';
 import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
 import AllTabs from '@/features/tabs/components/AllTabs.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
-import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
 const router = useRouter();
 const route = useRoute();

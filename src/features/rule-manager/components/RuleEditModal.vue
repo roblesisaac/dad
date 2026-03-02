@@ -323,7 +323,7 @@ const METHOD_OPTIONS = {
     { value: 'includes', label: 'includes' },
     { value: 'excludes', label: 'excludes' }
   ],
-  dateFilter: [
+  dateCondition: [
     { value: '=', label: 'is equal to' },
     { value: 'is before', label: 'is before' },
     { value: 'is after', label: 'is after' }
@@ -440,12 +440,12 @@ function isDateProperty(propName) {
 }
 
 function useDateInputForCondition(propName) {
-  return ruleData.value.rule[0] === 'filter' && isDateProperty(propName);
+  return ['filter', 'categorize'].includes(ruleData.value.rule[0]) && isDateProperty(propName);
 }
 
 function getMethodOptions(ruleType, propName) {
-  if (ruleType === 'filter' && isDateProperty(propName)) {
-    return METHOD_OPTIONS.dateFilter;
+  if (['filter', 'categorize'].includes(ruleType) && isDateProperty(propName)) {
+    return METHOD_OPTIONS.dateCondition;
   }
 
   const options = [];
@@ -484,8 +484,8 @@ function normalizeLegacyDateMethod(methodName) {
   return methodName;
 }
 
-function normalizeDateMethodsForFilterRule() {
-  if (ruleData.value.rule[0] !== 'filter') {
+function normalizeDateMethodsForRuleType() {
+  if (!['filter', 'categorize'].includes(ruleData.value.rule[0])) {
     return;
   }
 
@@ -508,7 +508,7 @@ function normalizeDateMethodsForFilterRule() {
 watch(
   () => [ruleData.value.rule[0], ruleData.value.rule[1]],
   () => {
-    normalizeDateMethodsForFilterRule();
+    normalizeDateMethodsForRuleType();
 
     if (!isMethodAllowed(ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2])) {
       ruleData.value.rule[2] = '';
@@ -520,7 +520,7 @@ watch(
   andConditions,
   () => {
     for (const condition of andConditions.value) {
-      if (ruleData.value.rule[0] === 'filter' && isDateProperty(condition.property)) {
+      if (['filter', 'categorize'].includes(ruleData.value.rule[0]) && isDateProperty(condition.property)) {
         const normalizedMethod = normalizeLegacyDateMethod(condition.method);
         if (normalizedMethod !== condition.method) {
           condition.method = normalizedMethod;
@@ -535,7 +535,7 @@ watch(
   { deep: true }
 );
 
-normalizeDateMethodsForFilterRule();
+normalizeDateMethodsForRuleType();
 
 function saveRule() {
   if (!validateRule()) {

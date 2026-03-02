@@ -1,25 +1,21 @@
 <template>
-    <div :class="[
-        'flex items-center bg-white transition-all duration-300',
-        'border-2 px-4 py-4 rounded-2xl relative group',
-        isSelected 
-            ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] z-10' 
-            : 'border-gray-50 hover:border-gray-200',
-        editMode ? 'edit-mode-row cursor-move' : 'cursor-pointer'
-    ]"
+    <div :class="containerClasses"
     @click="handleSelectGroup(element)"
     >
         <!-- Selection indicator (left bar) -->
-        <div v-if="isSelected && !editMode" class="absolute left-0 top-4 bottom-4 w-1 bg-black rounded-r-full"></div>
+        <div
+          v-if="isSelected && !editMode"
+          :class="isDashboardVariant ? 'absolute left-0 top-0 bottom-0 w-1 bg-black' : 'absolute left-0 top-4 bottom-4 w-1 bg-black rounded-r-full'"
+        ></div>
 
         <!-- Drag Handle / Edit Icon -->
-        <div class="flex-shrink-0 flex items-center gap-2">
+        <div v-if="!isDashboardVariant || editMode" class="flex-shrink-0 flex items-center gap-2">
             <div v-if="editMode" class="handler-group text-gray-400">
                 <GripVertical class="w-4 h-4" />
             </div>
             
             <button 
-                v-if="!editMode"
+                v-if="!editMode && !isDashboardVariant"
                 @click.stop="emit('edit-group', element)" 
                 class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-50 transition-colors"
                 aria-label="Edit group"
@@ -29,19 +25,19 @@
         </div>
         
         <!-- Content Area -->
-        <div class="flex-1 min-w-0 flex items-center justify-between">
+        <div :class="isDashboardVariant ? 'flex-1 min-w-0 flex items-center justify-between px-6 py-6' : 'flex-1 min-w-0 flex items-center justify-between'">
             <!-- Left side: Name and details -->
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-black text-gray-900 truncate uppercase tracking-tight">
+                    <h3 :class="isDashboardVariant ? 'text-base font-black text-gray-900 truncate uppercase tracking-tight' : 'text-sm font-black text-gray-900 truncate uppercase tracking-tight'">
                         {{ element.name }}
                     </h3>
-                    <span v-if="element.accounts.length > 1" class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
+                    <span v-if="!isDashboardVariant && element.accounts.length > 1" class="text-[9px] font-black bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded uppercase tracking-tighter">
                         {{ element.accounts.length }} accounts
                     </span>
                 </div>
                 
-                <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <div v-if="!isDashboardVariant" class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                     <span v-if="isDefaultName" class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                         {{ accountInfo }}
                     </span>
@@ -56,14 +52,14 @@
             <div class="flex-shrink-0 text-right flex flex-col items-end gap-1">
                 <!-- Available Balance -->
                 <div class="flex flex-col items-end leading-none">
-                    <span :class="['text-base font-black tracking-tight', availableBalanceDisplay.color]">
+                    <span :class="[isDashboardVariant ? 'text-base font-black tracking-tight' : 'text-base font-black tracking-tight', availableBalanceDisplay.color]">
                         {{ availableBalanceDisplay.value }}
                     </span>
-                    <span class="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-1">Available</span>
+                    <span v-if="!isDashboardVariant" class="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-1">Available</span>
                 </div>
                 
                 <!-- Current Balance (Small) -->
-                <div v-if="shouldShowCurrentBalance" class="flex items-center gap-1.5 pt-1 border-t border-gray-50">
+                <div v-if="shouldShowCurrentBalance && !isDashboardVariant" class="flex items-center gap-1.5 pt-1 border-t border-gray-50">
                     <span class="text-[8px] font-black text-gray-300 uppercase tracking-widest">Current</span>
                     <span :class="['text-[10px] font-black', currentBalanceDisplay.color]">
                         {{ currentBalanceDisplay.value }}
@@ -73,10 +69,10 @@
         </div>
         
         <!-- Selection Dot (Right) -->
-        <div v-if="isSelected && !editMode" class="ml-4 flex-shrink-0">
+        <div v-if="isSelected && !editMode && !isDashboardVariant" class="ml-4 flex-shrink-0">
             <div class="w-2 h-2 bg-black rounded-full"></div>
         </div>
-        <div v-else-if="!editMode" class="ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div v-else-if="!editMode && !isDashboardVariant" class="ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
             <ChevronRight class="w-4 h-4 text-gray-200" />
         </div>
     </div>
@@ -95,6 +91,10 @@ const emit = defineEmits(['edit-group', 'select-group']);
 
 const props = defineProps({
     element: Object,
+    variant: {
+      type: String,
+      default: 'modal'
+    },
     editMode: {
         type: Boolean,
         default: false
@@ -104,6 +104,7 @@ const props = defineProps({
 const { state } = useDashboardState();
 const elementRef = computed(() => props.element);
 const { shouldShowCurrentBalance, availableBalanceDisplay, currentBalanceDisplay } = useBalanceDisplay(elementRef);
+const isDashboardVariant = computed(() => props.variant === 'dashboard');
 
 const accountInfo = computed(() => {
     const account = state.allUserAccounts.find(
@@ -117,6 +118,23 @@ const accountInfo = computed(() => {
 
 const isSelected = computed(() => props.element.isSelected);
 const isDefaultName = computed(() => props.element.name === props.element.accounts[0]?.mask);
+const containerClasses = computed(() => {
+  if (isDashboardVariant.value) {
+    return [
+      'relative group bg-white hover:bg-gray-50/50 transition-all duration-300 w-full',
+      props.editMode ? 'cursor-move' : 'cursor-pointer',
+      isSelected.value && !props.editMode ? 'bg-gray-50/30' : ''
+    ];
+  }
+
+  return [
+    'flex items-center bg-white transition-all duration-300 border-2 px-4 py-4 rounded-2xl relative group',
+    isSelected.value
+      ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] z-10'
+      : 'border-gray-50 hover:border-gray-200',
+    props.editMode ? 'edit-mode-row cursor-move' : 'cursor-pointer'
+  ];
+});
 
 const { updateGroupSort } = useSelectGroup();
 

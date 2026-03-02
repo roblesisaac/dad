@@ -36,38 +36,29 @@
         </template>
       </div>
 
-      <!-- Date Selection (Right) -->
+      <!-- Theme Selection (Right) -->
       <div class="flex-shrink-0">
-        <SelectDate />
+        <ThemeCycleButton />
       </div>
     </div>
 
     <!-- Row 2: Hero Section -->
     <div class="flex flex-col items-center justify-center text-center">
-      <button
-        v-if="isCategoryView"
-        @click="showAllTabsModal = true"
-        class="flex flex-col items-center group hover:opacity-80 transition-opacity focus:outline-none"
-      >
+      <div v-if="isCategoryView" class="flex flex-col items-center">
         <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4 transition-all group-active:scale-[0.98]">
           {{ formatPrice(headerTotal, { toFixed: 0 }) }}
         </span>
 
-        <div class="flex items-center gap-2">
-          <span class="text-md uppercase tracking-[0.4em]">
-            {{ state.selected.tab?.tabName || 'Tab' }}
-          </span>
-          <ChevronDown class="w-3 h-3 text-gray-200 group-hover:text-gray-400 transition-colors" />
+        <div class="mb-4">
+          <SelectDate />
         </div>
-      </button>
+      </div>
 
       <div v-else class="flex flex-col items-center">
         <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4">
           {{ formatPrice(headerTotal, { toFixed: 0 }) }}
         </span>
-        <span class="text-md uppercase tracking-[0.4em]">
-          {{ selectorLabel }}
-        </span>
+        <SelectDate />
       </div>
     </div>
 
@@ -88,6 +79,7 @@ import { ChevronDown } from 'lucide-vue-next';
 
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 import AllTabsModal from '@/features/tabs/components/AllTabsModal.vue';
+import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
 const props = defineProps({
   view: {
@@ -107,7 +99,6 @@ const isTabSelectorView = computed(() => props.view === 'tab');
 const isCategoryView = computed(() => props.view === 'category');
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
-const selectorLabel = computed(() => (isGroupSelectorView.value ? 'Select Account' : 'Select Tab'));
 
 function numberOrZero(value) {
   const parsed = Number(value);
@@ -148,8 +139,27 @@ const selectedGroupNetBalance = computed(() => {
   }, 0);
 });
 
+const totalNetBalance = computed(() => {
+  const allAccounts = state.allUserAccounts || [];
+
+  return allAccounts.reduce((accumulator, account) => {
+    const accountType = account?.type;
+    const availableBalance = numberOrZero(account?.balances?.available ?? account?.available);
+    const currentBalance = numberOrZero(account?.balances?.current ?? account?.current);
+    const effectiveBalance = accountType === 'credit' ? currentBalance : availableBalance;
+
+    return accountType === 'credit'
+      ? accumulator - effectiveBalance
+      : accumulator + effectiveBalance;
+  }, 0);
+});
+
 const headerTotal = computed(() => {
-  if (!isCategoryView.value) {
+  if (isGroupSelectorView.value) {
+    return totalNetBalance.value;
+  }
+
+  if (isTabSelectorView.value) {
     return selectedGroupNetBalance.value;
   }
 

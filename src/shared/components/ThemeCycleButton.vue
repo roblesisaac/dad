@@ -5,7 +5,7 @@
     :aria-label="`Current theme ${themeLabel}. Click to switch theme.`"
     @click="cycleTheme"
   >
-    Theme: {{ themeLabel }}
+    {{ themeLabel }}
   </button>
 </template>
 
