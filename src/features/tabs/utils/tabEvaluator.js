@@ -16,12 +16,110 @@ function lowercase(string) {
   return typeof string === 'string' ? string.toLowerCase() : string;
 }
 
-function equals(itemValue, valueToCheck) {
-  if (isNaN(itemValue)) {
-    return lowercase(itemValue) == lowercase(valueToCheck);
+function toFiniteNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function toUtcDateStamp(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate());
   }
 
-  return parseFloat(itemValue) == parseFloat(valueToCheck);
+  if (typeof value === 'number') {
+    return null;
+  }
+
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) {
+    return null;
+  }
+
+  const today = new Date();
+  const currentDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+  if (normalized === 'today') {
+    return Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+  }
+
+  if (normalized === 'yesterday') {
+    currentDate.setDate(currentDate.getDate() - 1);
+    return Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+  }
+
+  if (normalized === 'tomorrow') {
+    currentDate.setDate(currentDate.getDate() + 1);
+    return Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate());
+  }
+
+  if (normalized === 'firstofmonth') {
+    return Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), 1);
+  }
+
+  if (normalized === 'firstofyear') {
+    return Date.UTC(currentDate.getFullYear(), 0, 1);
+  }
+
+  const dateOnlyMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    return Date.UTC(Number(year), Number(month) - 1, Number(day));
+  }
+
+  const dateTimeMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[t\s].+$/);
+  if (dateTimeMatch) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return null;
+    }
+
+    return Date.UTC(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+  }
+
+  return null;
+}
+
+function compareDates(itemValue, valueToCheck, comparator) {
+  const leftDateStamp = toUtcDateStamp(itemValue);
+  const rightDateStamp = toUtcDateStamp(valueToCheck);
+
+  if (leftDateStamp === null || rightDateStamp === null) {
+    return null;
+  }
+
+  return comparator(leftDateStamp, rightDateStamp);
+}
+
+function compareNumbersOrDates(itemValue, valueToCheck, comparator) {
+  const dateComparisonResult = compareDates(itemValue, valueToCheck, comparator);
+  if (dateComparisonResult !== null) {
+    return dateComparisonResult;
+  }
+
+  const leftNumber = toFiniteNumber(itemValue);
+  const rightNumber = toFiniteNumber(valueToCheck);
+
+  if (leftNumber === null || rightNumber === null) {
+    return false;
+  }
+
+  return comparator(leftNumber, rightNumber);
+}
+
+function equals(itemValue, valueToCheck) {
+  const dateComparisonResult = compareDates(itemValue, valueToCheck, (left, right) => left === right);
+  if (dateComparisonResult !== null) {
+    return dateComparisonResult;
+  }
+
+  const leftNumber = toFiniteNumber(itemValue);
+  const rightNumber = toFiniteNumber(valueToCheck);
+
+  if (leftNumber !== null && rightNumber !== null) {
+    return leftNumber === rightNumber;
+  }
+
+  return lowercase(itemValue) == lowercase(valueToCheck);
 }
 
 function includes(itemValue, valueToCheck) {
@@ -50,12 +148,14 @@ function endsWith(itemValue, valueToCheck) {
 
 export function buildDefaultRuleMethods() {
   return {
-    '>=': (itemValue, valueToCheck) => parseFloat(itemValue) >= parseFloat(valueToCheck),
-    '>': (itemValue, valueToCheck) => parseFloat(itemValue) > parseFloat(valueToCheck),
+    '>=': (itemValue, valueToCheck) => compareNumbersOrDates(itemValue, valueToCheck, (left, right) => left >= right),
+    '>': (itemValue, valueToCheck) => compareNumbersOrDates(itemValue, valueToCheck, (left, right) => left > right),
     '=': equals,
     'is not': (itemValue, valueToCheck) => !equals(itemValue, valueToCheck),
-    '<=': (itemValue, valueToCheck) => parseFloat(itemValue) <= parseFloat(valueToCheck),
-    '<': (itemValue, valueToCheck) => parseFloat(itemValue) < parseFloat(valueToCheck),
+    '<=': (itemValue, valueToCheck) => compareNumbersOrDates(itemValue, valueToCheck, (left, right) => left <= right),
+    '<': (itemValue, valueToCheck) => compareNumbersOrDates(itemValue, valueToCheck, (left, right) => left < right),
+    'is before': (itemValue, valueToCheck) => compareDates(itemValue, valueToCheck, (left, right) => left < right) === true,
+    'is after': (itemValue, valueToCheck) => compareDates(itemValue, valueToCheck, (left, right) => left > right) === true,
     includes,
     excludes: (itemValue, valueToCheck) => !includes(itemValue, valueToCheck),
     contains: includes,
@@ -87,6 +187,10 @@ export function buildTabRulesForId(allRules = [], tabId) {
 function getItemValue(item, propName) {
   if (propName === 'category') {
     return item.personal_finance_category?.primary;
+  }
+
+  if (propName === 'date') {
+    return item.authorized_date || item.date;
   }
 
   return item[propName];

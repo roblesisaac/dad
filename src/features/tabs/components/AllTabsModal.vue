@@ -23,7 +23,7 @@
     </template>
     
     <AllTabs 
-      :in-modal="true"
+      variant="modal"
       :is-edit-mode="isEditMode"
       @tab-selected="handleTabSelected"
     />

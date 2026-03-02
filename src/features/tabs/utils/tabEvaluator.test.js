@@ -169,6 +169,91 @@ describe('tabEvaluator', () => {
     expect(visibleTransactionIds).toEqual(['entertainment-income', 'travel-expense']);
   });
 
+  test('supports date-specific filter operators', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'early',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'middle',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          personal_finance_category: { primary: 'ENTERTAINMENT' }
+        },
+        {
+          transaction_id: 'late',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'GROCERIES' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'f-date-operators',
+          orderOfExecution: 0,
+          rule: [
+            'filter', 'date', 'is after', '2026-01-01', '',
+            'and', 'date', 'is before', '2026-01-03'
+          ]
+        }
+      ]
+    });
+
+    const visibleTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(visibleTransactionIds).toEqual(['middle']);
+  });
+
+  test('keeps legacy date operators working for existing rules', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'early',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'middle',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          personal_finance_category: { primary: 'ENTERTAINMENT' }
+        },
+        {
+          transaction_id: 'late',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'GROCERIES' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'f-date-legacy',
+          orderOfExecution: 0,
+          rule: ['filter', 'date', '<', '2026-01-03', '']
+        }
+      ]
+    });
+
+    const visibleTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(visibleTransactionIds).toEqual(['early', 'middle']);
+  });
+
   test('supports OR conditions inside a single categorize rule', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

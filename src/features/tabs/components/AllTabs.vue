@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white max-h-[80vh] overflow-y-auto w-full">
+  <div :class="containerClasses">
     <!-- Enabled Tabs Header -->
     <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
@@ -95,9 +95,10 @@ import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
 
 const props = defineProps({
-  inModal: {
-    type: Boolean,
-    default: false
+  variant: {
+    type: String,
+    default: 'modal',
+    validator: (value) => ['modal', 'dashboard'].includes(value)
   },
   isEditMode: {
     type: Boolean,
@@ -111,6 +112,14 @@ const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 const showDisabledTabs = ref(false);
+const isDashboardVariant = computed(() => props.variant === 'dashboard');
+const containerClasses = computed(() => {
+  if (isDashboardVariant.value) {
+    return 'bg-white w-full border-2 border-gray-100 rounded-2xl overflow-hidden';
+  }
+
+  return 'bg-white max-h-[80vh] overflow-y-auto w-full';
+});
 
 // Separate tabs into enabled and disabled based on current group
 const enabledTabs = computed(() => state.selected.tabsForGroup);
@@ -147,7 +156,7 @@ function handleDragEnd() {
 }
 
 onMounted(() => {
-  if (!props.inModal) {
+  if (isDashboardVariant.value) {
     window.scrollTo(0, 0);
   }
 });

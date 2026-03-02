@@ -1,4 +1,3 @@
-import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
@@ -7,8 +6,7 @@ import { nextTick } from 'vue';
 export function useTabs() {
   const { state } = useDashboardState();
   const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
-  const api = useApi();
-  const tabsAPI = useTabsAPI(api);
+  const tabsAPI = useTabsAPI();
 
   /**
    * Select a tab and deselect the currently selected tab
@@ -20,21 +18,18 @@ export function useTabs() {
 
     state.isLoading = true;
     const prevSelectedTab = state.selected.tab;
-    const prevSelectedTabId = prevSelectedTab?._id;
-    const tabToSelectId = tabToSelect._id;
 
     if(prevSelectedTab) {
       prevSelectedTab.isSelected = false;
       prevSelectedTab.categorizedItems = [];
-      tabsAPI.updateTabSelection(prevSelectedTabId, false);
     }
 
     tabToSelect.isSelected = true;
+    tabToSelect.categorizedItems = [];
     const processed = processTabData(tabToSelect);
     if(processed) {
       tabToSelect.categorizedItems = processed.categorizedItems;
     }
-    tabsAPI.updateTabSelection(tabToSelectId, true);
     
     await nextTick();
     state.isLoading = false;
@@ -89,20 +84,21 @@ export function useTabs() {
 
     if(selectedTab) {
       selectedTab.isSelected = false;
-      api.put(`tabs/${selectedTab._id}`, { isSelected: false });
+      selectedTab.categorizedItems = [];
     }
 
     const newTabData = {
       tabName,
       showForGroup: [selectedGroup._id],
-      isSelected: true,
       sort: tabsForGroup.length+1
     };
 
     const newTab = await tabsAPI.createTab(newTabData);
+    newTab.isSelected = false;
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
+    await selectTab(newTab);
   }
 
   /**

@@ -1,5 +1,5 @@
 <template>
-  <div class="bg-white max-h-[80vh] overflow-y-auto w-full">
+  <div :class="containerClasses">
     <!-- Net-worth Header -->
     <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
       <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Net Balance</h4>
@@ -154,7 +154,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useBanks } from '@/features/banks/composables/useBanks.js';
@@ -173,7 +173,12 @@ import SyncSessionsModal from '@/features/banks/components/SyncSessionsModal.vue
 const props = defineProps({
   isOpen: {
     type: Boolean,
-    required: true
+    default: true
+  },
+  variant: {
+    type: String,
+    default: 'modal',
+    validator: (value) => ['modal', 'dashboard'].includes(value)
   },
   editMode: {
     type: Boolean,
@@ -181,7 +186,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'group-selected']);
 
 const router = useRouter();
 const { state } = useDashboardState();
@@ -192,6 +197,14 @@ const { createNewGroup, selectGroup, fetchGroupsAndAccounts, handleGroupChange }
 // Collapsible sections state
 const showCustomGroups = ref(true);
 const showBankAccounts = ref(true);
+const isDashboardVariant = computed(() => props.variant === 'dashboard');
+const containerClasses = computed(() => {
+  if (isDashboardVariant.value) {
+    return 'bg-white w-full border-2 border-gray-100 rounded-2xl overflow-hidden';
+  }
+
+  return 'bg-white max-h-[80vh] overflow-y-auto w-full';
+});
 
 // Computed properties to split groups into two categories
 const customGroups = ref([]);
@@ -271,9 +284,12 @@ const handleCreateNewGroup = async () => {
 
 const handleSelectGroup = (group) => {
   if (props.editMode) return;
-  
+
+  emit('group-selected', group);
   emit('close');
-  selectGroup(group);
+  selectGroup(group).catch((error) => {
+    console.error('Error selecting group:', error);
+  });
 };
 
 // Handle the Manage Banks button click

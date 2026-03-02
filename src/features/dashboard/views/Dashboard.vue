@@ -8,25 +8,52 @@
 
       <!-- Unified Header -->
       <div>
-        <DashboardHeader />
+        <DashboardHeader
+          :view="dashboardView"
+          @navigate-group="openGroupSelector"
+          @navigate-tab="openTabSelector"
+        />
       </div>
 
-      <!-- Category Content -->
-      <div class="mt-4 pb-32">
-        <Transition name="fade">
-          <div v-if="!state.isLoading && state.selected.tab" class="w-full">
-            <CategoriesWrapper />
-          </div>
-        </Transition>
+      <!-- Dashboard Content -->
+      <div
+        class="mt-4"
+        :class="showSelectorView ? 'pb-12 sm:pb-16 px-4 sm:px-6' : 'pb-32'"
+      >
         <Transition name="fade">
           <div v-if="state.isLoading" class="w-full flex justify-center py-20">
             <LoadingDots />
           </div>
         </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && isGroupSelectorView" class="w-full">
+            <SelectGroup
+              variant="dashboard"
+              :is-open="true"
+              @group-selected="handleGroupSelected"
+            />
+          </div>
+        </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && isTabSelectorView" class="w-full">
+            <AllTabs variant="dashboard" @tab-selected="handleTabSelected" />
+          </div>
+        </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && isCategoryView" class="w-full">
+            <CategoriesWrapper />
+          </div>
+        </Transition>
       </div>
 
       <!-- Fixed Footer: Filters & Reports -->
-      <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md">
+      <footer
+        v-if="!state.isLoading && isCategoryView"
+        class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
+      >
         <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-3 items-center">
           <!-- Left: Filters -->
           <button 
@@ -78,7 +105,7 @@
 </style>
 
 <script setup>
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { isValid, parseISO } from 'date-fns';
 import { useRoute, useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState.js';
@@ -92,6 +119,8 @@ import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
+import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
+import AllTabs from '@/features/tabs/components/AllTabs.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
@@ -102,6 +131,11 @@ const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
 const { selectTab } = useTabs();
 const showRuleManagerModal = ref(false);
+const dashboardView = ref('tab');
+const isGroupSelectorView = computed(() => dashboardView.value === 'group');
+const isTabSelectorView = computed(() => dashboardView.value === 'tab');
+const isCategoryView = computed(() => dashboardView.value === 'category');
+const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -188,6 +222,7 @@ async function applyReportRowContextFromQuery(context) {
     const targetTab = state.selected.tabsForGroup.find(tab => tab._id === context.tabId);
     if (targetTab) {
       await selectTab(targetTab);
+      dashboardView.value = 'category';
     }
   }
 
@@ -206,10 +241,66 @@ async function applyReportRowContextFromQuery(context) {
   state.reportRowTotalOverride = null;
 }
 
+function setDefaultDashboardView() {
+  if (state.selected.tab) {
+    dashboardView.value = 'category';
+    return;
+  }
+
+  if (state.selected.group) {
+    dashboardView.value = 'tab';
+    return;
+  }
+
+  dashboardView.value = 'group';
+}
+
+function openGroupSelector() {
+  dashboardView.value = 'group';
+}
+
+function openTabSelector() {
+  if (!state.selected.group) {
+    dashboardView.value = 'group';
+    return;
+  }
+
+  dashboardView.value = 'tab';
+}
+
+function handleGroupSelected() {
+  dashboardView.value = 'tab';
+}
+
+function handleTabSelected() {
+  dashboardView.value = 'category';
+}
+
+watch(
+  () => state.selected.tab?._id,
+  (selectedTabId) => {
+    if (!selectedTabId && dashboardView.value === 'category') {
+      dashboardView.value = state.selected.group ? 'tab' : 'group';
+    }
+  }
+);
+
+watch(
+  () => state.selected.group?._id,
+  (selectedGroupId) => {
+    // During group switching, selection can be briefly empty while loading.
+    // Only force group selector when we're truly idle with no selected group.
+    if (!selectedGroupId && !state.isLoading) {
+      dashboardView.value = 'group';
+    }
+  }
+);
+
 onMounted(async () => {
   await init({
     preferredGroupId: reportContext.groupId
   });
   await applyReportRowContextFromQuery(reportContext);
+  setDefaultDashboardView();
 });
 </script>

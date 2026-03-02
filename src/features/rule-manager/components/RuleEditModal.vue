@@ -74,20 +74,25 @@
                       class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
                     >
                       <option value="" disabled selected>Select method...</option>
-                      <option v-if="isNumericProperty(ruleData.rule[1])" value=">">greater than</option>
-                      <option v-if="isNumericProperty(ruleData.rule[1])" value=">=">greater/equal to</option>
-                      <option v-if="isNumericProperty(ruleData.rule[1])" value="<">less than</option>
-                      <option v-if="isNumericProperty(ruleData.rule[1])" value="<=">less/equal to</option>
-                      <option value="=">equals</option>
-                      <option value="is not">is not</option>
-                      <option v-if="isTextProperty(ruleData.rule[1])" value="contains">contains</option>
-                      <option v-if="isTextProperty(ruleData.rule[1])" value="startsWith">starts with</option>
-                      <option v-if="isTextProperty(ruleData.rule[1])" value="endsWith">ends with</option>
-                      <option v-if="isTextProperty(ruleData.rule[1])" value="includes">includes</option>
-                      <option v-if="isTextProperty(ruleData.rule[1])" value="excludes">excludes</option>
+                      <option
+                        v-for="methodOption in getMethodOptions(ruleData.rule[0], ruleData.rule[1])"
+                        :key="`main-method-${methodOption.value}`"
+                        :value="methodOption.value"
+                      >
+                        {{ methodOption.label }}
+                      </option>
                     </select>
                     
-                    <textarea 
+                    <input
+                      v-if="useDateInputForPrimaryCondition"
+                      v-model="ruleData.rule[3]"
+                      type="date"
+                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                      :class="{'sm:col-span-2': ruleData.rule[0] === 'groupBy'}"
+                    />
+
+                    <textarea
+                      v-else
                       v-model="ruleData.rule[3]" 
                       ref="criterionInput"
                       class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors resize-none overflow-hidden"
@@ -170,22 +175,18 @@
                             class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
                           >
                             <option value="" disabled selected>Select method...</option>
-                            <option v-if="isNumericProperty(condition.property)" value=">">greater than</option>
-                            <option v-if="isNumericProperty(condition.property)" value=">=">greater/equal to</option>
-                            <option v-if="isNumericProperty(condition.property)" value="<">less than</option>
-                            <option v-if="isNumericProperty(condition.property)" value="<=">less/equal to</option>
-                            <option value="=">equals</option>
-                            <option value="is not">is not</option>
-                            <option v-if="isTextProperty(condition.property)" value="contains">contains</option>
-                            <option v-if="isTextProperty(condition.property)" value="startsWith">starts with</option>
-                            <option v-if="isTextProperty(condition.property)" value="endsWith">ends with</option>
-                            <option v-if="isTextProperty(condition.property)" value="includes">includes</option>
-                            <option v-if="isTextProperty(condition.property)" value="excludes">excludes</option>
+                            <option
+                              v-for="methodOption in getMethodOptions(ruleData.rule[0], condition.property)"
+                              :key="`and-method-${index}-${methodOption.value}`"
+                              :value="methodOption.value"
+                            >
+                              {{ methodOption.label }}
+                            </option>
                           </select>
 
                           <input
                             v-model="condition.value"
-                            type="text"
+                            :type="useDateInputForCondition(condition.property) ? 'date' : 'text'"
                             class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
                             :placeholder="getCriterionPlaceholderForProperty(condition.property)"
                           />
@@ -304,6 +305,31 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'save']);
 
+const METHOD_OPTIONS = {
+  numeric: [
+    { value: '>', label: 'greater than' },
+    { value: '>=', label: 'greater/equal to' },
+    { value: '<', label: 'less than' },
+    { value: '<=', label: 'less/equal to' }
+  ],
+  common: [
+    { value: '=', label: 'equals' },
+    { value: 'is not', label: 'is not' }
+  ],
+  text: [
+    { value: 'contains', label: 'contains' },
+    { value: 'startsWith', label: 'starts with' },
+    { value: 'endsWith', label: 'ends with' },
+    { value: 'includes', label: 'includes' },
+    { value: 'excludes', label: 'excludes' }
+  ],
+  dateFilter: [
+    { value: '=', label: 'is equal to' },
+    { value: 'is before', label: 'is before' },
+    { value: 'is after', label: 'is after' }
+  ]
+};
+
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
 
@@ -360,6 +386,10 @@ const andConditions = ref(extractAndConditions(ruleData.value.rule));
 
 const hasAndConditions = computed(() => andConditions.value.length > 0);
 
+const useDateInputForPrimaryCondition = computed(() =>
+  useDateInputForCondition(ruleData.value.rule[1])
+);
+
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
@@ -389,7 +419,9 @@ function getCriterionPlaceholderForProperty(propType) {
   if (propType === 'amount') {
     return 'Enter numeric value';
   } else if (propType === 'date') {
-    return 'YYYY-MM-DD or relative date';
+    return useDateInputForCondition(propType)
+      ? 'Select a date'
+      : 'YYYY-MM-DD or relative date';
   } else {
     return 'Enter text value';
   }
@@ -402,6 +434,108 @@ function isNumericProperty(propName) {
 function isTextProperty(propName) {
   return propName === 'name' || propName === 'category';
 }
+
+function isDateProperty(propName) {
+  return propName === 'date';
+}
+
+function useDateInputForCondition(propName) {
+  return ruleData.value.rule[0] === 'filter' && isDateProperty(propName);
+}
+
+function getMethodOptions(ruleType, propName) {
+  if (ruleType === 'filter' && isDateProperty(propName)) {
+    return METHOD_OPTIONS.dateFilter;
+  }
+
+  const options = [];
+
+  if (isNumericProperty(propName)) {
+    options.push(...METHOD_OPTIONS.numeric);
+  }
+
+  options.push(...METHOD_OPTIONS.common);
+
+  if (isTextProperty(propName)) {
+    options.push(...METHOD_OPTIONS.text);
+  }
+
+  return options;
+}
+
+function isMethodAllowed(ruleType, propName, methodName) {
+  if (!methodName || ruleType === 'groupBy') {
+    return false;
+  }
+
+  return getMethodOptions(ruleType, propName)
+    .some(methodOption => methodOption.value === methodName);
+}
+
+function normalizeLegacyDateMethod(methodName) {
+  if (methodName === '<') {
+    return 'is before';
+  }
+
+  if (methodName === '>') {
+    return 'is after';
+  }
+
+  return methodName;
+}
+
+function normalizeDateMethodsForFilterRule() {
+  if (ruleData.value.rule[0] !== 'filter') {
+    return;
+  }
+
+  if (isDateProperty(ruleData.value.rule[1])) {
+    ruleData.value.rule[2] = normalizeLegacyDateMethod(ruleData.value.rule[2]);
+  }
+
+  andConditions.value = andConditions.value.map(condition => {
+    if (!isDateProperty(condition.property)) {
+      return condition;
+    }
+
+    return {
+      ...condition,
+      method: normalizeLegacyDateMethod(condition.method)
+    };
+  });
+}
+
+watch(
+  () => [ruleData.value.rule[0], ruleData.value.rule[1]],
+  () => {
+    normalizeDateMethodsForFilterRule();
+
+    if (!isMethodAllowed(ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2])) {
+      ruleData.value.rule[2] = '';
+    }
+  }
+);
+
+watch(
+  andConditions,
+  () => {
+    for (const condition of andConditions.value) {
+      if (ruleData.value.rule[0] === 'filter' && isDateProperty(condition.property)) {
+        const normalizedMethod = normalizeLegacyDateMethod(condition.method);
+        if (normalizedMethod !== condition.method) {
+          condition.method = normalizedMethod;
+        }
+      }
+
+      if (!isMethodAllowed(ruleData.value.rule[0], condition.property, condition.method)) {
+        condition.method = '';
+      }
+    }
+  },
+  { deep: true }
+);
+
+normalizeDateMethodsForFilterRule();
 
 function saveRule() {
   if (!validateRule()) {
@@ -433,15 +567,15 @@ function validateRule() {
     return false;
   }
   
-  if (rule[0] !== 'groupBy' && !rule[2]) {
-    alert('Please select a comparison method');
+  if (rule[0] !== 'groupBy' && !isMethodAllowed(rule[0], rule[1], rule[2])) {
+    alert('Please select a valid comparison method');
     return false;
   }
 
   if (hasAndConditions.value) {
     const allAndRulesComplete = andConditions.value.every(andCondition =>
       andCondition.property &&
-      andCondition.method &&
+      isMethodAllowed(rule[0], andCondition.property, andCondition.method) &&
       String(andCondition.value || '').trim()
     );
 

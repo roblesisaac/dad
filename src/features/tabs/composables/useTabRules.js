@@ -1,56 +1,9 @@
-import { useUtils } from '@/shared/composables/useUtils.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
+import { buildDefaultRuleMethods } from '@/features/tabs/utils/tabEvaluator.js';
 
 export function useTabRules() {
-  const { lowercase, makeArray } = useUtils();
   const { state } = useDashboardState();
-  const ruleMethods = {
-    '>=': (itemValue, valueToCheck) => parseFloat(itemValue) >= parseFloat(valueToCheck),
-    '>': (itemValue, valueToCheck) => parseFloat(itemValue) > parseFloat(valueToCheck),
-    '=': equals,
-    'is not': (itemValue, valueToCheck) => !equals(itemValue, valueToCheck),
-    '<=': (itemValue, valueToCheck) => parseFloat(itemValue) <= parseFloat(valueToCheck),
-    '<': (itemValue, valueToCheck) => parseFloat(itemValue) < parseFloat(valueToCheck),
-    includes,
-    excludes: (itemValue, valueToCheck) => !includes(itemValue, valueToCheck),
-    contains: includes,
-    startsWith,
-    endsWith
-  };
-
-  function equals(itemValue, valueToCheck) {
-    if(isNaN(itemValue)) {
-      return lowercase(itemValue) == lowercase(valueToCheck);
-    }
-    return parseFloat(itemValue) == parseFloat(valueToCheck);
-  }
-
-  function includes(itemValue, valueToCheck) {
-    itemValue = String(itemValue || '').toLowerCase();
-    valueToCheck = String(valueToCheck || '').toLowerCase();
-    
-    return makeArray(valueToCheck.split(',')).some(valueToCheckItem => 
-      itemValue.includes(valueToCheckItem)
-    );
-  }
-
-  function startsWith(itemValue, valueToCheck) {
-    itemValue = String(itemValue || '').toLowerCase();
-    valueToCheck = String(valueToCheck || '').toLowerCase();
-
-    return makeArray(valueToCheck.split(',')).some(valueToCheckItem =>
-      itemValue.startsWith(valueToCheckItem.trim())
-    );
-  }
-
-  function endsWith(itemValue, valueToCheck) {
-    itemValue = String(itemValue || '').toLowerCase();
-    valueToCheck = String(valueToCheck || '').toLowerCase();
-
-    return makeArray(valueToCheck.split(',')).some(valueToCheckItem =>
-      itemValue.endsWith(valueToCheckItem.trim())
-    );
-  }
+  const ruleMethods = buildDefaultRuleMethods();
 
   function filterGlobalRules() {
     const allRules = state.allUserRules;

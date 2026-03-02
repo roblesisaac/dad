@@ -3,7 +3,6 @@ import { parseISO, isValid, startOfMonth, startOfYear } from 'date-fns';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabRules } from '@/features/tabs/composables/useTabRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
-import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { evaluateTabData } from '@/features/tabs/utils/tabEvaluator.js';
 
 /**
@@ -27,7 +26,6 @@ export function useTabProcessing() {
   const { state } = useDashboardState();
   const { ruleMethods, combinedRulesForTab } = useTabRules();
   const { getDayOfWeekPST } = useUtils();
-  const tabsAPI = useTabsAPI();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
 
@@ -361,21 +359,12 @@ export function useTabProcessing() {
     return tabsForGroup?.filter(tab => tab.isSelected) || [];
   }
 
-  async function selectFirstTab(tabsForGroup) {
-    const firstTab = tabsForGroup[0];
-    if (!firstTab) return;
-
-    firstTab.isSelected = true;
-    await tabsAPI.updateTabSelection(firstTab._id, true);
-    return firstTab;
-  }
-
-  async function deselectOtherTabs(selectedTabs) {
+  function deselectOtherTabs(selectedTabs) {
     if (!selectedTabs?.length) return;
 
-    for (const tab of selectedTabs.splice(1)) {
+    for (const tab of selectedTabs.slice(1)) {
       tab.isSelected = false;
-      await tabsAPI.updateTabSelection(tab._id, false);
+      tab.categorizedItems = [];
     }
   }
 
@@ -413,30 +402,30 @@ export function useTabProcessing() {
 
   async function processAllTabsForSelectedGroup() {
     state.isLoading = true;
-    const tabsForGroup = state.selected.tabsForGroup;
-    if (!tabsForGroup?.length) return;
-
-    const selectedTabs = selectedTabsInGroup(tabsForGroup);
-
-    if (selectedTabs.length < 1) {
-      await selectFirstTab(tabsForGroup);
-    }
-
-    if (selectedTabs.length > 1) {
-      await deselectOtherTabs(selectedTabs);
-    }
-
-    for (const tab of tabsForGroup) {
-      tab.categorizedItems = [];
-      const processed = processTabData(tab);
-      if (processed) {
-        tab.total = processed.tabTotal;
-        tab.categorizedItems = processed.categorizedItems;
+    try {
+      const tabsForGroup = state.selected.tabsForGroup;
+      if (!tabsForGroup?.length) {
+        return;
       }
-    }
 
-    await nextTick();
-    state.isLoading = false;
+      const selectedTabs = selectedTabsInGroup(tabsForGroup);
+      if (selectedTabs.length > 1) {
+        deselectOtherTabs(selectedTabs);
+      }
+
+      for (const tab of tabsForGroup) {
+        tab.categorizedItems = [];
+        const processed = processTabData(tab);
+        if (processed) {
+          tab.total = processed.tabTotal;
+          tab.categorizedItems = processed.categorizedItems;
+        }
+      }
+
+      await nextTick();
+    } finally {
+      state.isLoading = false;
+    }
   }
 
   /**

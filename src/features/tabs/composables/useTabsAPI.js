@@ -14,13 +14,6 @@ export function useTabsAPI() {
   }
 
   /**
-   * Update a tab's selection state
-   */
-  async function updateTabSelection(tabId, isSelected) {
-    return await api.put(`tabs/${tabId}`, { isSelected });
-  }
-
-  /**
    * Update a tab's sort order
    */
   async function updateTabSort(tabId, newSort) {
@@ -54,7 +47,6 @@ export function useTabsAPI() {
 
   return {
     fetchUserTabs,
-    updateTabSelection,
     updateTabSort,
     createTab,
     deleteTab,

@@ -152,6 +152,19 @@ export function useSelectGroup() {
     await groupsAPI.updateGroupSort(groupId, sort);
   }
 
+  function clearSelectedTabsForGroup(selectedGroup) {
+    if (!selectedGroup?._id) return;
+
+    state.allUserTabs.forEach((tab) => {
+      const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+      const tabMatchesGroup = showForGroup.includes(selectedGroup._id) || showForGroup.includes('_GLOBAL');
+      if (!tabMatchesGroup) return;
+
+      tab.isSelected = false;
+      tab.categorizedItems = [];
+    });
+  }
+
   /**
    * Handle group selection change
    */
@@ -169,7 +182,9 @@ export function useSelectGroup() {
       }
       // selectedGroup = await selectFirstGroup(state.allUserGroups);
     }
+
     state.isLoading = true;
+    clearSelectedTabsForGroup(selectedGroup);
 
     const dateRange = extractDateRange(state.date);
     const requestKey = `${selectedGroup?._id || ''}|${dateRange}`;

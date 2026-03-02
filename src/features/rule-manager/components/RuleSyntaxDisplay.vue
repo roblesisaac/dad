@@ -8,7 +8,7 @@
       <span class="font-medium mr-1">Sort by</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="font-medium mr-1">using</span>
-      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
+      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
       <span v-if="rule.rule[3]" class="font-medium mr-1">with value</span>
       <span v-if="rule.rule[3]" class="rule-part mr-1">{{ rule.rule[3] }}</span>
     </template>
@@ -17,12 +17,12 @@
     <template v-else-if="rule.rule[0] === 'filter'">
       <span class="font-medium mr-1">Show if</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
-      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
+      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
       <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`filter-condition-${index}`">
         <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
         <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(condition.method) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(condition.method, condition.property) }}</span>
         <span class="rule-part">{{ condition.value }}</span>
       </template>
     </template>
@@ -33,12 +33,12 @@
       <span class="rule-part mr-1">{{ rule.rule[4] || '(not set)' }}</span>
       <span class="font-medium mr-1">if</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
-      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
+      <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
       <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`categorize-condition-${index}`">
         <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
         <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(condition.method) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(condition.method, condition.property) }}</span>
         <span class="rule-part">{{ condition.value }}</span>
       </template>
     </template>
@@ -48,7 +48,7 @@
       <span class="font-medium mr-1">Group by</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span v-if="rule.rule[2]" class="font-medium mr-1">where</span>
-      <span v-if="rule.rule[2]" class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
+      <span v-if="rule.rule[2]" class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
     </template>
     
@@ -92,8 +92,16 @@ function formatPropName(propName) {
 }
 
 // Format method names for better readability
-function formatMethodName(methodName) {
+function formatMethodName(methodName, propName = '') {
   if (!methodName) return '(not set)';
+
+  const normalizedProperty = String(propName || '').toLowerCase();
+
+  if (normalizedProperty === 'date') {
+    if (methodName === '<' || methodName === 'is before') return 'is before';
+    if (methodName === '>' || methodName === 'is after') return 'is after';
+    if (methodName === '=') return 'is equal to';
+  }
   
   // Handle special cases
   const methodMap = {
@@ -103,10 +111,12 @@ function formatMethodName(methodName) {
     'endsWith': 'ends with',
     '>=': 'is greater than or equal to',
     '>': 'is greater than',
-    '=': 'equals',
+    '=': 'is equal to',
     'is not': 'is not',
     '<=': 'is less than or equal to',
     '<': 'is less than',
+    'is before': 'is before',
+    'is after': 'is after',
     'includes': 'includes',
     'excludes': 'excludes'
   };
