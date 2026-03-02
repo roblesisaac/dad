@@ -133,7 +133,7 @@ watch(props.element, (newVal) => {
 
 <style scoped>
 .edit-mode-row:hover {
-  border-color: #93c5fd; /* Light blue border for edit mode rows on hover */
-  background-color: #f0f7ff; /* Very light blue background */
+  border-color: var(--theme-edit-row-border-hover);
+  background-color: var(--theme-edit-row-bg-hover);
 }
 </style>

@@ -26,12 +26,12 @@
       </div>
 
       <!-- Fixed Footer: Filters & Reports -->
-      <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md border-t-2 border-gray-50/50">
-        <div class="max-w-5xl mx-auto w-full px-6 py-4 flex items-center justify-between">
+      <footer class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md">
+        <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-3 items-center">
           <!-- Left: Filters -->
           <button 
             @click="showRuleManagerModal = true"
-            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-start"
           >
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Edit Tab
@@ -39,10 +39,14 @@
             <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
           </button>
 
+          <div class="justify-self-center">
+            <ThemeCycleButton />
+          </div>
+
           <!-- Right: Reports -->
           <button 
             @click="router.push('/reports')"
-            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-end"
           >
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Reports
@@ -89,6 +93,7 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
+import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
 const router = useRouter();
 const route = useRoute();

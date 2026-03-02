@@ -504,6 +504,10 @@
         </div>
       </template>
 
+      <div class="fixed bottom-8 left-4 sm:left-8 z-30">
+        <ThemeCycleButton />
+      </div>
+
       <div
         v-if="isExistingRowPickerModalOpen"
         class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
@@ -802,6 +806,7 @@ import { Check, ChevronDown, ChevronLeft, ChevronRight, Folder, GripVertical, Lo
 import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
+import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
@@ -1896,37 +1901,37 @@ onBeforeUnmount(() => {
   padding: 0.6rem 0.9rem;
   font-size: 0.85rem;
   font-weight: 700;
-  color: #1f2937;
+  color: var(--theme-menu-item-text);
 }
 
 .menu-item:hover {
-  background: #f9fafb;
+  background: var(--theme-menu-item-hover-bg);
 }
 
 .btn-primary {
   border-radius: 0.6rem;
   padding: 0.55rem 0.9rem;
-  background: #111827;
-  color: white;
+  background: var(--theme-btn-primary-bg);
+  color: var(--theme-btn-primary-text);
   font-size: 0.85rem;
   font-weight: 800;
 }
 
 .btn-primary:hover {
-  background: #1f2937;
+  background: var(--theme-btn-primary-hover-bg);
 }
 
 .btn-secondary {
   border-radius: 0.6rem;
   padding: 0.55rem 0.9rem;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--theme-btn-secondary-border);
+  color: var(--theme-btn-secondary-text);
   font-size: 0.85rem;
   font-weight: 700;
 }
 
 .btn-secondary:hover {
-  background: #f9fafb;
+  background: var(--theme-btn-secondary-hover-bg);
 }
 
 

@@ -22,6 +22,7 @@ const route = useRoute();
 @import "css/tailwind.css";
 /* @import "css/palette.css"; */
 @import "css/grid.css";
+@import "css/theme-overrides.css";
 /* @import "css/utils.css"; */
 /* @import "css/colors.css"; */
 /* @import "css/style.css"; */

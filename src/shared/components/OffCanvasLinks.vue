@@ -34,6 +34,9 @@
 
       <!-- Footer / Auth Action -->
       <div class="p-6 border-t border-gray-100 bg-gray-50/50">
+        <div class="mb-3 flex justify-start">
+          <ThemeCycleButton />
+        </div>
         <button 
           @click="handleAuthClick"
           class="w-full py-3 bg-black text-white font-bold rounded-lg hover:bg-gray-800 transition-colors shadow-sm"
@@ -47,6 +50,7 @@
 
 <script setup>
 import { X, ArrowRight } from 'lucide-vue-next';
+import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import { useRouter } from 'vue-router';
 import { useAppStore } from '@/stores/state';
 import { useNavigation } from '@/shared/composables/useNavigation';

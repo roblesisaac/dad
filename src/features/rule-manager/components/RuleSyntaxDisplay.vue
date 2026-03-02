@@ -19,11 +19,11 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
-      <template v-for="(andCondition, index) in getAndConditions(rule)" :key="`filter-and-${index}`">
-        <span class="font-medium mx-1">AND</span>
-        <span class="rule-part mr-1">{{ formatPropName(andCondition.property) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(andCondition.method) }}</span>
-        <span class="rule-part">{{ andCondition.value }}</span>
+      <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`filter-condition-${index}`">
+        <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
+        <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(condition.method) }}</span>
+        <span class="rule-part">{{ condition.value }}</span>
       </template>
     </template>
     
@@ -35,11 +35,11 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2]) }}</span>
       <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
-      <template v-for="(andCondition, index) in getAndConditions(rule)" :key="`categorize-and-${index}`">
-        <span class="font-medium mx-1">AND</span>
-        <span class="rule-part mr-1">{{ formatPropName(andCondition.property) }}</span>
-        <span class="rule-part mr-1">{{ formatMethodName(andCondition.method) }}</span>
-        <span class="rule-part">{{ andCondition.value }}</span>
+      <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`categorize-condition-${index}`">
+        <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
+        <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
+        <span class="rule-part mr-1">{{ formatMethodName(condition.method) }}</span>
+        <span class="rule-part">{{ condition.value }}</span>
       </template>
     </template>
     
@@ -114,18 +114,13 @@ function formatMethodName(methodName) {
   return methodMap[methodName] || methodName;
 }
 
-function getAndConditions(rule) {
+function getAdditionalConditions(rule) {
   const conditions = [];
   const ruleValues = rule.rule || [];
 
   for (let i = 5; i < ruleValues.length; i += 4) {
-    const combinator = String(ruleValues[i] || '').toLowerCase();
-
-    if (combinator !== 'and') {
-      continue;
-    }
-
     conditions.push({
+      combinator: normalizeCombinator(ruleValues[i]),
       property: ruleValues[i + 1] || '',
       method: ruleValues[i + 2] || '',
       value: ruleValues[i + 3] || ''
@@ -134,18 +129,35 @@ function getAndConditions(rule) {
 
   return conditions;
 }
+
+function normalizeCombinator(combinator) {
+  return String(combinator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
+}
+
+function formatCombinator(combinator) {
+  return normalizeCombinator(combinator).toUpperCase();
+}
 </script>
 
 <style scoped>
 .rule-part {
-  @apply px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 font-medium;
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: var(--theme-rule-part-bg);
+  color: var(--theme-rule-part-text);
+  border: 1px solid var(--theme-rule-part-border);
+  font-weight: 500;
 }
 
 .rule-syntax.inline .rule-part {
-  @apply inline-flex items-center;
+  display: inline-flex;
+  align-items: center;
 }
 
 .compact .rule-part {
-  @apply text-xs;
+  font-size: 0.75rem;
+  line-height: 1rem;
 }
 </style> 

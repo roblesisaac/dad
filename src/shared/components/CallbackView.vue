@@ -44,6 +44,6 @@ onMounted(async () => {
 
 .loading {
   font-size: 1.2rem;
-  color: #666;
+  color: var(--theme-callback-muted);
 }
 </style> 

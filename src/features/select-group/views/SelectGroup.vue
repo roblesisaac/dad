@@ -363,6 +363,6 @@ watch(() => banks.value.length, (newCount) => {
 
 <style scoped>
 .edit-mode-container {
-  background-color: rgba(219, 234, 254, 0.1); /* Very light blue */
+  background-color: var(--theme-edit-container-bg);
 }
 </style> 

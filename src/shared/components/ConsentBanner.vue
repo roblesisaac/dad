@@ -13,13 +13,13 @@ function acceptConsent() {
 
 <style>
 #consent-banner {
-  background-color: #007bff;
-  color: #fff; 
+  background-color: var(--theme-consent-bg);
+  color: var(--theme-consent-text);
   padding: 5px; 
   text-align: center;
 }
 #consent-banner a {
-  color: #fff; 
+  color: var(--theme-consent-text);
   text-decoration: underline;
 }
 #consent-banner a {

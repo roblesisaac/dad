@@ -17,20 +17,27 @@
         >
           {{ link.name }}
         </router-link>
-        <a 
+        <a
           href="#"
           class="font-bold py-5 text-black hover:underline capitalize"
           @click.prevent="authLink.action"
         >
           {{ authLink.name }}
         </a>
+        <ThemeCycleButton />
       </div>
 
       <!-- hamburger -->
-      <div v-if="State.currentScreenSize()==='small'" class="" @click="State.showingOffCanvasLinks=true">
-        <a href="#" class="text-black inline-block py-5">
+      <div v-if="State.currentScreenSize()==='small'" class="flex items-center gap-2">
+        <ThemeCycleButton />
+        <button
+          type="button"
+          class="text-black inline-flex py-5"
+          aria-label="Open menu"
+          @click="State.showingOffCanvasLinks=true"
+        >
           <Menu />
-        </a>
+        </button>
       </div>
     </div>
   </nav>
@@ -38,6 +45,7 @@
 
 <script setup>
 import { Menu } from 'lucide-vue-next';
+import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import { useNavigation } from '@/shared/composables/useNavigation';
 import { useAppStore } from '@/stores/state';
 

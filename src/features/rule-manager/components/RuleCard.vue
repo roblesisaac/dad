@@ -95,11 +95,12 @@
         </div>
 
         <!-- Multi-condition visibility (Optional indicator if multi-filter) -->
-        <div v-if="hasAndConditions" class="px-6 pb-4">
+        <div v-if="hasAdditionalConditions" class="px-6 pb-4">
           <div class="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-2">Conditions</div>
           <div class="flex flex-wrap gap-x-3 gap-y-1">
-            <template v-for="(cond, idx) in andConditions" :key="idx">
+            <template v-for="(cond, idx) in additionalConditions" :key="idx">
               <span class="text-[11px] font-bold text-gray-400">
+                 <span class="uppercase text-[9px] text-gray-300 mr-1">{{ formatCombinator(cond.combinator) }}</span>
                  {{ cond.property }} <span class="uppercase text-[9px] text-gray-300">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
               </span>
             </template>
@@ -168,7 +169,7 @@ const ruleSummaryParts = computed(() => {
     parts.push({ text: getOperatorDisplay(r[2]), highlight: true });
     parts.push({ text: r[3] || 'value', highlight: true });
     
-    const extra = andConditions.value.length;
+    const extra = additionalConditions.value.length;
     if (extra > 0) {
       parts.push({ text: `(+${extra} more)` });
     }
@@ -192,22 +193,21 @@ const ruleSummaryParts = computed(() => {
 });
 
 // Filter conditions
-const andConditions = computed(() => {
+const additionalConditions = computed(() => {
   const conditions = [];
   const ruleValues = props.rule.rule || [];
   for (let i = 5; i < ruleValues.length; i += 4) {
-    if (String(ruleValues[i] || '').toLowerCase() === 'and') {
-      conditions.push({
-        property: ruleValues[i + 1] || '',
-        method: ruleValues[i + 2] || '',
-        value: ruleValues[i + 3] || ''
-      });
-    }
+    conditions.push({
+      combinator: normalizeCombinator(ruleValues[i]),
+      property: ruleValues[i + 1] || '',
+      method: ruleValues[i + 2] || '',
+      value: ruleValues[i + 3] || ''
+    });
   }
   return conditions;
 });
 
-const hasAndConditions = computed(() => andConditions.value.length > 0);
+const hasAdditionalConditions = computed(() => additionalConditions.value.length > 0);
 
 // Get operator display text
 function getOperatorDisplay(operator) {
@@ -225,6 +225,16 @@ function getOperatorDisplay(operator) {
     'endsWith': 'ends with'
   };
   return operators[operator] || operator;
+}
+
+function normalizeCombinator(combinator) {
+  return String(combinator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
+}
+
+function formatCombinator(combinator) {
+  return normalizeCombinator(combinator).toUpperCase();
 }
 </script>
 

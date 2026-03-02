@@ -1,0 +1,109 @@
+[data-theme]:not([data-theme='light']) {
+  color-scheme: dark;
+}
+
+[data-theme]:not([data-theme='light']) body,
+[data-theme]:not([data-theme='light']) #app {
+  background-color: var(--theme-bg) !important;
+  color: var(--theme-text) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where(
+  [class*='bg-white'],
+  [class*='bg-black'],
+  [class*='bg-gray-'],
+  [class*='bg-red-'],
+  [class*='bg-orange-'],
+  [class*='bg-yellow-'],
+  [class*='bg-green-'],
+  [class*='bg-blue-'],
+  [class*='bg-indigo-'],
+  [class*='bg-purple-'],
+  [class*='bg-pink-'],
+  [class*='bg-slate-'],
+  [class*='bg-zinc-'],
+  [class*='bg-neutral-'],
+  [class*='bg-stone-'],
+  [class*='bg-amber-'],
+  [class*='bg-emerald-']
+) {
+  background-color: var(--theme-bg) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/20']) {
+  background-color: var(--theme-overlay-20) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/30']) {
+  background-color: var(--theme-overlay-30) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/50']) {
+  background-color: var(--theme-overlay-50) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/80']) {
+  background-color: var(--theme-overlay-80) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/90']) {
+  background-color: var(--theme-overlay-90) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where(
+  [class*='text-white'],
+  [class*='text-black'],
+  [class*='text-gray-'],
+  [class*='text-red-'],
+  [class*='text-orange-'],
+  [class*='text-yellow-'],
+  [class*='text-green-'],
+  [class*='text-blue-'],
+  [class*='text-indigo-'],
+  [class*='text-purple-'],
+  [class*='text-pink-'],
+  [class*='text-slate-'],
+  [class*='text-zinc-'],
+  [class*='text-neutral-'],
+  [class*='text-stone-'],
+  [class*='text-amber-'],
+  [class*='text-emerald-'],
+  [class*='text-transparent']
+) {
+  color: var(--theme-text) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='text-transparent']) {
+  -webkit-text-fill-color: var(--theme-text) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='border-']) {
+  border-color: var(--theme-border) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='ring-']) {
+  --tw-ring-color: var(--theme-ring) !important;
+  --tw-ring-offset-color: var(--theme-bg) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='from-']) {
+  --tw-gradient-from: var(--theme-gradient-from) !important;
+  --tw-gradient-to: var(--theme-gradient-to-transparent) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='via-']) {
+  --tw-gradient-stops: var(--theme-gradient-from), var(--theme-gradient-via), var(--theme-gradient-to) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='to-']) {
+  --tw-gradient-to: var(--theme-gradient-to) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='fill-']) {
+  fill: var(--theme-text) !important;
+}
+
+[data-theme]:not([data-theme='light']) :where([class*='stroke-']) {
+  stroke: var(--theme-text) !important;
+}
+

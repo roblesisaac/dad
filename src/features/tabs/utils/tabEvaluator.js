@@ -126,22 +126,19 @@ function groupByDate(a, b) {
 
 function extractRuleConditions(rule) {
   const conditions = [{
+    combinator: 'and',
     itemPropName: rule[1],
     ruleMethodName: rule[2],
     criterion: rule[3]
   }];
 
   for (let i = 5; i < rule.length; i += 4) {
-    const combinator = String(rule[i] || '').toLowerCase();
+    const combinator = normalizeConditionCombinator(rule[i]);
     const itemPropName = rule[i + 1];
     const ruleMethodName = rule[i + 2];
     const criterion = rule[i + 3];
 
-    if (combinator !== 'and') {
-      continue;
-    }
-
-    conditions.push({ itemPropName, ruleMethodName, criterion });
+    conditions.push({ combinator, itemPropName, ruleMethodName, criterion });
   }
 
   return conditions;
@@ -165,17 +162,47 @@ function buildConditionMethod(itemPropName, ruleMethodName, criterion, ruleMetho
 }
 
 function buildRuleMethod(ruleConditions, ruleMethods) {
-  const conditionMethods = ruleConditions
-    .map(({ itemPropName, ruleMethodName, criterion }) =>
-      buildConditionMethod(itemPropName, ruleMethodName, criterion, ruleMethods)
-    )
-    .filter(Boolean);
+  const resolvedConditions = ruleConditions
+    .map(({ combinator, itemPropName, ruleMethodName, criterion }) => ({
+      combinator: normalizeConditionCombinator(combinator),
+      method: buildConditionMethod(itemPropName, ruleMethodName, criterion, ruleMethods)
+    }))
+    .filter(({ method }) => !!method);
 
-  if (!conditionMethods.length) {
+  if (!resolvedConditions.length) {
     return () => false;
   }
 
-  return (item) => conditionMethods.every(conditionMethod => conditionMethod(item));
+  const groupedConditions = [];
+  let currentGroup = [];
+
+  resolvedConditions.forEach(({ combinator, method }, index) => {
+    const joinOperator = index === 0
+      ? 'and'
+      : normalizeConditionCombinator(combinator);
+
+    if (joinOperator === 'or' && currentGroup.length) {
+      groupedConditions.push(currentGroup);
+      currentGroup = [method];
+      return;
+    }
+
+    currentGroup.push(method);
+  });
+
+  if (currentGroup.length) {
+    groupedConditions.push(currentGroup);
+  }
+
+  return (item) => groupedConditions.some(conditionGroup =>
+    conditionGroup.every(conditionMethod => conditionMethod(item))
+  );
+}
+
+function normalizeConditionCombinator(combinator) {
+  return String(combinator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
 }
 
 function extractRules(tabRules, ruleMethods) {
@@ -214,8 +241,8 @@ function extractRules(tabRules, ruleMethods) {
     if (ruleType === 'filter') {
       filters.push({
         method: ruleMethod,
-        orderOfExecution,
-        _isImportant
+        filterJoinOperator: normalizeFilterJoinOperator(ruleConfig?.filterJoinOperator),
+        orderOfExecution
       });
     }
   }
@@ -226,6 +253,12 @@ function extractRules(tabRules, ruleMethods) {
     filters.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
     propToGroupBy
   ];
+}
+
+function normalizeFilterJoinOperator(filterJoinOperator) {
+  return String(filterJoinOperator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
 }
 
 function buildSortMethod(sorters) {
@@ -297,20 +330,44 @@ function buildCategorizeMethod(categorizers) {
 }
 
 function buildFilterMethod(filters) {
+  const filterGroups = groupFiltersByOr(filters);
+
   return (item) => {
     if (!filters.length) return true;
 
-    let isImportant = false;
-
-    const itemPassesEveryFilter = filters.every(filterConfig => {
-      const filterConditionMet = filterConfig.method(item);
-      if (!filterConditionMet) return false;
-      isImportant = filterConfig._isImportant;
-      return true;
-    });
-
-    return itemPassesEveryFilter || isImportant;
+    return filterGroups.some(filterGroup =>
+      filterGroup.every(filterConfig => filterConfig.method(item))
+    );
   };
+}
+
+function groupFiltersByOr(filters) {
+  if (!filters.length) {
+    return [];
+  }
+
+  const groupedFilters = [];
+  let currentGroup = [];
+
+  filters.forEach((filterConfig, index) => {
+    const joinOperator = index === 0
+      ? 'and'
+      : normalizeFilterJoinOperator(filterConfig.filterJoinOperator);
+
+    if (joinOperator === 'or' && currentGroup.length) {
+      groupedFilters.push(currentGroup);
+      currentGroup = [filterConfig];
+      return;
+    }
+
+    currentGroup.push(filterConfig);
+  });
+
+  if (currentGroup.length) {
+    groupedFilters.push(currentGroup);
+  }
+
+  return groupedFilters;
 }
 
 function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {

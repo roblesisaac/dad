@@ -1,0 +1,107 @@
+export const THEME_STORAGE_KEY = 'tracktabs.theme';
+
+export const THEME_ORDER = ['light', 'dark'];
+
+export const THEME_REGISTRY = Object.freeze({
+  light: Object.freeze({
+    '--theme-bg': '#ffffff',
+    '--theme-bg-soft': '#f9fafb',
+    '--theme-bg-subtle': '#f3f4f6',
+    '--theme-bg-muted': '#e5e7eb',
+    '--theme-text': '#111827',
+    '--theme-text-muted': '#374151',
+    '--theme-text-soft': '#6b7280',
+    '--theme-border': '#d1d5db',
+    '--theme-ring': '#111827',
+    '--theme-overlay-20': 'rgba(0, 0, 0, 0.2)',
+    '--theme-overlay-30': 'rgba(0, 0, 0, 0.3)',
+    '--theme-overlay-50': 'rgba(0, 0, 0, 0.5)',
+    '--theme-overlay-80': 'rgba(255, 255, 255, 0.8)',
+    '--theme-overlay-90': 'rgba(255, 255, 255, 0.9)',
+    '--theme-gradient-from': '#111827',
+    '--theme-gradient-via': '#1f2937',
+    '--theme-gradient-to': '#4b5563',
+    '--theme-gradient-to-transparent': 'rgba(75, 85, 99, 0)',
+    '--theme-consent-bg': '#007bff',
+    '--theme-consent-text': '#ffffff',
+    '--theme-swiper-bg': '#333333',
+    '--theme-swiper-bg-hover': '#999999',
+    '--theme-swiper-bg-active': '#cccccc',
+    '--theme-swiper-text': '#ffffff',
+    '--theme-callback-muted': '#666666',
+    '--theme-menu-item-text': '#1f2937',
+    '--theme-menu-item-hover-bg': '#f9fafb',
+    '--theme-btn-primary-bg': '#111827',
+    '--theme-btn-primary-hover-bg': '#1f2937',
+    '--theme-btn-primary-text': '#ffffff',
+    '--theme-btn-secondary-border': '#d1d5db',
+    '--theme-btn-secondary-text': '#374151',
+    '--theme-btn-secondary-hover-bg': '#f9fafb',
+    '--theme-edit-row-border-hover': '#93c5fd',
+    '--theme-edit-row-bg-hover': '#f0f7ff',
+    '--theme-edit-container-bg': 'rgba(219, 234, 254, 0.1)',
+    '--theme-rule-part-bg': '#eff6ff',
+    '--theme-rule-part-text': '#1d4ed8',
+    '--theme-rule-part-border': '#bfdbfe',
+    '--theme-toggle-bg': '#ffffff',
+    '--theme-toggle-text': '#111827',
+    '--theme-toggle-border': '#111827',
+    '--theme-toggle-hover-bg': '#f9fafb',
+    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.5)'
+  }),
+  dark: Object.freeze({
+    '--theme-bg': '#000000',
+    '--theme-bg-soft': '#000000',
+    '--theme-bg-subtle': '#000000',
+    '--theme-bg-muted': '#000000',
+    '--theme-text': '#ffffff',
+    '--theme-text-muted': '#ffffff',
+    '--theme-text-soft': '#ffffff',
+    '--theme-border': '#ffffff',
+    '--theme-ring': '#ffffff',
+    '--theme-overlay-20': 'rgba(0, 0, 0, 0.2)',
+    '--theme-overlay-30': 'rgba(0, 0, 0, 0.3)',
+    '--theme-overlay-50': 'rgba(0, 0, 0, 0.5)',
+    '--theme-overlay-80': 'rgba(0, 0, 0, 0.8)',
+    '--theme-overlay-90': 'rgba(0, 0, 0, 0.9)',
+    '--theme-gradient-from': '#ffffff',
+    '--theme-gradient-via': '#ffffff',
+    '--theme-gradient-to': '#ffffff',
+    '--theme-gradient-to-transparent': 'rgba(255, 255, 255, 0)',
+    '--theme-consent-bg': '#000000',
+    '--theme-consent-text': '#ffffff',
+    '--theme-swiper-bg': '#000000',
+    '--theme-swiper-bg-hover': '#000000',
+    '--theme-swiper-bg-active': '#000000',
+    '--theme-swiper-text': '#ffffff',
+    '--theme-callback-muted': '#ffffff',
+    '--theme-menu-item-text': '#ffffff',
+    '--theme-menu-item-hover-bg': '#000000',
+    '--theme-btn-primary-bg': '#000000',
+    '--theme-btn-primary-hover-bg': '#000000',
+    '--theme-btn-primary-text': '#ffffff',
+    '--theme-btn-secondary-border': '#ffffff',
+    '--theme-btn-secondary-text': '#ffffff',
+    '--theme-btn-secondary-hover-bg': '#000000',
+    '--theme-edit-row-border-hover': '#ffffff',
+    '--theme-edit-row-bg-hover': '#000000',
+    '--theme-edit-container-bg': 'rgba(0, 0, 0, 0.1)',
+    '--theme-rule-part-bg': '#000000',
+    '--theme-rule-part-text': '#ffffff',
+    '--theme-rule-part-border': '#ffffff',
+    '--theme-toggle-bg': '#000000',
+    '--theme-toggle-text': '#ffffff',
+    '--theme-toggle-border': '#ffffff',
+    '--theme-toggle-hover-bg': '#000000',
+    '--theme-scroll-arrow': 'rgba(255, 255, 255, 0.8)'
+  })
+});
+
+export const THEME_NAMES = Object.freeze(Object.keys(THEME_REGISTRY));
+
+export function isThemeName(value) {
+  return (
+    typeof value === 'string'
+    && Object.prototype.hasOwnProperty.call(THEME_REGISTRY, value)
+  );
+}

@@ -29,15 +29,15 @@ const modules = [Autoplay];
 <style>
   .swiper-slide {
     height: 300px;
-    color: #fff;
+    color: var(--theme-swiper-text);
   }
   .slide1 {
-    background: #333;
+    background: var(--theme-swiper-bg);
   }
   .slide2 {
-    background: #999;
+    background: var(--theme-swiper-bg-hover);
   }
   .slide3 {
-    background: #ccc;
+    background: var(--theme-swiper-bg-active);
   }
 </style>

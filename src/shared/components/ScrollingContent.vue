@@ -104,7 +104,7 @@ onBeforeUnmount(() => {
   background: none;
   border: none;
   padding: 10px;
-  color: rgba(0,0,0,0.5);
+  color: var(--theme-scroll-arrow);
   font-size: 2rem;
   cursor: pointer;
   position: absolute;

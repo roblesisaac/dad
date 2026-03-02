@@ -111,15 +111,38 @@
                     </button>
                     
                     <div v-else class="space-y-4 relative">
+                      <div class="rounded-xl border-2 border-dashed border-gray-200 bg-white/70 px-4 py-2.5 flex items-center justify-between">
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Group 1</span>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300">Base Condition</span>
+                      </div>
+
                       <div
                         v-for="(condition, index) in andConditions"
                         :key="`and-condition-${index}`"
-                        class="space-y-4"
+                        :class="['space-y-4 rounded-xl border-2 p-3', getConditionGroupClass(index)]"
                       >
-                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border-2 border-gray-100 mb-2">
-                          <span class="text-[10px] font-black text-white bg-black px-3 py-1.5 rounded-lg inline-flex items-center uppercase tracking-[0.2em]">
-                            AND
+                        <div v-if="startsNewConditionGroup(index)" class="flex items-center gap-2">
+                          <div class="h-[1px] flex-1 bg-gray-200"></div>
+                          <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">OR</span>
+                          <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300">
+                            Start Group {{ getConditionGroupNumber(index) }}
                           </span>
+                          <div class="h-[1px] flex-1 bg-gray-200"></div>
+                        </div>
+                        <div class="flex justify-between items-center bg-white p-3 rounded-xl border-2 border-gray-100 mb-2">
+                          <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
+                              Group {{ getConditionGroupNumber(index) }}
+                            </span>
+                            <span class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Join</span>
+                            <select
+                              v-model="condition.combinator"
+                              class="rounded-lg border-2 border-gray-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-700 focus:border-black focus:ring-0"
+                            >
+                              <option value="and">AND</option>
+                              <option value="or">OR</option>
+                            </select>
+                          </div>
                           <button 
                             @click="removeAndCondition(index)" 
                             type="button" 
@@ -437,7 +460,7 @@ function normalizeAndCondition() {
   if (supportsAndCondition.value) {
     for (const andCondition of andConditions.value) {
       normalizedRule.push(
-        'and',
+        normalizeConditionCombinator(andCondition.combinator),
         andCondition.property || '',
         andCondition.method || '',
         andCondition.value || ''
@@ -454,6 +477,7 @@ function clearAndCondition() {
 
 function addAndCondition() {
   andConditions.value.push({
+    combinator: 'and',
     property: ruleData.value.rule[1] || '',
     method: ruleData.value.rule[2] || '',
     value: ''
@@ -464,17 +488,34 @@ function removeAndCondition(index) {
   andConditions.value.splice(index, 1);
 }
 
+function startsNewConditionGroup(index) {
+  return normalizeConditionCombinator(andConditions.value[index]?.combinator) === 'or';
+}
+
+function getConditionGroupNumber(index) {
+  let groupNumber = 1;
+
+  for (let i = 0; i <= index; i++) {
+    if (normalizeConditionCombinator(andConditions.value[i]?.combinator) === 'or') {
+      groupNumber += 1;
+    }
+  }
+
+  return groupNumber;
+}
+
+function getConditionGroupClass(index) {
+  return getConditionGroupNumber(index) % 2 === 0
+    ? 'border-blue-100 bg-blue-50/30'
+    : 'border-gray-100 bg-white';
+}
+
 function extractAndConditions(rule) {
   const extractedAndConditions = [];
 
   for (let i = 5; i < rule.length; i += 4) {
-    const combinator = String(rule[i] || '').toLowerCase();
-
-    if (combinator !== 'and') {
-      continue;
-    }
-
     extractedAndConditions.push({
+      combinator: normalizeConditionCombinator(rule[i]),
       property: rule[i + 1] || '',
       method: rule[i + 2] || '',
       value: rule[i + 3] || ''
@@ -482,5 +523,11 @@ function extractAndConditions(rule) {
   }
 
   return extractedAndConditions;
+}
+
+function normalizeConditionCombinator(combinator) {
+  return String(combinator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
 }
 </script> 
