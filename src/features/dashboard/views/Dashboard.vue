@@ -1,12 +1,8 @@
 <template>
   <div class="min-h-screen bg-white">
-    <!-- Feedback Bar -->
     <BlueBar />
 
-    <!-- Dashboard Container -->
     <div class="max-w-5xl mx-auto w-full relative">
-
-      <!-- Unified Header -->
       <div>
         <DashboardHeader
           :view="dashboardView"
@@ -15,7 +11,6 @@
         />
       </div>
 
-      <!-- Dashboard Content -->
       <div
         class="mt-4"
         :class="showSelectorView ? 'pb-12 sm:pb-16 px-4 sm:px-6' : 'pb-32'"
@@ -44,21 +39,26 @@
 
         <Transition name="fade">
           <div v-if="!state.isLoading && isCategoryView" class="w-full">
-            <CategoriesWrapper />
+            <CategoriesWrapper @category-selected="handleCategorySelected" />
+          </div>
+        </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && isCategoryDetailView" class="w-full">
+            <CategoryTransactionsView />
           </div>
         </Transition>
       </div>
 
-      <!-- Fixed Footer: Filters & Reports -->
       <footer
-        v-if="!state.isLoading && isCategoryView"
+        v-if="!state.isLoading && (isCategoryView || isCategoryDetailView)"
         class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
         <div class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center justify-between">
-          <!-- Left: Filters -->
-          <button 
+          <button
             @click="showRuleManagerModal = true"
             class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-start"
+            type="button"
           >
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Edit Tab
@@ -66,10 +66,10 @@
             <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
           </button>
 
-          <!-- Right: Reports -->
-          <button 
+          <button
             @click="router.push('/reports')"
             class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-end"
+            type="button"
           >
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Reports
@@ -79,10 +79,9 @@
         </div>
       </footer>
 
-      <!-- Modals -->
-      <RuleManagerModal 
-        :is-open="showRuleManagerModal" 
-        @close="showRuleManagerModal = false" 
+      <RuleManagerModal
+        :is-open="showRuleManagerModal"
+        @close="showRuleManagerModal = false"
       />
     </div>
   </div>
@@ -110,10 +109,10 @@ import { useSelectGroup } from '@/features/select-group/composables/useSelectGro
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
-// Core Components
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
+import CategoryTransactionsView from '../components/CategoryTransactionsView.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
 import AllTabs from '@/features/tabs/components/AllTabs.vue';
@@ -125,14 +124,21 @@ const { state } = useDashboardState();
 const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
 const { selectTab } = useTabs();
+
 const showRuleManagerModal = ref(false);
 const dashboardView = ref('tab');
 const isGroupSelectorView = computed(() => dashboardView.value === 'group');
 const isTabSelectorView = computed(() => dashboardView.value === 'tab');
 const isCategoryView = computed(() => dashboardView.value === 'category');
+const isCategoryDetailView = computed(() => dashboardView.value === 'category-detail');
 const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+function resetCategorySelection() {
+  state.selected.category = false;
+  state.selected.transaction = false;
+}
 
 function queryValue(key) {
   const value = route.query[key];
@@ -140,9 +146,7 @@ function queryValue(key) {
 }
 
 function parseReportDate(value) {
-  if (!ISO_DATE_PATTERN.test(value)) {
-    return null;
-  }
+  if (!ISO_DATE_PATTERN.test(value)) return null;
 
   const parsed = parseISO(value);
   return isValid(parsed) ? parsed : null;
@@ -201,11 +205,9 @@ async function applyReportRowContextFromQuery(context) {
   let didRunGroupChange = false;
   if (context.groupId) {
     const targetGroup = state.allUserGroups.find(group => group._id === context.groupId);
-    if (targetGroup) {
-      if (state.selected.group?._id !== targetGroup._id) {
-        await selectGroup(targetGroup);
-        didRunGroupChange = true;
-      }
+    if (targetGroup && state.selected.group?._id !== targetGroup._id) {
+      await selectGroup(targetGroup);
+      didRunGroupChange = true;
     }
   }
 
@@ -217,6 +219,7 @@ async function applyReportRowContextFromQuery(context) {
     const targetTab = state.selected.tabsForGroup.find(tab => tab._id === context.tabId);
     if (targetTab) {
       await selectTab(targetTab);
+      resetCategorySelection();
       dashboardView.value = 'category';
     }
   }
@@ -238,7 +241,7 @@ async function applyReportRowContextFromQuery(context) {
 
 function setDefaultDashboardView() {
   if (state.selected.tab) {
-    dashboardView.value = 'category';
+    dashboardView.value = state.selected.category ? 'category-detail' : 'category';
     return;
   }
 
@@ -251,6 +254,7 @@ function setDefaultDashboardView() {
 }
 
 function openGroupSelector() {
+  resetCategorySelection();
   dashboardView.value = 'group';
 }
 
@@ -260,35 +264,83 @@ function openTabSelector() {
     return;
   }
 
+  resetCategorySelection();
   dashboardView.value = 'tab';
 }
 
 function handleGroupSelected() {
+  resetCategorySelection();
   dashboardView.value = 'tab';
 }
 
 function handleTabSelected() {
+  resetCategorySelection();
   dashboardView.value = 'category';
+}
+
+function handleCategorySelected(categoryName) {
+  if (!categoryName) return;
+
+  state.selected.category = categoryName;
+  state.selected.transaction = false;
+  dashboardView.value = 'category-detail';
 }
 
 watch(
   () => state.selected.tab?._id,
-  (selectedTabId) => {
-    if (!selectedTabId && dashboardView.value === 'category') {
-      dashboardView.value = state.selected.group ? 'tab' : 'group';
+  (selectedTabId, previousTabId) => {
+    if (!selectedTabId) {
+      resetCategorySelection();
+      if (isCategoryView.value || isCategoryDetailView.value) {
+        dashboardView.value = state.selected.group ? 'tab' : 'group';
+      }
+      return;
+    }
+
+    if (selectedTabId !== previousTabId && previousTabId) {
+      resetCategorySelection();
+      if (isCategoryDetailView.value) {
+        dashboardView.value = 'category';
+      }
     }
   }
 );
 
 watch(
   () => state.selected.group?._id,
-  (selectedGroupId) => {
-    // During group switching, selection can be briefly empty while loading.
-    // Only force group selector when we're truly idle with no selected group.
+  (selectedGroupId, previousGroupId) => {
+    if (selectedGroupId !== previousGroupId) {
+      resetCategorySelection();
+    }
+
     if (!selectedGroupId && !state.isLoading) {
       dashboardView.value = 'group';
     }
   }
+);
+
+watch(
+  [() => dashboardView.value, () => state.selected.category, () => state.selected.tab?.categorizedItems],
+  ([view, selectedCategory]) => {
+    if (view !== 'category-detail') {
+      return;
+    }
+
+    if (!selectedCategory) {
+      dashboardView.value = 'category';
+      return;
+    }
+
+    const categoryExists = Boolean(
+      state.selected.tab?.categorizedItems?.find(([categoryName]) => categoryName === selectedCategory)
+    );
+
+    if (!categoryExists) {
+      resetCategorySelection();
+      dashboardView.value = 'category';
+    }
+  },
+  { deep: true }
 );
 
 onMounted(async () => {

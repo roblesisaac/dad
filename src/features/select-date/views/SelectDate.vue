@@ -1,9 +1,9 @@
 <template>
-<div class="relative w-full h-full">
+<div class="relative w-full h-full flex justify-center">
   <!-- Date Range Summary (Clickable to expand) -->
   <button 
     @click="toggleDatePicker"
-    class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
+    class="flex items-center justify-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
   >
     <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em] truncate">
       {{ dateRangeSummary }}

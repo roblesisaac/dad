@@ -212,38 +212,49 @@ export function useDate() {
     return false; // To close modal in component
   };
 
-  const formatDate = (date) => {
-    if (!date) return '';
-    
+  const parseDateForSummary = (date) => {
+    if (!date) return null;
+
     if (date === 'firstOfMonth') {
-      return format(startOfMonth(new Date()), 'MMM d');
+      return startOfMonth(new Date());
     }
-    
+
+    if (date === 'firstOfYear') {
+      return startOfYear(new Date());
+    }
+
     if (date === 'today') {
-      return format(new Date(), 'MMM d');
+      return new Date();
     }
-    
-    // If it's a string, try to parse it
+
     const dateObj = typeof date === 'string' ? parseISO(date) : date;
-    
-    if (!isValid(dateObj)) return '';
-    
-    return format(dateObj, 'MMM d');
+    return isValid(dateObj) ? dateObj : null;
+  };
+
+  const formatDate = (date, includeYear = false) => {
+    const dateObj = parseDateForSummary(date);
+    if (!dateObj) return '';
+
+    return format(dateObj, includeYear ? 'MMM d yyyy' : 'MMM d');
   };
 
   const dateRangeSummary = computed(() => {
-    const start = formatDate(state.date.start);
-    const end = formatDate(state.date.end);
-    
-    if (!start && !end) return 'Select date range';
-    if (!end) return `From ${start}`;
-    if (!start) return `Until ${end}`;
-    
-    if (start === end) {
-      return start; // Same day
+    const startDate = parseDateForSummary(state.date.start);
+    const endDate = parseDateForSummary(state.date.end);
+
+    if (!startDate && !endDate) return 'Select date range';
+    if (!endDate) return `From ${formatDate(startDate, true)}`;
+    if (!startDate) return `Until ${formatDate(endDate, true)}`;
+
+    if (startDate.getTime() === endDate.getTime()) {
+      return formatDate(startDate, true);
     }
-    
-    return `${start} - ${end}`;
+
+    if (isSameYear(startDate, endDate)) {
+      return `${formatDate(startDate)} - ${formatDate(endDate, true)}`;
+    }
+
+    return `${formatDate(startDate, true)} - ${formatDate(endDate, true)}`;
   });
 
   return {
