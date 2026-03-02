@@ -105,8 +105,8 @@ export function useTabProcessing() {
       if (ruleType === 'filter') {
         filters.push({
           method: ruleMethod,
-          orderOfExecution,
-          _isImportant
+          filterJoinOperator: normalizeFilterJoinOperator(ruleConfig.filterJoinOperator),
+          orderOfExecution
         });
       }
     }
@@ -175,6 +175,12 @@ export function useTabProcessing() {
 
       return method(itemValue, criterion);
     };
+  }
+
+  function normalizeFilterJoinOperator(filterJoinOperator) {
+    return String(filterJoinOperator || '').toLowerCase() === 'or'
+      ? 'or'
+      : 'and';
   }
 
   function getItemValue(item, propName) {
@@ -274,20 +280,44 @@ export function useTabProcessing() {
   }
 
   function buildFilterMethod(filters) {
+    const filterGroups = groupFiltersByOr(filters);
+
     return (item) => {
       if (!filters.length) return true;
 
-      let _isImportant = false;
-
-      const itemPassesEveryFilter = filters.every(filterConfig => {
-        const filterConditionMet = filterConfig.method(item);
-        if (!filterConditionMet) return false;
-        _isImportant = filterConfig._isImportant;
-        return true;
-      });
-
-      return itemPassesEveryFilter || _isImportant;
+      return filterGroups.some(filterGroup =>
+        filterGroup.every(filterConfig => filterConfig.method(item))
+      );
     };
+  }
+
+  function groupFiltersByOr(filters) {
+    if (!filters.length) {
+      return [];
+    }
+
+    const groupedFilters = [];
+    let currentGroup = [];
+
+    filters.forEach((filterConfig, index) => {
+      const joinOperator = index === 0
+        ? 'and'
+        : normalizeFilterJoinOperator(filterConfig.filterJoinOperator);
+
+      if (joinOperator === 'or' && currentGroup.length) {
+        groupedFilters.push(currentGroup);
+        currentGroup = [filterConfig];
+        return;
+      }
+
+      currentGroup.push(filterConfig);
+    });
+
+    if (currentGroup.length) {
+      groupedFilters.push(currentGroup);
+    }
+
+    return groupedFilters;
   }
 
   function buildGroupByMethod(propToGroupByArray) {

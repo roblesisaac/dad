@@ -6,60 +6,49 @@
     :hide-header="true"
   >
     <template #content>
-      <div>
+      <div class="p-6 sm:p-8">
         <!-- Modal header -->
-        <div class="px-4 py-5 border-b bg-red-50 border-red-100">
-          <div class="flex items-center">
-            <div class="flex-shrink-0">
-              <AlertTriangle class="h-6 w-6 text-red-600" aria-hidden="true" />
-            </div>
-            <div class="ml-3">
-              <h3 class="text-lg font-medium text-red-800">
-                Delete Rule
-              </h3>
-            </div>
+        <div class="flex flex-col items-center text-center mb-8">
+          <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
+            <AlertTriangle class="h-8 w-8 text-red-600" aria-hidden="true" />
           </div>
+          <h3 class="text-2xl font-black text-gray-900 tracking-tight">
+            Delete Rule
+          </h3>
+          <p class="mt-2 text-sm text-gray-400 font-medium">
+            This action is permanent and cannot be undone.
+          </p>
         </div>
         
-        <!-- Modal body -->
-        <div class="px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-          <div class="sm:flex sm:items-start">
-            <div class="mt-3 text-center sm:mt-0 sm:text-left w-full">
-              <div class="mt-2">
-                <p class="text-sm text-gray-700">
-                  Are you sure you want to delete this rule? This action cannot be undone.
-                </p>
-                
-                <!-- Rule Preview -->
-                <div class="mt-4 p-3 border border-gray-200 rounded-md bg-gray-50">
-                  <div class="flex items-center mb-2">
-                    <component 
-                      :is="getRuleIcon(rule.rule[0])" 
-                      class="w-4 h-4 mr-2 text-gray-500"
-                    />
-                    <span class="font-medium text-gray-700 capitalize">{{ rule.rule[0] }} Rule</span>
-                  </div>
-                  <div class="text-sm text-gray-600">
-                    <RuleSyntaxDisplay :rule="rule" />
-                  </div>
-                </div>
-              </div>
+        <!-- Modal body: Rule Preview -->
+        <div class="mb-8">
+          <div class="text-[10px] font-black uppercase tracking-[0.25em] text-gray-400 mb-2 px-1">Rule Preview</div>
+          <div class="p-4 rounded-2xl bg-gray-50 border-2 border-gray-100/50">
+            <div class="flex items-center gap-2 mb-3">
+              <component 
+                :is="getRuleIcon(rule.rule[0])" 
+                class="w-4 h-4 text-black"
+              />
+              <span class="text-xs font-black text-black uppercase tracking-widest">{{ rule.rule[0] }} Rule</span>
+            </div>
+            <div class="text-sm font-bold text-gray-700 leading-relaxed">
+              <RuleSyntaxDisplay :rule="rule" />
             </div>
           </div>
         </div>
         
         <!-- Modal footer -->
-        <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+        <div class="flex flex-col sm:flex-row-reverse gap-3 mt-8">
           <button 
             type="button" 
-            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
+            class="flex-1 px-6 py-4 bg-red-600 hover:bg-red-700 text-white text-xs font-black uppercase tracking-widest rounded-xl transition-all border-2 border-red-600 hover:translate-y-[-1px] active:translate-y-[0px] shadow-sm"
             @click="$emit('confirm')"
           >
-            Delete
+            Delete Rule
           </button>
           <button 
             type="button" 
-            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+            class="flex-1 px-6 py-4 bg-white border-2 border-gray-100 text-gray-400 hover:text-black hover:border-black text-xs font-black uppercase tracking-widest rounded-xl transition-all hover:translate-y-[-1px] active:translate-y-[0px]"
             @click="$emit('cancel')"
           >
             Cancel

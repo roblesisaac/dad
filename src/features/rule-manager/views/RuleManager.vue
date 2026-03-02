@@ -2,7 +2,7 @@
   <div class="flex flex-col bg-white min-h-screen">
     <div class="max-w-3xl mx-auto w-full flex flex-col min-h-screen">
       <!-- Header Area -->
-      <div class="px-6 py-8 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/90">
+      <div class="px-6 py-0 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/90">
         <div class="flex-1">
           <div class="flex items-center gap-2">
             <div v-if="state.selected.tab && !isEditingTabName" class="relative">
@@ -105,19 +105,33 @@
             </div>
             
             <transition name="list-fade">
-              <div v-if="!collapsedSections[ruleType.id]" class="space-y-3">
+              <div v-if="!collapsedSections[ruleType.id]" class="space-y-4 pt-2">
+                <!-- Section Sub-Header: Actions -->
+                <div class="flex items-center justify-between px-1">
+                  <button 
+                    @click="toggleReorderMode(ruleType.id)"
+                    class="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
+                    :class="reorderingSectionId === ruleType.id ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 hover:text-black'"
+                  >
+                    {{ reorderingSectionId === ruleType.id ? 'Done' : 'Rearrange' }}
+                  </button>
+
+                  <button 
+                    v-if="reorderingSectionId !== ruleType.id"
+                    @click="createNewRuleWithType(ruleType.id)"
+                    class="text-[10px] font-black uppercase tracking-widest text-black hover:opacity-70 flex items-center gap-1.5 transition-opacity"
+                  >
+                    <Plus class="w-3.5 h-3.5" />
+                    Add Rule
+                  </button>
+                </div>
+
                 <!-- No Rules Empty State -->
                 <div 
                   v-if="getEnabledRulesByType(ruleType.id).length === 0" 
                   class="py-12 px-6 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-3"
                 >
                   <p class="text-sm font-bold text-gray-300">No active {{ ruleType.name.toLowerCase() }}</p>
-                  <button 
-                    @click="createNewRuleWithType(ruleType.id)"
-                    class="text-xs font-black uppercase tracking-widest text-black hover:text-gray-500 py-2"
-                  >
-                    + Add Rule
-                  </button>
                 </div>
                 
                 <!-- Draggable Rule List -->
@@ -128,16 +142,36 @@
                     class="space-y-3"
                     handle=".drag-handle"
                     @end="onDragEnd"
+                    :disabled="reorderingSectionId !== ruleType.id"
                     :data-rule-type="ruleType.id"
                   >
-                    <template #item="{ element }">
-                      <RuleCard 
-                        :rule="element"
-                        :rule-type="ruleType"
-                        @edit="editRule"
-                        @toggle="toggleRuleContextStatus"
-                        @delete="confirmDeleteRule"
-                      />
+                    <template #item="{ element, index }">
+                      <div class="space-y-3">
+                        <!-- Filter Logic Connector -->
+                        <div
+                          v-if="ruleType.id === 'filter' && index > 0 && reorderingSectionId !== ruleType.id"
+                          class="mx-auto w-fit rounded-full border-2 border-dashed border-gray-100 bg-gray-50/50 px-3 py-1 flex items-center gap-2"
+                        >
+                          <span class="text-[9px] font-black uppercase tracking-widest text-gray-400">Combine with</span>
+                          <select
+                            :value="getFilterJoinOperator(element)"
+                            @change="updateFilterJoinOperator(element, $event.target.value)"
+                            class="appearance-none bg-transparent text-[10px] font-black uppercase tracking-widest text-black hover:text-gray-500 cursor-pointer focus:outline-none"
+                          >
+                            <option value="and">AND</option>
+                            <option value="or">OR</option>
+                          </select>
+                        </div>
+
+                        <RuleCard 
+                          :rule="element"
+                          :rule-type="ruleType"
+                          :is-reordering="reorderingSectionId === ruleType.id"
+                          @edit="editRule"
+                          @toggle="toggleRuleContextStatus"
+                          @delete="confirmDeleteRule"
+                        />
+                      </div>
                     </template>
                   </draggable>
                 </div>
@@ -193,7 +227,10 @@
       </div>
 
       <!-- Action Footer -->
-      <div class="mt-auto px-6 py-8 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex justify-center z-20">
+      <div 
+        v-if="!reorderingSectionId"
+        class="mt-auto px-6 py-8 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex justify-center z-20"
+      >
         <button
           @click="createNewRule"
           class="w-full max-w-sm px-8 py-5 bg-black border-2 border-black rounded-2xl text-base font-black text-white hover:bg-gray-800 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex justify-center items-center gap-3"
@@ -267,6 +304,7 @@ const tabNameInput = ref(null);
 const isSavingTabName = ref(false);
 const isDeletingTab = ref(false);
 const showTabActionsMenu = ref(false);
+const reorderingSectionId = ref(null);
 
 // Collapsible sections state
 const collapsedSections = ref({
@@ -295,7 +333,16 @@ const canSaveTabName = computed(() => {
 });
 
 // Toggle functions
+function toggleReorderMode(sectionId) {
+  if (reorderingSectionId.value === sectionId) {
+    reorderingSectionId.value = null;
+  } else {
+    reorderingSectionId.value = sectionId;
+  }
+}
+
 function toggleRuleTypeCollapse(typeId) {
+  if (reorderingSectionId.value === typeId) return; // Prevent collapse while reordering
   collapsedSections.value[typeId] = !collapsedSections.value[typeId];
 }
 
@@ -471,6 +518,32 @@ function getRuleCountByType(typeId, enabledOnly = false) {
   return state.allUserRules.filter(rule => rule.rule[0] === typeId).length;
 }
 
+function getFilterJoinOperator(rule) {
+  return String(rule?.filterJoinOperator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
+}
+
+async function updateFilterJoinOperator(rule, joinOperator) {
+  if (!rule?._id) return;
+
+  const normalizedJoinOperator = joinOperator === 'or' ? 'or' : 'and';
+  const currentJoinOperator = getFilterJoinOperator(rule);
+
+  if (normalizedJoinOperator === currentJoinOperator) {
+    return;
+  }
+
+  try {
+    await updateRule({
+      ...rule,
+      filterJoinOperator: normalizedJoinOperator
+    });
+  } catch (error) {
+    console.error('Error updating filter join operator:', error);
+  }
+}
+
 // Handle drag and drop reordering
 async function onDragEnd(event) {
   const { newIndex, oldIndex, from } = event;
@@ -510,6 +583,7 @@ function createNewRuleWithType(typeId) {
   currentRule.value = {
     rule: [typeId, '', '', '', ''],
     applyForTabs: state.selected.tab?._id ? [state.selected.tab._id] : ['_GLOBAL'],
+    filterJoinOperator: 'and',
     _isImportant: false,
     orderOfExecution: enabledRules.value.length
   };
