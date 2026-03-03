@@ -664,30 +664,78 @@ function resolveAccount(account) {
   }) || (typeof account === 'object' ? account : null);
 }
 
-function accountDisplayLabel(account) {
-  const contextGroup = getAccountContextGroup(account);
-  if (contextGroup?.name) {
-    return contextGroup.name;
+function sanitizeAccountText(value) {
+  if (typeof value !== 'string') {
+    return '';
   }
 
+  return value
+    .replace(/\uFFFD+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizedAccountText(value) {
+  return sanitizeAccountText(value).toLowerCase();
+}
+
+function accountDefaultLabel(account) {
   const resolved = resolveAccount(account) || account;
-  return resolved?.official_name || resolved?.officialName || resolved?.name || resolved?.mask || 'Account';
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+
+  let mask = '';
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = sanitizeAccountText(String(resolved.mask));
+  }
+
+  return officialName || accountName || mask || 'Account';
+}
+
+function accountDisplayLabel(account) {
+  const contextGroup = getAccountContextGroup(account);
+  const contextGroupName = sanitizeAccountText(contextGroup?.name || '');
+  const resolved = resolveAccount(account) || account;
+
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+  let mask = '';
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = sanitizeAccountText(String(resolved.mask));
+  }
+
+  const defaultLabel = officialName || accountName || mask || 'Account';
+
+  if (!contextGroupName) {
+    return defaultLabel;
+  }
+
+  const defaultNameCandidates = new Set(
+    ['Account', officialName, accountName, mask]
+      .map(value => normalizedAccountText(value))
+      .filter(Boolean)
+  );
+
+  if (defaultNameCandidates.has(normalizedAccountText(contextGroupName))) {
+    return defaultLabel;
+  }
+
+  return contextGroupName;
 }
 
 function accountSubtitleText(account) {
   const resolved = resolveAccount(account) || account;
-  const info = typeof resolved?.info === 'string' ? resolved.info.trim() : '';
+  const info = sanitizeAccountText(typeof resolved?.info === 'string' ? resolved.info : '');
   const displayLabel = accountDisplayLabel(account);
-  const normalizedDisplayLabel = typeof displayLabel === 'string'
-    ? displayLabel.trim().toLowerCase()
-    : '';
+  const normalizedDisplayLabel = normalizedAccountText(displayLabel);
 
   let mask = '';
   if (resolved?.mask !== undefined && resolved?.mask !== null) {
-    mask = String(resolved.mask).trim();
+    mask = sanitizeAccountText(String(resolved.mask));
   }
 
-  if (mask && normalizedDisplayLabel === mask.toLowerCase()) {
+  if (mask && normalizedDisplayLabel === normalizedAccountText(mask)) {
     mask = '';
   }
 
@@ -1071,7 +1119,7 @@ async function ensureAccountContextGroup(account) {
 
   const groupDraft = {
     _id: '',
-    name: resolvedAccount.mask || resolvedAccount.name || 'Account',
+    name: accountDefaultLabel(resolvedAccount),
     info: '',
     accounts: [resolvedAccount],
     sort,
