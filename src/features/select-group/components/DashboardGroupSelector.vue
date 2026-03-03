@@ -345,12 +345,6 @@
     >
       <template #content>
         <div class="py-2">
-          <div v-if="addLabelCurrentCount > 0" class="px-6 py-4 border-b selector-divider">
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
-              Already in {{ addLabelCurrentCount }} label{{ addLabelCurrentCount > 1 ? 's' : '' }}
-            </p>
-          </div>
-
           <div v-if="sortedLabelGroups.length" class="border-b selector-divider">
             <button
               v-for="label in sortedLabelGroups"
@@ -395,6 +389,7 @@
           <button
             @click="saveAddLabel"
             class="modal-button-primary"
+            :disabled="!canSaveAddLabel"
             type="button"
           >
             Save
@@ -423,7 +418,7 @@
       </template>
 
       <template #content>
-        <div class="px-6 py-8 border-b selector-divider">
+        <div class="px-6 py-8">
           <label class="modal-label">Label Name</label>
           <input
             v-model="newLabelInput"
@@ -431,61 +426,6 @@
             class="modal-input"
             placeholder="Label name"
           />
-        </div>
-
-        <div class="py-2">
-          <div
-            v-for="account in createLabelEnabledAccounts"
-            :key="`new-label-enabled-${accountKey(account)}`"
-            class="toggle-row"
-          >
-            <div class="flex flex-col min-w-0 pr-4">
-              <span class="text-base font-black tracking-tight truncate selector-text">{{ accountDisplayLabel(account) }}</span>
-              <span class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted mt-0.5">
-                {{ accountMask(account) }}
-              </span>
-            </div>
-            <Switch
-              :model-value="true"
-              :id="`new-label-enabled-${accountKey(account)}`"
-              @update:model-value="toggleCreateLabelAccount(accountKey(account))"
-            />
-          </div>
-
-          <div class="border-t selector-divider">
-            <button
-              class="w-full px-6 py-4 flex items-center justify-between transition-colors group focus:outline-none"
-              type="button"
-              @click="showCreateLabelDisabledAccounts = !showCreateLabelDisabledAccounts"
-            >
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-[0.2em] selector-text">Disabled Accounts</span>
-                <span class="text-[10px] font-black selector-muted">{{ createLabelDisabledAccounts.length }}</span>
-              </div>
-              <ChevronDown v-if="showCreateLabelDisabledAccounts" class="w-4 h-4 selector-muted" />
-              <ChevronRight v-else class="w-4 h-4 selector-muted" />
-            </button>
-          </div>
-
-          <div v-if="showCreateLabelDisabledAccounts">
-            <div
-              v-for="account in createLabelDisabledAccounts"
-              :key="`new-label-disabled-${accountKey(account)}`"
-              class="toggle-row"
-            >
-              <div class="flex flex-col min-w-0 pr-4">
-                <span class="text-base font-black tracking-tight truncate selector-text">{{ accountDisplayLabel(account) }}</span>
-                <span class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted mt-0.5">
-                  {{ accountMask(account) }}
-                </span>
-              </div>
-              <Switch
-                :model-value="false"
-                :id="`new-label-disabled-${accountKey(account)}`"
-                @update:model-value="toggleCreateLabelAccount(accountKey(account))"
-              />
-            </div>
-          </div>
         </div>
 
         <div class="modal-footer">
@@ -521,7 +461,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Check, Building, ChevronDown, ChevronRight, EllipsisVertical, GripVertical, RefreshCw, X } from 'lucide-vue-next';
+import { Check, Building, EllipsisVertical, GripVertical, RefreshCw, X } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
@@ -530,7 +470,6 @@ import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
-import Switch from '@/shared/components/Switch.vue';
 
 const emit = defineEmits(['group-selected']);
 
@@ -571,8 +510,6 @@ const selectedLabelIds = ref([]);
 
 const showCreateLabelModal = ref(false);
 const newLabelInput = ref('');
-const newLabelSelectedAccountIds = ref([]);
-const showCreateLabelDisabledAccounts = ref(false);
 
 const showBanksModal = ref(false);
 
@@ -620,26 +557,10 @@ const renameModalTitle = computed(() => {
   return renameType.value === 'account' ? 'Rename Account' : 'Rename Label';
 });
 
-const addLabelCurrentCount = computed(() => {
-  if (!addLabelTargetAccount.value) {
-    return 0;
-  }
-
-  return labelsForAccount(addLabelTargetAccount.value).length;
-});
-
-const createLabelEnabledAccounts = computed(() => {
-  const selectedIds = new Set(newLabelSelectedAccountIds.value);
-  return sortedAccounts.value.filter(account => selectedIds.has(accountKey(account)));
-});
-
-const createLabelDisabledAccounts = computed(() => {
-  const selectedIds = new Set(newLabelSelectedAccountIds.value);
-  return sortedAccounts.value.filter(account => !selectedIds.has(accountKey(account)));
-});
+const canSaveAddLabel = computed(() => selectedLabelIds.value.length > 0);
 
 const canSaveNewLabel = computed(() => {
-  return newLabelInput.value.trim().length > 0 && newLabelSelectedAccountIds.value.length > 0;
+  return newLabelInput.value.trim().length > 0;
 });
 
 watch(
@@ -704,11 +625,6 @@ function resolveAccount(account) {
   return state.allUserAccounts.find((userAccount) => {
     return accountIdentifiers(userAccount).some(id => ids.includes(id));
   }) || (typeof account === 'object' ? account : null);
-}
-
-function accountMask(account) {
-  const resolved = resolveAccount(account) || account;
-  return resolved?.mask ? `Mask: ${resolved.mask}` : 'No mask';
 }
 
 function accountDisplayLabel(account) {
@@ -953,9 +869,8 @@ async function saveDeleteLabel() {
 }
 
 function openAddLabelModal(account) {
-  const existingLabelIds = labelsForAccount(account).map(label => label._id);
   addLabelTargetAccount.value = account;
-  selectedLabelIds.value = [...existingLabelIds];
+  selectedLabelIds.value = [];
   showAddLabelModal.value = true;
   activeAccountMenuId.value = '';
 }
@@ -1092,27 +1007,25 @@ async function saveAddLabel() {
     return;
   }
 
-  const selectedSet = new Set(selectedLabelIds.value);
+  const selectedIds = [...new Set(selectedLabelIds.value)];
+  if (!selectedIds.length) {
+    return;
+  }
+
   const changedGroupIds = [];
 
-  for (const label of sortedLabelGroups.value) {
+  for (const labelId of selectedIds) {
+    const label = sortedLabelGroups.value.find(existingLabel => existingLabel._id === labelId);
+    if (!label) {
+      continue;
+    }
+
     const currentlyAssigned = (label.accounts || []).some(account => accountsMatch(account, targetAccount));
-    const shouldBeAssigned = selectedSet.has(label._id);
-
-    if (currentlyAssigned === shouldBeAssigned) {
+    if (currentlyAssigned) {
       continue;
     }
 
-    if (shouldBeAssigned) {
-      const nextAccounts = [...(label.accounts || []), targetAccount];
-      const outcome = await persistLabelAccounts(label, nextAccounts);
-      if (outcome) {
-        changedGroupIds.push(label._id);
-      }
-      continue;
-    }
-
-    const nextAccounts = (label.accounts || []).filter(account => !accountsMatch(account, targetAccount));
+    const nextAccounts = [...(label.accounts || []), targetAccount];
     const outcome = await persistLabelAccounts(label, nextAccounts);
     if (outcome) {
       changedGroupIds.push(label._id);
@@ -1132,31 +1045,13 @@ async function removeLabelFromAccount(account, labelGroup) {
 }
 
 function openCreateLabelModal() {
-  const targetAccountId = accountKey(addLabelTargetAccount.value);
   newLabelInput.value = '';
-  newLabelSelectedAccountIds.value = targetAccountId ? [targetAccountId] : [];
-  showCreateLabelDisabledAccounts.value = true;
   showCreateLabelModal.value = true;
 }
 
 function closeCreateLabelModal() {
   showCreateLabelModal.value = false;
   newLabelInput.value = '';
-  newLabelSelectedAccountIds.value = [];
-  showCreateLabelDisabledAccounts.value = false;
-}
-
-function toggleCreateLabelAccount(accountId) {
-  if (!accountId) {
-    return;
-  }
-
-  if (newLabelSelectedAccountIds.value.includes(accountId)) {
-    newLabelSelectedAccountIds.value = newLabelSelectedAccountIds.value.filter(id => id !== accountId);
-    return;
-  }
-
-  newLabelSelectedAccountIds.value = [...newLabelSelectedAccountIds.value, accountId];
 }
 
 async function saveCreateLabel() {
@@ -1164,9 +1059,13 @@ async function saveCreateLabel() {
     return;
   }
 
+  const targetAccount = addLabelTargetAccount.value;
+  if (!targetAccount) {
+    return;
+  }
+
   const nextName = newLabelInput.value.trim();
-  const selectedIds = new Set(newLabelSelectedAccountIds.value);
-  const selectedAccounts = sortedAccounts.value.filter(account => selectedIds.has(accountKey(account)));
+  const selectedAccounts = [targetAccount];
 
   const newGroup = {
     _id: '',
@@ -1192,13 +1091,10 @@ async function saveCreateLabel() {
     created.isLabel = true;
     state.allUserGroups.push(created);
     state.allUserGroups.sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
-
-    if (!selectedLabelIds.value.includes(created._id)) {
-      selectedLabelIds.value = [...selectedLabelIds.value, created._id];
-    }
   }
 
   closeCreateLabelModal();
+  closeAddLabelModal();
 }
 
 async function refreshSelectedGroupIfNeeded(changedGroupIds = []) {
