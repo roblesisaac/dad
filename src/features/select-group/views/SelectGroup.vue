@@ -451,18 +451,36 @@
     >
       <template #content>
         <div class="py-2">
+          <div v-if="alreadyInGroupsCount > 0" class="px-6 py-4 border-b-2 border-gray-50">
+            <p class="text-[10px] font-black uppercase tracking-widest text-gray-400">
+              Already in {{ alreadyInGroupsCount }} group{{ alreadyInGroupsCount > 1 ? 's' : '' }}
+            </p>
+          </div>
+
           <div v-if="groupsAvailableForAccount.length" class="border-b-2 border-gray-50">
             <button
-              v-for="group in groupsAvailableForAccount"
-              :key="group._id"
+              v-for="groupOption in groupsAvailableForAccount"
+              :key="groupOption.group._id"
               class="w-full px-6 py-4 text-left hover:bg-gray-50/50 transition-colors"
-              :class="selectedTargetGroupId === group._id ? 'bg-gray-50' : ''"
+              :class="[
+                selectedTargetGroupId === groupOption.group._id ? 'bg-gray-50' : '',
+                groupOption.alreadyInGroup ? 'opacity-60 cursor-not-allowed hover:bg-white' : ''
+              ]"
               type="button"
-              @click="selectedTargetGroupId = group._id"
+              @click="selectTargetGroup(groupOption)"
             >
               <div class="flex items-center justify-between">
-                <span class="text-base font-black text-gray-900 uppercase tracking-tight">{{ group.name }}</span>
-                <Check v-if="selectedTargetGroupId === group._id" class="w-4 h-4 text-black" />
+                <span class="text-base font-black text-gray-900 uppercase tracking-tight">{{ groupOption.group.name }}</span>
+                <span
+                  v-if="groupOption.alreadyInGroup"
+                  class="text-[10px] font-black uppercase tracking-widest text-gray-400"
+                >
+                  Already In Group
+                </span>
+                <Check
+                  v-else-if="selectedTargetGroupId === groupOption.group._id"
+                  class="w-4 h-4 text-black"
+                />
               </div>
             </button>
           </div>
@@ -520,7 +538,7 @@
         </div>
       </template>
       <template #content>
-        <div class="px-6 py-8">
+        <div class="px-6 py-8 border-b-2 border-gray-50">
           <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
             Group Name
           </label>
@@ -531,6 +549,50 @@
             placeholder="New group name"
           />
         </div>
+
+        <div class="py-2">
+          <div v-for="account in newGroupEnabledAccounts" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
+            <div class="flex flex-col min-w-0 pr-4">
+              <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
+              <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+            </div>
+            <Switch
+              :model-value="true"
+              :id="`new-group-enabled-${accountKey(account)}`"
+              @update:model-value="toggleNewGroupAccountSelection(accountKey(account))"
+            />
+          </div>
+
+          <div class="border-t-2 border-gray-50">
+            <button
+              class="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50/50 transition-colors group focus:outline-none"
+              type="button"
+              @click="showNewGroupDisabledAccounts = !showNewGroupDisabledAccounts"
+            >
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-widest text-black">Disabled Accounts</span>
+                <span class="text-[10px] font-black text-gray-300">{{ newGroupDisabledAccounts.length }}</span>
+              </div>
+              <ChevronDown v-if="showNewGroupDisabledAccounts" class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+              <ChevronRight v-else class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+            </button>
+          </div>
+
+          <div v-if="showNewGroupDisabledAccounts">
+            <div v-for="account in newGroupDisabledAccounts" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
+              <div class="flex flex-col min-w-0 pr-4">
+                <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
+                <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+              </div>
+              <Switch
+                :model-value="false"
+                :id="`new-group-disabled-${accountKey(account)}`"
+                @update:model-value="toggleNewGroupAccountSelection(accountKey(account))"
+              />
+            </div>
+          </div>
+        </div>
+
         <div class="px-6 py-8 border-t-2 border-gray-50 flex items-center gap-3">
           <button
             @click="closeCreateGroupFromAccountModal"
@@ -541,12 +603,17 @@
           </button>
           <button
             @click="saveCreateGroupFromAccount"
-            class="flex-grow px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
+            class="flex-grow px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all disabled:opacity-40"
+            :disabled="!canSaveNewGroup"
             type="button"
           >
             Save
           </button>
         </div>
+
+        <p v-if="newGroupSelectedAccountIds.length < 2" class="px-6 pb-6 text-[10px] font-black uppercase tracking-widest text-gray-400">
+          Select at least 2 accounts to create a group
+        </p>
       </template>
     </BaseModal>
   </div>
@@ -696,6 +763,8 @@ const selectedAccountIds = ref([]);
 const showDisabledAccounts = ref(false);
 const selectedTargetGroupId = ref('');
 const newGroupInput = ref('');
+const newGroupSelectedAccountIds = ref([]);
+const showNewGroupDisabledAccounts = ref(false);
 
 const renameModalTitle = computed(() => {
   if (currentRowAction.value === 'rename-account') {
@@ -721,10 +790,37 @@ const targetAccountForAction = computed(() => {
 });
 
 const groupsAvailableForAccount = computed(() => {
-  return state.allUserGroups
+  const targetAccount = targetAccountForAction.value;
+  const baseGroups = state.allUserGroups
     .filter((group) => Array.isArray(group.accounts) && group.accounts.length > 1)
     .filter((group) => group._id !== actionTarget.value?._id)
     .sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+
+  return baseGroups.map((group) => {
+    const alreadyInGroup = Boolean(
+      targetAccount && (group.accounts || []).some((groupAccount) => accountsMatch(groupAccount, targetAccount))
+    );
+
+    return { group, alreadyInGroup };
+  });
+});
+
+const alreadyInGroupsCount = computed(() => {
+  return groupsAvailableForAccount.value.filter(groupOption => groupOption.alreadyInGroup).length;
+});
+
+const newGroupEnabledAccounts = computed(() => {
+  const selectedIds = new Set(newGroupSelectedAccountIds.value);
+  return state.allUserAccounts.filter(account => selectedIds.has(accountKey(account)));
+});
+
+const newGroupDisabledAccounts = computed(() => {
+  const selectedIds = new Set(newGroupSelectedAccountIds.value);
+  return state.allUserAccounts.filter(account => !selectedIds.has(accountKey(account)));
+});
+
+const canSaveNewGroup = computed(() => {
+  return newGroupInput.value.trim().length > 0 && newGroupSelectedAccountIds.value.length >= 2;
 });
 
 const enabledAccountsForEditing = computed(() => {
@@ -879,6 +975,8 @@ function closeAddToGroupModal() {
 function closeCreateGroupFromAccountModal() {
   showCreateGroupFromAccountModal.value = false;
   newGroupInput.value = '';
+  newGroupSelectedAccountIds.value = [];
+  showNewGroupDisabledAccounts.value = false;
 }
 
 function handleRowAction(payload) {
@@ -923,6 +1021,14 @@ function handleRowAction(payload) {
   }
 }
 
+function selectTargetGroup(groupOption) {
+  if (groupOption?.alreadyInGroup) {
+    return;
+  }
+
+  selectedTargetGroupId.value = groupOption?.group?._id || '';
+}
+
 function toggleAccountSelection(accountId) {
   if (!accountId) return;
 
@@ -932,6 +1038,17 @@ function toggleAccountSelection(accountId) {
   }
 
   selectedAccountIds.value = [...selectedAccountIds.value, accountId];
+}
+
+function toggleNewGroupAccountSelection(accountId) {
+  if (!accountId) return;
+
+  if (newGroupSelectedAccountIds.value.includes(accountId)) {
+    newGroupSelectedAccountIds.value = newGroupSelectedAccountIds.value.filter(id => id !== accountId);
+    return;
+  }
+
+  newGroupSelectedAccountIds.value = [...newGroupSelectedAccountIds.value, accountId];
 }
 
 async function saveRename() {
@@ -1044,19 +1161,23 @@ function openCreateGroupFromAccountModal() {
   showCreateGroupFromAccountModal.value = true;
   const accountName = targetAccountForAction.value?.name || 'Group';
   newGroupInput.value = `New ${accountName}`;
+  const targetAccountId = accountKey(targetAccountForAction.value);
+  newGroupSelectedAccountIds.value = targetAccountId ? [targetAccountId] : [];
+  showNewGroupDisabledAccounts.value = true;
 }
 
 async function saveCreateGroupFromAccount() {
-  const account = targetAccountForAction.value;
   const groupName = newGroupInput.value.trim();
-  if (!account || !groupName) return;
+  if (!canSaveNewGroup.value) return;
 
   const nextSort = state.allUserGroups.reduce(
     (maxSort, group) => Math.max(maxSort, numberOrZero(group.sort)),
     -1
   ) + 1;
 
-  const payload = buildGroupUpdatePayload(groupName, '', [account]);
+  const selectedIds = new Set(newGroupSelectedAccountIds.value);
+  const selectedAccounts = state.allUserAccounts.filter(account => selectedIds.has(accountKey(account)));
+  const payload = buildGroupUpdatePayload(groupName, '', selectedAccounts);
   const createdGroup = await groupsAPI.createGroup({
     ...payload,
     isSelected: false,
