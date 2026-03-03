@@ -23,7 +23,7 @@
           <button
             v-else
             @click="emit('navigate-tab')"
-            class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+            class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
             type="button"
           >
             {{ selectedGroupLabel }}
@@ -42,7 +42,7 @@
           <button
             v-else
             @click="emit('navigate-category')"
-            class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+            class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
             type="button"
           >
             {{ selectedTabLabel }}
@@ -78,7 +78,10 @@
           <Info class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </button>
       </div>
-      <SelectDate v-if="!isGroupSelectorView" />
+      <SelectDate
+        v-if="!isGroupSelectorView"
+        class="clickable-date-selector"
+      />
       <span v-else>NET WORTH</span>
     </div>
 
@@ -111,7 +114,7 @@
             <p class="text-sm leading-relaxed text-[var(--theme-text)]">
               {{ headerInfo.summary }}
             </p>
-            <ul class="space-y-1.5">
+            <ul v-if="headerInfo.details" class="space-y-1.5">
               <li
                 v-for="detail in headerInfo.details"
                 :key="detail"
@@ -129,6 +132,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
 import { Home, Info, X } from 'lucide-vue-next';
@@ -156,6 +160,7 @@ const isCategoryDetailView = computed(() => props.view === 'category-detail');
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
 const selectedCategoryLabel = computed(() => state.selected.category || 'Category');
+const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
 
 function numberOrZero(value) {
   const parsed = Number(value);
@@ -269,17 +274,70 @@ const headerInfo = computed(() => {
   if (isCategoryDetailView.value) {
     return {
       title: 'Category Total',
-      summary: 'This is the total for the selected category in the active date range.',
-      details: ['Use the date selector below to change the range.']
+      summary: `This is the total for ${selectedCategoryLabel.value} in ${activeDateRangeLabel.value}.`
     };
   }
 
   return {
     title: 'Tab Total',
-    summary: 'This is the total for the selected tab in the active date range.',
-    details: ['Use the date selector below to change the range.']
+    summary: `This is the total for ${selectedTabLabel.value} in ${activeDateRangeLabel.value}.`,
+    details: ['Click the date selector below to change the range.']
   };
 });
+
+function parseDateForSummary(value) {
+  if (!value) return null;
+
+  if (value === 'firstOfMonth') {
+    return startOfMonth(new Date());
+  }
+
+  if (value === 'firstOfYear') {
+    return startOfYear(new Date());
+  }
+
+  if (value === 'today') {
+    return new Date();
+  }
+
+  if (value instanceof Date) {
+    return isValid(value) ? value : null;
+  }
+
+  const parsed = parseISO(String(value));
+  return isValid(parsed) ? parsed : null;
+}
+
+function formatDateLabel(date, includeYear = false) {
+  return format(date, includeYear ? 'MMM d yyyy' : 'MMM d');
+}
+
+function formatActiveDateRange(startValue, endValue) {
+  const startDate = parseDateForSummary(startValue);
+  const endDate = parseDateForSummary(endValue);
+
+  if (!startDate && !endDate) {
+    return 'the selected date range';
+  }
+
+  if (startDate && !endDate) {
+    return `the range from ${formatDateLabel(startDate, true)}`;
+  }
+
+  if (!startDate && endDate) {
+    return `the range through ${formatDateLabel(endDate, true)}`;
+  }
+
+  if (startDate.getTime() === endDate.getTime()) {
+    return formatDateLabel(startDate, true);
+  }
+
+  if (isSameYear(startDate, endDate)) {
+    return `${formatDateLabel(startDate)} - ${formatDateLabel(endDate, true)}`;
+  }
+
+  return `${formatDateLabel(startDate, true)} - ${formatDateLabel(endDate, true)}`;
+}
 
 function openHeaderInfoModal() {
   isHeaderInfoModalOpen.value = true;
@@ -305,6 +363,38 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.clickable-underline {
+  text-decoration: none;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: left calc(100% - 0.04em);
+  padding-bottom: 0.18em;
+  opacity: 0.8;
+  transition: opacity 160ms ease;
+}
+
+.clickable-underline:hover,
+.clickable-underline:focus-visible {
+  opacity: 1;
+}
+
+:deep(.clickable-date-selector > button > span:first-child) {
+  text-decoration: none;
+  background-image: radial-gradient(circle, currentColor 1px, transparent 1.2px);
+  background-size: 6px 2px;
+  background-repeat: repeat-x;
+  background-position: left calc(100% - 0.04em);
+  padding-bottom: 0.18em;
+  opacity: 0.8;
+  transition: opacity 160ms ease;
+}
+
+:deep(.clickable-date-selector > button:hover > span:first-child),
+:deep(.clickable-date-selector > button:focus-visible > span:first-child) {
+  opacity: 1;
+}
+
 .header-info-trigger {
   background-color: inherit;
 }
