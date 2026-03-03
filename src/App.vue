@@ -21,21 +21,15 @@ const showNav = computed(() => {
   // Always hide if off-canvas links are showing
   if (State.showingOffCanvasLinks) return false;
   
-  // If route meta is explicitly set to hide nav, hide it
-  if (route.meta.hideNav) return false;
-  
-  // During initial load, route meta might be unresolved.
-  // Check window location directly to prevent flash.
+  // User requested to only show on path '/'
+  // We check window.location.pathname directly because route.path 
+  // can default to '/' during initial mounting before the router is ready.
   const path = window.location.pathname;
-  if (
-    path.startsWith('/dashboard') || 
-    path.startsWith('/reports') || 
-    path.startsWith('/records')
-  ) {
-    return false;
-  }
+  
+  // Force update when route changes
+  const _routePath = route.path; 
 
-  return true;
+  return path === '/';
 });
 </script>
 

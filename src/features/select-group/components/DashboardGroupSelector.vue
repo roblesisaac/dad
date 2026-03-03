@@ -7,7 +7,7 @@
       data-menu-surface
     >
       <button type="button" class="selector-menu-item" @click.stop="openViewLabelAccounts(activeLabelGroup)">
-        View Accounts In Label
+        Edit Accounts
       </button>
       <button type="button" class="selector-menu-item" @click.stop="openRenameLabel(activeLabelGroup)">
         Rename
@@ -39,6 +39,12 @@
                   <div class="min-w-0 flex-1">
                     <div class="text-base font-black uppercase tracking-tight truncate selector-text">
                       {{ accountDisplayLabel(element) }}
+                    </div>
+                    <div
+                      v-if="accountSubtitleText(element)"
+                      class="mt-1 text-[10px] font-black tracking-[0.16em] truncate selector-muted"
+                    >
+                      {{ accountSubtitleText(element) }}
                     </div>
                   </div>
                 </div>
@@ -97,6 +103,13 @@
                       </div>
                     </div>
                   </div>
+                </div>
+
+                <div
+                  v-if="accountSubtitleText(account)"
+                  class="mt-1 text-[10px] font-black tracking-[0.16em] truncate selector-muted"
+                >
+                  {{ accountSubtitleText(account) }}
                 </div>
 
               </div>
@@ -287,7 +300,7 @@
       v-if="showViewLabelAccountsModal"
       :is-open="showViewLabelAccountsModal"
       size="md"
-      title="View Accounts In Label"
+      title="Edit Accounts"
       @close="closeViewLabelAccountsModal"
     >
 
@@ -681,6 +694,30 @@ function accountDisplayLabel(account) {
 
   const resolved = resolveAccount(account) || account;
   return resolved?.official_name || resolved?.officialName || resolved?.name || resolved?.mask || 'Account';
+}
+
+function accountSubtitleText(account) {
+  const resolved = resolveAccount(account) || account;
+  const info = typeof resolved?.info === 'string' ? resolved.info.trim() : '';
+  const displayLabel = accountDisplayLabel(account);
+  const normalizedDisplayLabel = typeof displayLabel === 'string'
+    ? displayLabel.trim().toLowerCase()
+    : '';
+
+  let mask = '';
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = String(resolved.mask).trim();
+  }
+
+  if (mask && normalizedDisplayLabel === mask.toLowerCase()) {
+    mask = '';
+  }
+
+  if (info && mask) {
+    return `${info} · ${mask}`;
+  }
+
+  return info || mask;
 }
 
 function accountNetBalance(account) {
