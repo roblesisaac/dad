@@ -1,95 +1,29 @@
 <template>
   <div :class="containerClasses">
     <template v-if="isDashboardVariant">
-      <div class="w-full">
-
-        <div v-if="dashboardGroups.length">
-          <Draggable
-            v-if="dashboardEditMode"
-            v-model="state.allUserGroups"
-            v-bind="dragOptions"
-            handle=".handler-group"
-            @end="updateDashboardGroupSorting"
-            class="w-full"
-            item-key="_id"
-          >
-            <template #item="{element}">
-              <GroupRow
-                :key="element._id"
-                :element="element"
-                variant="dashboard"
-                :edit-mode="dashboardEditMode"
-                :show-actions="!dashboardEditMode"
-                @select-group="handleSelectGroup(element)"
-                @row-action="handleRowAction"
-              />
-            </template>
-          </Draggable>
-
-          <div v-else>
-            <GroupRow
-              v-for="group in dashboardGroups"
-              :key="group._id"
-              :element="group"
-              variant="dashboard"
-              :show-actions="!dashboardEditMode"
-              @select-group="handleSelectGroup(group)"
-              @row-action="handleRowAction"
-            />
-          </div>
-        </div>
-        <div v-else class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
-          No accounts
-        </div>
-
-        <div class="border-t-2 border-gray-50">
-          <button
-            @click="goToOnboarding"
-            class="w-full px-6 py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
-          >
-            <span class="text-base font-black text-gray-900 uppercase tracking-tight">Re-Sync All</span>
-            <RefreshCw class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
-          </button>
-          <button
-            @click="handleManageBanks"
-            class="w-full px-6 py-6 border-t-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
-          >
-            <span class="text-base font-black text-gray-900 uppercase tracking-tight">Manage Banks</span>
-            <Building class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
-          </button>
-          <button
-          class="w-full px-6 py-6 border-b-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
-          @click="toggleDashboardReorder"
-        >
-          <span class="text-base font-black text-gray-900 uppercase tracking-tight">
-            {{ dashboardEditMode ? 'Done Rearranging' : 'Rearrange Accounts' }}
-          </span>
-          <GripVertical class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
-        </button>
-        </div>
-      </div>
+      <DashboardGroupSelector @group-selected="emit('group-selected', $event)" />
     </template>
 
     <template v-else>
       <!-- Net-worth Header -->
-      <div class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between">
-        <h4 class="text-[10px] font-black uppercase tracking-widest text-gray-400">Total Net Balance</h4>
-        <div class="text-xl font-black text-black tracking-tight">
+      <div class="py-5 border-b theme-border flex items-center justify-between">
+        <h4 class="text-[10px] font-black uppercase tracking-widest theme-text-muted">Total Net Balance</h4>
+        <div class="text-xl font-black theme-text tracking-tight">
           <NetBalance :accounts="state.allUserAccounts" :digits="0" />
         </div>
       </div>
 
       <!-- Custom Groups Section -->
-      <div class="px-6 py-4">
+      <div class="py-4">
         <div
           class="flex items-center justify-between mb-4 cursor-pointer group"
           @click="toggleCustomGroups"
         >
           <div class="flex items-center gap-2">
-            <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Banking Groups</h2>
-            <span class="text-[10px] font-black text-gray-300">{{ customGroups.length }}</span>
+            <h2 class="text-[10px] font-black uppercase tracking-widest theme-text">Banking Groups</h2>
+            <span class="text-[10px] font-black theme-text-muted">{{ customGroups.length }}</span>
           </div>
-          <div class="text-gray-300 group-hover:text-black transition-colors">
+          <div class="theme-text-muted group-hover:theme-text transition-colors">
             <ChevronDown v-if="showCustomGroups" class="w-4 h-4" />
             <ChevronRight v-else class="w-4 h-4" />
           </div>
@@ -116,7 +50,7 @@
             </template>
           </Draggable>
 
-          <div v-if="customGroups.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+          <div v-if="customGroups.length === 0" class="py-8 text-center text-xs font-bold theme-text-muted uppercase tracking-widest">
             No custom groups
           </div>
 
@@ -124,7 +58,7 @@
           <div v-if="editMode" class="mt-4">
             <button
               @click="handleCreateNewGroup"
-              class="group w-full px-6 py-3 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] flex items-center justify-center gap-2 active:shadow-none active:translate-x-0.5 active:translate-y-0.5"
+              class="theme-btn-primary group w-full py-3 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2"
             >
               <PlusCircle class="w-3.5 h-3.5" />
               Create Group
@@ -134,16 +68,16 @@
       </div>
 
       <!-- Bank Accounts Section -->
-      <div class="px-6 py-4 border-t-2 border-gray-50">
+      <div class="py-4 border-t theme-border">
         <div
           class="flex items-center justify-between mb-4 cursor-pointer group"
           @click="toggleBankAccounts"
         >
           <div class="flex items-center gap-2">
-            <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Raw Accounts</h2>
-            <span class="text-[10px] font-black text-gray-300">{{ bankAccounts.length }}</span>
+            <h2 class="text-[10px] font-black uppercase tracking-widest theme-text">Raw Accounts</h2>
+            <span class="text-[10px] font-black theme-text-muted">{{ bankAccounts.length }}</span>
           </div>
-          <div class="text-gray-300 group-hover:text-black transition-colors">
+          <div class="theme-text-muted group-hover:theme-text transition-colors">
             <ChevronDown v-if="showBankAccounts" class="w-4 h-4" />
             <ChevronRight v-else class="w-4 h-4" />
           </div>
@@ -170,18 +104,18 @@
             </template>
           </Draggable>
 
-          <div v-if="bankAccounts.length === 0" class="px-4 py-8 text-center text-xs font-bold text-gray-300 uppercase tracking-widest">
+          <div v-if="bankAccounts.length === 0" class="py-8 text-center text-xs font-bold theme-text-muted uppercase tracking-widest">
             No bank accounts
           </div>
         </div>
       </div>
 
       <!-- Management Actions -->
-      <div v-if="!editMode" class="px-6 py-6 border-t-2 border-gray-100 bg-gray-50/30">
+      <div v-if="!editMode" class="py-6 border-t theme-border bg-soft">
         <div class="grid grid-cols-2 gap-3">
           <button
             @click="goToOnboarding"
-            class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
+            class="px-4 py-4 theme-bg border theme-border hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest theme-text-muted hover:theme-text transition-all flex flex-col items-center justify-center gap-2 text-center"
           >
             <RefreshCw class="w-4 h-4" />
             Re-Sync All
@@ -189,7 +123,7 @@
 
           <button
             @click="handleManageBanks"
-            class="px-4 py-4 bg-white border-2 border-gray-100 hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all flex flex-col items-center justify-center gap-2 text-center"
+            class="px-4 py-4 theme-bg-element border theme-border hover:border-black rounded-2xl text-[10px] font-black uppercase tracking-widest theme-text-muted hover:theme-text transition-all flex flex-col items-center justify-center gap-2 text-center"
           >
             <Building class="w-4 h-4" />
             Manage Banks
@@ -227,45 +161,33 @@
       v-if="showRenameModal"
       :is-open="showRenameModal"
       size="md"
+      :title="renameModalTitle"
       @close="closeRenameModal"
     >
-      <template #header>
-        <div class="px-6 py-6 border-b-2 border-gray-50 flex items-center justify-between">
-          <h2 class="text-[10px] font-black uppercase tracking-widest text-black">
-            {{ renameModalTitle }}
-          </h2>
-          <button
-            @click="closeRenameModal"
-            class="p-2 hover:bg-gray-100 rounded-xl transition-colors text-gray-400 hover:text-black focus:outline-none"
-            type="button"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-      </template>
+    
       <template #content>
         <div class="px-6 py-8">
-          <label class="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 px-1">
+          <label class="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 px-1">
             Name
           </label>
           <input
             v-model="renameInput"
             type="text"
-            class="w-full px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-black tracking-tight placeholder:text-gray-200 focus:outline-none focus:border-black transition-all"
+            class="w-full px-5 py-4 theme-bg-element border theme-border rounded-2xl text-base font-black tracking-tight theme-text-placeholder focus:outline-none focus:border-black transition-all"
             :placeholder="renamePlaceholder"
           />
         </div>
-        <div class="px-6 py-8 border-t-2 border-gray-50 flex items-center gap-3">
+        <div class="py-8 border-t theme-border flex items-center gap-3">
           <button
             @click="closeRenameModal"
-            class="flex-grow px-6 py-4 bg-gray-50 hover:bg-gray-100 text-gray-400 hover:text-black text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
+            class="flex-grow px-6 py-4 bg-soft hover:bg-[var(--theme-bg-subtle)] theme-text-muted hover:theme-text text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
             type="button"
           >
             Cancel
           </button>
           <button
             @click="saveRename"
-            class="flex-grow px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
+            class="flex-grow px-6 py-4 theme-btn-primary hover:opacity-80 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all"
             type="button"
           >
             Save
@@ -630,6 +552,7 @@ import { useDraggable } from '@/shared/composables/useDraggable';
 
 import GroupRow from '../components/GroupRow.vue';
 import NetBalance from '../components/NetBalance.vue';
+import DashboardGroupSelector from '../components/DashboardGroupSelector.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import Switch from '@/shared/components/Switch.vue';
 import {
@@ -678,10 +601,10 @@ const dashboardEditMode = ref(false);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
-    return 'bg-white w-full';
+    return 'w-full';
   }
 
-  return 'bg-white max-h-[80vh] overflow-y-auto w-full';
+  return 'theme-bg max-h-[80vh] overflow-y-auto w-full';
 });
 const dashboardGroups = computed(() => {
   return [...state.allUserGroups].sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
@@ -1080,11 +1003,15 @@ async function saveDuplicate() {
 
   const createdGroup = await groupsAPI.createGroup({
     ...newGroupPayload,
+    isLabel: typeof sourceGroup.isLabel === 'boolean' ? sourceGroup.isLabel : (sourceGroup.accounts || []).length > 1,
     isSelected: false,
     sort: nextSort
   });
 
   if (createdGroup) {
+    if (typeof createdGroup.isLabel !== 'boolean') {
+      createdGroup.isLabel = typeof sourceGroup.isLabel === 'boolean' ? sourceGroup.isLabel : (sourceGroup.accounts || []).length > 1;
+    }
     state.allUserGroups.push(createdGroup);
     state.allUserGroups.sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
   }
@@ -1180,11 +1107,15 @@ async function saveCreateGroupFromAccount() {
   const payload = buildGroupUpdatePayload(groupName, '', selectedAccounts);
   const createdGroup = await groupsAPI.createGroup({
     ...payload,
+    isLabel: true,
     isSelected: false,
     sort: nextSort
   });
 
   if (createdGroup) {
+    if (typeof createdGroup.isLabel !== 'boolean') {
+      createdGroup.isLabel = true;
+    }
     state.allUserGroups.push(createdGroup);
     state.allUserGroups.sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
   }
@@ -1288,6 +1219,41 @@ watch(() => banks.value.length, (newCount) => {
 </script>
 
 <style scoped>
+.theme-bg {
+  background-color: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+.theme-bg-element {
+  background-color: var(--theme-bg);
+}
+
+.theme-btn-primary {
+  background-color: var(--theme-btn-primary-bg);
+  color: var(--theme-btn-primary-text);
+}
+
+.theme-text-placeholder::placeholder {
+  color: var(--theme-text-soft);
+  opacity: 0.5;
+}
+
+.bg-soft {
+  background-color: var(--theme-bg-soft);
+}
+
+.theme-text {
+  color: var(--theme-text);
+}
+
+.theme-text-muted {
+  color: var(--theme-text-soft);
+}
+
+.theme-border {
+  border-color: var(--theme-border);
+}
+
 .edit-mode-container {
   background-color: var(--theme-edit-container-bg);
 }

@@ -3,8 +3,11 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
 import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
 import { useUtils } from '@/shared/composables/useUtils';
+import { computed } from 'vue';
 
 const GROUP_CHANGE_IN_FLIGHT_REQUESTS = new Map();
+const GROUP_LABEL_MIGRATION_CACHE = new Set();
+const GROUP_LABEL_NORMALIZATION_CACHE = new Set();
 
 export function useSelectGroup() {
   const { state } = useDashboardState();
@@ -14,6 +17,108 @@ export function useSelectGroup() {
   const { fetchTransactionsForGroup } = useTransactions();
   const { processAllTabsForSelectedGroup } = useTabProcessing();
 
+  const labelGroups = computed(() => {
+    return state.allUserGroups.filter(group => group?.isLabel === true);
+  });
+
+  const accountContextGroups = computed(() => {
+    return state.allUserGroups.filter(group => group?.isLabel === false);
+  });
+
+  function accountIdentifiers(account) {
+    if (!account) return [];
+    if (typeof account === 'string') return [account];
+
+    return [account._id, account.account_id].filter(Boolean);
+  }
+
+  function accountsMatch(accountA, accountB) {
+    const idsA = accountIdentifiers(accountA);
+    const idsB = new Set(accountIdentifiers(accountB));
+
+    return idsA.some(id => idsB.has(id));
+  }
+
+  function inferIsLabel(group) {
+    const accounts = Array.isArray(group?.accounts) ? group.accounts : [];
+    return accounts.length > 1;
+  }
+
+  async function migrateMissingGroupLabelFlags(groups) {
+    if (!Array.isArray(groups) || !groups.length) {
+      return;
+    }
+
+    const groupsNeedingMigration = groups.filter((group) => {
+      const hasBooleanFlag = typeof group?.isLabel === 'boolean';
+      const cacheKey = String(group?._id || '');
+      return !hasBooleanFlag && cacheKey && !GROUP_LABEL_MIGRATION_CACHE.has(cacheKey);
+    });
+
+    if (!groupsNeedingMigration.length) {
+      return;
+    }
+
+    await Promise.all(groupsNeedingMigration.map(async (group) => {
+      const cacheKey = String(group._id || '');
+      const nextIsLabel = inferIsLabel(group);
+
+      try {
+        await groupsAPI.updateGroup(group._id, { isLabel: nextIsLabel });
+        group.isLabel = nextIsLabel;
+        GROUP_LABEL_MIGRATION_CACHE.add(cacheKey);
+      } catch (error) {
+        console.error(`Failed to migrate isLabel for group ${group?._id}`, error);
+        group.isLabel = nextIsLabel;
+        GROUP_LABEL_MIGRATION_CACHE.add(cacheKey);
+      }
+    }));
+  }
+
+  async function normalizeInconsistentGroupLabelFlags(groups) {
+    if (!Array.isArray(groups) || !groups.length) {
+      return;
+    }
+
+    const groupsToNormalize = groups.filter((group) => {
+      const accounts = Array.isArray(group?.accounts) ? group.accounts : [];
+      const shouldBeLabel = accounts.length > 1;
+      const isInconsistent = group?.isLabel === false && shouldBeLabel;
+      const cacheKey = `${String(group?._id || '')}:false->true`;
+
+      return Boolean(isInconsistent && group?._id && !GROUP_LABEL_NORMALIZATION_CACHE.has(cacheKey));
+    });
+
+    if (!groupsToNormalize.length) {
+      return;
+    }
+
+    await Promise.all(groupsToNormalize.map(async (group) => {
+      const cacheKey = `${String(group?._id || '')}:false->true`;
+
+      try {
+        await groupsAPI.updateGroup(group._id, { isLabel: true });
+        group.isLabel = true;
+        GROUP_LABEL_NORMALIZATION_CACHE.add(cacheKey);
+      } catch (error) {
+        console.error(`Failed to normalize isLabel for group ${group?._id}`, error);
+        group.isLabel = true;
+        GROUP_LABEL_NORMALIZATION_CACHE.add(cacheKey);
+      }
+    }));
+  }
+
+  function getAccountContextGroup(account) {
+    return accountContextGroups.value.find((group) => {
+      const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+      if (groupAccounts.length !== 1) {
+        return false;
+      }
+
+      return groupAccounts.some(groupAccount => accountsMatch(groupAccount, account));
+    }) || null;
+  }
+
   /**
    * Fetch groups and accounts data
    */
@@ -21,6 +126,8 @@ export function useSelectGroup() {
     const { groups, accounts, itemsNeedingReauth } = await groupsAPI.fetchGroupsAndAccounts();
 
     if (groups) {
+      await migrateMissingGroupLabelFlags(groups);
+      await normalizeInconsistentGroupLabelFlags(groups);
       // Sort groups by sort order
       return {
         groups: groups.sort(sortBy('sort')),
@@ -77,6 +184,7 @@ export function useSelectGroup() {
     const newGroupData = {
       accounts: [],
       isSelected: false,
+      isLabel: true,
       name: `New Group ${state.allUserGroups.length}`
     };
 
@@ -226,10 +334,13 @@ export function useSelectGroup() {
   }
 
   return {
+    accountContextGroups,
     createNewGroup,
     deleteGroup,
     fetchGroupsAndAccounts,
     handleGroupChange,
+    getAccountContextGroup,
+    labelGroups,
     selectGroup,
     selectFirstGroup,
     updateGroupName,

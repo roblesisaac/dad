@@ -11,12 +11,11 @@ export function useTabs() {
   /**
    * Select a tab and deselect the currently selected tab
    */
-  async function selectTab(tabToSelect) {
+  function selectTab(tabToSelect) {
     if(tabToSelect.isSelected) {
       return;
     }
 
-    state.isLoading = true;
     const prevSelectedTab = state.selected.tab;
 
     if(prevSelectedTab) {
@@ -30,9 +29,6 @@ export function useTabs() {
     if(processed) {
       tabToSelect.categorizedItems = processed.categorizedItems;
     }
-    
-    await nextTick();
-    state.isLoading = false;
   }
 
   /**

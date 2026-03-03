@@ -160,6 +160,7 @@ class PlaidAccountService extends PlaidBaseService {
             available: Number.isNaN(available) ? 0 : available
           }
         ],
+        isLabel: false,
         name: mask,
         req: { user }
       });

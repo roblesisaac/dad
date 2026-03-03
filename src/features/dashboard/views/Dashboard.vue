@@ -12,8 +12,8 @@
       </div>
 
       <div
-        class="mt-4"
-        :class="showSelectorView ? 'pb-12 sm:pb-16 px-4 sm:px-6' : 'pb-32'"
+        class="mt-4 px-4 "
+        :class="showSelectorView ? 'pb-12 sm:pb-16 sm:px-6' : 'pb-32'"
       >
         <Transition name="fade">
           <div v-if="state.isLoading && !isGroupSelectorView" class="w-full flex justify-center py-20">
@@ -52,7 +52,7 @@
 
       <footer
         v-if="!state.isLoading && shouldShowFooter"
-        class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
+        class="fixed bottom-0 py-2 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
         <div
           class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center"

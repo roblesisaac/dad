@@ -27,7 +27,7 @@
         </div>
         
         <!-- Content Area -->
-        <div :class="isDashboardVariant ? 'flex-1 min-w-0 flex items-center justify-between px-6 py-6' : 'flex-1 min-w-0 flex items-center justify-between'">
+        <div :class="isDashboardVariant ? 'flex-1 min-w-0 flex items-center justify-between py-6' : 'flex-1 min-w-0 flex items-center justify-between'">
             <!-- Left side: Name and details -->
             <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
@@ -184,17 +184,17 @@ const displayName = computed(() => {
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
     return [
-      'relative group bg-white hover:bg-gray-50/50 transition-all duration-300 w-full',
+      'relative group dashboard-row-bg hover:bg-[var(--theme-bg-soft)] transition-all duration-300 w-full',
       props.editMode ? 'cursor-move' : 'cursor-pointer',
-      isSelected.value && !props.editMode ? 'bg-gray-50/30' : ''
+      isSelected.value && !props.editMode ? 'bg-[var(--theme-bg-subtle)]' : ''
     ];
   }
 
   return [
-    'flex items-center bg-white transition-all duration-300 border-2 px-4 py-4 rounded-2xl relative group',
+    'flex items-center group-row-bg transition-all duration-300 py-4 relative group',
     isSelected.value
-      ? 'border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.05)] z-10'
-      : 'border-gray-50 hover:border-gray-200',
+      ? 'selected-row-border z-10'
+      : 'default-row-border',
     props.editMode ? 'edit-mode-row cursor-move' : 'cursor-pointer'
   ];
 });
@@ -244,8 +244,32 @@ watch(props.element, (newVal) => {
 </script>
 
 <style scoped>
+.dashboard-row-bg {
+  background-color: var(--theme-bg);
+}
+
+.group-row-bg {
+  background-color: var(--theme-bg);
+}
+
+.selected-row-border {
+  border-left: 4px solid var(--theme-text);
+}
+
+.default-row-border {
+  border-left: 4px solid transparent;
+}
+
 .edit-mode-row:hover {
   border-color: var(--theme-edit-row-border-hover);
   background-color: var(--theme-edit-row-bg-hover);
+}
+
+h3, span, div {
+  color: var(--theme-text);
+}
+
+.text-gray-300, .text-gray-400, .text-gray-500 {
+  color: var(--theme-text-soft);
 }
 </style>

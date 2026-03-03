@@ -33,6 +33,13 @@ const accountGroupSchema = {
   },
   info: String,
   isSelected: Boolean,
+  isLabel: (value) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    return false;
+  },
   name: String,
   sort: Number,
   label1: 'name',
