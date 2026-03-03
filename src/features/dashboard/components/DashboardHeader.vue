@@ -68,6 +68,7 @@
         {{ formatPrice(headerTotal, { toFixed: 0 }) }}
       </span>
       <SelectDate v-if="!isGroupSelectorView" />
+      <span v-else>NET WORTH</span>
     </div>
   </div>
 </template>

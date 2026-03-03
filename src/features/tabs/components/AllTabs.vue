@@ -109,7 +109,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { ChevronDown, ChevronRight, GripVertical } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
