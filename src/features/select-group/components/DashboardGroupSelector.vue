@@ -74,11 +74,6 @@
                     <div class="text-base font-black uppercase tracking-tight truncate selector-text">
                       {{ accountDisplayLabel(element) }}
                     </div>
-                    <div class="mt-2">
-                      <span class="label-count-badge label-count-badge-static">
-                        {{ labelCountText(element) }}
-                      </span>
-                    </div>
                   </div>
                 </div>
                 <span class="text-base font-black tracking-tight selector-text">
@@ -138,73 +133,6 @@
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  class="mt-2 label-count-badge"
-                  data-menu-surface
-                  @click.stop="toggleAccountLabels(account)"
-                >
-                  <span>{{ labelCountText(account) }}</span>
-                  <ChevronDown
-                    class="w-3.5 h-3.5 label-count-chevron"
-                    :class="{ 'label-count-chevron-open': isAccountLabelsExpanded(account) }"
-                  />
-                </button>
-
-                <div v-if="isAccountLabelsExpanded(account)" class="mt-2">
-                  <div v-if="labelsForAccount(account).length" class="flex flex-wrap gap-2">
-                    <div
-                      v-for="label in labelsForAccount(account)"
-                      :key="`pill-${accountKey(account)}-${label._id}`"
-                      class="relative"
-                      data-menu-surface
-                    >
-                      <div class="label-pill label-pill-clickable" data-menu-surface>
-                        <button
-                          type="button"
-                          class="label-pill-button"
-                          data-menu-surface
-                          @click.stop="handleLabelChipSelect(label)"
-                        >
-                          {{ label.name }}
-                        </button>
-                        <button
-                          type="button"
-                          class="label-pill-menu"
-                          data-menu-surface
-                          @click.stop="toggleAccountLabelMenu(account, label)"
-                        >
-                          <EllipsisVertical class="w-3 h-3" />
-                        </button>
-                      </div>
-
-                      <div
-                        v-if="isAccountLabelMenuOpen(account, label)"
-                        class="selector-menu left-0 mt-2"
-                        data-menu-surface
-                      >
-                        <button
-                          type="button"
-                          class="selector-menu-item"
-                          @click.stop="removeLabelFromAccount(account, label)"
-                        >
-                          Remove
-                        </button>
-                        <button
-                          type="button"
-                          class="selector-menu-item"
-                          @click.stop="openRenameLabel(label)"
-                        >
-                          Rename
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div v-else class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
-                    No labels
-                  </div>
-                </div>
               </div>
 
               <span class="text-base font-black tracking-tight shrink-0 selector-text">

@@ -8,6 +8,7 @@
           :view="dashboardView"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
+          @navigate-category="openCategoryView"
         />
       </div>
 
@@ -277,6 +278,16 @@ function openTabSelector() {
 
   resetCategorySelection();
   dashboardView.value = 'tab';
+}
+
+function openCategoryView() {
+  if (!state.selected.tab) {
+    openTabSelector();
+    return;
+  }
+
+  resetCategorySelection();
+  dashboardView.value = 'category';
 }
 
 function handleGroupSelected() {
