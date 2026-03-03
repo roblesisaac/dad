@@ -90,7 +90,7 @@
         </template>
         <template v-else>
           <span>+</span>
-          New Tab
+          Create New Tab
         </template>
       </button>
     </div>

@@ -64,20 +64,74 @@
     </div>
 
     <div class="flex flex-col items-center justify-center text-center">
-      <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4">
-        {{ formatPrice(headerTotal, { toFixed: 0 }) }}
-      </span>
+      <div class="flex items-center gap-2 sm:gap-3 mb-4">
+        <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter">
+          {{ formatPrice(headerTotal, { toFixed: 0 }) }}
+        </span>
+        <button
+          type="button"
+          class="header-info-trigger inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+          aria-label="What this total means"
+          :aria-expanded="isHeaderInfoModalOpen"
+          @click="openHeaderInfoModal"
+        >
+          <Info class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+        </button>
+      </div>
       <SelectDate v-if="!isGroupSelectorView" />
       <span v-else>NET WORTH</span>
     </div>
+
+    <Teleport to="body">
+      <div
+        v-if="isHeaderInfoModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] px-4"
+        @click.self="closeHeaderInfoModal"
+      >
+        <div
+          class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-bg)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
+          role="dialog"
+          aria-modal="true"
+          :aria-label="headerInfo.title"
+        >
+          <div class="flex items-start justify-between gap-4 border-b border-[var(--theme-border)] px-4 py-3">
+            <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)]">
+              {{ headerInfo.title }}
+            </h3>
+            <button
+              type="button"
+              class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+              aria-label="Close total info"
+              @click="closeHeaderInfoModal"
+            >
+              <X class="h-4 w-4" />
+            </button>
+          </div>
+          <div class="space-y-3 px-4 py-4 text-left">
+            <p class="text-sm leading-relaxed text-[var(--theme-text)]">
+              {{ headerInfo.summary }}
+            </p>
+            <ul class="space-y-1.5">
+              <li
+                v-for="detail in headerInfo.details"
+                :key="detail"
+                class="text-xs leading-relaxed text-[var(--theme-text-soft)]"
+              >
+                {{ detail }}
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { Home } from 'lucide-vue-next';
+import { Home, Info, X } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
@@ -92,6 +146,7 @@ const props = defineProps({
 const emit = defineEmits(['navigate-group', 'navigate-tab', 'navigate-category']);
 const { state } = useDashboardState();
 const { formatPrice } = useUtils();
+const isHeaderInfoModalOpen = ref(false);
 
 const isGroupSelectorView = computed(() => props.view === 'group');
 const isTabSelectorView = computed(() => props.view === 'tab');
@@ -186,4 +241,75 @@ const headerTotal = computed(() => {
   const liveTotal = Number(state.selected.tab?.total);
   return Number.isFinite(liveTotal) ? liveTotal : 0;
 });
+
+const headerInfo = computed(() => {
+  if (isGroupSelectorView.value) {
+    return {
+      title: 'Net Worth',
+      summary: 'This is your total net worth across all connected accounts.',
+      details: [
+        'Non-credit accounts use available balances.',
+        'Credit accounts use current balances and are subtracted.'
+      ]
+    };
+  }
+
+  if (isTabSelectorView.value) {
+    return {
+      title: 'Selected Account Balance',
+      summary: `This is the current net balance for ${selectedGroupLabel.value}.`,
+      details: [
+        'Non-credit accounts use available balances.',
+        'Credit accounts use current balances and are subtracted.',
+        'This value is balance-based and does not use the date range.'
+      ]
+    };
+  }
+
+  if (isCategoryDetailView.value) {
+    return {
+      title: 'Category Total',
+      summary: 'This is the total for the selected category in the active date range.',
+      details: ['Use the date selector below to change the range.']
+    };
+  }
+
+  return {
+    title: 'Tab Total',
+    summary: 'This is the total for the selected tab in the active date range.',
+    details: ['Use the date selector below to change the range.']
+  };
+});
+
+function openHeaderInfoModal() {
+  isHeaderInfoModalOpen.value = true;
+}
+
+function closeHeaderInfoModal() {
+  isHeaderInfoModalOpen.value = false;
+}
+
+function onHeaderInfoEscape(event) {
+  if (event.key === 'Escape' && isHeaderInfoModalOpen.value) {
+    closeHeaderInfoModal();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', onHeaderInfoEscape);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onHeaderInfoEscape);
+});
 </script>
+
+<style scoped>
+.header-info-trigger {
+  background-color: inherit;
+}
+
+[data-theme]:not([data-theme='light']) .header-info-trigger {
+  background-color: var(--theme-bg);
+}
+</style>
