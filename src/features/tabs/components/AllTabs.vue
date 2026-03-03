@@ -3,7 +3,7 @@
     <!-- Enabled Tabs Header -->
     <div
       v-if="!isDashboardVariant"
-      class="px-6 py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between"
+      class="py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between"
     >
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
       <span class="text-[10px] font-black text-gray-300">{{ enabledTabs.length }} enabled</span>
@@ -48,12 +48,12 @@
     </div>
 
     <!-- Disabled Tabs Section -->
-    <div :class="isDashboardVariant ? 'border-t-2 border-gray-50' : 'py-4 border-t-2 border-gray-50'">
+    <div :class="isDashboardVariant ? '' : 'py-4'">
       <button 
         @click="toggleDisabledSection" 
         :class="isDashboardVariant
-          ? 'flex items-center justify-between w-full px-6 py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none'
-          : 'flex items-center justify-between w-full mb-4 px-6 group focus:outline-none'"
+          ? 'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none'
+          : 'flex items-center justify-between w-full mb-4 group focus:outline-none'"
       >
         <div class="flex items-center gap-2">
           <h2 :class="isDashboardVariant ? 'text-base font-black text-gray-900 uppercase tracking-tight' : 'text-[10px] font-black uppercase tracking-widest text-black'">Hidden Tabs</h2>
@@ -80,12 +80,12 @@
     </div>
 
     <!-- Create New Tab Button -->
-    <div :class="isDashboardVariant ? 'border-t-2 border-gray-50' : 'p-6 bg-gray-50/30 border-t-2 border-gray-100'">
+    <div :class="isDashboardVariant ? '' : 'p-6 bg-gray-50/30 border-t-2 border-gray-100'">
       <button 
         @click="handleCreateNew" 
         :class="isDashboardVariant
-          ? 'w-full px-6 py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none'
-          : 'w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
+          ? 'w-full py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none'
+          : 'w-full py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
       >
         <template v-if="isDashboardVariant">
           <span class="text-base font-black text-gray-900 uppercase tracking-tight">New Tab</span>
@@ -100,7 +100,7 @@
   </div>
   <button
   v-if="isDashboardVariant"
-  class="w-full px-6 py-6 border-b-2 border-gray-50 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
+  class="w-full py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
   @click="toggleDashboardReorder"
 >
   <span class="text-base font-black text-gray-900 uppercase tracking-tight">

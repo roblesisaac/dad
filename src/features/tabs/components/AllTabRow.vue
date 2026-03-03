@@ -10,7 +10,7 @@
   <!-- Active Tab Indicator (Left Bar) -->
   <div v-if="isActiveTab && !isEditMode" class="absolute left-0 top-0 bottom-0 w-1 bg-black"></div>
 
-  <div class="flex items-center justify-between px-6 py-5 w-full">
+  <div class="flex items-center justify-between py-5 w-full">
     <div class="flex items-center min-w-0 flex-1">
       <!-- Drag Handle -->
       <div v-if="isEditMode && isEnabled" class="handler-tab cursor-grab text-gray-300 mr-4" @mousedown.stop>
