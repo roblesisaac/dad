@@ -24,55 +24,35 @@
   >
     <template #content>
       <!-- Scrollable content area -->
-      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto">
+      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto bg-[var(--theme-bg)]">
         <!-- Quick Action Buttons -->
-        <div class="mb-8">
-          <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-3 px-2">Quick Select</div>
+        <div class="mb-12">
+          <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-6 px-2 opacity-50">Quick Select</div>
           
-          <div class="grid grid-cols-2 gap-2">
+          <div class="flex flex-col">
             <button 
-              @click="quickSelect('thisYear')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+              v-for="option in quickSelectOptions"
+              :key="option.id"
+              @click="quickSelect(option.id)" 
+              class="w-full flex items-center justify-between px-2 py-6 border-b border-[var(--theme-border)]/10 hover:bg-[var(--theme-bg-soft)] transition-all group"
             >
-              This Year
-            </button>
-            <button 
-              @click="quickSelect('lastYear')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-            >
-              Last Year
-            </button>
-            <button 
-              @click="quickSelect('thisMonth')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-            >
-              This Month
-            </button>
-            <button 
-              @click="quickSelect('lastMonth')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-            >
-              Last Month
-            </button>
-            <button 
-              @click="quickSelect('thisWeek')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-            >
-              This Week
-            </button>
-            <button 
-              @click="quickSelect('today')" 
-              class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-            >
-              Today
+              <span class="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[var(--theme-text)] group-hover:translate-x-1 transition-transform duration-300">
+                {{ option.label }}
+              </span>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300">
+                  Select
+                </span>
+                <ChevronRight class="w-4 h-4 text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300" />
+              </div>
             </button>
           </div>
         </div>
         
         <!-- Custom Date Pickers -->
-        <div class="space-y-6">
+        <div class="space-y-10 pb-8">
           <div>
-            <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-2 px-2">Start Date</div>
+            <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">Start Date</div>
             <DatePicker 
               :date="tempDate" 
               when="start" 
@@ -81,7 +61,7 @@
           </div>
           
           <div>
-            <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-2 px-2">End Date</div>
+            <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">End Date</div>
             <DatePicker 
               :date="tempDate" 
               when="end" 
@@ -92,12 +72,12 @@
       </div>
       
       <!-- Sticky Footer Actions -->
-      <div class="border-t-2 border-gray-100 bg-white/80 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
+      <div class="border-t border-[var(--theme-border)]/20 bg-[var(--theme-bg)]/80 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
         <button 
           @click="onApplyDates" 
-          class="w-full px-6 py-4 bg-black hover:bg-gray-800 text-white text-sm font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] hover:-translate-y-0.5 active:translate-y-0 active:shadow-none"
+          class="w-full px-6 py-5 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-sm font-black uppercase tracking-[0.3em] rounded-2xl transition-all active:scale-[0.98] border border-[var(--theme-border)]/10"
         >
-          Apply Dates
+          Apply Selection
         </button>
       </div>
     </template>
@@ -109,7 +89,7 @@
 import { ref, onMounted } from 'vue';
 import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import { Calendar, ChevronDown } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import { useDate } from '../composables/useDate.js';
 
 // Use the date composable
@@ -123,6 +103,15 @@ const {
 } = useDate();
 
 const showDatePicker = ref(false);
+
+const quickSelectOptions = [
+  { id: 'thisYear', label: 'This Year' },
+  { id: 'lastYear', label: 'Last Year' },
+  { id: 'thisMonth', label: 'This Month' },
+  { id: 'lastMonth', label: 'Last Month' },
+  { id: 'thisWeek', label: 'This Week' },
+  { id: 'today', label: 'Today' },
+];
 
 // Initialize default date range
 onMounted(() => {
