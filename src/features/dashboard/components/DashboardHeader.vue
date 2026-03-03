@@ -167,51 +167,56 @@ function numberOrZero(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function accountIdentifiers(account) {
+  if (!account) {
+    return [];
+  }
+
+  if (typeof account === 'string') {
+    return [account];
+  }
+
+  return [account._id, account.account_id, account.id, account.accountId].filter(Boolean);
+}
+
 function resolveGroupAccount(account) {
-  if (!account) return {};
-  if (account.type) return account;
+  const ids = accountIdentifiers(account);
+  if (!ids.length) {
+    return typeof account === 'object' ? account : null;
+  }
 
   return (
-    state.allUserAccounts.find(
-      (userAccount) =>
-        userAccount._id === account._id || userAccount.account_id === account.account_id
-    ) || account
+    state.allUserAccounts.find((userAccount) => {
+      const userAccountIds = accountIdentifiers(userAccount);
+      return userAccountIds.some(id => ids.includes(id));
+    }) || (typeof account === 'object' ? account : null)
   );
+}
+
+function accountNetBalance(account) {
+  const resolvedAccount = resolveGroupAccount(account) || account;
+  const accountType = resolvedAccount?.type;
+  const availableBalance = numberOrZero(
+    resolvedAccount?.available ?? resolvedAccount?.balances?.available
+  );
+  const currentBalance = numberOrZero(
+    resolvedAccount?.current ?? resolvedAccount?.balances?.current
+  );
+  const effectiveBalance = accountType === 'credit' ? currentBalance : availableBalance;
+
+  return accountType === 'credit' ? -effectiveBalance : effectiveBalance;
 }
 
 const selectedGroupNetBalance = computed(() => {
   const groupAccounts = state.selected.group?.accounts || [];
 
-  return groupAccounts.reduce((accumulator, account) => {
-    const resolvedAccount = resolveGroupAccount(account);
-    const accountType = resolvedAccount?.type;
-    const availableBalance = numberOrZero(
-      resolvedAccount?.available ?? resolvedAccount?.balances?.available
-    );
-    const currentBalance = numberOrZero(
-      resolvedAccount?.current ?? resolvedAccount?.balances?.current
-    );
-    const effectiveBalance = accountType === 'credit' ? currentBalance : availableBalance;
-
-    return accountType === 'credit'
-      ? accumulator - effectiveBalance
-      : accumulator + effectiveBalance;
-  }, 0);
+  return groupAccounts.reduce((accumulator, account) => accumulator + accountNetBalance(account), 0);
 });
 
 const totalNetBalance = computed(() => {
   const allAccounts = state.allUserAccounts || [];
 
-  return allAccounts.reduce((accumulator, account) => {
-    const accountType = account?.type;
-    const availableBalance = numberOrZero(account?.balances?.available ?? account?.available);
-    const currentBalance = numberOrZero(account?.balances?.current ?? account?.current);
-    const effectiveBalance = accountType === 'credit' ? currentBalance : availableBalance;
-
-    return accountType === 'credit'
-      ? accumulator - effectiveBalance
-      : accumulator + effectiveBalance;
-  }, 0);
+  return allAccounts.reduce((accumulator, account) => accumulator + accountNetBalance(account), 0);
 });
 
 const selectedCategoryTotal = computed(() => {

@@ -201,20 +201,9 @@
       v-if="showRenameModal"
       :is-open="showRenameModal"
       size="md"
+      :title="renameModalTitle"
       @close="closeRenameModal"
     >
-      <template #header>
-        <div class="modal-header">
-          <h2 class="modal-title">{{ renameModalTitle }}</h2>
-          <button
-            @click="closeRenameModal"
-            class="modal-close"
-            type="button"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-      </template>
 
       <template #content>
         <div class="px-6 py-8">
@@ -440,21 +429,10 @@
     <BaseModal
       v-if="showCreateLabelModal"
       :is-open="showCreateLabelModal"
+      title="Create New Label"
       size="md"
       @close="closeCreateLabelModal"
     >
-      <template #header>
-        <div class="modal-header">
-          <h2 class="modal-title">Create New Label</h2>
-          <button
-            @click="closeCreateLabelModal"
-            class="modal-close"
-            type="button"
-          >
-            <X class="w-4 h-4" />
-          </button>
-        </div>
-      </template>
 
       <template #content>
         <div class="px-6 py-8">
@@ -1576,8 +1554,8 @@ async function handleBanksDataChanged() {
 
 .modal-input {
   width: 100%;
-  border: 1px solid var(--selector-border);
-  background: var(--selector-bg);
+  border: 1px solid var(--theme-border);
+  background: var(--theme-bg);
   color: var(--selector-text);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
@@ -1615,7 +1593,6 @@ async function handleBanksDataChanged() {
   flex: 1;
   border-radius: 1rem;
   padding: 1rem 1.25rem;
-  font-size: 0.625rem;
   font-weight: 900;
   letter-spacing: 0.2em;
   text-transform: uppercase;
@@ -1625,6 +1602,7 @@ async function handleBanksDataChanged() {
 .modal-button-primary {
   background: var(--theme-btn-primary-bg);
   color: var(--theme-btn-primary-text);
+  border: 1px solid var(--theme-border);
 }
 
 .modal-button-primary:disabled {
@@ -1644,7 +1622,7 @@ async function handleBanksDataChanged() {
 .modal-button-danger {
   background: var(--theme-btn-primary-bg);
   color: var(--theme-btn-primary-text);
-  border: 1px solid var(--selector-border);
+  border: 1px solid var(--theme-border);
 }
 
 .modal-button-danger:disabled {

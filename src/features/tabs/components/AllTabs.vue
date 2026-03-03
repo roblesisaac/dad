@@ -85,7 +85,7 @@
           : 'w-full py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
       >
         <template v-if="isDashboardVariant">
-          <span class="text-base font-black text-gray-900 uppercase tracking-tight">New Tab</span>
+          <span class="text-base font-black text-gray-900 uppercase tracking-tight">Create New Tab</span>
           <span class="text-gray-300 group-hover:text-black transition-colors text-lg leading-none">+</span>
         </template>
         <template v-else>
