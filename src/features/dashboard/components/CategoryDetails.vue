@@ -8,7 +8,7 @@
       type="button"
     >
       <div class="flex items-center gap-4 flex-1 min-w-0">
-        <span class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0">
+        <span v-if="isSelected" class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0">
           {{ categoryItems.length }}
         </span>
         <span class="text-base font-black text-gray-900 uppercase tracking-tight truncate group-hover:text-black transition-colors">
