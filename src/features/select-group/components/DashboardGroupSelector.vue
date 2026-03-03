@@ -37,8 +37,16 @@
                 <div class="flex items-start gap-3 min-w-0 flex-1">
                   <GripVertical class="handler-account w-4 h-4 mt-1 selector-muted cursor-grab" />
                   <div class="min-w-0 flex-1">
-                    <div class="text-base font-black uppercase tracking-tight truncate selector-text">
-                      {{ accountDisplayLabel(element) }}
+                    <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
+                      <span
+                        v-if="accountRowMask(element)"
+                        class="text-base font-black uppercase tracking-tight selector-muted flex-shrink-0"
+                      >
+                        {{ accountRowMask(element) }}
+                      </span>
+                      <div class="text-base font-black uppercase tracking-tight truncate selector-text">
+                        {{ accountDisplayLabel(element) }}
+                      </div>
                     </div>
                     <div
                       v-if="accountSubtitleText(element)"
@@ -74,8 +82,16 @@
             <div class="flex items-start justify-between gap-4">
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 min-w-0">
-                  <div class="text-base font-black uppercase tracking-tight truncate selector-text">
-                    {{ accountDisplayLabel(account) }}
+                  <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
+                    <span
+                      v-if="accountRowMask(account)"
+                      class="text-base font-black uppercase tracking-tight selector-muted flex-shrink-0"
+                    >
+                      {{ accountRowMask(account) }}
+                    </span>
+                    <div class="text-base font-black uppercase tracking-tight truncate selector-text">
+                      {{ accountDisplayLabel(account) }}
+                    </div>
                   </div>
 
                   <div class="row-title-actions flex-shrink-0">
@@ -216,6 +232,15 @@
         </div>
         <div class="modal-footer">
           <button
+            v-if="renameType === 'account'"
+            @click="restoreDefaultAccountName"
+            class="modal-button-secondary"
+            type="button"
+            :disabled="!canRestoreDefaultAccountName"
+          >
+            Restore Default
+          </button>
+          <button
             @click="closeRenameModal"
             class="modal-button-secondary"
             type="button"
@@ -226,7 +251,7 @@
             @click="saveRename"
             class="modal-button-primary"
             type="button"
-            :disabled="!renameInput.trim()"
+            :disabled="!sanitizeAccountText(renameInput)"
           >
             Save
           </button>
@@ -580,6 +605,29 @@ const sortedAccounts = computed(() => {
 const renameModalTitle = computed(() => {
   return renameType.value === 'account' ? 'Rename Account' : 'Rename Label';
 });
+const renameAccountDefaultName = computed(() => {
+  if (renameType.value !== 'account') {
+    return '';
+  }
+
+  const targetGroupAccount = Array.isArray(renameTargetGroup.value?.accounts)
+    ? renameTargetGroup.value.accounts[0]
+    : null;
+  return accountDefaultLabel(targetGroupAccount);
+});
+const canRestoreDefaultAccountName = computed(() => {
+  if (renameType.value !== 'account' || !renameTargetGroup.value?._id) {
+    return false;
+  }
+
+  const defaultName = sanitizeAccountText(renameAccountDefaultName.value);
+  if (!defaultName) {
+    return false;
+  }
+
+  const currentName = sanitizeAccountText(renameTargetGroup.value?.name || '');
+  return normalizedAccountText(currentName) !== normalizedAccountText(defaultName);
+});
 
 const canSaveAddLabel = computed(() => selectedLabelIds.value.length > 0);
 
@@ -724,26 +772,32 @@ function accountDisplayLabel(account) {
   return contextGroupName;
 }
 
-function accountSubtitleText(account) {
+function accountRowMask(account) {
   const resolved = resolveAccount(account) || account;
-  const info = sanitizeAccountText(typeof resolved?.info === 'string' ? resolved.info : '');
-  const displayLabel = accountDisplayLabel(account);
-  const normalizedDisplayLabel = normalizedAccountText(displayLabel);
-
   let mask = '';
+
   if (resolved?.mask !== undefined && resolved?.mask !== null) {
     mask = sanitizeAccountText(String(resolved.mask));
   }
 
-  if (mask && normalizedDisplayLabel === normalizedAccountText(mask)) {
-    mask = '';
+  if (!mask) {
+    return '';
   }
 
-  if (info && mask) {
-    return `${info} · ${mask}`;
+  const displayLabel = accountDisplayLabel(account);
+  const normalizedDisplayLabel = normalizedAccountText(displayLabel);
+  const normalizedMask = normalizedAccountText(mask);
+
+  if (normalizedDisplayLabel.includes(normalizedMask)) {
+    return '';
   }
 
-  return info || mask;
+  return mask;
+}
+
+function accountSubtitleText(account) {
+  const resolved = resolveAccount(account) || account;
+  return sanitizeAccountText(typeof resolved?.info === 'string' ? resolved.info : '');
 }
 
 function accountNetBalance(account) {
@@ -948,7 +1002,7 @@ async function openRenameAccount(account) {
 
   renameType.value = 'account';
   renameTargetGroup.value = accountContextGroup;
-  renameInput.value = accountContextGroup.name || '';
+  renameInput.value = accountDisplayLabel(account);
   showRenameModal.value = true;
   activeAccountMenuId.value = '';
 }
@@ -970,13 +1024,30 @@ function closeRenameModal() {
 
 async function saveRename() {
   const target = renameTargetGroup.value;
-  const nextName = renameInput.value.trim();
+  const nextName = sanitizeAccountText(renameInput.value);
   if (!target?._id || !nextName) {
     return;
   }
 
   await groupsAPI.updateGroup(target._id, { name: nextName });
   target.name = nextName;
+  closeRenameModal();
+}
+
+async function restoreDefaultAccountName() {
+  const target = renameTargetGroup.value;
+  const defaultName = sanitizeAccountText(renameAccountDefaultName.value);
+  if (renameType.value !== 'account' || !target?._id || !defaultName) {
+    return;
+  }
+
+  if (normalizedAccountText(target.name || '') === normalizedAccountText(defaultName)) {
+    return;
+  }
+
+  await groupsAPI.updateGroup(target._id, { name: defaultName });
+  target.name = defaultName;
+  renameInput.value = defaultName;
   closeRenameModal();
 }
 
