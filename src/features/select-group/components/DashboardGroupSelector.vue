@@ -232,11 +232,10 @@
         </div>
         <div class="modal-footer">
           <button
-            v-if="renameType === 'account'"
+            v-if="renameType === 'account' && canRestoreDefaultAccountName"
             @click="restoreDefaultAccountName"
             class="modal-button-secondary"
             type="button"
-            :disabled="!canRestoreDefaultAccountName"
           >
             Restore Default
           </button>
