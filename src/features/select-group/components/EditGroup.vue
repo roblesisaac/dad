@@ -30,7 +30,7 @@
       <div class="border-t-2 border-gray-50 pt-8">
         <div class="px-6 mb-4 flex items-center justify-between">
           <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Accounts In Group</h2>
-          <span class="text-[10px] font-black text-gray-300">{{ props.group.accounts.length }} assigned</span>
+          <span class="text-[10px] font-black text-black">{{ props.group.accounts.length }} assigned</span>
         </div>
         
         <div v-if="props.group.accounts.length > 0">
@@ -41,7 +41,7 @@
           >
             <div class="flex flex-col">
               <span class="text-base font-black text-gray-900 tracking-tight">{{ account.officialName || account.name }}</span>
-              <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+              <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
             </div>
             <Switch 
               :model-value="true" 
@@ -51,7 +51,7 @@
           </div>
         </div>
         
-        <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+        <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">
           No accounts in this group
         </div>
       </div>
@@ -64,7 +64,7 @@
         >
           <div class="flex items-center gap-2">
             <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Available Accounts</h2>
-            <span class="text-[10px] font-black text-gray-300">{{ accountsNotInGroup.length }}</span>
+            <span class="text-[10px] font-black text-black">{{ accountsNotInGroup.length }}</span>
           </div>
           <div class="text-gray-200 group-hover:text-black transition-colors">
             <ChevronDown v-if="showAvailableAccounts" class="w-4 h-4" />
@@ -81,7 +81,7 @@
             >
               <div class="flex flex-col">
                 <span class="text-base font-black text-gray-900 tracking-tight">{{ account.officialName || account.name }}</span>
-                <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+                <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
               </div>
               <Switch 
                 :model-value="false" 
@@ -91,7 +91,7 @@
             </div>
           </div>
           
-          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">
             All accounts assigned
           </div>
         </div>

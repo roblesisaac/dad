@@ -8,7 +8,7 @@
             <div v-if="state.selected.tab && !isEditingTabName" class="relative">
               <button
                 @click="toggleTabActionsMenu"
-                class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all"
+                class="p-2 text-black hover:text-black hover:bg-gray-100 rounded-full transition-all"
                 title="Tab actions"
               >
                 <MoreVertical class="w-5 h-5" />
@@ -67,7 +67,7 @@
         </div>
         <button 
           @click="emit('close')"
-          class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
+          class="p-2 text-black hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
         >
           <X class="w-6 h-6" />
         </button>
@@ -98,7 +98,7 @@
               </div>
               <ChevronDown 
                 :class="[
-                  'w-5 h-5 text-gray-300 transition-all duration-300 group-hover:text-black', 
+                  'w-5 h-5 text-black transition-all duration-300 group-hover:text-black', 
                   collapsedSections[ruleType.id] ? '' : 'rotate-180'
                 ]" 
               />
@@ -131,7 +131,7 @@
                   v-if="getEnabledRulesByType(ruleType.id).length === 0" 
                   class="py-12 px-6 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-3"
                 >
-                  <p class="text-sm font-bold text-gray-300">No active {{ ruleType.name.toLowerCase() }}</p>
+                  <p class="text-sm font-bold text-black">No active {{ ruleType.name.toLowerCase() }}</p>
                 </div>
                 
                 <!-- Draggable Rule List -->
@@ -183,7 +183,7 @@
                     class="w-full flex items-center gap-4 group py-4"
                   >
                     <div class="h-[2px] flex-1 bg-gray-50"></div>
-                    <div class="text-[10px] font-black text-gray-300 group-hover:text-black transition-colors uppercase tracking-[0.3em] flex items-center gap-2">
+                    <div class="text-[10px] font-black text-black group-hover:text-black transition-colors uppercase tracking-[0.3em] flex items-center gap-2">
                        Disabled ({{ getDisabledRulesByType('categorize').length }})
                        <ChevronDown :class="['w-3 h-3 transition-transform', disabledSectionCollapsed ? '' : 'rotate-180']" />
                     </div>

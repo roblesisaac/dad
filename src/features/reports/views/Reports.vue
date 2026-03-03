@@ -8,7 +8,7 @@
           @click="router.push('/dashboard')" 
           class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
         >
-          <ChevronLeft class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+          <ChevronLeft class="w-4 h-4 text-black group-hover:text-black transition-colors" />
           <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
             Dashboard
           </span>
@@ -507,7 +507,7 @@
             <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
               Logout
             </span>
-            <LogOut class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+            <LogOut class="w-4 h-4 text-black group-hover:text-black transition-colors" />
           </button>
         </div>
       </div>

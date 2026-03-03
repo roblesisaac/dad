@@ -68,7 +68,7 @@
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Edit Tab
             </span>
-            <ChevronDown class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
+            <ChevronDown class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
           </button>
 
           <button
@@ -79,7 +79,7 @@
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
               Reports
             </span>
-            <ChevronRight class="w-3.5 h-3.5 text-gray-300 group-hover:text-black transition-colors" />
+            <ChevronRight class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
           </button>
         </div>
       </footer>

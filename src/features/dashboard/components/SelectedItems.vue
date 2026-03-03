@@ -20,7 +20,7 @@
           <div class="flex-shrink-0">
             <div class="w-12 h-12 bg-gray-50 rounded-xl border border-gray-100 flex items-center justify-center overflow-hidden">
               <img v-if="item.logo_url" :src="item.logo_url" class="h-8 w-8 object-contain" alt="Logo" />
-              <div v-else class="text-[10px] font-black text-gray-300 uppercase">TX</div>
+              <div v-else class="text-[10px] font-black text-black uppercase">TX</div>
             </div>
           </div>
           
@@ -46,7 +46,7 @@
             <div class="text-lg font-black tracking-tight" :class="fontColor(item.amount)">
               {{ formatPrice(item.amount) }}
             </div>
-            <div class="text-[9px] font-bold text-gray-300 uppercase tracking-widest">#{{ i + 1 }}</div>
+            <div class="text-[9px] font-bold text-black uppercase tracking-widest">#{{ i + 1 }}</div>
           </div>
         </div>
 

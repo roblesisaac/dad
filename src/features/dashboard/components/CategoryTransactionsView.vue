@@ -14,7 +14,7 @@
           type="button"
         >
           <div class="min-w-0 flex-1 pr-4">
-            <div class="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">
+            <div class="text-[10px] font-black text-black uppercase tracking-widest mb-1">
               {{ transactionDate(item) }}
             </div>
             <div class="text-base font-black text-gray-900 uppercase tracking-tight truncate">
@@ -44,7 +44,7 @@
 
     <div
       v-else
-      class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-gray-300"
+      class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-black"
     >
       No transactions in this category
     </div>

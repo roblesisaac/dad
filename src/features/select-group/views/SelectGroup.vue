@@ -164,7 +164,7 @@
       :title="renameModalTitle"
       @close="closeRenameModal"
     >
-    
+
       <template #content>
         <div class="px-6 py-8">
           <label class="block text-[10px] font-black theme-text-muted uppercase tracking-widest mb-2 px-1">
@@ -307,7 +307,7 @@
           <div v-for="account in enabledAccountsForEditing" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
             <div class="flex flex-col min-w-0 pr-4">
               <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
-              <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+              <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
             </div>
             <Switch
               :model-value="true"
@@ -324,10 +324,10 @@
             >
               <div class="flex items-center gap-2">
                 <span class="text-[10px] font-black uppercase tracking-widest text-black">Disabled Accounts</span>
-                <span class="text-[10px] font-black text-gray-300">{{ disabledAccountsForEditing.length }}</span>
+                <span class="text-[10px] font-black text-black">{{ disabledAccountsForEditing.length }}</span>
               </div>
-              <ChevronDown v-if="showDisabledAccounts" class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
-              <ChevronRight v-else class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+              <ChevronDown v-if="showDisabledAccounts" class="w-4 h-4 text-black group-hover:text-black transition-colors" />
+              <ChevronRight v-else class="w-4 h-4 text-black group-hover:text-black transition-colors" />
             </button>
           </div>
 
@@ -335,7 +335,7 @@
             <div v-for="account in disabledAccountsForEditing" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
               <div class="flex flex-col min-w-0 pr-4">
                 <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
-                <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+                <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
               </div>
               <Switch
                 :model-value="false"
@@ -406,7 +406,7 @@
               </div>
             </button>
           </div>
-          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">
             No existing groups
           </div>
 
@@ -476,7 +476,7 @@
           <div v-for="account in newGroupEnabledAccounts" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
             <div class="flex flex-col min-w-0 pr-4">
               <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
-              <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+              <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
             </div>
             <Switch
               :model-value="true"
@@ -493,10 +493,10 @@
             >
               <div class="flex items-center gap-2">
                 <span class="text-[10px] font-black uppercase tracking-widest text-black">Disabled Accounts</span>
-                <span class="text-[10px] font-black text-gray-300">{{ newGroupDisabledAccounts.length }}</span>
+                <span class="text-[10px] font-black text-black">{{ newGroupDisabledAccounts.length }}</span>
               </div>
-              <ChevronDown v-if="showNewGroupDisabledAccounts" class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
-              <ChevronRight v-else class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+              <ChevronDown v-if="showNewGroupDisabledAccounts" class="w-4 h-4 text-black group-hover:text-black transition-colors" />
+              <ChevronRight v-else class="w-4 h-4 text-black group-hover:text-black transition-colors" />
             </button>
           </div>
 
@@ -504,7 +504,7 @@
             <div v-for="account in newGroupDisabledAccounts" :key="accountKey(account)" class="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
               <div class="flex flex-col min-w-0 pr-4">
                 <span class="text-base font-black text-gray-900 tracking-tight truncate">{{ accountDisplayName(account) }}</span>
-                <span class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
+                <span class="text-[10px] font-black text-black uppercase tracking-widest mt-0.5">Mask: {{ account.mask }}</span>
               </div>
               <Switch
                 :model-value="false"

@@ -52,7 +52,7 @@
         <!-- Expansion Toggle -->
         <div 
           v-else
-          class="p-2 text-gray-300 group-hover:text-black transition-all"
+          class="p-2 text-black group-hover:text-black transition-all"
           :class="{ 'rotate-180': isExpanded }"
         >
           <ChevronDown class="w-4 h-4" />
@@ -84,7 +84,7 @@
 
           <!-- Quick Toggle -->
           <div class="flex items-center gap-3 px-2 border-l-2 border-gray-100">
-             <span class="text-[10px] font-black uppercase tracking-widest text-gray-300">
+             <span class="text-[10px] font-black uppercase tracking-widest text-black">
                {{ isEnabledForCurrentTab ? 'Active' : 'Disabled' }}
              </span>
              <Switch 
@@ -96,12 +96,12 @@
 
         <!-- Multi-condition visibility (Optional indicator if multi-filter) -->
         <div v-if="hasAdditionalConditions" class="px-6 pb-4">
-          <div class="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-2">Conditions</div>
+          <div class="text-[9px] font-black text-black uppercase tracking-widest mb-2">Conditions</div>
           <div class="flex flex-wrap gap-x-3 gap-y-1">
             <template v-for="(cond, idx) in additionalConditions" :key="idx">
               <span class="text-[11px] font-bold text-gray-400">
-                 <span class="uppercase text-[9px] text-gray-300 mr-1">{{ formatCombinator(cond.combinator) }}</span>
-                 {{ cond.property }} <span class="uppercase text-[9px] text-gray-300">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
+                 <span class="uppercase text-[9px] text-black mr-1">{{ formatCombinator(cond.combinator) }}</span>
+                 {{ cond.property }} <span class="uppercase text-[9px] text-black">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
               </span>
             </template>
           </div>

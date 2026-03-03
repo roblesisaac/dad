@@ -16,7 +16,7 @@
       after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all
       peer-checked:after:translate-x-[20px] rtl:peer-checked:after:-translate-x-[20px]
     "></div>
-    <span v-if="label" class="ms-3 text-sm font-medium text-gray-900 dark:text-gray-300">{{ label }}</span>
+    <span v-if="label" class="ms-3 text-sm font-medium text-gray-900 dark:text-black">{{ label }}</span>
   </label>
 </template>
 

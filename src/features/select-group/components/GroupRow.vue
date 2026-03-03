@@ -19,7 +19,7 @@
             <button 
                 v-if="!editMode && !isDashboardVariant"
                 @click.stop="emit('edit-group', element)" 
-                class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-50 transition-colors"
+                class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-50 transition-colors"
                 aria-label="Edit group"
             >
                 <EllipsisVertical size="16" />
@@ -57,12 +57,12 @@
                     <span :class="[isDashboardVariant ? 'text-base font-black tracking-tight' : 'text-base font-black tracking-tight', availableBalanceDisplay.color]">
                         {{ availableBalanceDisplay.value }}
                     </span>
-                    <span v-if="!isDashboardVariant" class="text-[9px] font-black text-gray-300 uppercase tracking-widest mt-1">Available</span>
+                    <span v-if="!isDashboardVariant" class="text-[9px] font-black text-black uppercase tracking-widest mt-1">Available</span>
                 </div>
                 
                 <!-- Current Balance (Small) -->
                 <div v-if="shouldShowCurrentBalance && !isDashboardVariant" class="flex items-center gap-1.5 pt-1 border-t border-gray-50">
-                    <span class="text-[8px] font-black text-gray-300 uppercase tracking-widest">Current</span>
+                    <span class="text-[8px] font-black text-black uppercase tracking-widest">Current</span>
                     <span :class="['text-[10px] font-black', currentBalanceDisplay.color]">
                         {{ currentBalanceDisplay.value }}
                     </span>
@@ -75,7 +75,7 @@
               @click.stop
             >
               <button
-                class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
+                class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
                 :class="{ 'opacity-100': showActionsMenu }"
                 type="button"
                 @click.stop="toggleActionsMenu"
@@ -269,7 +269,7 @@ h3, span, div {
   color: var(--theme-text);
 }
 
-.text-gray-300, .text-gray-400, .text-gray-500 {
+.text-black, .text-gray-400, .text-gray-500 {
   color: var(--theme-text-soft);
 }
 </style>

@@ -22,7 +22,7 @@
             </div>
             <button 
               @click="$emit('close')" 
-              class="p-2 text-gray-300 hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
+              class="p-2 text-black hover:text-black hover:bg-gray-100 rounded-full transition-all flex-shrink-0"
             >
               <X class="w-6 h-6" />
             </button>
@@ -118,7 +118,7 @@
                     <div v-else class="space-y-4 relative">
                       <div class="rounded-xl border-2 border-dashed border-gray-200 bg-white/70 px-4 py-2.5 flex items-center justify-between">
                         <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Group 1</span>
-                        <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300">Base Condition</span>
+                        <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-black">Base Condition</span>
                       </div>
 
                       <div
@@ -129,7 +129,7 @@
                         <div v-if="startsNewConditionGroup(index)" class="flex items-center gap-2">
                           <div class="h-[1px] flex-1 bg-gray-200"></div>
                           <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">OR</span>
-                          <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-gray-300">
+                          <span class="text-[10px] font-bold uppercase tracking-[0.1em] text-black">
                             Start Group {{ getConditionGroupNumber(index) }}
                           </span>
                           <div class="h-[1px] flex-1 bg-gray-200"></div>
@@ -139,7 +139,7 @@
                             <span class="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">
                               Group {{ getConditionGroupNumber(index) }}
                             </span>
-                            <span class="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Join</span>
+                            <span class="text-[10px] font-black text-black uppercase tracking-[0.2em]">Join</span>
                             <select
                               v-model="condition.combinator"
                               class="rounded-lg border-2 border-gray-200 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-gray-700 focus:border-black focus:ring-0"

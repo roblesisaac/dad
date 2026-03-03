@@ -9,7 +9,7 @@
       {{ dateRangeSummary }}
     </span>
     <ChevronDown 
-      class="h-3 w-3 text-gray-300 group-hover:text-black transition-all duration-300 flex-shrink-0"
+      class="h-3 w-3 text-black group-hover:text-black transition-all duration-300 flex-shrink-0"
       :class="{ '-rotate-180': showDatePicker }"
     />
   </button>

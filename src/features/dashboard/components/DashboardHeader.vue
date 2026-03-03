@@ -13,7 +13,7 @@
 
         <!-- Account segment -->
         <template v-if="!isGroupSelectorView">
-          <span class="text-gray-300 font-black text-xs sm:text-sm flex-shrink-0">/</span>
+          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
           <span
             v-if="isTabSelectorView"
             class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
@@ -32,7 +32,7 @@
 
         <!-- Tab segment -->
         <template v-if="isCategoryView || isCategoryDetailView">
-          <span class="text-gray-300 font-black text-xs sm:text-sm flex-shrink-0">/</span>
+          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
           <span
             v-if="isCategoryView"
             class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
@@ -51,7 +51,7 @@
 
         <!-- Category segment -->
         <template v-if="isCategoryDetailView">
-          <span class="text-gray-300 font-black text-xs sm:text-sm flex-shrink-0">/</span>
+          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
           <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
             {{ selectedCategoryLabel }}
           </span>

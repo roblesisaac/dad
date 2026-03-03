@@ -13,7 +13,7 @@
   <div class="flex items-center justify-between py-5 w-full">
     <div class="flex items-center min-w-0 flex-1">
       <!-- Drag Handle -->
-      <div v-if="isEditMode && isEnabled" class="handler-tab cursor-grab text-gray-300 mr-4" @mousedown.stop>
+      <div v-if="isEditMode && isEnabled" class="handler-tab cursor-grab text-black mr-4" @mousedown.stop>
         <GripVertical size="18" />
       </div>
       
@@ -22,7 +22,7 @@
         <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">
           {{ element.tabName }}
         </h3>
-        <div v-if="element.description" class="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-1 truncate">
+        <div v-if="element.description" class="text-[10px] font-black text-black uppercase tracking-widest mt-1 truncate">
           {{ element.description }}
         </div>
       </div>
@@ -42,7 +42,7 @@
         <button 
           v-if="isEnabled"
           @click.stop="editTab(element._id)" 
-          class="p-2 rounded-xl text-gray-300 hover:text-black hover:bg-gray-50 transition-colors"
+          class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-50 transition-colors"
           title="Edit tab rules"
         >
           <Settings size="16" />

@@ -18,7 +18,7 @@
       <div class="flex items-center px-6 overflow-hidden min-w-0 w-full justify-between">
         <div class="flex items-center overflow-hidden min-w-0 gap-3">
           <Transition name="fade">
-            <span v-if="state.isLoading" class="text-xs font-black uppercase tracking-widest text-gray-300 flex items-center gap-2">
+            <span v-if="state.isLoading" class="text-xs font-black uppercase tracking-widest text-black flex items-center gap-2">
               Syncing<LoadingDots />
             </span>
           </Transition>
@@ -28,7 +28,7 @@
             <!-- Settings Button -->
             <button 
               @click="showRuleManagerModal = true" 
-              class="p-2 hover:bg-black hover:text-white rounded-xl transition-all text-gray-300 flex-shrink-0"
+              class="p-2 hover:bg-black hover:text-white rounded-xl transition-all text-black flex-shrink-0"
               title="Manage tab rules"
             >
               <LayoutDashboard class="w-4 h-4" />

@@ -6,7 +6,7 @@
       class="py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between"
     >
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
-      <span class="text-[10px] font-black text-gray-300">{{ enabledTabs.length }} enabled</span>
+      <span class="text-[10px] font-black text-black">{{ enabledTabs.length }} enabled</span>
     </div>
     
     <!-- List of active tabs -->
@@ -54,9 +54,9 @@
       >
         <div class="flex items-center gap-2">
           <h2 :class="isDashboardVariant ? 'text-base font-black text-gray-900 uppercase tracking-tight' : 'text-[10px] font-black uppercase tracking-widest text-black'">Hidden Tabs</h2>
-          <span :class="isDashboardVariant ? 'text-sm font-black text-gray-300' : 'text-[10px] font-black text-gray-300'">{{ disabledTabs.length }}</span>
+          <span :class="isDashboardVariant ? 'text-sm font-black text-black' : 'text-[10px] font-black text-black'">{{ disabledTabs.length }}</span>
         </div>
-        <div class="text-gray-300 group-hover:text-black transition-colors">
+        <div class="text-black group-hover:text-black transition-colors">
           <ChevronUp v-if="showDisabledTabs" class="w-4 h-4" />
           <ChevronDown v-else class="w-4 h-4" />
         </div>
@@ -70,7 +70,7 @@
           :is-edit-mode="effectiveEditMode" 
           @tab-selected="handleTabSelected"
         />
-        <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
+        <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">
           No hidden tabs
         </div>
       </div>
@@ -86,7 +86,7 @@
       >
         <template v-if="isDashboardVariant">
           <span class="text-base font-black text-gray-900 uppercase tracking-tight">Create New Tab</span>
-          <span class="text-gray-300 group-hover:text-black transition-colors text-lg leading-none">+</span>
+          <span class="text-black group-hover:text-black transition-colors text-lg leading-none">+</span>
         </template>
         <template v-else>
           <span>+</span>
@@ -103,7 +103,7 @@
   <span class="text-base font-black text-gray-900 uppercase tracking-tight">
     {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange Tabs' }}
   </span>
-  <GripVertical class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
+  <GripVertical class="w-4 h-4 text-black group-hover:text-black transition-colors" />
 </button>
 </template>
 
