@@ -1,39 +1,5 @@
 <template>
   <div class="dashboard-group-selector" @click="closeAllMenus">
-    <section class="pb-4 border-b selector-divider">
-      <div class="flex items-center gap-2 overflow-x-auto pb-1 hide-scroll">
-        <div
-          v-for="label in sortedLabelGroups"
-          :key="label._id"
-          :class="['relative flex-shrink-0', { 'menu-open': activeLabelMenuId === label._id }]"
-          data-menu-surface
-        >
-          <button
-            type="button"
-            class="label-chip flex items-center gap-2"
-            :class="{ 'label-chip-active': state.selected.group?._id === label._id }"
-            @click.stop="handleLabelChipSelect(label)"
-          >
-            <span class="text-[10px] font-black uppercase tracking-[0.2em]">{{ label.name }}</span>
-            <span class="text-[10px] font-black label-chip-count">{{ label.accounts?.length || 0 }}</span>
-          </button>
-
-          <button
-            type="button"
-            class="chip-menu-trigger"
-            data-menu-surface
-            @click.stop="toggleLabelMenu(label._id, $event)"
-          >
-            <EllipsisVertical class="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        <div v-if="!sortedLabelGroups.length" class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted px-1 py-2">
-          No labels yet
-        </div>
-      </div>
-    </section>
-
     <div
       v-if="activeLabelGroup"
       class="selector-menu selector-menu-fixed"
@@ -144,6 +110,45 @@
 
         <div v-if="!sortedAccounts.length" class="py-12 text-center text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
           No accounts
+        </div>
+      </div>
+    </section>
+
+    <section class="py-8 selector-divider">
+      <div class="pb-2">
+        <h3 class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
+          View Accounts by Label
+        </h3>
+      </div>
+      <div class="flex items-center gap-2 overflow-x-auto pb-1 hide-scroll">
+        <div
+          v-for="label in sortedLabelGroups"
+          :key="label._id"
+          :class="['relative flex-shrink-0', { 'menu-open': activeLabelMenuId === label._id }]"
+          data-menu-surface
+        >
+          <button
+            type="button"
+            class="label-chip flex items-center gap-2"
+            :class="{ 'label-chip-active': state.selected.group?._id === label._id }"
+            @click.stop="handleLabelChipSelect(label)"
+          >
+            <span class="text-[10px] font-black uppercase tracking-[0.2em]">{{ label.name }}</span>
+            <span class="text-[10px] font-black label-chip-count">{{ label.accounts?.length || 0 }}</span>
+          </button>
+
+          <button
+            type="button"
+            class="chip-menu-trigger"
+            data-menu-surface
+            @click.stop="toggleLabelMenu(label._id, $event)"
+          >
+            <EllipsisVertical class="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <div v-if="!sortedLabelGroups.length" class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted px-1 py-2">
+          No labels yet
         </div>
       </div>
     </section>
