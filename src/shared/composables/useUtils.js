@@ -1,4 +1,50 @@
 export function useUtils() {
+  function normalizeDate(dateValue) {
+    const now = new Date();
+
+    if (dateValue instanceof Date) {
+      return Number.isNaN(dateValue.getTime()) ? now : dateValue;
+    }
+
+    if (!dateValue) return now;
+
+    if (typeof dateValue === 'string') {
+      if (dateValue === 'firstOfMonth') {
+        return new Date(now.getFullYear(), now.getMonth(), 1);
+      }
+
+      if (dateValue === 'firstOfYear') {
+        return new Date(now.getFullYear(), 0, 1);
+      }
+
+      if (dateValue === 'today') {
+        return now;
+      }
+
+      const yyyyMmDdMatch = dateValue.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (yyyyMmDdMatch) {
+        const [, year, month, day] = yyyyMmDdMatch;
+        return new Date(Number(year), Number(month) - 1, Number(day));
+      }
+
+      const parsed = new Date(dateValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+
+      return now;
+    }
+
+    if (typeof dateValue === 'number') {
+      const parsed = new Date(dateValue);
+      if (!Number.isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+
+    return now;
+  }
+
   // Sort function generator
   function sortBy(prop) {
     return (a, b) => a[prop] - b[prop];
@@ -7,14 +53,14 @@ export function useUtils() {
   // Date utilities
   function extractDateRange(state) {
     const { start, end } = state;
-    return `${yyyyMmDd(start)}_${yyyyMmDd(end)}`;
+    return `${yyyyMmDd(normalizeDate(start))}_${yyyyMmDd(normalizeDate(end))}`;
   }
 
   function yyyyMmDd(dateObject) {
-    if(!dateObject) return;
-    const year = dateObject.getFullYear();
-    const month = String(dateObject.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObject.getDate()).padStart(2, '0');
+    const normalizedDate = normalizeDate(dateObject);
+    const year = normalizedDate.getFullYear();
+    const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
+    const day = String(normalizedDate.getDate()).padStart(2, '0');
     
     return `${year}-${month}-${day}`;
   }

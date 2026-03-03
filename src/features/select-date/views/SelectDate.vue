@@ -33,7 +33,7 @@
             <button 
               v-for="option in quickSelectOptions"
               :key="option.id"
-              @click="quickSelect(option.id)" 
+              @click="onQuickSelect(option.id)" 
               class="w-full flex items-center justify-between py-6 hover:bg-[var(--theme-bg-soft)] transition-all group"
             >
               <span class="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[var(--theme-text)] group-hover:translate-x-1 transition-transform duration-300">
@@ -129,6 +129,11 @@ const toggleDatePicker = () => {
 
 const onDateSelected = () => {
   // This now only updates the temporary date values in the composable
+};
+
+const onQuickSelect = (period) => {
+  quickSelect(period);
+  onApplyDates();
 };
 
 const onApplyDates = () => {

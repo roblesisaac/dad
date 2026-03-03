@@ -40,6 +40,9 @@
       :style="labelMenuStyles"
       data-menu-surface
     >
+      <button type="button" class="selector-menu-item" @click.stop="openViewLabelAccounts(activeLabelGroup)">
+        View Accounts In Label
+      </button>
       <button type="button" class="selector-menu-item" @click.stop="openRenameLabel(activeLabelGroup)">
         Rename
       </button>
@@ -337,6 +340,85 @@
     </BaseModal>
 
     <BaseModal
+      v-if="showViewLabelAccountsModal"
+      :is-open="showViewLabelAccountsModal"
+      size="md"
+      title="View Accounts In Label"
+      @close="closeViewLabelAccountsModal"
+    >
+
+      <template #content>
+        <div class="py-2">
+          <div
+            v-for="account in viewLabelEnabledAccounts"
+            :key="`view-label-enabled-${accountKey(account)}`"
+            class="label-accounts-row"
+          >
+            <div class="min-w-0 pr-4">
+              <div class="text-base font-black tracking-tight truncate selector-text">
+                {{ accountDisplayLabel(account) }}
+              </div>
+            </div>
+            <Switch
+              :model-value="true"
+              :id="`view-label-enabled-${accountKey(account)}`"
+              @update:model-value="toggleViewLabelAccount(accountKey(account))"
+            />
+          </div>
+
+          <button
+            class="label-accounts-divider"
+            type="button"
+            @click="showViewLabelDisabledAccounts = !showViewLabelDisabledAccounts"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] font-black uppercase tracking-[0.2em] selector-text">Disabled Accounts</span>
+              <span class="text-[10px] font-black selector-muted">{{ viewLabelDisabledAccounts.length }}</span>
+            </div>
+            <ChevronDown v-if="showViewLabelDisabledAccounts" class="w-4 h-4 selector-muted" />
+            <ChevronRight v-else class="w-4 h-4 selector-muted" />
+          </button>
+
+          <div v-if="showViewLabelDisabledAccounts">
+            <div
+              v-for="account in viewLabelDisabledAccounts"
+              :key="`view-label-disabled-${accountKey(account)}`"
+              class="label-accounts-row"
+            >
+              <div class="min-w-0 pr-4">
+                <div class="text-base font-black tracking-tight truncate selector-text">
+                  {{ accountDisplayLabel(account) }}
+                </div>
+              </div>
+              <Switch
+                :model-value="false"
+                :id="`view-label-disabled-${accountKey(account)}`"
+                @update:model-value="toggleViewLabelAccount(accountKey(account))"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer-no-border">
+          <button
+            @click="closeViewLabelAccountsModal"
+            class="modal-button-secondary"
+            type="button"
+          >
+            Cancel
+          </button>
+          <button
+            @click="saveViewLabelAccounts"
+            class="modal-button-primary"
+            type="button"
+          >
+            Save
+          </button>
+        </div>
+      </template>
+    </BaseModal>
+
+    <BaseModal
       v-if="showAddLabelModal"
       :is-open="showAddLabelModal"
       title="Add Label"
@@ -461,7 +543,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Check, Building, EllipsisVertical, GripVertical, RefreshCw, X } from 'lucide-vue-next';
+import { Check, Building, ChevronDown, ChevronRight, EllipsisVertical, GripVertical, RefreshCw, X } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
@@ -470,6 +552,7 @@ import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
+import Switch from '@/shared/components/Switch.vue';
 
 const emit = defineEmits(['group-selected']);
 
@@ -503,6 +586,11 @@ const renameTargetGroup = ref(null);
 const showDeleteLabelModal = ref(false);
 const deleteLabelTarget = ref(null);
 const deleteLabelInput = ref('');
+
+const showViewLabelAccountsModal = ref(false);
+const viewLabelTarget = ref(null);
+const viewLabelSelectedAccountIds = ref([]);
+const showViewLabelDisabledAccounts = ref(false);
 
 const showAddLabelModal = ref(false);
 const addLabelTargetAccount = ref(null);
@@ -561,6 +649,16 @@ const canSaveAddLabel = computed(() => selectedLabelIds.value.length > 0);
 
 const canSaveNewLabel = computed(() => {
   return newLabelInput.value.trim().length > 0;
+});
+
+const viewLabelEnabledAccounts = computed(() => {
+  const selectedIds = new Set(viewLabelSelectedAccountIds.value);
+  return sortedAccounts.value.filter(account => selectedIds.has(accountKey(account)));
+});
+
+const viewLabelDisabledAccounts = computed(() => {
+  const selectedIds = new Set(viewLabelSelectedAccountIds.value);
+  return sortedAccounts.value.filter(account => !selectedIds.has(accountKey(account)));
 });
 
 watch(
@@ -845,10 +943,33 @@ function openDeleteLabel(labelGroup) {
   closeAllMenus();
 }
 
+function openViewLabelAccounts(labelGroup) {
+  if (!labelGroup?._id) {
+    return;
+  }
+
+  const selectedIds = (labelGroup.accounts || [])
+    .map(account => accountKey(resolveAccount(account) || account))
+    .filter(Boolean);
+
+  viewLabelTarget.value = labelGroup;
+  viewLabelSelectedAccountIds.value = [...new Set(selectedIds)];
+  showViewLabelDisabledAccounts.value = false;
+  showViewLabelAccountsModal.value = true;
+  closeAllMenus();
+}
+
 function closeDeleteLabelModal() {
   showDeleteLabelModal.value = false;
   deleteLabelTarget.value = null;
   deleteLabelInput.value = '';
+}
+
+function closeViewLabelAccountsModal() {
+  showViewLabelAccountsModal.value = false;
+  viewLabelTarget.value = null;
+  viewLabelSelectedAccountIds.value = [];
+  showViewLabelDisabledAccounts.value = false;
 }
 
 async function saveDeleteLabel() {
@@ -866,6 +987,19 @@ async function saveDeleteLabel() {
   closeDeleteLabelModal();
 
   await refreshSelectedGroupIfNeeded([target._id]);
+}
+
+function toggleViewLabelAccount(accountId) {
+  if (!accountId) {
+    return;
+  }
+
+  if (viewLabelSelectedAccountIds.value.includes(accountId)) {
+    viewLabelSelectedAccountIds.value = viewLabelSelectedAccountIds.value.filter(id => id !== accountId);
+    return;
+  }
+
+  viewLabelSelectedAccountIds.value = [...viewLabelSelectedAccountIds.value, accountId];
 }
 
 function openAddLabelModal(account) {
@@ -1095,6 +1229,21 @@ async function saveCreateLabel() {
 
   closeCreateLabelModal();
   closeAddLabelModal();
+}
+
+async function saveViewLabelAccounts() {
+  const targetLabel = viewLabelTarget.value;
+  if (!targetLabel?._id) {
+    return;
+  }
+
+  const targetLabelId = targetLabel._id;
+  const selectedIds = new Set(viewLabelSelectedAccountIds.value);
+  const selectedAccounts = sortedAccounts.value.filter(account => selectedIds.has(accountKey(account)));
+
+  await persistLabelAccounts(targetLabel, selectedAccounts);
+  closeViewLabelAccountsModal();
+  await refreshSelectedGroupIfNeeded([targetLabelId]);
 }
 
 async function refreshSelectedGroupIfNeeded(changedGroupIds = []) {
@@ -1337,6 +1486,13 @@ async function handleBanksDataChanged() {
   justify-content: space-between;
 }
 
+.modal-header-no-border {
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .modal-title {
   font-size: 0.625rem;
   font-weight: 900;
@@ -1395,6 +1551,13 @@ async function handleBanksDataChanged() {
   gap: 0.75rem;
 }
 
+.modal-footer-no-border {
+  padding: 2rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .modal-button-primary,
 .modal-button-secondary,
 .modal-button-danger {
@@ -1437,14 +1600,26 @@ async function handleBanksDataChanged() {
   opacity: 0.4;
 }
 
-.toggle-row {
+.label-accounts-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
 }
 
-.toggle-row:hover {
+.label-accounts-row:hover {
+  background: var(--selector-bg-soft);
+}
+
+.label-accounts-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+}
+
+.label-accounts-divider:hover {
   background: var(--selector-bg-soft);
 }
 

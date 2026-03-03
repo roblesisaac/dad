@@ -4,7 +4,7 @@
 
     <button
       @click="selectCategory"
-      class="flex items-center justify-between w-full px-6 py-6 text-left cursor-pointer focus:outline-none"
+      class="flex items-center justify-between w-full py-6 text-left cursor-pointer focus:outline-none"
       type="button"
     >
       <div class="flex items-center gap-4 flex-1 min-w-0">

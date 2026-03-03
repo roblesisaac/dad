@@ -10,7 +10,7 @@
     </div>
     
     <!-- List of active tabs -->
-    <div :class="isDashboardVariant ? '' : 'py-2'">
+    <div v-if="enabledTabs.length > 0" :class="isDashboardVariant ? '' : 'py-2'">
 
       <div v-if="enabledTabs.length > 0">
         <Draggable 
@@ -42,9 +42,6 @@
           />
         </div>
       </div>
-      <div v-else class="py-12 text-center text-[10px] font-black uppercase tracking-widest text-gray-300">
-        No enabled tabs
-      </div>
     </div>
 
     <!-- Disabled Tabs Section -->
@@ -60,8 +57,8 @@
           <span :class="isDashboardVariant ? 'text-sm font-black text-gray-300' : 'text-[10px] font-black text-gray-300'">{{ disabledTabs.length }}</span>
         </div>
         <div class="text-gray-300 group-hover:text-black transition-colors">
-          <ChevronDown v-if="showDisabledTabs" class="w-4 h-4" />
-          <ChevronRight v-else class="w-4 h-4" />
+          <ChevronUp v-if="showDisabledTabs" class="w-4 h-4" />
+          <ChevronDown v-else class="w-4 h-4" />
         </div>
       </button>
       
