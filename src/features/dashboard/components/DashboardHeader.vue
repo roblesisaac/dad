@@ -68,7 +68,7 @@
       <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter mb-4">
         {{ formatPrice(headerTotal, { toFixed: 0 }) }}
       </span>
-      <SelectDate />
+      <SelectDate v-if="!isGroupSelectorView" />
     </div>
   </div>
 </template>
@@ -83,7 +83,7 @@ import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 const props = defineProps({
   view: {
     type: String,
-    default: 'tab',
+    default: 'group',
     validator: (value) => ['group', 'tab', 'category', 'category-detail'].includes(value)
   }
 });

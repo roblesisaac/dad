@@ -16,7 +16,7 @@
         :class="showSelectorView ? 'pb-12 sm:pb-16 px-4 sm:px-6' : 'pb-32'"
       >
         <Transition name="fade">
-          <div v-if="state.isLoading" class="w-full flex justify-center py-20">
+          <div v-if="state.isLoading && !isGroupSelectorView" class="w-full flex justify-center py-20">
             <LoadingDots />
           </div>
         </Transition>
@@ -51,11 +51,15 @@
       </div>
 
       <footer
-        v-if="!state.isLoading && (isCategoryView || isCategoryDetailView)"
+        v-if="!state.isLoading && shouldShowFooter"
         class="fixed bottom-0 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
-        <div class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center justify-between">
+        <div
+          class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center"
+          :class="shouldShowEditTabAction ? 'justify-between' : 'justify-end'"
+        >
           <button
+            v-if="shouldShowEditTabAction"
             @click="showRuleManagerModal = true"
             class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-start"
             type="button"
@@ -126,12 +130,19 @@ const { selectGroup, handleGroupChange } = useSelectGroup();
 const { selectTab } = useTabs();
 
 const showRuleManagerModal = ref(false);
-const dashboardView = ref('tab');
+const dashboardView = ref('group');
 const isGroupSelectorView = computed(() => dashboardView.value === 'group');
 const isTabSelectorView = computed(() => dashboardView.value === 'tab');
 const isCategoryView = computed(() => dashboardView.value === 'category');
 const isCategoryDetailView = computed(() => dashboardView.value === 'category-detail');
 const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
+const shouldShowFooter = computed(() => (
+  isGroupSelectorView.value ||
+  isTabSelectorView.value ||
+  isCategoryView.value ||
+  isCategoryDetailView.value
+));
+const shouldShowEditTabAction = computed(() => isCategoryView.value || isCategoryDetailView.value);
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -245,10 +256,10 @@ function setDefaultDashboardView() {
     return;
   }
 
-  if (state.selected.group) {
-    dashboardView.value = 'tab';
-    return;
-  }
+  // if (state.selected.group) {
+  //   dashboardView.value = 'tab';
+  //   return;
+  // }
 
   dashboardView.value = 'group';
 }

@@ -3,6 +3,7 @@
     v-if="isOpen"
     :is-open="isOpen"
     size="md"
+    :hide-header="true"
     @close="$emit('close')"
   >
     <template #header>

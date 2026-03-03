@@ -3,21 +3,21 @@
     <div class="max-w-5xl mx-auto w-full relative">
       <!-- Sticky Navigation Header -->
       <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
-        <!-- Left: Theme -->
-        <div class="flex items-center">
-          <ThemeCycleButton />
-        </div>
-
-        <!-- Right: Dashboard -->
+        <!-- Left: Dashboard -->
         <button 
           @click="router.push('/dashboard')" 
           class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
         >
+          <ChevronLeft class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
           <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
             Dashboard
           </span>
-          <ChevronRight class="w-4 h-4 text-gray-300 group-hover:text-black transition-colors" />
         </button>
+
+        <!-- Right: Theme -->
+        <div class="flex items-center">
+          <ThemeCycleButton />
+        </div>
       </div>
 
       <section class="px-4 py-4">

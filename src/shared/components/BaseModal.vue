@@ -7,7 +7,7 @@
       <!-- Optional Header -->
       <div v-if="!hideHeader" class="flex items-center justify-between p-4 border-b bg-gray-50 shrink-0">
         <slot name="header">
-          <h3 class="text-lg font-semibold text-blue-800">{{ title }}</h3>
+          <h3 class="text-lg font-semibold">{{ title }}</h3>
         </slot>
         <button 
           v-if="showCloseButton"
