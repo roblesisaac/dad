@@ -74,13 +74,9 @@
                     <div class="text-base font-black uppercase tracking-tight truncate selector-text">
                       {{ accountDisplayLabel(element) }}
                     </div>
-                    <div class="mt-2 flex flex-wrap gap-2">
-                      <span
-                        v-for="label in labelsForAccount(element)"
-                        :key="`pill-edit-${accountKey(element)}-${label._id}`"
-                        class="label-pill"
-                      >
-                        {{ label.name }}
+                    <div class="mt-2">
+                      <span class="label-count-badge label-count-badge-static">
+                        {{ labelCountText(element) }}
                       </span>
                     </div>
                   </div>
@@ -142,57 +138,72 @@
                   </div>
                 </div>
 
-                <div v-if="labelsForAccount(account).length" class="mt-2 flex flex-wrap gap-2">
-                  <div
-                    v-for="label in labelsForAccount(account)"
-                    :key="`pill-${accountKey(account)}-${label._id}`"
-                    class="relative"
-                    data-menu-surface
-                  >
-                    <div class="label-pill label-pill-clickable" data-menu-surface>
-                      <button
-                        type="button"
-                        class="label-pill-button"
-                        data-menu-surface
-                        @click.stop="handleLabelChipSelect(label)"
-                      >
-                        {{ label.name }}
-                      </button>
-                      <button
-                        type="button"
-                        class="label-pill-menu"
-                        data-menu-surface
-                        @click.stop="toggleAccountLabelMenu(account, label)"
-                      >
-                        <EllipsisVertical class="w-3 h-3" />
-                      </button>
-                    </div>
+                <button
+                  type="button"
+                  class="mt-2 label-count-badge"
+                  data-menu-surface
+                  @click.stop="toggleAccountLabels(account)"
+                >
+                  <span>{{ labelCountText(account) }}</span>
+                  <ChevronDown
+                    class="w-3.5 h-3.5 label-count-chevron"
+                    :class="{ 'label-count-chevron-open': isAccountLabelsExpanded(account) }"
+                  />
+                </button>
 
+                <div v-if="isAccountLabelsExpanded(account)" class="mt-2">
+                  <div v-if="labelsForAccount(account).length" class="flex flex-wrap gap-2">
                     <div
-                      v-if="isAccountLabelMenuOpen(account, label)"
-                      class="selector-menu left-0 mt-2"
+                      v-for="label in labelsForAccount(account)"
+                      :key="`pill-${accountKey(account)}-${label._id}`"
+                      class="relative"
                       data-menu-surface
                     >
-                      <button
-                        type="button"
-                        class="selector-menu-item"
-                        @click.stop="removeLabelFromAccount(account, label)"
+                      <div class="label-pill label-pill-clickable" data-menu-surface>
+                        <button
+                          type="button"
+                          class="label-pill-button"
+                          data-menu-surface
+                          @click.stop="handleLabelChipSelect(label)"
+                        >
+                          {{ label.name }}
+                        </button>
+                        <button
+                          type="button"
+                          class="label-pill-menu"
+                          data-menu-surface
+                          @click.stop="toggleAccountLabelMenu(account, label)"
+                        >
+                          <EllipsisVertical class="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <div
+                        v-if="isAccountLabelMenuOpen(account, label)"
+                        class="selector-menu left-0 mt-2"
+                        data-menu-surface
                       >
-                        Remove
-                      </button>
-                      <button
-                        type="button"
-                        class="selector-menu-item"
-                        @click.stop="openRenameLabel(label)"
-                      >
-                        Rename
-                      </button>
+                        <button
+                          type="button"
+                          class="selector-menu-item"
+                          @click.stop="removeLabelFromAccount(account, label)"
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          class="selector-menu-item"
+                          @click.stop="openRenameLabel(label)"
+                        >
+                          Rename
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div v-else class="mt-2 text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
-                  No labels
+                  <div v-else class="text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
+                    No labels
+                  </div>
                 </div>
               </div>
 
@@ -577,6 +588,7 @@ const activeAccountMenuId = ref('');
 const activeLabelMenuId = ref('');
 const activeAccountLabelMenuKey = ref('');
 const activeLabelMenuPosition = ref({ top: 0, left: 0 });
+const expandedAccountLabelIds = ref([]);
 
 const showRenameModal = ref(false);
 const renameInput = ref('');
@@ -664,6 +676,9 @@ const viewLabelDisabledAccounts = computed(() => {
 watch(
   () => sortedAccounts.value,
   (accounts) => {
+    const validAccountIds = new Set(accounts.map(account => accountKey(account)).filter(Boolean));
+    expandedAccountLabelIds.value = expandedAccountLabelIds.value.filter(id => validAccountIds.has(id));
+
     if (!dashboardEditMode.value) {
       dashboardAccounts.value = [...accounts];
     }
@@ -748,6 +763,39 @@ function labelsForAccount(account) {
   return sortedLabelGroups.value.filter((label) => {
     return (label.accounts || []).some(labelAccount => accountsMatch(labelAccount, account));
   });
+}
+
+function labelCountText(account) {
+  const count = Number(labelsForAccount(account).length) || 0;
+  const labelWord = count === 1 ? 'label' : 'labels';
+  return `${count} ${labelWord}`;
+}
+
+function isAccountLabelsExpanded(account) {
+  const key = accountKey(account);
+  if (!key) {
+    return false;
+  }
+
+  return expandedAccountLabelIds.value.includes(key);
+}
+
+function toggleAccountLabels(account) {
+  const key = accountKey(account);
+  if (!key) {
+    return;
+  }
+
+  if (expandedAccountLabelIds.value.includes(key)) {
+    expandedAccountLabelIds.value = expandedAccountLabelIds.value.filter(id => id !== key);
+
+    if (activeAccountLabelMenuKey.value.startsWith(`${key}::`)) {
+      activeAccountLabelMenuKey.value = '';
+    }
+    return;
+  }
+
+  expandedAccountLabelIds.value = [...expandedAccountLabelIds.value, key];
 }
 
 function closeAllMenus() {
@@ -1429,6 +1477,39 @@ async function handleBanksDataChanged() {
 
 .selector-menu-item:hover {
   background: var(--selector-bg-soft);
+}
+
+.label-count-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--selector-border);
+  background: var(--selector-bg-soft);
+  color: var(--selector-text-soft);
+  border-radius: 9999px;
+  padding: 0.25rem 0.625rem;
+  font-size: 0.625rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.label-count-badge:hover {
+  background: var(--selector-bg-subtle);
+  color: var(--selector-text);
+}
+
+.label-count-badge-static {
+  pointer-events: none;
+}
+
+.label-count-chevron {
+  transition: transform 150ms ease;
+}
+
+.label-count-chevron-open {
+  transform: rotate(180deg);
 }
 
 .label-pill {
