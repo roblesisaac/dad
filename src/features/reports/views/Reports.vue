@@ -1,5 +1,5 @@
 <template>
-  <main class="min-h-screen bg-white pb-28">
+  <main :class="['min-h-screen bg-white', footerPaddingClass]">
     <div class="max-w-5xl mx-auto w-full relative">
       <!-- Sticky Navigation Header -->
       <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
@@ -499,20 +499,90 @@
       </template>
 
       <div class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white z-30">
-        <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
-          <div v-if="selectedReport" class="flex items-center gap-3 min-w-0">
-            <button
-              class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
-              @click="openFormulaMenuModal"
+        <div class="max-w-5xl mx-auto px-4 py-4 flex items-start justify-between gap-3">
+          <div v-if="selectedReport" class="flex-1 min-w-0">
+            <div class="flex items-center gap-3 min-w-0">
+              <button
+                class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                @click="openFormulaMenuModal"
+              >
+                <MoreVertical class="w-4 h-4" />
+              </button>
+              <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Total</span>
+              <span class="text-xl font-black truncate" :class="fontColor(getReportTotal(selectedReport._id))">
+                {{ formatPrice(getReportTotal(selectedReport._id), { toFixed: 2 }) }}
+              </span>
+            </div>
+
+            <div
+              v-if="isFormulaMenuModalOpen"
+              class="mt-3 w-full max-w-sm bg-white rounded-xl border border-gray-200 shadow-sm p-3"
             >
-              <MoreVertical class="w-4 h-4" />
-            </button>
-            <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Total</span>
-            <span class="text-xl font-black truncate" :class="fontColor(getReportTotal(selectedReport._id))">
-              {{ formatPrice(getReportTotal(selectedReport._id), { toFixed: 2 }) }}
-            </span>
+              <button
+                class="w-full text-left border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50"
+                @click="openFormulaEditorModal"
+              >
+                Edit Formula
+              </button>
+              <div class="mt-2 flex justify-end">
+                <button
+                  class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isApplyingReportFormula"
+                  @click="closeFormulaModals"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+
+            <div
+              v-if="isFormulaEditorModalOpen"
+              class="mt-3 w-full max-w-2xl bg-white rounded-xl border border-gray-200 shadow-sm p-3"
+            >
+              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                Formula
+                <input
+                  v-model="totalFormulaDraft"
+                  type="text"
+                  class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="r1-r2+r3*1.0875"
+                  @keydown.enter.prevent="applyReportFormula"
+                />
+              </label>
+
+              <p class="mt-2 text-xs text-gray-500">
+                Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
+              </p>
+              <p v-if="selectedReportTotalIssue" class="mt-2 text-xs text-red-600">
+                Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
+              </p>
+
+              <div class="mt-3 flex items-center justify-end gap-2">
+                <button
+                  class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isApplyingReportFormula"
+                  @click="closeFormulaModals"
+                >
+                  Close
+                </button>
+                <button
+                  class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isApplyingReportFormula"
+                  @click="clearReportFormula"
+                >
+                  Clear
+                </button>
+                <button
+                  class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                  :disabled="isApplyingReportFormula"
+                  @click="applyReportFormula"
+                >
+                  {{ isApplyingReportFormula ? 'Applying...' : 'Apply' }}
+                </button>
+              </div>
+            </div>
           </div>
-          <div v-else />
+          <div v-else class="flex-1" />
 
           <button
             @click="logoutUser"
@@ -523,79 +593,6 @@
             </span>
             <LogOut class="w-4 h-4 text-black group-hover:text-black transition-colors" />
           </button>
-        </div>
-      </div>
-
-      <div
-        v-if="isFormulaMenuModalOpen"
-        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-        @click.self="closeFormulaModals"
-      >
-        <div class="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
-          <h2 class="text-lg font-black text-gray-900">Formula</h2>
-
-          <button
-            class="mt-4 w-full text-left border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50"
-            @click="openFormulaEditorModal"
-          >
-            Edit Formula
-          </button>
-
-          <div class="mt-5 flex justify-end">
-            <button class="btn-secondary" @click="closeFormulaModals">Cancel</button>
-          </div>
-        </div>
-      </div>
-
-      <div
-        v-if="isFormulaEditorModalOpen"
-        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
-        @click.self="closeFormulaModals"
-      >
-        <div class="w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
-          <h2 class="text-lg font-black text-gray-900">Edit Formula</h2>
-
-          <label class="block mt-4 text-xs font-black uppercase tracking-wider text-gray-500">
-            Formula
-            <input
-              v-model="totalFormulaDraft"
-              type="text"
-              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-              placeholder="r1-r2+r3*1.0875"
-              @keydown.enter.prevent="applyReportFormula"
-            />
-          </label>
-
-          <p class="mt-2 text-xs text-gray-500">
-            Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
-          </p>
-          <p v-if="selectedReportTotalIssue" class="mt-2 text-xs text-red-600">
-            Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
-          </p>
-
-          <div class="mt-6 flex items-center justify-end gap-2">
-            <button
-              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isApplyingReportFormula"
-              @click="closeFormulaModals"
-            >
-              Cancel
-            </button>
-            <button
-              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isApplyingReportFormula"
-              @click="clearReportFormula"
-            >
-              Clear
-            </button>
-            <button
-              class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isApplyingReportFormula"
-              @click="applyReportFormula"
-            >
-              {{ isApplyingReportFormula ? 'Applying...' : 'Apply' }}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1112,6 +1109,18 @@ const saveStateLabel = computed(() => {
   return '';
 });
 
+const footerPaddingClass = computed(() => {
+  if (isFormulaEditorModalOpen.value) {
+    return 'pb-64';
+  }
+
+  if (isFormulaMenuModalOpen.value) {
+    return 'pb-40';
+  }
+
+  return 'pb-28';
+});
+
 const selectedReportTotalIssue = computed(() => {
   if (!selectedReport.value?._id) return '';
   return getReportTotalIssue(selectedReport.value._id);
@@ -1550,6 +1559,11 @@ function closeDropdownMenus() {
 
 function openFormulaMenuModal() {
   if (!selectedReport.value?._id) return;
+
+  if (isFormulaMenuModalOpen.value) {
+    closeFormulaModals();
+    return;
+  }
 
   closeDropdownMenus();
   closeExistingRowPickerModal();
