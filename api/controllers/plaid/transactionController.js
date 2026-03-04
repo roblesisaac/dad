@@ -6,6 +6,42 @@ import { CustomError } from '../../services/plaid/customError.js';
 
 export default {
   /**
+   * Search transactions for user across all accounts and dates
+   */
+  async searchTransactions(req, res) {
+    try {
+      const keyword = typeof req?.query?.keyword === 'string'
+        ? req.query.keyword.trim()
+        : '';
+
+      if (!keyword) {
+        return res.status(400).json({
+          error: 'INVALID_PARAMS',
+          message: 'Keyword is required'
+        });
+      }
+
+      const response = await transactionQueryService.searchTransactions(req.user, req.query);
+      return res.json(response);
+    } catch (error) {
+      let errorCode = 'TRANSACTION_SEARCH_ERROR';
+      let errorMessage = error.message;
+
+      if (error.code) {
+        errorCode = error.code;
+        errorMessage = error.originalMessage || error.message;
+      } else if (error.message && error.message.includes(':')) {
+        [errorCode, errorMessage] = error.message.split(': ');
+      }
+
+      return res.status(400).json({
+        error: errorCode,
+        message: errorMessage
+      });
+    }
+  },
+
+  /**
    * Get transactions for user
    */
   async getTransactions(req, res) {

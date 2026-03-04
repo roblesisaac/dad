@@ -23,6 +23,7 @@ export default function(api, baseUrl) {
   member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
 
   // Transactions
+  member.get('/plaid/transactions/search', transactionController.searchTransactions);
   member.get('/plaid/transactions/:_id?', transactionController.getTransactions);
   member.get('/plaid/sync/latest/transactions/:itemId', transactionController.syncLatestTransactionsForItem);
   

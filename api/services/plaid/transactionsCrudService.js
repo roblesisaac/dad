@@ -9,6 +9,86 @@ import { CustomError } from './customError.js';
 class TransactionQueryService extends PlaidBaseService {
   _datePattern = /^\d{4}-\d{2}-\d{2}$/;
   _pageLimit = 250;
+  _searchPageLimit = 100;
+
+  _parseSearchOffset(offsetValue) {
+    const parsed = Number.parseInt(offsetValue, 10);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      return 0;
+    }
+
+    return parsed;
+  }
+
+  _parseSearchLimit(limitValue) {
+    const parsed = Number.parseInt(limitValue, 10);
+    if (!Number.isInteger(parsed) || parsed <= 0) {
+      return this._searchPageLimit;
+    }
+
+    return Math.min(parsed, this._searchPageLimit);
+  }
+
+  _normalizeSearchField(value) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map(item => this._normalizeSearchField(item))
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    if (typeof value === 'object') {
+      return Object.values(value)
+        .map(item => this._normalizeSearchField(item))
+        .filter(Boolean)
+        .join(' ');
+    }
+
+    return String(value).trim();
+  }
+
+  _transactionSearchText(transaction = {}) {
+    const categoryValue = this._normalizeSearchField(transaction.category);
+    const pfcPrimary = this._normalizeSearchField(transaction.personal_finance_category?.primary);
+    const pfcDetailed = this._normalizeSearchField(transaction.personal_finance_category?.detailed);
+
+    return [
+      transaction.name,
+      transaction.merchant_name,
+      transaction.notes,
+      transaction.recategorizeAs,
+      categoryValue,
+      pfcPrimary,
+      pfcDetailed
+    ]
+      .map(value => this._normalizeSearchField(value).toLowerCase())
+      .filter(Boolean)
+      .join(' ');
+  }
+
+  _transactionSearchDate(transaction = {}) {
+    const dateValue = transaction.authorized_date || transaction.date || '';
+    return this._isValidIsoDate(dateValue) ? dateValue : '';
+  }
+
+  _sortTransactionsForSearch(transactions = []) {
+    return [...transactions].sort((transactionA, transactionB) => {
+      const dateA = this._transactionSearchDate(transactionA);
+      const dateB = this._transactionSearchDate(transactionB);
+
+      if (dateA !== dateB) {
+        return dateB.localeCompare(dateA);
+      }
+
+      const idA = String(transactionA?._id || '');
+      const idB = String(transactionB?._id || '');
+      return idB.localeCompare(idA);
+    });
+  }
 
   _isValidIsoDate(date) {
     return typeof date === 'string' && this._datePattern.test(date);
@@ -136,6 +216,59 @@ class TransactionQueryService extends PlaidBaseService {
       return `${accountId}:${startDate.trim()}*`;
     }
   }
+
+  async searchTransactions(user, query = {}) {
+    try {
+      const userId = user?._id;
+      if (!userId) {
+        throw new CustomError('INVALID_USER', 'Missing user identifier');
+      }
+
+      const keyword = typeof query.keyword === 'string' ? query.keyword.trim().toLowerCase() : '';
+      if (!keyword) {
+        throw new CustomError('INVALID_PARAMS', 'Keyword is required');
+      }
+
+      const offset = this._parseSearchOffset(query.offset);
+      const limit = this._parseSearchLimit(query.limit);
+      const safeUserId = String(userId).replaceAll(':', '-');
+
+      const allTransactions = await plaidTransactions.findAll(
+        `plaidtransactions-${safeUserId}:*`,
+        { limit: this._pageLimit }
+      );
+
+      const matchedTransactions = allTransactions.filter((transaction) => {
+        const searchText = this._transactionSearchText(transaction);
+        return searchText.includes(keyword);
+      });
+
+      const sortedMatches = this._sortTransactionsForSearch(matchedTransactions);
+      const pagedItems = sortedMatches.slice(offset, offset + limit);
+      const total = sortedMatches.length;
+      const nextOffsetValue = offset + pagedItems.length;
+      const hasMore = nextOffsetValue < total;
+
+      return {
+        items: pagedItems,
+        pagination: {
+          offset,
+          limit,
+          nextOffset: hasMore ? nextOffsetValue : null,
+          hasMore,
+          total
+        }
+      };
+    } catch (error) {
+      if (error instanceof CustomError) {
+        throw error;
+      }
+
+      console.error('Error searching transactions:', error);
+      throw new CustomError('FETCH_ERROR', error.message);
+    }
+  }
+
   async fetchTransactions(user, query) {
     try {
       const userId = user?._id;

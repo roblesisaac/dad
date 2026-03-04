@@ -17,7 +17,7 @@
         :class="showSelectorView ? 'pb-12 sm:pb-16 sm:px-6' : 'pb-32'"
       >
         <Transition name="fade">
-          <div v-if="state.isLoading && !isGroupSelectorView" class="w-full flex justify-center py-20">
+          <div v-if="state.isLoading && !isGroupSelectorView && !isTransactionSearchView" class="w-full flex justify-center py-20">
             <LoadingDots />
           </div>
         </Transition>
@@ -60,6 +60,12 @@
             <CategoryTransactionsView />
           </div>
         </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && isTransactionSearchView" class="w-full">
+            <TransactionSearchView />
+          </div>
+        </Transition>
       </div>
 
       <footer
@@ -71,6 +77,7 @@
             class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
             type="button"
             aria-label="Search transactions"
+            @click="openTransactionSearch"
           >
             <Search class="w-4 h-4 text-black group-hover:text-black transition-colors" />
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
@@ -183,6 +190,8 @@
 
 .account-modal-overlay {
   background: var(--theme-overlay-30);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 .account-modal-panel {
@@ -256,6 +265,7 @@ import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import CategoriesWrapper from '../components/CategoriesWrapper.vue';
 import CategoryTransactionsView from '../components/CategoryTransactionsView.vue';
+import TransactionSearchView from '../components/TransactionSearchView.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
 import AllTabs from '@/features/tabs/components/AllTabs.vue';
@@ -281,12 +291,14 @@ const isGroupSelectorView = computed(() => dashboardView.value === 'group');
 const isTabSelectorView = computed(() => dashboardView.value === 'tab');
 const isCategoryView = computed(() => dashboardView.value === 'category');
 const isCategoryDetailView = computed(() => dashboardView.value === 'category-detail');
+const isTransactionSearchView = computed(() => dashboardView.value === 'transaction-search');
 const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const shouldShowFooter = computed(() => (
   isGroupSelectorView.value ||
   isTabSelectorView.value ||
   isCategoryView.value ||
-  isCategoryDetailView.value
+  isCategoryDetailView.value ||
+  isTransactionSearchView.value
 ));
 const shouldShowEditTabAction = computed(() => isCategoryView.value || isCategoryDetailView.value);
 
@@ -433,6 +445,11 @@ function openCategoryView() {
 
   resetCategorySelection();
   dashboardView.value = 'category';
+}
+
+function openTransactionSearch() {
+  resetCategorySelection();
+  dashboardView.value = 'transaction-search';
 }
 
 function handleGroupSelected() {

@@ -12,7 +12,7 @@
         </button>
 
         <!-- Account segment -->
-        <template v-if="!isGroupSelectorView">
+        <template v-if="!isGroupSelectorView && !isTransactionSearchView">
           <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
           <span
             v-if="isTabSelectorView"
@@ -56,6 +56,13 @@
             {{ selectedCategoryLabel }}
           </span>
         </template>
+
+        <template v-if="isTransactionSearchView">
+          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+            Transactions
+          </span>
+        </template>
       </nav>
 
       <div class="flex-shrink-0">
@@ -63,7 +70,13 @@
       </div>
     </div>
 
-    <div class="flex flex-col items-center justify-center text-center">
+    <div v-if="isTransactionSearchView" class="flex flex-col items-center justify-center text-center">
+      <span class="font-black text-black text-lg sm:text-xl uppercase tracking-[0.2em]">
+        Transaction Search
+      </span>
+    </div>
+
+    <div v-else class="flex flex-col items-center justify-center text-center">
       <div class="flex items-center gap-2 sm:gap-3 mb-4">
         <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter">
           {{ formatPrice(headerTotal, { toFixed: 0 }) }}
@@ -143,7 +156,7 @@ const props = defineProps({
   view: {
     type: String,
     default: 'group',
-    validator: (value) => ['group', 'tab', 'category', 'category-detail'].includes(value)
+    validator: (value) => ['group', 'tab', 'category', 'category-detail', 'transaction-search'].includes(value)
   }
 });
 
@@ -156,6 +169,7 @@ const isGroupSelectorView = computed(() => props.view === 'group');
 const isTabSelectorView = computed(() => props.view === 'tab');
 const isCategoryView = computed(() => props.view === 'category');
 const isCategoryDetailView = computed(() => props.view === 'category-detail');
+const isTransactionSearchView = computed(() => props.view === 'transaction-search');
 
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
