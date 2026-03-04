@@ -101,7 +101,7 @@
   @click="toggleDashboardReorder"
 >
   <span class="text-base font-black text-gray-900 uppercase tracking-tight">
-    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange/Hide Tabs' }}
+    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange / Hide Tabs' }}
   </span>
   <GripVertical class="w-4 h-4 text-black group-hover:text-black transition-colors" />
 </button>
