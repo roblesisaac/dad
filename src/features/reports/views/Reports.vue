@@ -73,13 +73,13 @@
           <draggable
             v-model="reportReorderItems"
             item-key="key"
-            class="space-y-4"
+            class="space-y-1"
             handle=".drag-handle-top"
           >
             <template #item="{ element: item }">
               <article
                 v-if="item.type === 'report'"
-                class="relative border-2 border-dashed border-gray-300 rounded-2xl p-4 bg-white shadow-sm transition-colors"
+                class="relative w-full py-4 transition-colors hover:bg-gray-50/50"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="flex items-start gap-2 min-w-0">
@@ -104,9 +104,9 @@
 
               <section
                 v-else
-                class="border-2 border-dashed border-gray-300 rounded-2xl bg-white shadow-sm"
+                class="w-full"
               >
-                <div class="w-full px-4 py-3 flex items-center justify-between rounded-2xl">
+                <div class="w-full py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50">
                   <div class="flex items-center gap-2 min-w-0 flex-1">
                     <button
                       class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
@@ -120,31 +120,38 @@
                       class="flex items-center gap-2 min-w-0 flex-1 text-left"
                       @click="toggleFolderExpansion(item.folderName)"
                     >
-                      <ChevronDown
-                        v-if="folderIsExpanded(item.folderName)"
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
-                      <ChevronRight
-                        v-else
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
                       <Folder class="w-4 h-4 text-gray-500 flex-shrink-0" />
                       <span class="text-base font-black text-gray-900 truncate">{{ item.folderName }}</span>
                     </button>
                   </div>
 
-                  <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
+                    <button
+                      class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                      @click.stop="toggleFolderExpansion(item.folderName)"
+                    >
+                      <ChevronUp
+                        v-if="folderIsExpanded(item.folderName)"
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                      <ChevronDown
+                        v-else
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div v-if="folderIsExpanded(item.folderName)" class="px-3 pb-3">
+                <div v-if="folderIsExpanded(item.folderName)" class="pl-6 pb-2">
                   <draggable
                     v-model="item.reports"
                     item-key="key"
-                    class="space-y-2"
+                    class="space-y-1"
                     handle=".drag-handle-nested"
                   >
                     <template #item="{ element: folderReport }">
-                      <article class="relative border border-gray-200 rounded-xl p-3 bg-white">
+                      <article class="relative w-full py-3 transition-colors hover:bg-gray-50/50">
                         <div class="flex items-start justify-between gap-3">
                           <div class="flex items-start gap-2 min-w-0">
                             <button
@@ -172,11 +179,11 @@
         </template>
 
         <template v-else>
-          <div class="space-y-4">
+          <div class="space-y-1">
             <template v-for="item in topLevelReportItems" :key="item.key">
               <article
                 v-if="item.type === 'report'"
-                class="relative border-2 border-gray-100 rounded-2xl p-4 bg-white shadow-sm transition-colors cursor-pointer hover:border-gray-200"
+                class="relative w-full py-4 transition-colors cursor-pointer hover:bg-gray-50/50"
                 @click="openReportFromList(item.report._id)"
               >
                 <div class="flex items-start justify-between gap-3">
@@ -214,26 +221,18 @@
 
               <section
                 v-else
-                class="border-2 border-gray-100 rounded-2xl bg-white shadow-sm"
+                class="w-full"
               >
-                <div class="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 rounded-2xl">
+                <div class="w-full py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50">
                   <button
                     class="flex items-center gap-2 min-w-0 flex-1 text-left"
                     @click="toggleFolderExpansion(item.folderName)"
                   >
-                    <ChevronDown
-                      v-if="folderIsExpanded(item.folderName)"
-                      class="w-4 h-4 text-gray-500 flex-shrink-0"
-                    />
-                    <ChevronRight
-                      v-else
-                      class="w-4 h-4 text-gray-500 flex-shrink-0"
-                    />
                     <Folder class="w-4 h-4 text-gray-500 flex-shrink-0" />
                     <span class="text-base font-black text-gray-900 truncate">{{ item.folderName }}</span>
                   </button>
 
-                  <div class="flex items-center gap-2 ml-2">
+                  <div class="flex items-center gap-1 ml-2 shrink-0">
                     <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
                     <div class="relative" data-dropdown-root>
                       <button
@@ -253,14 +252,28 @@
                         <button class="menu-item" @click="removeFolderFromMenu(item.folderName)">Remove folder</button>
                       </div>
                     </div>
+
+                    <button
+                      class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                      @click.stop="toggleFolderExpansion(item.folderName)"
+                    >
+                      <ChevronUp
+                        v-if="folderIsExpanded(item.folderName)"
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                      <ChevronDown
+                        v-else
+                        class="w-4 h-4 text-gray-500 flex-shrink-0"
+                      />
+                    </button>
                   </div>
                 </div>
 
-                <div v-if="folderIsExpanded(item.folderName)" class="px-3 pb-3 space-y-2">
+                <div v-if="folderIsExpanded(item.folderName)" class="pl-6 pb-2 space-y-1">
                   <article
                     v-for="report in item.reports"
                     :key="report._id"
-                    class="relative border border-gray-200 rounded-xl p-3 bg-white cursor-pointer hover:border-gray-300"
+                    class="relative w-full py-3 transition-colors cursor-pointer hover:bg-gray-50/50"
                     @click="openReportFromList(report._id)"
                   >
                     <div class="flex items-start justify-between gap-3">
@@ -901,7 +914,7 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Folder, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronUp, Folder, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
