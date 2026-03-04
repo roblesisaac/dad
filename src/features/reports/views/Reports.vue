@@ -91,7 +91,7 @@
                       <GripVertical class="w-4 h-4" />
                     </button>
 
-                    <h2 class="text-xl font-black text-gray-900 truncate">
+                    <h2 class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">
                       {{ item.reportName }}
                     </h2>
                   </div>
@@ -120,13 +120,11 @@
                       class="flex items-center gap-2 min-w-0 flex-1 text-left"
                       @click="toggleFolderExpansion(item.folderName)"
                     >
-                      <Folder class="w-4 h-4 text-gray-500 flex-shrink-0" />
-                      <span class="text-base font-black text-gray-900 truncate">{{ item.folderName }}</span>
+                      <span class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
                     </button>
                   </div>
 
                   <div class="flex items-center gap-2 shrink-0">
-                    <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
                     <button
                       class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
                       @click.stop="toggleFolderExpansion(item.folderName)"
@@ -162,7 +160,7 @@
                               <GripVertical class="w-4 h-4" />
                             </button>
 
-                            <h3 class="text-base font-black text-gray-900 truncate">{{ folderReport.reportName }}</h3>
+                            <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">{{ folderReport.reportName }}</h3>
                           </div>
 
                           <span class="text-base font-black" :class="fontColor(getReportTotal(folderReport.reportId))">
@@ -187,7 +185,7 @@
                 @click="openReportFromList(item.report._id)"
               >
                 <div class="flex items-start justify-between gap-3">
-                  <h2 class="text-xl font-black text-gray-900 truncate">{{ item.report.name }}</h2>
+                  <h2 class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.report.name }}</h2>
 
                   <div class="flex items-center gap-2">
                     <span class="text-lg font-black" :class="fontColor(getReportTotal(item.report._id))">
@@ -228,12 +226,10 @@
                     class="flex items-center gap-2 min-w-0 flex-1 text-left"
                     @click="toggleFolderExpansion(item.folderName)"
                   >
-                    <Folder class="w-4 h-4 text-gray-500 flex-shrink-0" />
-                    <span class="text-base font-black text-gray-900 truncate">{{ item.folderName }}</span>
+                    <span class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
                   </button>
 
                   <div class="flex items-center gap-1 ml-2 shrink-0">
-                    <span class="text-xs font-bold text-gray-500">{{ item.reports.length }}</span>
                     <div class="relative" data-dropdown-root>
                       <button
                         class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
@@ -277,7 +273,7 @@
                     @click="openReportFromList(report._id)"
                   >
                     <div class="flex items-start justify-between gap-3">
-                      <h3 class="text-base font-black text-gray-900 truncate">{{ report.name }}</h3>
+                      <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">{{ report.name }}</h3>
 
                       <div class="flex items-center gap-2">
                         <span class="text-base font-black" :class="fontColor(getReportTotal(report._id))">
@@ -914,7 +910,7 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronUp, Folder, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronUp, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
