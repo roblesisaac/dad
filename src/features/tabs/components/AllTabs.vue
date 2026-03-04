@@ -15,7 +15,7 @@
       <div v-if="enabledTabs.length > 0">
         <Draggable 
           v-if="shouldUseDraggable"
-          v-model="state.selected.tabsForGroup" 
+          v-model="draggableTabs" 
           v-bind="dragOptions" 
           handle=".handler-tab"
           @end="handleDragEnd"
@@ -114,7 +114,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import AllTabRow from './AllTabRow.vue';
@@ -144,6 +144,7 @@ const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 const showDisabledTabs = ref(false);
 const longPressReorderTabId = ref('');
+const dashboardTabs = ref([]);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
 const shouldUseDraggable = computed(() => {
   return isDashboardVariant.value || props.isEditMode;
@@ -154,6 +155,23 @@ const canDragInCurrentMode = computed(() => {
   }
 
   return props.isEditMode;
+});
+const draggableTabs = computed({
+  get: () => {
+    if (isDashboardVariant.value) {
+      return dashboardTabs.value;
+    }
+
+    return state.selected.tabsForGroup;
+  },
+  set: (tabs) => {
+    if (isDashboardVariant.value) {
+      dashboardTabs.value = Array.isArray(tabs) ? tabs : [];
+      return;
+    }
+
+    state.selected.tabsForGroup = tabs;
+  }
 });
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
@@ -206,6 +224,7 @@ function handleTabSelected(tab) {
 function handleRequestReorderMode(tabId) {
   if (!isDashboardVariant.value) return;
 
+  dashboardTabs.value = [...enabledTabs.value];
   longPressReorderTabId.value = tabId || '';
 }
 
@@ -238,8 +257,12 @@ function showCancelEditButtonForTab(tabId) {
 
 // Handle drag end event
 function handleDragEnd() {
+  const orderedTabs = isDashboardVariant.value
+    ? dashboardTabs.value
+    : state.selected.tabsForGroup;
+
   // Update tab ordering in the database
-  state.selected.tabsForGroup.forEach((tab, index) => {
+  orderedTabs.forEach((tab, index) => {
     if (tab.sort !== index) {
       tab.sort = index;
     }
@@ -249,6 +272,18 @@ function handleDragEnd() {
     longPressReorderTabId.value = '';
   }
 }
+
+watch(
+  () => enabledTabs.value,
+  (tabs) => {
+    if (!isDashboardVariant.value) return;
+
+    if (!canDragInCurrentMode.value) {
+      dashboardTabs.value = [...tabs];
+    }
+  },
+  { immediate: true }
+);
 
 onMounted(() => {
   if (isDashboardVariant.value) {
