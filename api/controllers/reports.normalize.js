@@ -27,6 +27,12 @@ function optionalString(value, fallback = '') {
   return value.trim();
 }
 
+function normalizeTotalDisplayType(value) {
+  return optionalString(value).toLowerCase() === 'percentage'
+    ? 'percentage'
+    : 'dollar';
+}
+
 function parseAmount(value) {
   const amount = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(amount)) {
@@ -177,6 +183,7 @@ export function normalizeReportPayload(payload) {
   const name = nonEmptyString(payload.name, 'name');
   const folderName = optionalString(payload.folderName);
   const totalFormula = optionalString(payload.totalFormula);
+  const totalDisplayType = normalizeTotalDisplayType(payload.totalDisplayType);
   const rows = normalizeRows(payload.rows);
   const sort = parseOptionalSort(payload.sort);
 
@@ -184,6 +191,7 @@ export function normalizeReportPayload(payload) {
     name,
     folderName,
     totalFormula,
+    totalDisplayType,
     rows
   };
 

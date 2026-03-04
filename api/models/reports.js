@@ -25,6 +25,7 @@ const reportSchema = {
   name: String,
   folderName: String,
   totalFormula: String,
+  totalDisplayType: String,
   rows: [rowSchema],
   sort: Number,
   createdAt: String,

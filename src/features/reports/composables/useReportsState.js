@@ -77,10 +77,17 @@ export function normalizeReportsForLocal(reports = []) {
     return [];
   }
 
+  const normalizeTotalDisplayType = (value) => (
+    String(value || '').trim().toLowerCase() === 'percentage'
+      ? 'percentage'
+      : 'dollar'
+  );
+
   const normalized = reports.map((report, index) => ({
     ...report,
     folderName: typeof report?.folderName === 'string' ? report.folderName.trim() : '',
     totalFormula: typeof report?.totalFormula === 'string' ? report.totalFormula.trim() : '',
+    totalDisplayType: normalizeTotalDisplayType(report?.totalDisplayType),
     sort: Number.isFinite(Number(report?.sort)) ? Number(report.sort) : index,
     rows: normalizeRowsForLocal(report?.rows)
   }));
@@ -735,6 +742,7 @@ export function useReportsState() {
           name: report.name,
           folderName: report.folderName || '',
           totalFormula: report.totalFormula || '',
+          totalDisplayType: report.totalDisplayType || 'dollar',
           rows,
           sort: report.sort
         });
@@ -767,6 +775,7 @@ export function useReportsState() {
         name: report.name,
         folderName: report.folderName || '',
         totalFormula: report.totalFormula || '',
+        totalDisplayType: report.totalDisplayType || 'dollar',
         rows,
         sort: report.sort
       });
@@ -816,6 +825,7 @@ export function useReportsState() {
         name: nextName,
         folderName: '',
         totalFormula: '',
+        totalDisplayType: 'dollar',
         rows: [],
         sort: state.reports.length
       });
@@ -859,6 +869,7 @@ export function useReportsState() {
         name: buildCopyName(sourceReport.name),
         folderName: sourceReport.folderName || '',
         totalFormula: sourceReport.totalFormula || '',
+        totalDisplayType: sourceReport.totalDisplayType || 'dollar',
         rows: normalizeRowsForLocal(sourceReport.rows),
         sort: state.reports.length
       });
@@ -933,6 +944,15 @@ export function useReportsState() {
       : '';
 
     setReportTotal(reportId);
+  }
+
+  function updateReportTotalDisplayType(reportId, totalDisplayType) {
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.totalDisplayType = String(totalDisplayType || '').trim().toLowerCase() === 'percentage'
+      ? 'percentage'
+      : 'dollar';
   }
 
   async function moveReportToFolder(reportId, folderName) {
@@ -1152,6 +1172,7 @@ export function useReportsState() {
         name: report.name,
         folderName: report.folderName || '',
         totalFormula: report.totalFormula || '',
+        totalDisplayType: report.totalDisplayType || 'dollar',
         rows: report.rows,
         sort: report.sort
       });
@@ -1191,6 +1212,7 @@ export function useReportsState() {
             name: report.name,
             folderName: report.folderName || '',
             totalFormula: report.totalFormula || '',
+            totalDisplayType: report.totalDisplayType || 'dollar',
             rows: report.rows,
             sort: report.sort
           })
@@ -1328,6 +1350,7 @@ export function useReportsState() {
     updateReportName,
     updateReportFolderName,
     updateReportTotalFormula,
+    updateReportTotalDisplayType,
     moveReportToFolder,
     removeReportFromFolder,
     renameFolder,

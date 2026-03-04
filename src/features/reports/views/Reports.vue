@@ -97,7 +97,7 @@
                   </div>
 
                   <span class="text-lg font-black" :class="fontColor(getReportTotal(item.reportId))">
-                    {{ formatPrice(getReportTotal(item.reportId), { toFixed: 2 }) }}
+                    {{ formatReportTotal(item.reportId, { toFixed: 2 }) }}
                   </span>
                 </div>
               </article>
@@ -159,7 +159,7 @@
                           </div>
 
                           <span class="text-base font-black" :class="fontColor(getReportTotal(folderReport.reportId))">
-                            {{ formatPrice(getReportTotal(folderReport.reportId), { toFixed: 2 }) }}
+                            {{ formatReportTotal(folderReport.reportId, { toFixed: 2 }) }}
                           </span>
                         </div>
                       </article>
@@ -184,7 +184,7 @@
 
                   <div class="flex items-center gap-2">
                     <span class="text-lg font-black" :class="fontColor(getReportTotal(item.report._id))">
-                      {{ formatPrice(getReportTotal(item.report._id), { toFixed: 2 }) }}
+                      {{ formatReportTotal(item.report._id, { toFixed: 2 }) }}
                     </span>
 
                     <div class="relative" data-dropdown-root>
@@ -268,7 +268,7 @@
 
                       <div class="flex items-center gap-2">
                         <span class="text-base font-black" :class="fontColor(getReportTotal(report._id))">
-                          {{ formatPrice(getReportTotal(report._id), { toFixed: 2 }) }}
+                          {{ formatReportTotal(report._id, { toFixed: 2 }) }}
                         </span>
 
                         <div class="relative" data-dropdown-root>
@@ -510,7 +510,7 @@
               </button>
               <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Total</span>
               <span class="text-xl font-black truncate" :class="fontColor(getReportTotal(selectedReport._id))">
-                {{ formatPrice(getReportTotal(selectedReport._id), { toFixed: 2 }) }}
+                {{ formatReportTotal(selectedReport._id, { toFixed: 2 }) }}
               </span>
             </div>
 
@@ -539,6 +539,17 @@
               v-if="isFormulaEditorModalOpen"
               class="mt-3 w-full max-w-2xl bg-white rounded-xl border border-gray-200 shadow-sm p-3"
             >
+              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                Type
+                <select
+                  v-model="totalDisplayTypeDraft"
+                  class="mt-1 w-full sm:w-52 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                >
+                  <option value="dollar">Dollar</option>
+                  <option value="percentage">Percentage</option>
+                </select>
+              </label>
+
               <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
                 Formula
                 <input
@@ -916,6 +927,7 @@ const {
   saveReport,
   updateReportName,
   updateReportTotalFormula,
+  updateReportTotalDisplayType,
   moveReportToFolder,
   removeReportFromFolder,
   renameFolder,
@@ -951,6 +963,7 @@ const showDetailReportMenu = ref(false);
 const isEditingReportName = ref(false);
 const reportNameDraft = ref('');
 const totalFormulaDraft = ref('');
+const totalDisplayTypeDraft = ref('dollar');
 const isApplyingReportFormula = ref(false);
 const isFormulaMenuModalOpen = ref(false);
 const isFormulaEditorModalOpen = ref(false);
@@ -1130,11 +1143,41 @@ watch(
   () => selectedReport.value?._id || '',
   () => {
     totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+    totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
     isFormulaMenuModalOpen.value = false;
     isFormulaEditorModalOpen.value = false;
   },
   { immediate: true }
 );
+
+function getReportDisplayType(reportId) {
+  const report = state.reports.find(item => item._id === reportId);
+  return String(report?.totalDisplayType || '').trim().toLowerCase() === 'percentage'
+    ? 'percentage'
+    : 'dollar';
+}
+
+function formatPercentage(value, { toFixed = 2 } = {}) {
+  const numeric = Number(value);
+  const safeValue = Number.isFinite(numeric) ? numeric : 0;
+
+  return safeValue.toLocaleString('en-US', {
+    style: 'percent',
+    minimumFractionDigits: toFixed,
+    maximumFractionDigits: toFixed
+  });
+}
+
+function formatReportTotal(reportId, { toFixed = 2 } = {}) {
+  const total = getReportTotal(reportId);
+  const displayType = getReportDisplayType(reportId);
+
+  if (displayType === 'percentage') {
+    return formatPercentage(total, { toFixed });
+  }
+
+  return formatPrice(total, { toFixed });
+}
 
 function folderIsExpanded(folderName) {
   return expandedFoldersByName.value[folderName] === true;
@@ -1575,6 +1618,7 @@ function openFormulaEditorModal() {
   if (!selectedReport.value?._id) return;
 
   totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+  totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
   isFormulaMenuModalOpen.value = false;
   isFormulaEditorModalOpen.value = true;
 }
@@ -1585,6 +1629,7 @@ function closeFormulaModals() {
   isFormulaMenuModalOpen.value = false;
   isFormulaEditorModalOpen.value = false;
   totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+  totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
 }
 
 function handleGlobalPointerDown(event) {
@@ -1807,7 +1852,9 @@ async function applyReportFormula() {
 
   const reportId = selectedReport.value._id;
   updateReportTotalFormula(reportId, totalFormulaDraft.value);
+  updateReportTotalDisplayType(reportId, totalDisplayTypeDraft.value);
   totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+  totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
 
   if (isDraftSelected.value) {
     closeFormulaModals();
@@ -1821,6 +1868,9 @@ async function applyReportFormula() {
     if (saved?._id) {
       selectedReportId.value = saved._id;
       totalFormulaDraft.value = String(saved.totalFormula || '').trim();
+      totalDisplayTypeDraft.value = String(saved.totalDisplayType || '').trim().toLowerCase() === 'percentage'
+        ? 'percentage'
+        : 'dollar';
     }
   } finally {
     isApplyingReportFormula.value = false;

@@ -95,12 +95,18 @@ describe('useReportsState helpers', () => {
 
   test('normalizes report list sort order', () => {
     const normalized = normalizeReportsForLocal([
-      { _id: 'r2', name: 'B', folderName: '  Ops ', totalFormula: ' r1 + r2 ', sort: 5, rows: [] },
+      { _id: 'r2', name: 'B', folderName: '  Ops ', totalFormula: ' r1 + r2 ', totalDisplayType: 'percentage', sort: 5, rows: [] },
       { _id: 'r1', name: 'A', sort: 1, rows: [] }
     ]);
 
-    expect(normalized[0]).toMatchObject({ _id: 'r1', sort: 0, totalFormula: '' });
-    expect(normalized[1]).toMatchObject({ _id: 'r2', sort: 1, folderName: 'Ops', totalFormula: 'r1 + r2' });
+    expect(normalized[0]).toMatchObject({ _id: 'r1', sort: 0, totalFormula: '', totalDisplayType: 'dollar' });
+    expect(normalized[1]).toMatchObject({
+      _id: 'r2',
+      sort: 1,
+      folderName: 'Ops',
+      totalFormula: 'r1 + r2',
+      totalDisplayType: 'percentage'
+    });
   });
 
   test('calculates total from formula using row references and PEMDAS', () => {

@@ -82,6 +82,7 @@ describe('reports controller', () => {
       expect.objectContaining({
         name: 'Monthly',
         totalFormula: '',
+        totalDisplayType: 'dollar',
         rows: [
           {
             rowId: 'r1',

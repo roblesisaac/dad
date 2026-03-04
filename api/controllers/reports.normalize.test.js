@@ -7,6 +7,7 @@ describe('reports normalize', () => {
       name: '  Monthly  ',
       folderName: '  Planning  ',
       totalFormula: ' r1 + r2 * 1.0875 ',
+      totalDisplayType: ' Percentage ',
       sort: '4',
       rows: [
         {
@@ -43,6 +44,7 @@ describe('reports normalize', () => {
     expect(normalized.name).toBe('Monthly');
     expect(normalized.folderName).toBe('Planning');
     expect(normalized.totalFormula).toBe('r1 + r2 * 1.0875');
+    expect(normalized.totalDisplayType).toBe('percentage');
     expect(normalized.sort).toBe(4);
     expect(normalized.rows).toHaveLength(3);
 
@@ -168,6 +170,28 @@ describe('reports normalize', () => {
       rows: []
     });
     expect(withNonString.totalFormula).toBe('');
+  });
+
+  test('normalizes total display type with safe fallback', () => {
+    const explicitPercentage = normalizeReportPayload({
+      name: 'Monthly',
+      totalDisplayType: 'percentage',
+      rows: []
+    });
+    expect(explicitPercentage.totalDisplayType).toBe('percentage');
+
+    const invalidType = normalizeReportPayload({
+      name: 'Monthly',
+      totalDisplayType: 'something-else',
+      rows: []
+    });
+    expect(invalidType.totalDisplayType).toBe('dollar');
+
+    const missingType = normalizeReportPayload({
+      name: 'Monthly',
+      rows: []
+    });
+    expect(missingType.totalDisplayType).toBe('dollar');
   });
 
   test('checks ownership helper', () => {
