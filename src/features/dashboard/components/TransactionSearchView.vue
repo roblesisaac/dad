@@ -1,12 +1,12 @@
 <template>
   <section class="w-full transaction-search-view">
-    <div class="search-panel rounded-2xl border p-4 sm:p-5">
+    <div class="search-panel">
       <label class="block">
         <span class="search-label text-[10px] font-black uppercase tracking-[0.2em]">
           Keyword
         </span>
 
-        <div class="search-input-wrap mt-2 flex items-center gap-2 rounded-xl border px-3 py-2">
+        <div class="search-input-wrap mt-2 flex items-center gap-2 px-3 py-2">
           <Search class="h-4 w-4 search-muted shrink-0" />
           <input
             v-model="keyword"
@@ -26,7 +26,7 @@
         <button
           v-if="canSearch"
           type="button"
-          class="search-button rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          class="search-button px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           :disabled="isSearching"
           @click="executeSearch"
         >
@@ -55,13 +55,13 @@
         Showing {{ results.length }} of {{ pagination.total }} matches
       </p>
 
-      <div class="overflow-hidden rounded-2xl border search-border">
+      <div class="search-results">
         <article
           v-for="transaction in results"
           :key="transactionKey(transaction)"
           class="search-row border-b search-border last:border-b-0"
         >
-          <div class="px-4 py-4 sm:px-5 sm:py-5 flex items-start justify-between gap-3">
+          <div class="px-1 sm:px-2 flex items-start justify-between gap-3 py-5 w-full">
             <div class="min-w-0 flex-1">
               <div class="text-[10px] font-black uppercase tracking-[0.16em] search-muted">
                 {{ transactionDate(transaction) }}
@@ -347,11 +347,13 @@ onBeforeUnmount(() => {
 <style scoped>
 .transaction-search-view {
   color: var(--theme-text);
+  background-color: inherit;
 }
 
 .search-panel {
-  border-color: var(--theme-border);
-  background: var(--theme-bg);
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--theme-border);
+  background-color: inherit;
 }
 
 .search-label {
@@ -359,12 +361,18 @@ onBeforeUnmount(() => {
 }
 
 .search-input-wrap {
-  border-color: var(--theme-border);
-  background: var(--theme-bg);
+  border: 1px solid var(--theme-border);
+  border-radius: 0.75rem;
+  background-color: inherit;
+}
+
+.search-input-wrap:focus-within {
+  border-color: var(--theme-text);
 }
 
 .search-input {
   color: var(--theme-text);
+  background-color: inherit;
 }
 
 .search-input::placeholder {
@@ -373,24 +381,30 @@ onBeforeUnmount(() => {
 
 .search-button {
   border: 1px solid var(--theme-border);
-  background: var(--theme-bg);
+  border-radius: 0.75rem;
+  background-color: inherit;
   color: var(--theme-text);
 }
 
 .search-button:hover {
-  background: var(--theme-bg-soft);
+  background-color: var(--theme-bg-soft);
 }
 
 .search-border {
   border-color: var(--theme-border);
 }
 
+.search-results {
+  border-top: 1px solid var(--theme-border);
+}
+
 .search-row {
-  background: inherit;
+  background-color: inherit;
+  transition: background-color 150ms ease;
 }
 
 .search-row:hover {
-  background: var(--theme-bg-soft);
+  background-color: var(--theme-bg-soft);
 }
 
 .search-text {

@@ -79,9 +79,8 @@
             aria-label="Search transactions"
             @click="openTransactionSearch"
           >
-            <Search class="w-4 h-4 text-black group-hover:text-black transition-colors" />
             <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-              Transactions
+              Search Transactions
             </span>
           </button>
 
@@ -259,7 +258,7 @@ import { useSelectGroup } from '@/features/select-group/composables/useSelectGro
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { useTheme } from '@/theme/useTheme.js';
 import { useAuth } from '@/shared/composables/useAuth.js';
-import { ChevronDown, ChevronRight, Search, X } from 'lucide-vue-next';
+import { ChevronDown, ChevronRight, X } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
