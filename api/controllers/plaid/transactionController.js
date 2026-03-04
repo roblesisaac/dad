@@ -69,7 +69,9 @@ export default {
         hasMore: syncResult.hasMore,
         cursor: syncResult.cursor,
         batchResults,
-        addedTransactions: syncResult.addedTransactions
+        addedTransactions: syncResult.addedTransactions || [],
+        modifiedTransactions: syncResult.modifiedTransactions || [],
+        removedTransactions: syncResult.removedTransactions || []
       };
 
       if (syncResult.recovery?.performed) {

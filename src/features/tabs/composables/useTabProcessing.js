@@ -400,8 +400,12 @@ export function useTabProcessing() {
     });
   }
 
-  async function processAllTabsForSelectedGroup() {
-    state.isLoading = true;
+  async function processAllTabsForSelectedGroup(options = {}) {
+    const { showLoading = true } = options;
+    if (showLoading) {
+      state.isLoading = true;
+    }
+
     try {
       const tabsForGroup = state.selected.tabsForGroup;
       if (!tabsForGroup?.length) {
@@ -413,105 +417,194 @@ export function useTabProcessing() {
         deselectOtherTabs(selectedTabs);
       }
 
-      for (const tab of tabsForGroup) {
-        tab.categorizedItems = [];
-        const processed = processTabData(tab);
-        if (processed) {
-          tab.total = processed.tabTotal;
-          tab.categorizedItems = processed.categorizedItems;
+      const processedTabData = tabsForGroup.map((tab) => ({
+        tab,
+        processed: processTabData(tab)
+      }));
+
+      for (const { tab, processed } of processedTabData) {
+        if (!processed) {
+          continue;
         }
+
+        tab.total = processed.tabTotal;
+        tab.categorizedItems = processed.categorizedItems;
       }
 
       await nextTick();
     } finally {
-      state.isLoading = false;
+      if (showLoading) {
+        state.isLoading = false;
+      }
     }
   }
 
-  /**
-   * Efficiently adds new transactions to the current view and processes only affected tabs
-   * @param {Array} addedTransactions - New transactions to add
-   * @returns {Number} Count of transactions added to view
-   */
-  async function concatAndProcessTransactions(addedTransactions) {
+  function getTransactionKey(transaction) {
+    if (!transaction) return null;
+
+    return transaction.transaction_id
+      || `${transaction.account_id || ''}-${transaction.authorized_date || transaction.date || ''}-${transaction.amount || ''}-${transaction.name || ''}`;
+  }
+
+  function getGroupAccountIds(group) {
+    const accounts = Array.isArray(group?.accounts) ? group.accounts : [];
+    return new Set(accounts
+      .map((account) => (typeof account === 'object' ? account?.account_id : account))
+      .filter(Boolean));
+  }
+
+  function matchesSelectedGroupAndDateRange(transaction, groupAccountIds, startDate, endDate) {
+    if (!transaction?.account_id || !groupAccountIds.has(transaction.account_id)) {
+      return false;
+    }
+
+    const txDate = new Date(transaction.date || transaction.authorized_date);
+    if (Number.isNaN(txDate.getTime())) {
+      return false;
+    }
+
+    return txDate >= startDate && txDate <= endDate;
+  }
+
+  function normalizeDeltaTransactions(deltaTransactions) {
+    if (!Array.isArray(deltaTransactions)) {
+      return [];
+    }
+
+    return deltaTransactions.filter(Boolean);
+  }
+
+  async function applyTransactionSyncDelta(delta = {}, options = {}) {
+    const { showLoading = false } = options;
+
     try {
-      // Wait for app to be initialized before processing transactions
       const isInitialized = await waitUntilAppIsInitialized();
       if (!isInitialized) {
         console.warn('App initialization timeout reached, proceeding with caution');
       }
 
-      // Only proceed if we have state, a selected group, and transactions
-      if (!state || !state.selected || !state.selected.group || !addedTransactions || !addedTransactions.length) {
-        return 0;
+      const selectedGroup = state?.selected?.group;
+      if (!selectedGroup) {
+        return { added: 0, modified: 0, removed: 0, totalChanged: 0 };
       }
 
-      const selectedGroup = state.selected.group;
+      const addedTransactions = normalizeDeltaTransactions(delta.addedTransactions);
+      const modifiedTransactions = normalizeDeltaTransactions(delta.modifiedTransactions);
+      const removedTransactions = normalizeDeltaTransactions(delta.removedTransactions);
 
-      // Use the date composable (already initialized at setup time)
+      if (!addedTransactions.length && !modifiedTransactions.length && !removedTransactions.length) {
+        return { added: 0, modified: 0, removed: 0, totalChanged: 0 };
+      }
 
-      // Get date range from state and convert to Date objects
+      const groupAccountIds = getGroupAccountIds(selectedGroup);
+      if (!groupAccountIds.size) {
+        return { added: 0, modified: 0, removed: 0, totalChanged: 0 };
+      }
+
       const startDate = convertToDate(state.date.start);
       const endDate = convertToDate(state.date.end);
 
-      // Filter transactions by date range
-      const dateFilteredTransactions = addedTransactions.filter(transaction => {
-        const txDate = new Date(transaction.date || transaction.authorized_date);
-        return txDate >= startDate && txDate <= endDate;
+      const existingTransactions = Array.isArray(state.selected.allGroupTransactions)
+        ? state.selected.allGroupTransactions
+        : [];
+      const transactionsById = new Map();
+
+      existingTransactions.forEach((transaction) => {
+        const key = getTransactionKey(transaction);
+        if (!key) return;
+        transactionsById.set(key, transaction);
       });
 
-      if (dateFilteredTransactions.length === 0) {
-        return 0;
+      let addedCount = 0;
+      let modifiedCount = 0;
+      let removedCount = 0;
+
+      for (const removedTransaction of removedTransactions) {
+        const transactionId = typeof removedTransaction === 'string'
+          ? removedTransaction
+          : removedTransaction?.transaction_id;
+
+        if (!transactionId) {
+          continue;
+        }
+
+        if (transactionsById.delete(transactionId)) {
+          removedCount += 1;
+        }
       }
 
-      // Filter transactions for the selected group
-      const groupAccounts = selectedGroup.accounts || [];
-      const groupAccountIds = Array.isArray(groupAccounts) ?
-        (groupAccounts[0] && typeof groupAccounts[0] === 'object' ?
-          groupAccounts.map(account => account.account_id) :
-          groupAccounts) :
-        [];
+      for (const modifiedTransaction of modifiedTransactions) {
+        const transactionId = modifiedTransaction?.transaction_id;
+        if (!transactionId) {
+          continue;
+        }
 
-      const matchingTransactions = dateFilteredTransactions.filter(transaction => {
-        return groupAccountIds.includes(transaction.account_id);
-      });
+        if (!matchesSelectedGroupAndDateRange(modifiedTransaction, groupAccountIds, startDate, endDate)) {
+          if (transactionsById.delete(transactionId)) {
+            modifiedCount += 1;
+          }
+          continue;
+        }
 
-      if (matchingTransactions.length === 0) {
-        return 0;
+        const previousValue = transactionsById.get(transactionId);
+        if (previousValue !== modifiedTransaction) {
+          modifiedCount += 1;
+        }
+
+        transactionsById.set(transactionId, modifiedTransaction);
       }
 
-      const allGroupTransactions = state.selected.allGroupTransactions;
+      for (const addedTransaction of addedTransactions) {
+        const transactionId = addedTransaction?.transaction_id;
+        if (!transactionId) {
+          continue;
+        }
 
-      if (!allGroupTransactions) {
-        state.selected.allGroupTransactions = [];
+        if (!matchesSelectedGroupAndDateRange(addedTransaction, groupAccountIds, startDate, endDate)) {
+          continue;
+        }
+
+        if (transactionsById.has(transactionId)) {
+          continue;
+        }
+
+        transactionsById.set(transactionId, addedTransaction);
+        addedCount += 1;
       }
 
-      // Add new transactions to the array (avoid duplicates by checking transaction_id)
-      const existingIds = new Set(allGroupTransactions.map(t => t.transaction_id));
-      const newTransactions = matchingTransactions.filter(t => !existingIds.has(t.transaction_id));
-
-      if (newTransactions.length === 0) {
-        return 0;
+      const totalChanged = addedCount + modifiedCount + removedCount;
+      if (!totalChanged) {
+        return { added: addedCount, modified: modifiedCount, removed: removedCount, totalChanged };
       }
 
-      // Add new transactions to state
-      state.selected.allGroupTransactions = [
-        ...allGroupTransactions,
-        ...newTransactions
-      ];
+      state.selected.allGroupTransactions = [...transactionsById.values()];
+      await processAllTabsForSelectedGroup({ showLoading });
 
-      await processAllTabsForSelectedGroup();
-
-      return newTransactions.length;
+      return { added: addedCount, modified: modifiedCount, removed: removedCount, totalChanged };
     } catch (error) {
-      console.error('Error concatenating and processing transactions:', error);
-      return 0;
+      console.error('Error applying transaction sync delta:', error);
+      return { added: 0, modified: 0, removed: 0, totalChanged: 0 };
     }
+  }
+
+  /**
+   * Compatibility wrapper for existing added-transactions-only sync updates.
+   * @param {Array} addedTransactions - New transactions to add
+   * @returns {Number} Count of transactions added to view
+   */
+  async function concatAndProcessTransactions(addedTransactions) {
+    const result = await applyTransactionSyncDelta(
+      { addedTransactions },
+      { showLoading: false }
+    );
+
+    return result.added;
   }
 
   return {
     processTabData,
     processAllTabsForSelectedGroup,
+    applyTransactionSyncDelta,
     concatAndProcessTransactions
   };
 }

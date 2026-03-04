@@ -89,7 +89,10 @@ export function useInit() {
 
         await handleGroupChange();
         state.isInitialized = true;
-        await syncLatestTransactionsForAllBanks();
+
+        syncLatestTransactionsForAllBanks().catch((syncError) => {
+          console.error('Background sync error:', syncError);
+        });
       } catch (error) {
         const errorData = error.response?.data;
         state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';

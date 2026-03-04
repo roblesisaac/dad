@@ -21,7 +21,7 @@ export function usePlaidSync() {
   const MAX_RETRIES = 0; // Max retries per sync operation
   const consecutiveRecoveries = ref({}); // Track consecutive recoveries by itemId
   const statusBarTimeout = ref(null); // Add ref to track the timeout ID
-  const { concatAndProcessTransactions } = useTabProcessing();
+  const { applyTransactionSyncDelta } = useTabProcessing();
 
   /**
    * Sync latest transactions for a single bank/item
@@ -104,12 +104,22 @@ export function usePlaidSync() {
           totalStats.modified += batchResults.modified || 0;
           totalStats.removed += batchResults.removed || 0;
 
-          // If there are added transactions in the response and we're in a dashboard view, update visible transactions
-          if (result.addedTransactions && result.addedTransactions.length > 0) {
-            const addedCount = await concatAndProcessTransactions(result.addedTransactions);
-            if (addedCount > 0) {
-              updateStatusBar(`Added ${addedCount} new transactions to your current view`, false);
-            }
+          const deltaResult = await applyTransactionSyncDelta(
+            {
+              addedTransactions: result.addedTransactions,
+              modifiedTransactions: result.modifiedTransactions,
+              removedTransactions: result.removedTransactions
+            },
+            { showLoading: false }
+          );
+
+          if (deltaResult.totalChanged > 0) {
+            const hasReconciledChanges = deltaResult.modified > 0 || deltaResult.removed > 0;
+            const statusMessage = hasReconciledChanges
+              ? `Updated ${deltaResult.totalChanged} transactions in your current view`
+              : `Added ${deltaResult.added} new transactions to your current view`;
+
+            updateStatusBar(statusMessage, false);
           }
 
           // Update UI with progress

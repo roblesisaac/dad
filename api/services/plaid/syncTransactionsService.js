@@ -168,6 +168,9 @@ class TransactionSyncService {
       added: 0,
       modified: 0,
       removed: 0,
+      addedTransactions: [],
+      modifiedTransactions: [],
+      removedTransactions: [],
       hasMore: plaidData.has_more,
       cursor: plaidData.next_cursor,
       noChanges: true,
@@ -244,6 +247,7 @@ class TransactionSyncService {
       expected: expectedCounts,
       actual: actualCounts
     };
+    const countsMatch = syncSessionService.countsMatch(syncCounts);
 
     // Determine if there were any failures
     const hasFailures = Object.values(failedTransactions).some(
@@ -256,7 +260,9 @@ class TransactionSyncService {
         plaidData.added
         : [],
       modifiedCount: actualCounts.modified,
+      modifiedTransactions: countsMatch ? plaidData.modified : [],
       removedCount: actualCounts.removed,
+      removedTransactions: countsMatch ? plaidData.removed : [],
       hasMore: plaidData.has_more,
       cursor: cursor,
       nextCursor: plaidData.next_cursor,
@@ -576,7 +582,10 @@ class TransactionSyncService {
         added: 0,
         modified: 0,
         removed: 0
-      }
+      },
+      addedTransactions: [],
+      modifiedTransactions: [],
+      removedTransactions: []
     };
   }
 
@@ -591,9 +600,11 @@ class TransactionSyncService {
   _buildSyncResponse(syncResult, syncTime, batchNumber) {
     const response = {
       added: syncResult.addedCount,
-      addedTransactions: syncResult.addedTransactions,
+      addedTransactions: syncResult.addedTransactions || [],
       modified: syncResult.modifiedCount,
+      modifiedTransactions: syncResult.modifiedTransactions || [],
       removed: syncResult.removedCount,
+      removedTransactions: syncResult.removedTransactions || [],
       hasMore: syncResult.hasMore,
       cursor: syncResult.cursor,
       nextCursor: syncResult.nextCursor,
