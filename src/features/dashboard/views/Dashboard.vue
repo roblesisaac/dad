@@ -367,7 +367,8 @@ watch(
 
 onMounted(async () => {
   await init({
-    preferredGroupId: reportContext.groupId
+    preferredGroupId: reportContext.groupId,
+    prioritizeFirstPaint: !reportContext.hasContext
   });
   await applyReportRowContextFromQuery(reportContext);
   setDefaultDashboardView();

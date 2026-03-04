@@ -24,6 +24,20 @@ export function useInit() {
   const rulesAPI = useRulesAPI(api);
   const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
 
+  async function fetchTabsAndRules() {
+    try {
+      const [tabs, rules] = await Promise.all([
+        tabsAPI.fetchUserTabs(),
+        rulesAPI.fetchUserRules()
+      ]);
+
+      state.allUserTabs = tabs;
+      state.allUserRules = rules;
+    } catch (error) {
+      console.error('Error fetching tabs/rules:', error);
+    }
+  }
+
   function applyPreferredGroupSelection(groups, preferredGroupId) {
     if (!Array.isArray(groups) || !groups.length) {
       return;
@@ -44,20 +58,19 @@ export function useInit() {
   }
 
   async function init(options = {}) {
-    const { preferredGroupId = '' } = options;
+    const {
+      preferredGroupId = '',
+      prioritizeFirstPaint = true
+    } = options;
     try {
       state.isInitialized = false;
       state.blueBar.message = 'Beginning sync';
       state.blueBar.loading = true;
 
-      await loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js');
-
-      try {
-        state.allUserTabs = await tabsAPI.fetchUserTabs();
-        state.allUserRules = await rulesAPI.fetchUserRules();
-      } catch (error) {
-        console.error('Error fetching tabs/rules:', error);
-      }
+      const plaidScriptPromise = loadScript('https://cdn.plaid.com/link/v2/stable/link-initialize.js')
+        .catch((error) => {
+          console.error('Failed to load Plaid script:', error);
+        });
 
       try {
         const { groups, accounts, itemsNeedingReauth } = await fetchGroupsAndAccounts();
@@ -87,12 +100,28 @@ export function useInit() {
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;
 
-        await handleGroupChange();
-        state.isInitialized = true;
+        if (prioritizeFirstPaint) {
+          state.isInitialized = true;
+          state.isLoading = false;
 
-        syncLatestTransactionsForAllBanks().catch((syncError) => {
-          console.error('Background sync error:', syncError);
-        });
+          void (async () => {
+            await fetchTabsAndRules();
+            await handleGroupChange({ showLoading: false });
+            await syncLatestTransactionsForAllBanks();
+          })().catch((backgroundError) => {
+            console.error('Background init workflow error:', backgroundError);
+          });
+        } else {
+          await fetchTabsAndRules();
+          await handleGroupChange();
+          state.isInitialized = true;
+
+          syncLatestTransactionsForAllBanks().catch((syncError) => {
+            console.error('Background sync error:', syncError);
+          });
+        }
+
+        void plaidScriptPromise;
       } catch (error) {
         const errorData = error.response?.data;
         state.blueBar.message = errorData?.message || 'There was an error connecting to your accounts. Please try again.';

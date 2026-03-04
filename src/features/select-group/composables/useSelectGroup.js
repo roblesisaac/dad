@@ -277,7 +277,11 @@ export function useSelectGroup() {
    * Handle group selection change
    */
   async function handleGroupChange(options = {}) {
-    const { forceRefresh = false, preserveSelectedTab = false } = options;
+    const {
+      forceRefresh = false,
+      preserveSelectedTab = false,
+      showLoading = true
+    } = options;
     let selectedGroup = state.selected.group;
     const tabsForGroup = state.selected.tabsForGroup;
 
@@ -291,7 +295,9 @@ export function useSelectGroup() {
       // selectedGroup = await selectFirstGroup(state.allUserGroups);
     }
 
-    state.isLoading = true;
+    if (showLoading) {
+      state.isLoading = true;
+    }
     if (!preserveSelectedTab) {
       clearSelectedTabsForGroup(selectedGroup);
     }
@@ -316,10 +322,12 @@ export function useSelectGroup() {
       );
 
       if (tabsForGroup.length) {
-        return await processAllTabsForSelectedGroup();
+        return await processAllTabsForSelectedGroup({ showLoading });
       }
 
-      state.isLoading = false;
+      if (showLoading) {
+        state.isLoading = false;
+      }
     })();
 
     GROUP_CHANGE_IN_FLIGHT_REQUESTS.set(requestKey, requestPromise);
