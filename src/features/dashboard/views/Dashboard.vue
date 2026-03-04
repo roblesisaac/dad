@@ -32,7 +32,7 @@
 
             <button
               @click="router.push('/reports')"
-              class="w-full text-left py-6 border-t border-[var(--theme-border)] flex items-center justify-between hover:bg-[var(--theme-bg-soft)] transition-colors"
+              class="w-full text-left py-6 flex items-center justify-between hover:bg-[var(--theme-bg-soft)] transition-colors"
               type="button"
             >
               <span class="text-base font-black uppercase tracking-tight text-[var(--theme-text)]">
