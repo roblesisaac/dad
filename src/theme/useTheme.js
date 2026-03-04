@@ -78,6 +78,24 @@ function applyThemeTokens(themeName) {
   }
 }
 
+function applyBrowserThemeColor(themeName) {
+  if (typeof document === 'undefined' || typeof document.querySelector !== 'function') {
+    return;
+  }
+
+  const tokenMap = THEME_REGISTRY[themeName] || THEME_REGISTRY.light;
+  const themeColor = tokenMap['--theme-bg'] || THEME_REGISTRY.light['--theme-bg'];
+  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+  if (themeColorMeta && typeof themeColorMeta.setAttribute === 'function') {
+    themeColorMeta.setAttribute('content', themeColor);
+  }
+
+  const appleStatusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  if (appleStatusBarMeta && typeof appleStatusBarMeta.setAttribute === 'function') {
+    appleStatusBarMeta.setAttribute('content', themeName === 'dark' ? 'black' : 'default');
+  }
+}
+
 function applyTheme(themeName) {
   const nextTheme = isThemeName(themeName) ? themeName : 'light';
   activeTheme.value = nextTheme;
@@ -88,6 +106,7 @@ function applyTheme(themeName) {
   }
 
   applyThemeTokens(nextTheme);
+  applyBrowserThemeColor(nextTheme);
 }
 
 function handleSystemThemeChange(event) {
@@ -159,4 +178,3 @@ export function useTheme() {
 }
 
 export { resolvedTheme, isNonLightTheme };
-

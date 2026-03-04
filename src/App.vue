@@ -5,11 +5,13 @@
   </Transition>
 
   <router-view v-if="!State.showingOffCanvasLinks" />
+  <PwaInstallBanner />
 </template>
 
 <script setup>
 import NavMain from './shared/components/NavMain.vue';
 import OffCanvasLinks from './shared/components/OffCanvasLinks.vue';
+import PwaInstallBanner from './shared/components/PwaInstallBanner.vue';
 import { useRoute } from 'vue-router';
 import { useAppStore } from './stores/state';
 import { computed } from 'vue';

@@ -1,4 +1,5 @@
 import { reactive, computed } from 'vue';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 const state = reactive({
   allUserAccounts: [],
@@ -14,7 +15,19 @@ const state = reactive({
 
   selected: {
     allGroupTransactions: [],
-    group: computed(() => state.allUserGroups.find(g => g.isSelected)),
+    groupOverride: null,
+    group: computed(() => {
+      const overrideGroup = state.selected.groupOverride;
+      if (overrideGroup?.isVirtualAllAccounts) {
+        return {
+          ...overrideGroup,
+          _id: ALL_ACCOUNTS_GROUP_ID,
+          accounts: state.allUserAccounts
+        };
+      }
+
+      return overrideGroup || state.allUserGroups.find(g => g.isSelected);
+    }),
     tabsForGroup: computed({
       get: () => getTabsForGroup(state.selected.group),
       set: (reorderedTabs) => {
@@ -34,6 +47,10 @@ export function useDashboardState() {
 
 function getTabsForGroup(group) {
   if (!group) return [];
+
+  if (group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID) {
+    return [...state.allUserTabs].sort((a, b) => a.sort - b.sort);
+  }
 
   const tabs = state.allUserTabs.filter(tab => {
     const tabMatchesGroupId = tab.showForGroup.includes(group._id);

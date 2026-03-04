@@ -4,6 +4,7 @@ import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.j
 import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
 import { useUtils } from '@/shared/composables/useUtils';
 import { computed } from 'vue';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 const GROUP_CHANGE_IN_FLIGHT_REQUESTS = new Map();
 const GROUP_LABEL_MIGRATION_CACHE = new Set();
@@ -226,6 +227,7 @@ export function useSelectGroup() {
    */
   async function selectGroup(groupToSelect) {
     state.isLoading = true;
+    state.selected.groupOverride = null;
     const allGroups = state.allUserGroups;
     // First deselect all groups
     for (const group of allGroups) {
@@ -251,6 +253,7 @@ export function useSelectGroup() {
     const firstGroup = allGroups[0];
     if (!firstGroup) return null;
 
+    state.selected.groupOverride = null;
     firstGroup.isSelected = true;
     await groupsAPI.updateGroupSelection(firstGroup._id, true);
     return firstGroup;
@@ -262,6 +265,14 @@ export function useSelectGroup() {
 
   function clearSelectedTabsForGroup(selectedGroup) {
     if (!selectedGroup?._id) return;
+
+    if (selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID) {
+      state.allUserTabs.forEach((tab) => {
+        tab.isSelected = false;
+        tab.categorizedItems = [];
+      });
+      return;
+    }
 
     state.allUserTabs.forEach((tab) => {
       const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];

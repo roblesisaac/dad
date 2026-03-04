@@ -114,6 +114,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 const props = defineProps({
   variant: {
@@ -150,6 +151,10 @@ const containerClasses = computed(() => {
 const enabledTabs = computed(() => state.selected.tabsForGroup);
 
 const disabledTabs = computed(() => {
+  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
+    return [];
+  }
+
   const currentGroupId = state.selected.group?._id;
   if (!currentGroupId) return [];
   

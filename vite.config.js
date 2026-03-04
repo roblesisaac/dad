@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import path from 'path'
-// import { VitePWA } from 'vite-plugin-pwa'
+import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   build: {
@@ -38,12 +38,43 @@ export default defineConfig({
   },
   plugins: [
     vue(),
-    // VitePWA({ 
-    //   registerType: 'autoUpdate',
-    //   devOptions: {
-    //     enabled: true
-    //   } 
-    // })
+    VitePWA({
+      registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      includeAssets: ['icon.svg', 'logo.png'],
+      manifest: {
+        id: '/',
+        name: 'TrackTabs',
+        short_name: 'TrackTabs',
+        description: 'TrackTabs dashboard and tab tracking app',
+        theme_color: '#111827',
+        background_color: '#111827',
+        display: 'standalone',
+        start_url: '/',
+        scope: '/',
+        icons: [
+          {
+            src: '/pwa-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+          {
+            src: '/pwa-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable',
+          },
+        ],
+      },
+      devOptions: {
+        enabled: true,
+      },
+    })
   ],
   resolve: {
     alias: {

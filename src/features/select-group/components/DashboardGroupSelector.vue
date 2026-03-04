@@ -18,6 +18,31 @@
     </div>
 
     <section class="w-full">
+      <div class="selector-row group">
+        <div
+          class="w-full text-left py-6 row-main"
+          role="button"
+          tabindex="0"
+          @click="handleAllAccountsRowSelect"
+          @keydown.enter.prevent="handleAllAccountsRowSelect"
+          @keydown.space.prevent="handleAllAccountsRowSelect"
+        >
+          <div class="flex items-start justify-between gap-4">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
+                <div class="text-base font-black uppercase tracking-tight truncate selector-text">
+                  All Accounts
+                </div>
+              </div>
+            </div>
+
+            <span class="text-base font-black tracking-tight shrink-0 selector-text">
+              {{ formatPrice(allAccountsNetBalance, { toFixed: 0 }) }}
+            </span>
+          </div>
+        </div>
+      </div>
+
       <Draggable
         v-if="dashboardEditMode"
         v-model="dashboardAccounts"
@@ -151,9 +176,9 @@
       </div>
       <div class="flex items-center gap-2 overflow-x-auto pb-1 hide-scroll">
         <div
-          v-for="label in sortedLabelGroups"
+          v-for="label in labelChipGroups"
           :key="label._id"
-          :class="['relative flex-shrink-0', { 'menu-open': activeLabelMenuId === label._id }]"
+          :class="['relative flex-shrink-0', { 'menu-open': !isAllAccountsGroup(label) && activeLabelMenuId === label._id }]"
           data-menu-surface
         >
           <button
@@ -167,6 +192,7 @@
           </button>
 
           <button
+            v-if="!isAllAccountsGroup(label)"
             type="button"
             class="chip-menu-trigger"
             data-menu-surface
@@ -488,6 +514,7 @@ import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
 import { useBanks } from '@/features/banks/composables/useBanks';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
 import Switch from '@/shared/components/Switch.vue';
@@ -543,6 +570,20 @@ const showBanksModal = ref(false);
 
 const sortedLabelGroups = computed(() => {
   return [...labelGroups.value].sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+});
+const allAccountsSystemLabel = computed(() => {
+  return {
+    _id: ALL_ACCOUNTS_GROUP_ID,
+    name: 'All Accounts',
+    isVirtualAllAccounts: true,
+    accounts: state.allUserAccounts
+  };
+});
+const labelChipGroups = computed(() => {
+  return [allAccountsSystemLabel.value, ...sortedLabelGroups.value];
+});
+const allAccountsNetBalance = computed(() => {
+  return (state.allUserAccounts || []).reduce((sum, account) => sum + accountNetBalance(account), 0);
 });
 
 const activeLabelGroup = computed(() => {
@@ -835,6 +876,10 @@ function closeMenusOnOutsideClick(event) {
   closeAllMenus();
 }
 
+function isAllAccountsGroup(group) {
+  return Boolean(group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID);
+}
+
 function toggleAccountMenu(account) {
   const nextId = activeAccountMenuId.value === accountKey(account) ? '' : accountKey(account);
   activeAccountMenuId.value = nextId;
@@ -917,6 +962,11 @@ async function handleAccountReorderEnd() {
 }
 
 async function handleLabelChipSelect(labelGroup) {
+  if (isAllAccountsGroup(labelGroup)) {
+    await handleAllAccountsRowSelect();
+    return;
+  }
+
   closeAllMenus();
   emit('group-selected', labelGroup);
 
@@ -924,6 +974,23 @@ async function handleLabelChipSelect(labelGroup) {
     await selectGroup(labelGroup);
   } catch (error) {
     console.error('Error selecting label group', error);
+  }
+}
+
+function buildAllAccountsSelectionGroup() {
+  return allAccountsSystemLabel.value;
+}
+
+async function handleAllAccountsRowSelect() {
+  closeAllMenus();
+  const allAccountsGroup = buildAllAccountsSelectionGroup();
+  state.selected.groupOverride = allAccountsGroup;
+  emit('group-selected', allAccountsGroup);
+
+  try {
+    await handleGroupChange();
+  } catch (error) {
+    console.error('Error selecting all accounts group', error);
   }
 }
 

@@ -75,6 +75,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useTabs } from '../composables/useTabs';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 import Switch from '@/shared/components/Switch.vue';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
@@ -104,6 +105,10 @@ const isActiveTab = computed(() => {
 
 // Determine if this tab is enabled for the current group
 const isEnabled = computed(() => {
+  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
+    return true;
+  }
+
   const currentGroupId = state.selected.group?._id;
   if (!currentGroupId) return false;
   
@@ -155,6 +160,10 @@ function selectTabAndGoBack(tab) {
 
 // Toggle tab for current group
 function toggleTabVisibility(tabId) {
+  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
+    return;
+  }
+
   const currentGroupId = state.selected.group?._id;
   if (!currentGroupId) return;
   

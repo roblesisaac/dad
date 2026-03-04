@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { THEME_STORAGE_KEY } from './themes.js';
+import { THEME_REGISTRY, THEME_STORAGE_KEY } from './themes.js';
 
 function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
   const storage = new Map();
@@ -37,6 +37,24 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
     getPropertyValue: (name) => styleState[name] || ''
   };
 
+  const themeColorMeta = {
+    content: '',
+    setAttribute: vi.fn((name, value) => {
+      if (name === 'content') {
+        themeColorMeta.content = value;
+      }
+    })
+  };
+
+  const appleStatusBarMeta = {
+    content: 'default',
+    setAttribute: vi.fn((name, value) => {
+      if (name === 'content') {
+        appleStatusBarMeta.content = value;
+      }
+    })
+  };
+
   globalThis.window = {
     localStorage,
     matchMedia: vi.fn(() => mediaQueryList)
@@ -46,6 +64,17 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
     createElement: () => ({}),
     createElementNS: () => ({}),
     createTextNode: () => ({}),
+    querySelector: vi.fn((selector) => {
+      if (selector === 'meta[name="theme-color"]') {
+        return themeColorMeta;
+      }
+
+      if (selector === 'meta[name="apple-mobile-web-app-status-bar-style"]') {
+        return appleStatusBarMeta;
+      }
+
+      return null;
+    }),
     documentElement: {
       dataset: {},
       style
@@ -55,6 +84,8 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
   return {
     storage,
     localStorage,
+    themeColorMeta,
+    appleStatusBarMeta,
     emitSystemThemeChange(nextPrefersDark) {
       mediaQueryList.matches = nextPrefersDark;
       if (mediaChangeListener) {
@@ -147,5 +178,18 @@ describe('useTheme', () => {
     themeModule.setTheme('light');
     env.emitSystemThemeChange(true);
     expect(themeModule.resolvedTheme.value).toBe('light');
+  });
+
+  test('updates browser theme meta colors when theme changes', async () => {
+    const env = createThemeTestEnv({ prefersDark: false });
+    const themeModule = await import('./useTheme.js');
+
+    themeModule.initTheme();
+    expect(env.themeColorMeta.content).toBe(THEME_REGISTRY.light['--theme-bg']);
+    expect(env.appleStatusBarMeta.content).toBe('default');
+
+    themeModule.setTheme('dark');
+    expect(env.themeColorMeta.content).toBe(THEME_REGISTRY.dark['--theme-bg']);
+    expect(env.appleStatusBarMeta.content).toBe('black');
   });
 });

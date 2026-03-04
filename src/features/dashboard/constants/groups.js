@@ -1,0 +1,1 @@
+export const ALL_ACCOUNTS_GROUP_ID = '_ALL_ACCOUNTS';

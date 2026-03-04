@@ -2,6 +2,7 @@ import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
 import { nextTick } from 'vue';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 export function useTabs() {
   const { state } = useDashboardState();
@@ -85,7 +86,9 @@ export function useTabs() {
 
     const newTabData = {
       tabName,
-      showForGroup: [selectedGroup._id],
+      showForGroup: selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID
+        ? ['_GLOBAL']
+        : [selectedGroup._id],
       sort: tabsForGroup.length+1
     };
 
