@@ -14,20 +14,25 @@
 
       <div v-if="enabledTabs.length > 0">
         <Draggable 
-          v-if="effectiveEditMode"
+          v-if="shouldUseDraggable"
           v-model="state.selected.tabsForGroup" 
           v-bind="dragOptions" 
           handle=".handler-tab"
           @end="handleDragEnd"
           item-key="_id"
+          :disabled="!canDragInCurrentMode"
         >
           <template #item="{element}">
             <AllTabRow
               :element="element"
               :key="element._id" 
-              :is-edit-mode="effectiveEditMode"
+              :is-edit-mode="isEditModeForTab(element._id)"
+              :show-cancel-edit-button="showCancelEditButtonForTab(element._id)"
               :variant="variant"
               @tab-selected="handleTabSelected"
+              @request-reorder-mode="handleRequestReorderMode"
+              @tab-actions-clicked="handleTabActionsClicked"
+              @cancel-edit-mode="exitAllEditModes"
             />
           </template>
         </Draggable>
@@ -38,9 +43,13 @@
             v-for="element in enabledTabs"
             :key="element._id"
             :element="element"
-            :is-edit-mode="effectiveEditMode"
+            :is-edit-mode="isEditModeForTab(element._id)"
+            :show-cancel-edit-button="showCancelEditButtonForTab(element._id)"
             :variant="variant"
             @tab-selected="handleTabSelected"
+            @request-reorder-mode="handleRequestReorderMode"
+            @tab-actions-clicked="handleTabActionsClicked"
+            @cancel-edit-mode="exitAllEditModes"
           />
         </div>
       </div>
@@ -69,9 +78,13 @@
           v-for="tab in disabledTabs"
           :key="tab._id"
           :element="tab"
-          :is-edit-mode="effectiveEditMode" 
+          :is-edit-mode="isEditModeForTab(tab._id)"
+          :show-cancel-edit-button="showCancelEditButtonForTab(tab._id)"
           :variant="variant"
           @tab-selected="handleTabSelected"
+          @request-reorder-mode="handleRequestReorderMode"
+          @tab-actions-clicked="handleTabActionsClicked"
+          @cancel-edit-mode="exitAllEditModes"
         />
         <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">
           No hidden tabs
@@ -98,21 +111,11 @@
       </button>
     </div>
   </div>
-  <button
-  v-if="isDashboardVariant"
-  class="w-full py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none"
-  @click="toggleDashboardReorder"
->
-  <span class="text-base font-black text-gray-900 uppercase tracking-tight">
-    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange / Hide Tabs' }}
-  </span>
-  <GripVertical class="w-4 h-4 text-black group-hover:text-black transition-colors" />
-</button>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { ChevronDown, ChevronUp, GripVertical } from 'lucide-vue-next';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
@@ -140,10 +143,17 @@ const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 const showDisabledTabs = ref(false);
-const dashboardEditMode = ref(false);
+const longPressReorderTabId = ref('');
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
-const effectiveEditMode = computed(() => {
-  return isDashboardVariant.value ? dashboardEditMode.value : props.isEditMode;
+const shouldUseDraggable = computed(() => {
+  return isDashboardVariant.value || props.isEditMode;
+});
+const canDragInCurrentMode = computed(() => {
+  if (isDashboardVariant.value) {
+    return Boolean(longPressReorderTabId.value);
+  }
+
+  return props.isEditMode;
 });
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
@@ -193,9 +203,37 @@ function handleTabSelected(tab) {
   emit('tab-selected', tab);
 }
 
-function toggleDashboardReorder() {
+function handleRequestReorderMode(tabId) {
   if (!isDashboardVariant.value) return;
-  dashboardEditMode.value = !dashboardEditMode.value;
+
+  longPressReorderTabId.value = tabId || '';
+}
+
+function handleTabActionsClicked() {
+  if (!isDashboardVariant.value) return;
+  if (!longPressReorderTabId.value) return;
+
+  exitAllEditModes();
+}
+
+function exitAllEditModes() {
+  longPressReorderTabId.value = '';
+}
+
+function isEditModeForTab(tabId) {
+  if (!isDashboardVariant.value) {
+    return props.isEditMode;
+  }
+
+  return longPressReorderTabId.value === tabId;
+}
+
+function showCancelEditButtonForTab(tabId) {
+  if (!isDashboardVariant.value) {
+    return false;
+  }
+
+  return longPressReorderTabId.value === tabId;
 }
 
 // Handle drag end event
@@ -206,6 +244,10 @@ function handleDragEnd() {
       tab.sort = index;
     }
   });
+
+  if (longPressReorderTabId.value) {
+    longPressReorderTabId.value = '';
+  }
 }
 
 onMounted(() => {

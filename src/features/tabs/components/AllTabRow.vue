@@ -2,9 +2,19 @@
 <div
   ref="rowElement"
   class="relative bg-white transition-all duration-300 w-full group shrink-0"
-  @click.stop="!isEditMode && isEnabled && selectTabAndGoBack(element)"
+  @click.stop="handleRowClick"
+  @mousedown="handleRowMouseDown"
+  @mousemove="handleRowMouseMove"
+  @mouseup="handleRowMouseUp"
+  @mouseleave="handleRowMouseLeave"
+  @touchstart.passive="handleRowTouchStart"
+  @touchmove.passive="handleRowTouchMove"
+  @touchend="handleRowTouchEnd"
+  @touchcancel="clearLongPressTimer"
   :class="[
-    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-gray-50/50' : 'opacity-60 grayscale',
+    !isEnabled ? 'opacity-60 grayscale' : '',
+    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-gray-50/50' : '',
+    isEditMode && isEnabled ? 'cursor-move' : '',
     isActiveTab && !isEditMode ? 'bg-gray-50/30 active-z-index' : ''
   ]"
 >
@@ -32,7 +42,7 @@
           >
             <button
               class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
-              :class="{ 'opacity-100': showActionsMenu }"
+              :class="{ 'opacity-100': showActionsMenu || showLongPressActions }"
               type="button"
               aria-label="Tab actions"
               @click.stop="toggleActionsMenu"
@@ -78,8 +88,17 @@
         </span>
       </div>
 
+      <button
+        v-if="showNevermindButton"
+        type="button"
+        class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+        @click.stop="cancelEditMode"
+      >
+        Nevermind
+      </button>
+
       <!-- Edit/Toggle (Edit Mode) -->
-      <div v-if="isEditMode || !isEnabled" class="flex items-center gap-3">
+      <div v-else-if="showEditControls" class="flex items-center gap-3">
         <button 
           v-if="isEnabled"
           @click.stop="editTab" 
@@ -128,6 +147,13 @@ const { toggleTabForGroup, selectTab, updateTabSort } = useTabs();
 const rowElement = ref(null);
 const showRuleManagerModal = ref(false);
 const showActionsMenu = ref(false);
+const showLongPressActions = ref(false);
+const suppressNextRowClick = ref(false);
+const longPressTimeoutId = ref(null);
+const longPressStart = ref({ x: 0, y: 0 });
+
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 const props = defineProps({
   element: {
@@ -138,6 +164,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  showCancelEditButton: {
+    type: Boolean,
+    default: false
+  },
   variant: {
     type: String,
     default: 'modal',
@@ -145,7 +175,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['tab-selected']);
+const emit = defineEmits(['tab-selected', 'request-reorder-mode', 'tab-actions-clicked', 'cancel-edit-mode']);
 
 // Determine if this is the active tab
 const isActiveTab = computed(() => {
@@ -178,34 +208,153 @@ const isEnabled = computed(() => {
 });
 
 const showInlineActions = computed(() => {
-  return props.variant === 'dashboard' && !props.isEditMode;
+  return props.variant === 'dashboard' && (!props.isEditMode || showLongPressActions.value);
+});
+const showNevermindButton = computed(() => {
+  return props.variant === 'dashboard' && props.isEditMode && props.showCancelEditButton;
+});
+const showEditControls = computed(() => {
+  if (props.variant === 'dashboard' && props.isEditMode) {
+    return false;
+  }
+
+  return props.isEditMode || !isEnabled.value;
 });
 
 function toggleActionsMenu() {
+  emit('tab-actions-clicked');
   showActionsMenu.value = !showActionsMenu.value;
+}
+
+function clearLongPressTimer() {
+  if (longPressTimeoutId.value) {
+    clearTimeout(longPressTimeoutId.value);
+    longPressTimeoutId.value = null;
+  }
+}
+
+function triggerLongPress() {
+  showLongPressActions.value = true;
+  suppressNextRowClick.value = true;
+  if (isEnabled.value) {
+    emit('request-reorder-mode', props.element._id);
+  }
+}
+
+function shouldIgnoreLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function handleRowTouchStart(event) {
+  if (!showInlineActions.value || props.isEditMode) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  longPressStart.value = { x: touch.clientX, y: touch.clientY };
+  suppressNextRowClick.value = false;
+  clearLongPressTimer();
+
+  longPressTimeoutId.value = setTimeout(() => {
+    triggerLongPress();
+    longPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleRowTouchMove(event) {
+  if (!longPressTimeoutId.value) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  const deltaX = Math.abs(touch.clientX - longPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - longPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearLongPressTimer();
+  }
+}
+
+function handleRowTouchEnd() {
+  clearLongPressTimer();
+}
+
+function handleRowMouseDown(event) {
+  if (!showInlineActions.value || props.isEditMode) return;
+  if (event.button !== 0) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  longPressStart.value = { x: event.clientX, y: event.clientY };
+  suppressNextRowClick.value = false;
+  clearLongPressTimer();
+
+  longPressTimeoutId.value = setTimeout(() => {
+    triggerLongPress();
+    longPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleRowMouseMove(event) {
+  if (!longPressTimeoutId.value) return;
+
+  const deltaX = Math.abs(event.clientX - longPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - longPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearLongPressTimer();
+  }
+}
+
+function handleRowMouseUp() {
+  clearLongPressTimer();
+}
+
+function handleRowMouseLeave() {
+  clearLongPressTimer();
+}
+
+function handleRowClick() {
+  if (suppressNextRowClick.value) {
+    suppressNextRowClick.value = false;
+    return;
+  }
+
+  if (!props.isEditMode && isEnabled.value) {
+    selectTabAndGoBack(props.element);
+  }
 }
 
 async function openTabEditor() {
   showActionsMenu.value = false;
+  showLongPressActions.value = false;
   await editTab();
 }
 
 function closeActionsMenuOnOutsideClick(event) {
-  if (!showActionsMenu.value) return;
+  if (!showActionsMenu.value && !showLongPressActions.value) return;
 
   if (!rowElement.value?.contains(event.target)) {
     showActionsMenu.value = false;
+    showLongPressActions.value = false;
   }
 }
 
 async function editTab() {
   showActionsMenu.value = false;
+  showLongPressActions.value = false;
   await selectTab(props.element);
   showRuleManagerModal.value = true;
 }
 
 async function hideTabForCurrentGroup() {
   showActionsMenu.value = false;
+  showLongPressActions.value = false;
   if (!isEnabled.value) return;
 
   const currentGroupId = toggleTargetGroupId.value;
@@ -214,9 +363,16 @@ async function hideTabForCurrentGroup() {
   await toggleTabForGroup(props.element._id, currentGroupId);
 }
 
+function cancelEditMode() {
+  showActionsMenu.value = false;
+  showLongPressActions.value = false;
+  emit('cancel-edit-mode');
+}
+
 // Select the tab and go back to dashboard
 function selectTabAndGoBack(tab) {
   showActionsMenu.value = false;
+  showLongPressActions.value = false;
 
   if (isEnabled.value) {
     selectTab(tab);
@@ -247,7 +403,11 @@ function toggleTabVisibility(tabId) {
 watch(() => props.isEditMode, (isEditMode) => {
   if (isEditMode) {
     showActionsMenu.value = false;
+    clearLongPressTimer();
+    return;
   }
+
+  showLongPressActions.value = false;
 });
 
 watch(() => props.element.sort, (newSort) => {
@@ -259,6 +419,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearLongPressTimer();
   document.removeEventListener('click', closeActionsMenuOnOutsideClick);
 });
 </script>

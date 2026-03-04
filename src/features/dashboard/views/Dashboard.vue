@@ -86,18 +86,6 @@
 
           <div class="ml-auto flex items-center gap-6">
             <button
-              v-if="shouldShowEditTabAction"
-              @click="showRuleManagerModal = true"
-              class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-              type="button"
-            >
-              <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-                Edit Tab
-              </span>
-              <ChevronDown class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
-            </button>
-
-            <button
               @click="isAccountModalOpen = true"
               class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
               type="button"
@@ -180,7 +168,6 @@ const shouldShowFooter = computed(() => (
   isCategoryDetailView.value ||
   isTransactionSearchView.value
 ));
-const shouldShowEditTabAction = computed(() => isCategoryView.value || isCategoryDetailView.value);
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DASHBOARD_VIEW_QUERY_KEY = 'dashboardView';
