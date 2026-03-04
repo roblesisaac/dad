@@ -789,7 +789,7 @@ function accountRowMask(account) {
   const normalizedDisplayLabel = normalizedAccountText(displayLabel);
   const normalizedMask = normalizedAccountText(mask);
 
-  if (normalizedDisplayLabel.includes(normalizedMask)) {
+  if (normalizedDisplayLabel === normalizedMask) {
     return '';
   }
 
