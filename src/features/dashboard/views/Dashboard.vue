@@ -183,6 +183,10 @@ const shouldShowFooter = computed(() => (
 const shouldShowEditTabAction = computed(() => isCategoryView.value || isCategoryDetailView.value);
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DASHBOARD_VIEW_QUERY_KEY = 'dashboardView';
+const DASHBOARD_VIEWS = ['group', 'tab', 'category', 'category-detail', 'transaction-search'];
+const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
+const isSyncingDashboardRouteQuery = ref(false);
 
 function resetCategorySelection() {
   state.selected.category = false;
@@ -192,6 +196,104 @@ function resetCategorySelection() {
 function queryValue(key) {
   const value = route.query[key];
   return typeof value === 'string' ? value : '';
+}
+
+function normalizeDashboardView(view) {
+  return DASHBOARD_VIEW_SET.has(view) ? view : '';
+}
+
+function defaultDashboardView() {
+  if (state.selected.tab) {
+    return state.selected.category ? 'category-detail' : 'category';
+  }
+
+  return 'group';
+}
+
+function resolveDashboardViewForState(view) {
+  if (view === 'tab') {
+    return state.selected.group ? 'tab' : 'group';
+  }
+
+  if (view === 'category') {
+    if (!state.selected.tab) {
+      return state.selected.group ? 'tab' : 'group';
+    }
+
+    return 'category';
+  }
+
+  if (view === 'category-detail') {
+    if (!state.selected.tab) {
+      return state.selected.group ? 'tab' : 'group';
+    }
+
+    return state.selected.category ? 'category-detail' : 'category';
+  }
+
+  return view;
+}
+
+function shouldResetCategoryForView(view) {
+  return view === 'group' || view === 'tab' || view === 'category' || view === 'transaction-search';
+}
+
+function dashboardQueryForView(view) {
+  const nextQuery = { ...route.query };
+
+  if (view === 'group') {
+    delete nextQuery[DASHBOARD_VIEW_QUERY_KEY];
+  } else {
+    nextQuery[DASHBOARD_VIEW_QUERY_KEY] = view;
+  }
+
+  return Object.keys(nextQuery).length ? nextQuery : undefined;
+}
+
+async function syncDashboardViewQuery(view, historyMode = 'push') {
+  const normalizedQueryValue = view === 'group' ? '' : view;
+  if (queryValue(DASHBOARD_VIEW_QUERY_KEY) === normalizedQueryValue) {
+    return;
+  }
+
+  isSyncingDashboardRouteQuery.value = true;
+
+  try {
+    const routeTarget = {
+      name: 'dashboard',
+      query: dashboardQueryForView(view)
+    };
+
+    if (historyMode === 'replace') {
+      await router.replace(routeTarget);
+      return;
+    }
+
+    await router.push(routeTarget);
+  } finally {
+    isSyncingDashboardRouteQuery.value = false;
+  }
+}
+
+function setDashboardView(view, options = {}) {
+  const {
+    syncRoute = false,
+    historyMode = 'push'
+  } = options;
+  const normalized = normalizeDashboardView(view) || 'group';
+  const resolvedView = resolveDashboardViewForState(normalized);
+
+  if (shouldResetCategoryForView(resolvedView)) {
+    resetCategorySelection();
+  }
+
+  dashboardView.value = resolvedView;
+
+  if (syncRoute) {
+    void syncDashboardViewQuery(resolvedView, historyMode);
+  }
+
+  return resolvedView;
 }
 
 function parseReportDate(value) {
@@ -268,8 +370,7 @@ async function applyReportRowContextFromQuery(context) {
     const targetTab = state.selected.tabsForGroup.find(tab => tab._id === context.tabId);
     if (targetTab) {
       await selectTab(targetTab);
-      resetCategorySelection();
-      dashboardView.value = 'category';
+      setDashboardView('category');
     }
   }
 
@@ -288,33 +389,21 @@ async function applyReportRowContextFromQuery(context) {
   state.reportRowTotalOverride = null;
 }
 
-function setDefaultDashboardView() {
-  if (state.selected.tab) {
-    dashboardView.value = state.selected.category ? 'category-detail' : 'category';
-    return;
-  }
-
-  // if (state.selected.group) {
-  //   dashboardView.value = 'tab';
-  //   return;
-  // }
-
-  dashboardView.value = 'group';
+function setDefaultDashboardView(options = {}) {
+  return setDashboardView(defaultDashboardView(), options);
 }
 
 function openGroupSelector() {
-  resetCategorySelection();
-  dashboardView.value = 'group';
+  setDashboardView('group', { syncRoute: true });
 }
 
 function openTabSelector() {
   if (!state.selected.group) {
-    dashboardView.value = 'group';
+    setDashboardView('group', { syncRoute: true });
     return;
   }
 
-  resetCategorySelection();
-  dashboardView.value = 'tab';
+  setDashboardView('tab', { syncRoute: true });
 }
 
 function openCategoryView() {
@@ -323,23 +412,19 @@ function openCategoryView() {
     return;
   }
 
-  resetCategorySelection();
-  dashboardView.value = 'category';
+  setDashboardView('category', { syncRoute: true });
 }
 
 function openTransactionSearch() {
-  resetCategorySelection();
-  dashboardView.value = 'transaction-search';
+  setDashboardView('transaction-search', { syncRoute: true });
 }
 
 function handleGroupSelected() {
-  resetCategorySelection();
-  dashboardView.value = 'tab';
+  setDashboardView('tab', { syncRoute: true });
 }
 
 function handleTabSelected() {
-  resetCategorySelection();
-  dashboardView.value = 'category';
+  setDashboardView('category', { syncRoute: true });
 }
 
 function handleCategorySelected(categoryName) {
@@ -347,7 +432,7 @@ function handleCategorySelected(categoryName) {
 
   state.selected.category = categoryName;
   state.selected.transaction = false;
-  dashboardView.value = 'category-detail';
+  setDashboardView('category-detail', { syncRoute: true });
 }
 
 watch(
@@ -356,7 +441,10 @@ watch(
     if (!selectedTabId) {
       resetCategorySelection();
       if (isCategoryView.value || isCategoryDetailView.value) {
-        dashboardView.value = state.selected.group ? 'tab' : 'group';
+        setDashboardView(state.selected.group ? 'tab' : 'group', {
+          syncRoute: true,
+          historyMode: 'replace'
+        });
       }
       return;
     }
@@ -364,7 +452,10 @@ watch(
     if (selectedTabId !== previousTabId && previousTabId) {
       resetCategorySelection();
       if (isCategoryDetailView.value) {
-        dashboardView.value = 'category';
+        setDashboardView('category', {
+          syncRoute: true,
+          historyMode: 'replace'
+        });
       }
     }
   }
@@ -378,7 +469,10 @@ watch(
     }
 
     if (!selectedGroupId && !state.isLoading) {
-      dashboardView.value = 'group';
+      setDashboardView('group', {
+        syncRoute: true,
+        historyMode: 'replace'
+      });
     }
   }
 );
@@ -391,7 +485,10 @@ watch(
     }
 
     if (!selectedCategory) {
-      dashboardView.value = 'category';
+      setDashboardView('category', {
+        syncRoute: true,
+        historyMode: 'replace'
+      });
       return;
     }
 
@@ -401,10 +498,39 @@ watch(
 
     if (!categoryExists) {
       resetCategorySelection();
-      dashboardView.value = 'category';
+      setDashboardView('category', {
+        syncRoute: true,
+        historyMode: 'replace'
+      });
     }
   },
   { deep: true }
+);
+
+watch(
+  () => queryValue(DASHBOARD_VIEW_QUERY_KEY),
+  (routeViewRaw) => {
+    if (isSyncingDashboardRouteQuery.value) {
+      return;
+    }
+
+    if (!routeViewRaw) {
+      setDashboardView('group');
+      return;
+    }
+
+    const normalizedRouteView = normalizeDashboardView(routeViewRaw);
+    if (!normalizedRouteView) {
+      const fallbackView = setDefaultDashboardView();
+      void syncDashboardViewQuery(fallbackView, 'replace');
+      return;
+    }
+
+    const resolvedRouteView = setDashboardView(normalizedRouteView);
+    if (resolvedRouteView !== normalizedRouteView) {
+      void syncDashboardViewQuery(resolvedRouteView, 'replace');
+    }
+  }
 );
 
 onMounted(async () => {
@@ -413,6 +539,17 @@ onMounted(async () => {
     prioritizeFirstPaint: !reportContext.hasContext
   });
   await applyReportRowContextFromQuery(reportContext);
-  setDefaultDashboardView();
+
+  const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
+  if (routeView) {
+    const resolvedRouteView = setDashboardView(routeView);
+    if (resolvedRouteView !== routeView) {
+      await syncDashboardViewQuery(resolvedRouteView, 'replace');
+    }
+    return;
+  }
+
+  const initialView = setDefaultDashboardView();
+  await syncDashboardViewQuery(initialView, 'replace');
 });
 </script>

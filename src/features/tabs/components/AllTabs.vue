@@ -26,6 +26,7 @@
               :element="element"
               :key="element._id" 
               :is-edit-mode="effectiveEditMode"
+              :variant="variant"
               @tab-selected="handleTabSelected"
             />
           </template>
@@ -38,6 +39,7 @@
             :key="element._id"
             :element="element"
             :is-edit-mode="effectiveEditMode"
+            :variant="variant"
             @tab-selected="handleTabSelected"
           />
         </div>
@@ -68,6 +70,7 @@
           :key="tab._id"
           :element="tab"
           :is-edit-mode="effectiveEditMode" 
+          :variant="variant"
           @tab-selected="handleTabSelected"
         />
         <div v-if="disabledTabs.length === 0" class="py-8 text-center text-[10px] font-black uppercase tracking-widest text-black">

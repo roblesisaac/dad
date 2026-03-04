@@ -1,5 +1,6 @@
 <template>
-<div 
+<div
+  ref="rowElement"
   class="relative bg-white transition-all duration-300 w-full group shrink-0"
   @click.stop="!isEditMode && isEnabled && selectTabAndGoBack(element)"
   :class="[
@@ -37,11 +38,40 @@
         </span>
       </div>
 
+      <div
+        v-if="showInlineActions"
+        class="relative"
+        @click.stop
+      >
+        <button
+          class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
+          :class="{ 'opacity-100': showActionsMenu }"
+          type="button"
+          aria-label="Tab actions"
+          @click.stop="toggleActionsMenu"
+        >
+          <EllipsisVertical class="w-4 h-4" />
+        </button>
+
+        <div
+          v-if="showActionsMenu"
+          class="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40 min-w-[150px] py-1"
+        >
+          <button
+            class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
+            type="button"
+            @click.stop="openTabEditor"
+          >
+            Edit Tab
+          </button>
+        </div>
+      </div>
+
       <!-- Edit/Toggle (Edit Mode) -->
       <div v-if="isEditMode || !isEnabled" class="flex items-center gap-3">
         <button 
           v-if="isEnabled"
-          @click.stop="editTab(element._id)" 
+          @click.stop="editTab" 
           class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-50 transition-colors"
           title="Edit tab rules"
         >
@@ -68,8 +98,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
-import { GripVertical, Edit2, ChevronRight, Settings } from 'lucide-vue-next';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { GripVertical, Settings, EllipsisVertical } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabs } from '../composables/useTabs';
@@ -84,9 +114,9 @@ const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
 const { toggleTabForGroup, selectTab, updateTabSort } = useTabs();
 
-// Add ref for rule manager modal
+const rowElement = ref(null);
 const showRuleManagerModal = ref(false);
-const currentTabToEdit = ref(null);
+const showActionsMenu = ref(false);
 
 const props = defineProps({
   element: {
@@ -96,6 +126,11 @@ const props = defineProps({
   isEditMode: {
     type: Boolean,
     default: false
+  },
+  variant: {
+    type: String,
+    default: 'modal',
+    validator: (value) => ['modal', 'dashboard'].includes(value)
   }
 });
 
@@ -131,32 +166,37 @@ const isEnabled = computed(() => {
   return showForGroup.includes(currentGroupId);
 });
 
-// Edit tab function - now opens modal instead of navigating
-async function editTab(tabId) {
-  // Handle tab selection before opening modal
-  if (isEnabled.value) {
-    // If tab is enabled, just select it
-    await selectTab(props.element);
-  } else {
-    // If the tab is disabled, toggle it on first, then select it
-    const currentGroupId = toggleTargetGroupId.value;
-    if (currentGroupId) {
-      toggleTabForGroup(tabId, currentGroupId);
-      
-      // Short delay to allow the toggle to complete before selecting
-      setTimeout(() => {
-        selectTab(props.element);
-      }, 100);
-    }
+const showInlineActions = computed(() => {
+  return props.variant === 'dashboard' && !props.isEditMode;
+});
+
+function toggleActionsMenu() {
+  showActionsMenu.value = !showActionsMenu.value;
+}
+
+async function openTabEditor() {
+  showActionsMenu.value = false;
+  await editTab();
+}
+
+function closeActionsMenuOnOutsideClick(event) {
+  if (!showActionsMenu.value) return;
+
+  if (!rowElement.value?.contains(event.target)) {
+    showActionsMenu.value = false;
   }
-  
-  // Open rule manager modal
-  currentTabToEdit.value = props.element;
+}
+
+async function editTab() {
+  showActionsMenu.value = false;
+  await selectTab(props.element);
   showRuleManagerModal.value = true;
 }
 
 // Select the tab and go back to dashboard
 function selectTabAndGoBack(tab) {
+  showActionsMenu.value = false;
+
   if (isEnabled.value) {
     selectTab(tab);
     emit('tab-selected', tab);
@@ -183,7 +223,21 @@ function toggleTabVisibility(tabId) {
   toggleTabForGroup(tabId, currentGroupId);
 }
 
+watch(() => props.isEditMode, (isEditMode) => {
+  if (isEditMode) {
+    showActionsMenu.value = false;
+  }
+});
+
 watch(() => props.element.sort, (newSort) => {
   updateTabSort(props.element._id, newSort);
+});
+
+onMounted(() => {
+  document.addEventListener('click', closeActionsMenuOnOutsideClick);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('click', closeActionsMenuOnOutsideClick);
 });
 </script>
