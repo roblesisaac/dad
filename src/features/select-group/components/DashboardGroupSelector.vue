@@ -20,7 +20,7 @@
     <section class="w-full">
       <div class="selector-row group">
         <div
-          class="w-full text-left py-6 row-main"
+          class="w-full text-left py-6 row-main select-none"
           role="button"
           tabindex="0"
           @click="handleAllAccountsRowSelect"
@@ -44,35 +44,83 @@
       </div>
 
       <Draggable
-        v-if="dashboardEditMode"
         v-model="dashboardAccounts"
         v-bind="dragOptions"
         handle=".handler-account"
         item-key="account_id"
+        :disabled="!isAccountReorderActive"
         @end="handleAccountReorderEnd"
       >
         <template #item="{ element }">
-          <div :key="accountKey(element)" class="selector-row group">
-            <button
-              type="button"
-              class="w-full text-left py-6"
-              disabled
+          <div
+            :key="accountKey(element)"
+            :class="['selector-row group', { 'row-menu-open': accountRowHasOpenMenu(element) }]"
+          >
+            <div
+              class="w-full text-left py-6 row-main select-none"
+              role="button"
+              tabindex="0"
+              @click="handleAccountRowClick(element)"
+              @keydown.enter.prevent="handleAccountRowSelect(element)"
+              @keydown.space.prevent="handleAccountRowSelect(element)"
+              @mousedown="handleAccountRowMouseDown($event, element)"
+              @mousemove="handleAccountRowMouseMove"
+              @mouseup="handleAccountRowMouseUp"
+              @mouseleave="handleAccountRowMouseLeave"
+              @touchstart.passive="handleAccountRowTouchStart($event, element)"
+              @touchmove.passive="handleAccountRowTouchMove"
+              @touchend="handleAccountRowTouchEnd"
+              @touchcancel="clearAccountLongPressTimer"
             >
               <div class="flex items-start justify-between gap-4">
-                <div class="flex items-start gap-3 min-w-0 flex-1">
-                  <GripVertical class="handler-account w-4 h-4 mt-1 selector-muted cursor-grab" />
+                <div class="min-w-0 flex-1 flex items-start gap-3">
+                  <GripVertical
+                    v-if="isAccountInReorderMode(element)"
+                    class="handler-account w-4 h-4 mt-1 selector-muted cursor-grab shrink-0"
+                  />
+
                   <div class="min-w-0 flex-1">
-                    <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
-                      <span
-                        v-if="accountRowMask(element)"
-                        class="text-base font-black uppercase tracking-tight selector-muted flex-shrink-0"
-                      >
-                        {{ accountRowMask(element) }}
-                      </span>
-                      <div class="text-base font-black uppercase tracking-tight truncate selector-text">
-                        {{ accountDisplayLabel(element) }}
+                    <div class="flex items-center gap-2 min-w-0">
+                      <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
+                        <span
+                          v-if="accountRowMask(element)"
+                          class="text-base font-black uppercase tracking-tight selector-muted flex-shrink-0"
+                        >
+                          {{ accountRowMask(element) }}
+                        </span>
+                        <div class="text-base font-black uppercase tracking-tight truncate selector-text">
+                          {{ accountDisplayLabel(element) }}
+                        </div>
+                      </div>
+
+                      <div class="row-title-actions flex-shrink-0">
+                        <div class="relative row-menu-anchor-inline" data-menu-surface>
+                          <button
+                            type="button"
+                            class="row-menu-trigger"
+                            :class="{ 'row-menu-trigger-visible': shouldShowAccountRowMenu(element) }"
+                            data-menu-surface
+                            @click.stop="toggleAccountMenu(element)"
+                          >
+                            <EllipsisVertical class="w-4 h-4" />
+                          </button>
+
+                          <div
+                            v-if="activeAccountMenuId === accountKey(element)"
+                            class="selector-menu left-0 mt-2"
+                            data-menu-surface
+                          >
+                            <button type="button" class="selector-menu-item" @click.stop="openAddLabelModal(element)">
+                              Edit Labels
+                            </button>
+                            <button type="button" class="selector-menu-item" @click.stop="openRenameAccount(element)">
+                              Rename Account
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
                     <div
                       v-if="accountSubtitleText(element)"
                       class="mt-1 text-[10px] font-black tracking-[0.16em] truncate selector-muted"
@@ -81,90 +129,32 @@
                     </div>
                   </div>
                 </div>
-                <span class="text-base font-black tracking-tight selector-text">
-                  {{ formatPrice(accountNetBalance(element), { toFixed: 0 }) }}
-                </span>
+
+                <div class="shrink-0">
+                  <button
+                    v-if="showNevermindForAccount(element)"
+                    type="button"
+                    class="px-3 py-2 rounded-xl border border-[var(--selector-border)] text-[10px] font-black uppercase tracking-widest selector-muted hover:selector-text transition-colors"
+                    @click.stop="cancelAccountReorder"
+                  >
+                    Nevermind
+                  </button>
+
+                  <span
+                    v-else
+                    class="text-base font-black tracking-tight shrink-0 selector-text"
+                  >
+                    {{ formatPrice(accountNetBalance(element), { toFixed: 0 }) }}
+                  </span>
+                </div>
               </div>
-            </button>
+            </div>
           </div>
         </template>
       </Draggable>
 
-      <div v-else>
-        <div
-          v-for="account in sortedAccounts"
-          :key="accountKey(account)"
-          :class="['selector-row group', { 'row-menu-open': accountRowHasOpenMenu(account) }]"
-        >
-          <div
-            class="w-full text-left py-6 row-main"
-            role="button"
-            tabindex="0"
-            @click="handleAccountRowSelect(account)"
-            @keydown.enter.prevent="handleAccountRowSelect(account)"
-            @keydown.space.prevent="handleAccountRowSelect(account)"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-2 min-w-0">
-                  <div class="flex items-center gap-2 min-w-0 max-w-[60%]">
-                    <span
-                      v-if="accountRowMask(account)"
-                      class="text-base font-black uppercase tracking-tight selector-muted flex-shrink-0"
-                    >
-                      {{ accountRowMask(account) }}
-                    </span>
-                    <div class="text-base font-black uppercase tracking-tight truncate selector-text">
-                      {{ accountDisplayLabel(account) }}
-                    </div>
-                  </div>
-
-                  <div class="row-title-actions flex-shrink-0">
-                    <div class="relative row-menu-anchor-inline" data-menu-surface>
-                      <button
-                        type="button"
-                        class="row-menu-trigger"
-                        data-menu-surface
-                        @click.stop="toggleAccountMenu(account)"
-                      >
-                        <EllipsisVertical class="w-4 h-4" />
-                      </button>
-
-                      <div
-                        v-if="activeAccountMenuId === accountKey(account)"
-                        class="selector-menu left-0 mt-2"
-                        data-menu-surface
-                      >
-                        <button type="button" class="selector-menu-item" @click.stop="openAddLabelModal(account)">
-                          Edit Labels
-                        </button>
-                        <button type="button" class="selector-menu-item" @click.stop="openRenameAccount(account)">
-                          Rename Account
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div
-                  v-if="accountSubtitleText(account)"
-                  class="mt-1 text-[10px] font-black tracking-[0.16em] truncate selector-muted"
-                >
-                  {{ accountSubtitleText(account) }}
-                </div>
-
-              </div>
-
-              <span class="text-base font-black tracking-tight shrink-0 selector-text">
-                {{ formatPrice(accountNetBalance(account), { toFixed: 0 }) }}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="!sortedAccounts.length" class="py-12 text-center text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
-          No accounts
-        </div>
+      <div v-if="!sortedAccounts.length" class="py-12 text-center text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
+        No accounts
       </div>
     </section>
 
@@ -227,16 +217,6 @@
         <Building class="w-4 h-4 selector-muted" />
       </button>
 
-      <button
-        class="utility-row"
-        type="button"
-        @click="toggleDashboardReorder"
-      >
-        <span class="text-base font-black uppercase tracking-tight selector-text">
-          {{ dashboardEditMode ? 'Done Rearranging' : 'Rearrange Accounts' }}
-        </span>
-        <GripVertical class="w-4 h-4 selector-muted" />
-      </button>
     </div>
 
     <BaseModal
@@ -535,8 +515,12 @@ const {
 } = useSelectGroup();
 const { fetchBanks } = useBanks();
 
-const dashboardEditMode = ref(false);
 const dashboardAccounts = ref([]);
+const longPressReorderAccountId = ref('');
+const longPressVisibleAccountId = ref('');
+const suppressNextAccountSelectId = ref('');
+const accountLongPressTimeoutId = ref(null);
+const accountLongPressStart = ref({ x: 0, y: 0 });
 
 const activeAccountMenuId = ref('');
 const activeLabelMenuId = ref('');
@@ -567,6 +551,8 @@ const isInlineCreatingLabel = ref(false);
 const newLabelInput = ref('');
 
 const showBanksModal = ref(false);
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 const sortedLabelGroups = computed(() => {
   return [...labelGroups.value].sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
@@ -621,6 +607,7 @@ const sortedAccounts = computed(() => {
 
   return rows.map(({ account }) => account);
 });
+const isAccountReorderActive = computed(() => Boolean(longPressReorderAccountId.value));
 
 const renameModalTitle = computed(() => {
   return renameType.value === 'account' ? 'Rename Account' : 'Rename Label';
@@ -693,7 +680,7 @@ const viewLabelDisabledAccounts = computed(() => {
 watch(
   () => sortedAccounts.value,
   (accounts) => {
-    if (!dashboardEditMode.value) {
+    if (!isAccountReorderActive.value) {
       dashboardAccounts.value = [...accounts];
     }
   },
@@ -708,6 +695,7 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  clearAccountLongPressTimer();
   document.removeEventListener('click', closeMenusOnOutsideClick);
   window.removeEventListener('resize', closeAllMenus);
   window.removeEventListener('scroll', closeAllMenus, true);
@@ -861,6 +849,7 @@ function closeAllMenus() {
   activeAccountMenuId.value = '';
   activeLabelMenuId.value = '';
   activeLabelMenuPosition.value = { top: 0, left: 0 };
+  longPressVisibleAccountId.value = '';
 }
 
 function closeMenusOnOutsideClick(event) {
@@ -881,7 +870,13 @@ function isAllAccountsGroup(group) {
 }
 
 function toggleAccountMenu(account) {
-  const nextId = activeAccountMenuId.value === accountKey(account) ? '' : accountKey(account);
+  const key = accountKey(account);
+  if (isAccountReorderActive.value) {
+    exitAccountReorderMode();
+  }
+
+  longPressVisibleAccountId.value = key;
+  const nextId = activeAccountMenuId.value === key ? '' : key;
   activeAccountMenuId.value = nextId;
   activeLabelMenuId.value = '';
 }
@@ -925,15 +920,141 @@ function accountRowHasOpenMenu(account) {
   return activeAccountMenuId.value === key;
 }
 
-function toggleDashboardReorder() {
-  dashboardEditMode.value = !dashboardEditMode.value;
-  closeAllMenus();
+function isAccountInReorderMode(account) {
+  const key = accountKey(account);
+  return Boolean(key) && longPressReorderAccountId.value === key;
+}
 
-  if (dashboardEditMode.value) {
-    dashboardAccounts.value = [...sortedAccounts.value];
-  } else {
-    dashboardAccounts.value = [...sortedAccounts.value];
+function showNevermindForAccount(account) {
+  return isAccountInReorderMode(account);
+}
+
+function shouldShowAccountRowMenu(account) {
+  const key = accountKey(account);
+  if (!key) {
+    return false;
   }
+
+  return (
+    activeAccountMenuId.value === key ||
+    longPressVisibleAccountId.value === key ||
+    longPressReorderAccountId.value === key
+  );
+}
+
+function clearAccountLongPressTimer() {
+  if (accountLongPressTimeoutId.value) {
+    clearTimeout(accountLongPressTimeoutId.value);
+    accountLongPressTimeoutId.value = null;
+  }
+}
+
+function shouldIgnoreAccountLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function triggerAccountLongPress(account) {
+  const key = accountKey(account);
+  if (!key) {
+    return;
+  }
+
+  closeAllMenus();
+  longPressVisibleAccountId.value = key;
+  longPressReorderAccountId.value = key;
+  suppressNextAccountSelectId.value = key;
+}
+
+function handleAccountRowTouchStart(event, account) {
+  if (isAccountInReorderMode(account)) return;
+  if (shouldIgnoreAccountLongPressTarget(event)) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  accountLongPressStart.value = { x: touch.clientX, y: touch.clientY };
+  suppressNextAccountSelectId.value = '';
+  clearAccountLongPressTimer();
+
+  accountLongPressTimeoutId.value = setTimeout(() => {
+    triggerAccountLongPress(account);
+    accountLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleAccountRowTouchMove(event) {
+  if (!accountLongPressTimeoutId.value) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  const deltaX = Math.abs(touch.clientX - accountLongPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - accountLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearAccountLongPressTimer();
+  }
+}
+
+function handleAccountRowTouchEnd() {
+  clearAccountLongPressTimer();
+}
+
+function handleAccountRowMouseDown(event, account) {
+  if (event.button !== 0) return;
+  if (isAccountInReorderMode(account)) return;
+  if (shouldIgnoreAccountLongPressTarget(event)) return;
+
+  accountLongPressStart.value = { x: event.clientX, y: event.clientY };
+  suppressNextAccountSelectId.value = '';
+  clearAccountLongPressTimer();
+
+  accountLongPressTimeoutId.value = setTimeout(() => {
+    triggerAccountLongPress(account);
+    accountLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleAccountRowMouseMove(event) {
+  if (!accountLongPressTimeoutId.value) return;
+
+  const deltaX = Math.abs(event.clientX - accountLongPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - accountLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearAccountLongPressTimer();
+  }
+}
+
+function handleAccountRowMouseUp() {
+  clearAccountLongPressTimer();
+}
+
+function handleAccountRowMouseLeave() {
+  clearAccountLongPressTimer();
+}
+
+function handleAccountRowClick(account) {
+  const key = accountKey(account);
+  if (key && suppressNextAccountSelectId.value === key) {
+    suppressNextAccountSelectId.value = '';
+    return;
+  }
+
+  void handleAccountRowSelect(account);
+}
+
+function exitAccountReorderMode() {
+  longPressReorderAccountId.value = '';
+}
+
+function cancelAccountReorder() {
+  exitAccountReorderMode();
 }
 
 async function handleAccountReorderEnd() {
@@ -954,11 +1075,13 @@ async function handleAccountReorderEnd() {
   });
 
   if (!updateRequests.length) {
+    exitAccountReorderMode();
     return;
   }
 
   await Promise.allSettled(updateRequests);
   state.allUserGroups.sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+  exitAccountReorderMode();
 }
 
 async function handleLabelChipSelect(labelGroup) {
@@ -995,6 +1118,10 @@ async function handleAllAccountsRowSelect() {
 }
 
 async function handleAccountRowSelect(account) {
+  if (isAccountReorderActive.value) {
+    return;
+  }
+
   const accountContextGroup = await ensureAccountContextGroup(account);
   if (!accountContextGroup) {
     console.warn('No account-context group found for account', account);
@@ -1022,6 +1149,7 @@ async function openRenameAccount(account) {
   renameInput.value = accountDisplayLabel(account);
   showRenameModal.value = true;
   activeAccountMenuId.value = '';
+  longPressVisibleAccountId.value = '';
 }
 
 function openRenameLabel(labelGroup) {
@@ -1149,6 +1277,7 @@ function openAddLabelModal(account) {
   newLabelInput.value = '';
   showAddLabelModal.value = true;
   activeAccountMenuId.value = '';
+  longPressVisibleAccountId.value = '';
 }
 
 function closeAddLabelModal() {
@@ -1471,6 +1600,7 @@ async function handleBanksDataChanged() {
   background: transparent;
   transition: background-color 150ms ease;
   overflow: visible;
+  user-select: none;
 }
 
 .row-main {
@@ -1561,6 +1691,10 @@ async function handleBanksDataChanged() {
 .row-menu-trigger:hover {
   color: var(--selector-text);
   background: var(--selector-bg-subtle);
+}
+
+.row-menu-trigger-visible {
+  opacity: 1;
 }
 
 .selector-menu {
