@@ -110,6 +110,9 @@
                             class="selector-menu left-0 mt-2"
                             data-menu-surface
                           >
+                            <button type="button" class="selector-menu-item" @click.stop="startAccountReorderFromMenu(element)">
+                              Rearrange Row
+                            </button>
                             <button type="button" class="selector-menu-item" @click.stop="openAddLabelModal(element)">
                               Edit Labels
                             </button>
@@ -879,6 +882,11 @@ function toggleAccountMenu(account) {
   const nextId = activeAccountMenuId.value === key ? '' : key;
   activeAccountMenuId.value = nextId;
   activeLabelMenuId.value = '';
+}
+
+function startAccountReorderFromMenu(account) {
+  activeAccountMenuId.value = '';
+  triggerAccountLongPress(account);
 }
 
 function toggleLabelMenu(labelId, event) {

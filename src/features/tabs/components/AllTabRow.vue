@@ -55,11 +55,20 @@
               class="absolute left-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40 min-w-[150px] py-1"
             >
               <button
+                v-if="isEnabled"
+                class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
+                type="button"
+                @click.stop="startTabReorderModeFromMenu"
+              >
+                Rearrange Row
+              </button>
+
+              <button
                 class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
                 type="button"
                 @click.stop="openTabEditor"
               >
-                Edit Tab
+                Edit Tab Rules
               </button>
 
               <button
@@ -224,6 +233,15 @@ const showEditControls = computed(() => {
 function toggleActionsMenu() {
   emit('tab-actions-clicked');
   showActionsMenu.value = !showActionsMenu.value;
+}
+
+function startTabReorderModeFromMenu() {
+  if (!isEnabled.value) return;
+
+  showActionsMenu.value = false;
+  showLongPressActions.value = true;
+  suppressNextRowClick.value = true;
+  emit('request-reorder-mode', props.element._id);
 }
 
 function clearLongPressTimer() {
