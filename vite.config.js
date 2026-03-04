@@ -40,7 +40,7 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
-      injectRegister: 'auto',
+      injectRegister: false,
       includeAssets: ['icon.svg', 'logo.png'],
       manifest: {
         id: '/',
