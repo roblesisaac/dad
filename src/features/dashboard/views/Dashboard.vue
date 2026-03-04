@@ -162,7 +162,7 @@ const route = useRoute();
 const { state } = useDashboardState();
 const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
-const { selectTab } = useTabs();
+const { selectTab, ensureDefaultTabsForTabView } = useTabs();
 
 const showRuleManagerModal = ref(false);
 const isAccountModalOpen = ref(false);
@@ -434,6 +434,17 @@ function handleCategorySelected(categoryName) {
   state.selected.transaction = false;
   setDashboardView('category-detail', { syncRoute: true });
 }
+
+watch(
+  [() => dashboardView.value, () => state.selected.group?._id],
+  async ([view, selectedGroupId]) => {
+    if (view !== 'tab' || !selectedGroupId) {
+      return;
+    }
+
+    await ensureDefaultTabsForTabView();
+  }
+);
 
 watch(
   () => state.selected.tab?._id,

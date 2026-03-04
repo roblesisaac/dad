@@ -51,6 +51,15 @@
               >
                 Edit Tab
               </button>
+
+              <button
+                v-if="isEnabled"
+                class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
+                type="button"
+                @click.stop="hideTabForCurrentGroup"
+              >
+                Hide Tab For Group
+              </button>
             </div>
           </div>
         </div>
@@ -165,7 +174,7 @@ const isEnabled = computed(() => {
 
   const currentGroupId = state.selected.group?._id;
   if (!currentGroupId) return false;
-  return showForGroup.includes(currentGroupId);
+  return showForGroup.includes(currentGroupId) || showForGroup.includes('_GLOBAL');
 });
 
 const showInlineActions = computed(() => {
@@ -193,6 +202,16 @@ async function editTab() {
   showActionsMenu.value = false;
   await selectTab(props.element);
   showRuleManagerModal.value = true;
+}
+
+async function hideTabForCurrentGroup() {
+  showActionsMenu.value = false;
+  if (!isEnabled.value) return;
+
+  const currentGroupId = toggleTargetGroupId.value;
+  if (!currentGroupId) return;
+
+  await toggleTabForGroup(props.element._id, currentGroupId);
 }
 
 // Select the tab and go back to dashboard

@@ -1,16 +1,24 @@
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
-import { nextTick } from 'vue';
+import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
 } from '@/features/dashboard/constants/groups.js';
 
+const DEFAULT_TABS_FOR_EMPTY_STATE = [
+  { tabName: 'money in', filterMethod: '>' },
+  { tabName: 'money out', filterMethod: '<' }
+];
+
+let createDefaultTabsPromise = null;
+
 export function useTabs() {
   const { state } = useDashboardState();
   const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
   const tabsAPI = useTabsAPI();
+  const rulesAPI = useRulesAPI();
 
   /**
    * Select a tab and deselect the currently selected tab
@@ -103,6 +111,69 @@ export function useTabs() {
     await selectTab(newTab);
   }
 
+  async function ensureDefaultTabsForTabView() {
+    if (state.allUserTabs.length > 0) {
+      return [];
+    }
+
+    if (!createDefaultTabsPromise) {
+      createDefaultTabsPromise = (async () => {
+        const latestTabs = await tabsAPI.fetchUserTabs();
+        if (Array.isArray(latestTabs) && latestTabs.length > 0) {
+          state.allUserTabs = latestTabs;
+          return [];
+        }
+
+        const createdTabs = [];
+
+        for (const [sort, defaultTab] of DEFAULT_TABS_FOR_EMPTY_STATE.entries()) {
+          const createdTab = await tabsAPI.createTab({
+            tabName: defaultTab.tabName,
+            showForGroup: ['_GLOBAL'],
+            sort
+          });
+
+          if (!createdTab) {
+            continue;
+          }
+
+          createdTab.isSelected = false;
+          state.allUserTabs.push(createdTab);
+          createdTabs.push({
+            tab: createdTab,
+            filterMethod: defaultTab.filterMethod
+          });
+        }
+
+        for (const createdTabWithFilter of createdTabs) {
+          const createdRule = await rulesAPI.createRule({
+            applyForTabs: [createdTabWithFilter.tab._id],
+            rule: ['filter', 'amount', createdTabWithFilter.filterMethod, '0', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          });
+
+          if (createdRule) {
+            state.allUserRules.push(createdRule);
+          }
+        }
+
+        await processAllTabsForSelectedGroup({ showLoading: false });
+        return createdTabs.map(({ tab }) => tab);
+      })()
+        .catch((error) => {
+          console.error('Error creating default tabs for empty state:', error);
+          return [];
+        })
+        .finally(() => {
+          createDefaultTabsPromise = null;
+        });
+    }
+
+    return await createDefaultTabsPromise;
+  }
+
   /**
    * Toggle a tab's visibility for a specific group
    */
@@ -116,14 +187,31 @@ export function useTabs() {
       state.blueBar.message = "Updating tab visibility...";
       state.blueBar.loading = true;
       
+      const allGroupIds = state.allUserGroups
+        .map(group => group?._id)
+        .filter(Boolean);
+      const uniqueGroupIds = (groupIds) => [...new Set(groupIds.filter(Boolean))];
+      const currentShowForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+
       // Update showForGroup in memory
       let isEnabled = false;
-      if (tab.showForGroup.includes(groupId)) {
+      if (groupId === ALL_ACCOUNTS_HIDDEN_GROUP_ID) {
+        if (currentShowForGroup.includes(groupId)) {
+          tab.showForGroup = currentShowForGroup.filter(id => id !== groupId);
+          isEnabled = true;
+        } else {
+          tab.showForGroup = uniqueGroupIds([...currentShowForGroup, groupId]);
+        }
+      } else if (currentShowForGroup.includes('_GLOBAL')) {
+        tab.showForGroup = uniqueGroupIds(
+          allGroupIds.filter(existingGroupId => existingGroupId !== groupId)
+        );
+      } else if (currentShowForGroup.includes(groupId)) {
         // Disable tab for this group
-        tab.showForGroup = tab.showForGroup.filter(id => id !== groupId);
+        tab.showForGroup = currentShowForGroup.filter(id => id !== groupId);
       } else {
         // Enable tab for this group
-        tab.showForGroup.push(groupId);
+        tab.showForGroup = uniqueGroupIds([...currentShowForGroup, groupId]);
         isEnabled = true;
       }
       
@@ -142,7 +230,7 @@ export function useTabs() {
         // If we just enabled the tab, update its sort value to be at the end
         if (isEnabled && groupId !== ALL_ACCOUNTS_HIDDEN_GROUP_ID) {
           const enabledTabs = state.allUserTabs.filter(t => 
-            t.showForGroup.includes(groupId)
+            t.showForGroup.includes(groupId) || t.showForGroup.includes('_GLOBAL')
           );
           
           if (enabledTabs.length > 0) {
@@ -198,6 +286,7 @@ export function useTabs() {
     selectTab,
     updateTabSort,
     createNewTab,
+    ensureDefaultTabsForTabView,
     toggleTabForGroup,
     updateTab
   };

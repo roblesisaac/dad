@@ -173,7 +173,11 @@ const disabledTabs = computed(() => {
   if (!currentGroupId) return [];
   
   return state.allUserTabs
-    .filter(tab => !tab.showForGroup.includes(currentGroupId))
+    .filter((tab) => {
+      const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+      const isEnabledForCurrentGroup = showForGroup.includes(currentGroupId) || showForGroup.includes('_GLOBAL');
+      return !isEnabledForCurrentGroup;
+    })
     .sort((a, b) => a.tabName.localeCompare(b.tabName));
 });
 
