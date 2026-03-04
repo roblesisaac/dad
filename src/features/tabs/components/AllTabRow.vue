@@ -75,7 +75,10 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useTabs } from '../composables/useTabs';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 import Switch from '@/shared/components/Switch.vue';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 
 const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
@@ -104,15 +107,28 @@ const isActiveTab = computed(() => {
 });
 
 // Determine if this tab is enabled for the current group
+const isAllAccountsScope = computed(() => {
+  return state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID;
+});
+
+const toggleTargetGroupId = computed(() => {
+  if (isAllAccountsScope.value) {
+    return ALL_ACCOUNTS_HIDDEN_GROUP_ID;
+  }
+
+  return state.selected.group?._id || '';
+});
+
 const isEnabled = computed(() => {
-  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
-    return true;
+  const showForGroup = Array.isArray(props.element.showForGroup) ? props.element.showForGroup : [];
+
+  if (isAllAccountsScope.value) {
+    return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
   }
 
   const currentGroupId = state.selected.group?._id;
   if (!currentGroupId) return false;
-  
-  return props.element.showForGroup.includes(currentGroupId);
+  return showForGroup.includes(currentGroupId);
 });
 
 // Edit tab function - now opens modal instead of navigating
@@ -123,7 +139,7 @@ async function editTab(tabId) {
     await selectTab(props.element);
   } else {
     // If the tab is disabled, toggle it on first, then select it
-    const currentGroupId = state.selected.group?._id;
+    const currentGroupId = toggleTargetGroupId.value;
     if (currentGroupId) {
       toggleTabForGroup(tabId, currentGroupId);
       
@@ -146,7 +162,7 @@ function selectTabAndGoBack(tab) {
     emit('tab-selected', tab);
   } else {
     // If the tab is disabled, toggle it on first, then select it
-    const currentGroupId = state.selected.group?._id;
+    const currentGroupId = toggleTargetGroupId.value;
     if (currentGroupId) {
       toggleTabForGroup(tab._id, currentGroupId);
       // Short delay to allow the toggle to complete before selecting
@@ -160,11 +176,7 @@ function selectTabAndGoBack(tab) {
 
 // Toggle tab for current group
 function toggleTabVisibility(tabId) {
-  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
-    return;
-  }
-
-  const currentGroupId = state.selected.group?._id;
+  const currentGroupId = toggleTargetGroupId.value;
   if (!currentGroupId) return;
   
   // Call the toggleTabForGroup function from useTabs composable

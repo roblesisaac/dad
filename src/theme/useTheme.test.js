@@ -37,21 +37,53 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
     getPropertyValue: (name) => styleState[name] || ''
   };
 
-  const themeColorMeta = {
-    content: '',
-    setAttribute: vi.fn((name, value) => {
-      if (name === 'content') {
-        themeColorMeta.content = value;
-      }
-    })
-  };
+  function createMetaNode(initial = {}) {
+    const attrs = new Map();
+    for (const [key, value] of Object.entries(initial)) {
+      attrs.set(key, value);
+    }
 
-  const appleStatusBarMeta = {
-    content: 'default',
-    setAttribute: vi.fn((name, value) => {
-      if (name === 'content') {
-        appleStatusBarMeta.content = value;
+    return {
+      setAttribute: vi.fn((name, value) => {
+        attrs.set(name, value);
+      }),
+      getAttribute: vi.fn((name) => attrs.get(name) || null),
+      get content() {
+        return attrs.get('content') || '';
+      },
+      set content(value) {
+        attrs.set('content', value);
       }
+    };
+  }
+
+  const themeColorMeta = createMetaNode({ name: 'theme-color', content: '' });
+  const themeColorMetaLight = createMetaNode({
+    name: 'theme-color',
+    media: '(prefers-color-scheme: light)',
+    content: ''
+  });
+  const themeColorMetaDark = createMetaNode({
+    name: 'theme-color',
+    media: '(prefers-color-scheme: dark)',
+    content: ''
+  });
+  const themeColorMetas = [themeColorMeta, themeColorMetaLight, themeColorMetaDark];
+
+  const appleStatusBarMeta = createMetaNode({
+    name: 'apple-mobile-web-app-status-bar-style',
+    content: 'default'
+  });
+  const colorSchemeMeta = createMetaNode({
+    name: 'color-scheme',
+    content: 'light'
+  });
+
+  const headNodes = [...themeColorMetas, appleStatusBarMeta, colorSchemeMeta];
+  const head = {
+    appendChild: vi.fn((node) => {
+      headNodes.push(node);
+      return node;
     })
   };
 
@@ -61,12 +93,17 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
   };
 
   globalThis.document = {
-    createElement: () => ({}),
+    createElement: () => createMetaNode(),
     createElementNS: () => ({}),
     createTextNode: () => ({}),
+    head,
     querySelector: vi.fn((selector) => {
       if (selector === 'meta[name="theme-color"]') {
         return themeColorMeta;
+      }
+
+      if (selector === 'meta[name="color-scheme"]') {
+        return colorSchemeMeta;
       }
 
       if (selector === 'meta[name="apple-mobile-web-app-status-bar-style"]') {
@@ -74,6 +111,13 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
       }
 
       return null;
+    }),
+    querySelectorAll: vi.fn((selector) => {
+      if (selector === 'meta[name="theme-color"]') {
+        return themeColorMetas;
+      }
+
+      return [];
     }),
     documentElement: {
       dataset: {},
@@ -84,7 +128,9 @@ function createThemeTestEnv({ storedTheme = null, prefersDark = false } = {}) {
   return {
     storage,
     localStorage,
+    colorSchemeMeta,
     themeColorMeta,
+    themeColorMetas,
     appleStatusBarMeta,
     emitSystemThemeChange(nextPrefersDark) {
       mediaQueryList.matches = nextPrefersDark;
@@ -185,11 +231,15 @@ describe('useTheme', () => {
     const themeModule = await import('./useTheme.js');
 
     themeModule.initTheme();
-    expect(env.themeColorMeta.content).toBe(THEME_REGISTRY.light['--theme-bg']);
+    expect(env.themeColorMetas.every((meta) => meta.content === THEME_REGISTRY.light['--theme-browser-chrome'])).toBe(true);
+    expect(env.colorSchemeMeta.content).toBe('light');
     expect(env.appleStatusBarMeta.content).toBe('default');
+    expect(globalThis.document.documentElement.style.colorScheme).toBe('light');
 
     themeModule.setTheme('dark');
-    expect(env.themeColorMeta.content).toBe(THEME_REGISTRY.dark['--theme-bg']);
+    expect(env.themeColorMetas.every((meta) => meta.content === THEME_REGISTRY.dark['--theme-browser-chrome'])).toBe(true);
+    expect(env.colorSchemeMeta.content).toBe('dark');
     expect(env.appleStatusBarMeta.content).toBe('black');
+    expect(globalThis.document.documentElement.style.colorScheme).toBe('dark');
   });
 });

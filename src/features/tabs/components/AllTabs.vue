@@ -101,7 +101,7 @@
   @click="toggleDashboardReorder"
 >
   <span class="text-base font-black text-gray-900 uppercase tracking-tight">
-    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange Tabs' }}
+    {{ effectiveEditMode ? 'Done Rearranging' : 'Rearrange/Hide Tabs' }}
   </span>
   <GripVertical class="w-4 h-4 text-black group-hover:text-black transition-colors" />
 </button>
@@ -114,7 +114,10 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 
 const props = defineProps({
   variant: {
@@ -149,10 +152,18 @@ const containerClasses = computed(() => {
 
 // Separate tabs into enabled and disabled based on current group
 const enabledTabs = computed(() => state.selected.tabsForGroup);
+const isAllAccountsScope = computed(() => {
+  return state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID;
+});
 
 const disabledTabs = computed(() => {
-  if (state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID) {
-    return [];
+  if (isAllAccountsScope.value) {
+    return state.allUserTabs
+      .filter((tab) => {
+        const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+        return showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
+      })
+      .sort((a, b) => a.tabName.localeCompare(b.tabName));
   }
 
   const currentGroupId = state.selected.group?._id;

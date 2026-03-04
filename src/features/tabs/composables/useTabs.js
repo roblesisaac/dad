@@ -2,7 +2,10 @@ import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
 import { nextTick } from 'vue';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 
 export function useTabs() {
   const { state } = useDashboardState();
@@ -137,7 +140,7 @@ export function useTabs() {
         }
         
         // If we just enabled the tab, update its sort value to be at the end
-        if (isEnabled) {
+        if (isEnabled && groupId !== ALL_ACCOUNTS_HIDDEN_GROUP_ID) {
           const enabledTabs = state.allUserTabs.filter(t => 
             t.showForGroup.includes(groupId)
           );

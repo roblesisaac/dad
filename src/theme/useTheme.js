@@ -78,19 +78,84 @@ function applyThemeTokens(themeName) {
   }
 }
 
+function getThemeColorMetaTags() {
+  if (typeof document === 'undefined') {
+    return [];
+  }
+
+  if (typeof document.querySelectorAll === 'function') {
+    const tags = Array.from(document.querySelectorAll('meta[name="theme-color"]'));
+    if (tags.length > 0) {
+      return tags;
+    }
+  }
+
+  if (typeof document.querySelector === 'function') {
+    const tag = document.querySelector('meta[name="theme-color"]');
+    return tag ? [tag] : [];
+  }
+
+  return [];
+}
+
+function ensureMetaTag(name) {
+  if (typeof document === 'undefined') {
+    return null;
+  }
+
+  if (typeof document.querySelector === 'function') {
+    const existing = document.querySelector(`meta[name="${name}"]`);
+    if (existing) {
+      return existing;
+    }
+  }
+
+  if (!document.head || typeof document.createElement !== 'function' || typeof document.head.appendChild !== 'function') {
+    return null;
+  }
+
+  const meta = document.createElement('meta');
+  meta.setAttribute('name', name);
+  document.head.appendChild(meta);
+  return meta;
+}
+
 function applyBrowserThemeColor(themeName) {
-  if (typeof document === 'undefined' || typeof document.querySelector !== 'function') {
+  if (typeof document === 'undefined') {
     return;
   }
 
   const tokenMap = THEME_REGISTRY[themeName] || THEME_REGISTRY.light;
-  const themeColor = tokenMap['--theme-bg'] || THEME_REGISTRY.light['--theme-bg'];
-  const themeColorMeta = document.querySelector('meta[name="theme-color"]');
-  if (themeColorMeta && typeof themeColorMeta.setAttribute === 'function') {
-    themeColorMeta.setAttribute('content', themeColor);
+  const themeColor = tokenMap['--theme-browser-chrome']
+    || tokenMap['--theme-bg']
+    || THEME_REGISTRY.light['--theme-browser-chrome']
+    || THEME_REGISTRY.light['--theme-bg'];
+  const themeColorTags = getThemeColorMetaTags();
+
+  if (themeColorTags.length === 0) {
+    const createdThemeColorMeta = ensureMetaTag('theme-color');
+    if (createdThemeColorMeta) {
+      createdThemeColorMeta.setAttribute('content', themeColor);
+    }
+  } else {
+    for (const tag of themeColorTags) {
+      if (tag && typeof tag.setAttribute === 'function') {
+        tag.setAttribute('content', themeColor);
+      }
+    }
   }
 
-  const appleStatusBarMeta = document.querySelector('meta[name="apple-mobile-web-app-status-bar-style"]');
+  const root = getRoot();
+  if (root && root.style) {
+    root.style.colorScheme = themeName === 'dark' ? 'dark' : 'light';
+  }
+
+  const colorSchemeMeta = ensureMetaTag('color-scheme');
+  if (colorSchemeMeta && typeof colorSchemeMeta.setAttribute === 'function') {
+    colorSchemeMeta.setAttribute('content', themeName === 'dark' ? 'dark' : 'light');
+  }
+
+  const appleStatusBarMeta = ensureMetaTag('apple-mobile-web-app-status-bar-style');
   if (appleStatusBarMeta && typeof appleStatusBarMeta.setAttribute === 'function') {
     appleStatusBarMeta.setAttribute('content', themeName === 'dark' ? 'black' : 'default');
   }

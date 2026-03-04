@@ -5,6 +5,7 @@ export const THEME_ORDER = ['light', 'dark'];
 export const THEME_REGISTRY = Object.freeze({
   light: Object.freeze({
     '--theme-bg': '#ffffff',
+    '--theme-browser-chrome': '#f3f3ee',
     '--theme-bg-soft': '#f9fafb',
     '--theme-bg-subtle': '#f3f4f6',
     '--theme-bg-muted': '#e5e7eb',
@@ -51,6 +52,7 @@ export const THEME_REGISTRY = Object.freeze({
   }),
   dark: Object.freeze({
     '--theme-bg': '#000000',
+    '--theme-browser-chrome': '#000000',
     '--theme-bg-soft': '#000000',
     '--theme-bg-subtle': '#000000',
     '--theme-bg-muted': '#000000',

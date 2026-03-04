@@ -1,5 +1,8 @@
 import { reactive, computed } from 'vue';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 
 const state = reactive({
   allUserAccounts: [],
@@ -49,7 +52,12 @@ function getTabsForGroup(group) {
   if (!group) return [];
 
   if (group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID) {
-    return [...state.allUserTabs].sort((a, b) => a.sort - b.sort);
+    return state.allUserTabs
+      .filter((tab) => {
+        const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+        return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
+      })
+      .sort((a, b) => a.sort - b.sort);
   }
 
   const tabs = state.allUserTabs.filter(tab => {
