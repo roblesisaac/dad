@@ -81,6 +81,7 @@ describe('reports controller', () => {
     expect(Reports.save).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Monthly',
+        totalFormula: '',
         rows: [
           {
             rowId: 'r1',

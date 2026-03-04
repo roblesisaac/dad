@@ -391,7 +391,7 @@
             :disabled="!isReorderingRows"
             @end="onRowsDragEnd"
           >
-            <template #item="{ element: row }">
+            <template #item="{ element: row, index }">
               <article
                 class="relative border rounded-xl px-4 py-3 bg-white"
                 :class="[
@@ -410,8 +410,16 @@
                     </button>
 
                     <div class="min-w-0">
-                      <div class="text-lg font-bold text-gray-900 truncate">
-                        {{ rowTitle(row) }}
+                      <div class="flex items-center gap-2 min-w-0">
+                        <span
+                          v-if="isFormulaEditorModalOpen"
+                          class="flex-shrink-0 inline-flex items-center rounded-md border border-gray-300 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-gray-600"
+                        >
+                          r{{ index + 1 }}
+                        </span>
+                        <div class="text-lg font-bold text-gray-900 truncate">
+                          {{ rowTitle(row) }}
+                        </div>
                       </div>
                       <p class="text-sm text-gray-500 mt-1">
                         {{ rowSubtitle(row) }}
@@ -493,7 +501,13 @@
       <div class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white z-30">
         <div class="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-3">
           <div v-if="selectedReport" class="flex items-center gap-3 min-w-0">
-            <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Report Total</span>
+            <button
+              class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+              @click="openFormulaMenuModal"
+            >
+              <MoreVertical class="w-4 h-4" />
+            </button>
+            <span class="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Total</span>
             <span class="text-xl font-black truncate" :class="fontColor(getReportTotal(selectedReport._id))">
               {{ formatPrice(getReportTotal(selectedReport._id), { toFixed: 2 }) }}
             </span>
@@ -509,6 +523,79 @@
             </span>
             <LogOut class="w-4 h-4 text-black group-hover:text-black transition-colors" />
           </button>
+        </div>
+      </div>
+
+      <div
+        v-if="isFormulaMenuModalOpen"
+        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="closeFormulaModals"
+      >
+        <div class="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
+          <h2 class="text-lg font-black text-gray-900">Formula</h2>
+
+          <button
+            class="mt-4 w-full text-left border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold text-gray-800 hover:bg-gray-50"
+            @click="openFormulaEditorModal"
+          >
+            Edit Formula
+          </button>
+
+          <div class="mt-5 flex justify-end">
+            <button class="btn-secondary" @click="closeFormulaModals">Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div
+        v-if="isFormulaEditorModalOpen"
+        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+        @click.self="closeFormulaModals"
+      >
+        <div class="w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
+          <h2 class="text-lg font-black text-gray-900">Edit Formula</h2>
+
+          <label class="block mt-4 text-xs font-black uppercase tracking-wider text-gray-500">
+            Formula
+            <input
+              v-model="totalFormulaDraft"
+              type="text"
+              class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+              placeholder="r1-r2+r3*1.0875"
+              @keydown.enter.prevent="applyReportFormula"
+            />
+          </label>
+
+          <p class="mt-2 text-xs text-gray-500">
+            Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
+          </p>
+          <p v-if="selectedReportTotalIssue" class="mt-2 text-xs text-red-600">
+            Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
+          </p>
+
+          <div class="mt-6 flex items-center justify-end gap-2">
+            <button
+              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="closeFormulaModals"
+            >
+              Cancel
+            </button>
+            <button
+              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="clearReportFormula"
+            >
+              Clear
+            </button>
+            <button
+              class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="applyReportFormula"
+            >
+              {{ isApplyingReportFormula ? 'Applying...' : 'Apply' }}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -789,7 +876,7 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   addMonths,
   addYears,
@@ -831,6 +918,7 @@ const {
   deleteReport,
   saveReport,
   updateReportName,
+  updateReportTotalFormula,
   moveReportToFolder,
   removeReportFromFolder,
   renameFolder,
@@ -848,6 +936,7 @@ const {
   getRowAmount,
   getRowIssue,
   getReportTotal,
+  getReportTotalIssue,
   refreshReportTotals
 } = useReportsState();
 
@@ -864,6 +953,10 @@ const showListMenu = ref(false);
 const showDetailReportMenu = ref(false);
 const isEditingReportName = ref(false);
 const reportNameDraft = ref('');
+const totalFormulaDraft = ref('');
+const isApplyingReportFormula = ref(false);
+const isFormulaMenuModalOpen = ref(false);
+const isFormulaEditorModalOpen = ref(false);
 
 const isRowEditorOpen = ref(false);
 const rowEditorDraft = ref(null);
@@ -1018,6 +1111,21 @@ const saveStateLabel = computed(() => {
   if (status === 'error') return 'Save failed';
   return '';
 });
+
+const selectedReportTotalIssue = computed(() => {
+  if (!selectedReport.value?._id) return '';
+  return getReportTotalIssue(selectedReport.value._id);
+});
+
+watch(
+  () => selectedReport.value?._id || '',
+  () => {
+    totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+    isFormulaMenuModalOpen.value = false;
+    isFormulaEditorModalOpen.value = false;
+  },
+  { immediate: true }
+);
 
 function folderIsExpanded(folderName) {
   return expandedFoldersByName.value[folderName] === true;
@@ -1360,6 +1468,7 @@ function openReport(reportId) {
   closeExistingRowPickerModal();
   isMoveToFolderModalOpen.value = false;
   isReorderingRows.value = false;
+  closeFormulaModals();
 }
 
 function openReportFromList(reportId) {
@@ -1386,6 +1495,7 @@ function backToList() {
   showAddRowPicker.value = false;
   closeExistingRowPickerModal();
   closeMoveToFolderModal();
+  closeFormulaModals();
   isReorderingRows.value = false;
   cancelReportNameEdit();
   cancelRowEditor();
@@ -1436,6 +1546,31 @@ function closeDropdownMenus() {
   showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+}
+
+function openFormulaMenuModal() {
+  if (!selectedReport.value?._id) return;
+
+  closeDropdownMenus();
+  closeExistingRowPickerModal();
+  isFormulaEditorModalOpen.value = false;
+  isFormulaMenuModalOpen.value = true;
+}
+
+function openFormulaEditorModal() {
+  if (!selectedReport.value?._id) return;
+
+  totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+  isFormulaMenuModalOpen.value = false;
+  isFormulaEditorModalOpen.value = true;
+}
+
+function closeFormulaModals() {
+  if (isApplyingReportFormula.value) return;
+
+  isFormulaMenuModalOpen.value = false;
+  isFormulaEditorModalOpen.value = false;
+  totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
 }
 
 function handleGlobalPointerDown(event) {
@@ -1565,6 +1700,7 @@ function toggleReorderRows() {
   showAddRowPicker.value = false;
   showDetailReportMenu.value = false;
   closeExistingRowPickerModal();
+  closeFormulaModals();
 }
 
 async function onRowsDragEnd() {
@@ -1591,6 +1727,7 @@ function openCreateReportModal() {
   showListMenu.value = false;
   activeReportMenuId.value = '';
   closeExistingRowPickerModal();
+  closeFormulaModals();
   createReportNameDraft.value = '';
   isCreateReportModalOpen.value = true;
 }
@@ -1649,6 +1786,38 @@ async function saveReportName() {
     selectedReportId.value = saved._id;
     cancelReportNameEdit();
   }
+}
+
+async function applyReportFormula() {
+  if (!selectedReport.value || isApplyingReportFormula.value) return;
+
+  const reportId = selectedReport.value._id;
+  updateReportTotalFormula(reportId, totalFormulaDraft.value);
+  totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+
+  if (isDraftSelected.value) {
+    closeFormulaModals();
+    return;
+  }
+
+  isApplyingReportFormula.value = true;
+
+  try {
+    const saved = await saveReportLayout(reportId);
+    if (saved?._id) {
+      selectedReportId.value = saved._id;
+      totalFormulaDraft.value = String(saved.totalFormula || '').trim();
+    }
+  } finally {
+    isApplyingReportFormula.value = false;
+  }
+
+  closeFormulaModals();
+}
+
+async function clearReportFormula() {
+  totalFormulaDraft.value = '';
+  await applyReportFormula();
 }
 
 async function saveDraftReport() {

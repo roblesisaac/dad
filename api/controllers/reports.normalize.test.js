@@ -6,6 +6,7 @@ describe('reports normalize', () => {
     const payload = {
       name: '  Monthly  ',
       folderName: '  Planning  ',
+      totalFormula: ' r1 + r2 * 1.0875 ',
       sort: '4',
       rows: [
         {
@@ -41,6 +42,7 @@ describe('reports normalize', () => {
 
     expect(normalized.name).toBe('Monthly');
     expect(normalized.folderName).toBe('Planning');
+    expect(normalized.totalFormula).toBe('r1 + r2 * 1.0875');
     expect(normalized.sort).toBe(4);
     expect(normalized.rows).toHaveLength(3);
 
@@ -151,6 +153,21 @@ describe('reports normalize', () => {
         rows: []
       })
     ).toThrow('sort must be a valid number');
+  });
+
+  test('normalizes missing or invalid total formula to empty string', () => {
+    const withMissing = normalizeReportPayload({
+      name: 'Monthly',
+      rows: []
+    });
+    expect(withMissing.totalFormula).toBe('');
+
+    const withNonString = normalizeReportPayload({
+      name: 'Monthly',
+      totalFormula: 123,
+      rows: []
+    });
+    expect(withNonString.totalFormula).toBe('');
   });
 
   test('checks ownership helper', () => {

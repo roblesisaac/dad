@@ -80,6 +80,7 @@ export function normalizeReportsForLocal(reports = []) {
   const normalized = reports.map((report, index) => ({
     ...report,
     folderName: typeof report?.folderName === 'string' ? report.folderName.trim() : '',
+    totalFormula: typeof report?.totalFormula === 'string' ? report.totalFormula.trim() : '',
     sort: Number.isFinite(Number(report?.sort)) ? Number(report.sort) : index,
     rows: normalizeRowsForLocal(report?.rows)
   }));
@@ -92,18 +93,254 @@ export function normalizeReportsForLocal(reports = []) {
     }));
 }
 
-export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
-  return rows.reduce((total, row) => {
-    if (row.type === 'manual') {
-      const manualAmount = Number(row.amount);
-      return total + (Number.isFinite(manualAmount) ? manualAmount : 0);
+function getRowAmountForTotal(row, rowAmountByRowId = null) {
+  if (row?.type === 'manual') {
+    const manualAmount = Number(row?.amount);
+    return Number.isFinite(manualAmount) ? manualAmount : 0;
+  }
+
+  const mappedAmount = rowAmountByRowId ? Number(rowAmountByRowId[row?.rowId]) : Number.NaN;
+  const savedAmount = Number(row?.savedTotal);
+  const rowAmount = Number.isFinite(mappedAmount) ? mappedAmount : savedAmount;
+  return Number.isFinite(rowAmount) ? rowAmount : 0;
+}
+
+function makeFormulaError(message) {
+  const error = new Error(message || 'Invalid formula');
+  error.name = 'ReportFormulaError';
+  return error;
+}
+
+export function tokenizeReportTotalFormula(formula = '') {
+  const source = String(formula || '');
+  const tokens = [];
+  let index = 0;
+
+  while (index < source.length) {
+    const char = source[index];
+
+    if (/\s/.test(char)) {
+      index += 1;
+      continue;
     }
 
-    const mappedAmount = rowAmountByRowId ? Number(rowAmountByRowId[row.rowId]) : Number.NaN;
-    const savedAmount = Number(row.savedTotal);
-    const rowAmount = Number.isFinite(mappedAmount) ? mappedAmount : savedAmount;
-    return total + (Number.isFinite(rowAmount) ? rowAmount : 0);
+    if (char === '+' || char === '-' || char === '*' || char === '/') {
+      tokens.push({ type: 'operator', value: char });
+      index += 1;
+      continue;
+    }
+
+    if (char === '(' || char === ')') {
+      tokens.push({ type: 'paren', value: char });
+      index += 1;
+      continue;
+    }
+
+    if (char === 'r' || char === 'R') {
+      const start = index;
+      index += 1;
+
+      let digits = '';
+      while (index < source.length && /\d/.test(source[index])) {
+        digits += source[index];
+        index += 1;
+      }
+
+      if (!digits) {
+        throw makeFormulaError(
+          `Invalid row reference at position ${start + 1}. Use r1, r2, ...`
+        );
+      }
+
+      const rowNumber = Number(digits);
+      if (!Number.isInteger(rowNumber) || rowNumber < 1) {
+        throw makeFormulaError(`Row reference r${digits} is invalid`);
+      }
+
+      tokens.push({
+        type: 'row_ref',
+        value: rowNumber,
+        raw: `r${rowNumber}`
+      });
+      continue;
+    }
+
+    const numberMatch = source.slice(index).match(/^(?:\d+(?:\.\d*)?|\.\d+)/);
+    if (numberMatch) {
+      const raw = numberMatch[0];
+      const value = Number(raw);
+      if (!Number.isFinite(value)) {
+        throw makeFormulaError(`Invalid number '${raw}'`);
+      }
+
+      tokens.push({ type: 'number', value });
+      index += raw.length;
+      continue;
+    }
+
+    throw makeFormulaError(`Invalid token '${char}' at position ${index + 1}`);
+  }
+
+  return tokens;
+}
+
+function resolveFormulaRowValue(rowNumber, rows = [], rowAmountByRowId = null) {
+  const index = rowNumber - 1;
+
+  if (!Array.isArray(rows) || index < 0 || index >= rows.length) {
+    throw makeFormulaError(`Row reference r${rowNumber} is out of range`);
+  }
+
+  return getRowAmountForTotal(rows[index], rowAmountByRowId);
+}
+
+export function evaluateReportTotalFormulaExpression(formula = '', rows = [], rowAmountByRowId = null) {
+  const tokens = tokenizeReportTotalFormula(formula);
+  let cursor = 0;
+
+  function current() {
+    return tokens[cursor] || null;
+  }
+
+  function consume() {
+    const token = tokens[cursor] || null;
+    cursor += 1;
+    return token;
+  }
+
+  function parseFactor() {
+    const token = current();
+    if (!token) {
+      throw makeFormulaError('Formula ended unexpectedly');
+    }
+
+    if (token.type === 'operator' && (token.value === '+' || token.value === '-')) {
+      consume();
+      const value = parseFactor();
+      return token.value === '-' ? -value : value;
+    }
+
+    if (token.type === 'number') {
+      consume();
+      return token.value;
+    }
+
+    if (token.type === 'row_ref') {
+      consume();
+      return resolveFormulaRowValue(token.value, rows, rowAmountByRowId);
+    }
+
+    if (token.type === 'paren' && token.value === '(') {
+      consume();
+      const value = parseExpression();
+      const closing = current();
+
+      if (!closing || closing.type !== 'paren' || closing.value !== ')') {
+        throw makeFormulaError('Missing closing parenthesis');
+      }
+
+      consume();
+      return value;
+    }
+
+    if (token.type === 'paren' && token.value === ')') {
+      throw makeFormulaError('Unexpected closing parenthesis');
+    }
+
+    throw makeFormulaError(`Unexpected token '${token.value || token.type}'`);
+  }
+
+  function parseTerm() {
+    let value = parseFactor();
+
+    while (true) {
+      const token = current();
+      if (!token || token.type !== 'operator' || (token.value !== '*' && token.value !== '/')) {
+        break;
+      }
+
+      consume();
+      const right = parseFactor();
+
+      if (token.value === '*') {
+        value *= right;
+        continue;
+      }
+
+      if (right === 0) {
+        throw makeFormulaError('Cannot divide by zero');
+      }
+
+      value /= right;
+    }
+
+    return value;
+  }
+
+  function parseExpression() {
+    let value = parseTerm();
+
+    while (true) {
+      const token = current();
+      if (!token || token.type !== 'operator' || (token.value !== '+' && token.value !== '-')) {
+        break;
+      }
+
+      consume();
+      const right = parseTerm();
+
+      if (token.value === '+') {
+        value += right;
+      } else {
+        value -= right;
+      }
+    }
+
+    return value;
+  }
+
+  const result = parseExpression();
+  if (cursor < tokens.length) {
+    const token = tokens[cursor];
+    throw makeFormulaError(`Unexpected token '${token.value || token.type}'`);
+  }
+
+  if (!Number.isFinite(result)) {
+    throw makeFormulaError('Formula result must be a valid number');
+  }
+
+  return result;
+}
+
+export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
+  return rows.reduce((total, row) => {
+    return total + getRowAmountForTotal(row, rowAmountByRowId);
   }, 0);
+}
+
+export function calculateReportTotalWithFormula(rows = [], totalFormula = '', rowAmountByRowId = null) {
+  const sumTotal = calculateReportTotal(rows, rowAmountByRowId);
+  const formula = typeof totalFormula === 'string' ? totalFormula.trim() : '';
+
+  if (!formula) {
+    return {
+      total: sumTotal,
+      issue: ''
+    };
+  }
+
+  try {
+    const total = evaluateReportTotalFormulaExpression(formula, rows, rowAmountByRowId);
+    return {
+      total,
+      issue: ''
+    };
+  } catch (error) {
+    return {
+      total: sumTotal,
+      issue: error?.message || 'Invalid formula'
+    };
+  }
 }
 
 export function useReportsState() {
@@ -125,6 +362,7 @@ export function useReportsState() {
     allUserGroups: [],
     allUserAccounts: [],
     reportTotalsById: {},
+    reportTotalIssuesById: {},
     rowIssuesByKey: {},
     saveStatusByReportId: {}
   });
@@ -169,7 +407,13 @@ export function useReportsState() {
     const report = findReport(reportId);
     if (!report) return;
 
-    state.reportTotalsById[reportId] = calculateReportTotal(report.rows);
+    const { total, issue } = calculateReportTotalWithFormula(
+      report.rows,
+      report.totalFormula
+    );
+
+    state.reportTotalsById[reportId] = total;
+    state.reportTotalIssuesById[reportId] = issue || '';
   }
 
   function applyRowIssues(reportId, issuesByRowId = {}) {
@@ -182,6 +426,25 @@ export function useReportsState() {
 
   function replaceReports(nextReports = []) {
     state.reports = normalizeReportsForLocal(nextReports);
+    const reportIds = new Set(state.reports.map(report => report._id));
+
+    Object.keys(state.reportTotalsById).forEach((reportId) => {
+      if (!reportIds.has(reportId)) {
+        delete state.reportTotalsById[reportId];
+      }
+    });
+
+    Object.keys(state.reportTotalIssuesById).forEach((reportId) => {
+      if (!reportIds.has(reportId)) {
+        delete state.reportTotalIssuesById[reportId];
+      }
+    });
+
+    Object.keys(state.saveStatusByReportId).forEach((reportId) => {
+      if (!reportIds.has(reportId)) {
+        delete state.saveStatusByReportId[reportId];
+      }
+    });
 
     state.reports.forEach((report) => {
       if (!state.saveStatusByReportId[report._id]) {
@@ -471,6 +734,7 @@ export function useReportsState() {
         const created = await reportsAPI.createReport({
           name: report.name,
           folderName: report.folderName || '',
+          totalFormula: report.totalFormula || '',
           rows,
           sort: report.sort
         });
@@ -489,6 +753,7 @@ export function useReportsState() {
 
         clearReportRowIssues(reportId);
         delete state.reportTotalsById[reportId];
+        delete state.reportTotalIssuesById[reportId];
         delete state.saveStatusByReportId[reportId];
 
         applyRowIssues(normalizedCreated._id, issuesByRowId);
@@ -501,6 +766,7 @@ export function useReportsState() {
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
         folderName: report.folderName || '',
+        totalFormula: report.totalFormula || '',
         rows,
         sort: report.sort
       });
@@ -549,6 +815,7 @@ export function useReportsState() {
       const created = await reportsAPI.createReport({
         name: nextName,
         folderName: '',
+        totalFormula: '',
         rows: [],
         sort: state.reports.length
       });
@@ -591,6 +858,7 @@ export function useReportsState() {
       const created = await reportsAPI.createReport({
         name: buildCopyName(sourceReport.name),
         folderName: sourceReport.folderName || '',
+        totalFormula: sourceReport.totalFormula || '',
         rows: normalizeRowsForLocal(sourceReport.rows),
         sort: state.reports.length
       });
@@ -616,6 +884,7 @@ export function useReportsState() {
     replaceReports(state.reports.filter(item => item._id !== reportId));
     delete state.saveStatusByReportId[reportId];
     delete state.reportTotalsById[reportId];
+    delete state.reportTotalIssuesById[reportId];
     return true;
   }
 
@@ -634,6 +903,7 @@ export function useReportsState() {
       replaceReports(state.reports.filter(report => report._id !== reportId));
       delete state.saveStatusByReportId[reportId];
       delete state.reportTotalsById[reportId];
+      delete state.reportTotalIssuesById[reportId];
     } catch (error) {
       console.error(`Failed to delete report '${reportId}'`, error);
       state.error = error.message || 'Failed to delete report';
@@ -652,6 +922,17 @@ export function useReportsState() {
     if (!report) return;
 
     report.folderName = String(folderName || '').trim();
+  }
+
+  function updateReportTotalFormula(reportId, totalFormula) {
+    const report = findReport(reportId);
+    if (!report) return;
+
+    report.totalFormula = typeof totalFormula === 'string'
+      ? totalFormula.trim()
+      : '';
+
+    setReportTotal(reportId);
   }
 
   async function moveReportToFolder(reportId, folderName) {
@@ -870,6 +1151,7 @@ export function useReportsState() {
       const updated = await reportsAPI.updateReport(reportId, {
         name: report.name,
         folderName: report.folderName || '',
+        totalFormula: report.totalFormula || '',
         rows: report.rows,
         sort: report.sort
       });
@@ -908,6 +1190,7 @@ export function useReportsState() {
           await reportsAPI.updateReport(report._id, {
             name: report.name,
             folderName: report.folderName || '',
+            totalFormula: report.totalFormula || '',
             rows: report.rows,
             sort: report.sort
           })
@@ -942,13 +1225,7 @@ export function useReportsState() {
     const row = report.rows.find(item => item.rowId === rowId);
     if (!row) return 0;
 
-    if (row.type === 'manual') {
-      const manualAmount = Number(row.amount);
-      return Number.isFinite(manualAmount) ? manualAmount : 0;
-    }
-
-    const savedAmount = Number(row.savedTotal);
-    return Number.isFinite(savedAmount) ? savedAmount : 0;
+    return getRowAmountForTotal(row);
   }
 
   function getRowIssue(reportId, rowId) {
@@ -957,6 +1234,10 @@ export function useReportsState() {
 
   function getReportTotal(reportId) {
     return state.reportTotalsById[reportId] ?? 0;
+  }
+
+  function getReportTotalIssue(reportId) {
+    return state.reportTotalIssuesById[reportId] || '';
   }
 
   async function refreshRowTotal(reportId, rowId, options = {}) {
@@ -1046,6 +1327,7 @@ export function useReportsState() {
     saveReport,
     updateReportName,
     updateReportFolderName,
+    updateReportTotalFormula,
     moveReportToFolder,
     removeReportFromFolder,
     renameFolder,
@@ -1063,6 +1345,7 @@ export function useReportsState() {
     getRowAmount,
     getRowIssue,
     getReportTotal,
+    getReportTotalIssue,
     refreshReportTotals
   };
 }
