@@ -66,37 +66,42 @@
         v-if="!state.isLoading && shouldShowFooter"
         class="fixed bottom-0 py-2 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
-        <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-[1fr_auto_1fr] items-center">
+        <div class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center">
           <button
-            class="group focus:outline-none inline-flex items-center justify-self-start hover:opacity-70 transition-opacity"
+            class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
             type="button"
             aria-label="Search transactions"
           >
             <Search class="w-4 h-4 text-black group-hover:text-black transition-colors" />
+            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+              Transactions
+            </span>
           </button>
 
-          <button
-            v-if="shouldShowEditTabAction"
-            @click="showRuleManagerModal = true"
-            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-center"
-            type="button"
-          >
-            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-              Edit Tab
-            </span>
-            <ChevronDown class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
-          </button>
+          <div class="ml-auto flex items-center gap-6">
+            <button
+              v-if="shouldShowEditTabAction"
+              @click="showRuleManagerModal = true"
+              class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+              type="button"
+            >
+              <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+                Edit Tab
+              </span>
+              <ChevronDown class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
+            </button>
 
-          <button
-            @click="isAccountModalOpen = true"
-            class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity justify-self-end"
-            type="button"
-          >
-            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-              Account
-            </span>
-            <ChevronRight class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
-          </button>
+            <button
+              @click="isAccountModalOpen = true"
+              class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+              type="button"
+            >
+              <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+                Account
+              </span>
+              <ChevronRight class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
+            </button>
+          </div>
         </div>
       </footer>
 
@@ -108,22 +113,22 @@
       <Teleport to="body">
         <div
           v-if="isAccountModalOpen"
-          class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] px-4"
+          class="account-modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4"
           @click.self="isAccountModalOpen = false"
         >
           <div
-            class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-bg)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
+            class="account-modal-panel w-full max-w-sm rounded-2xl"
             role="dialog"
             aria-modal="true"
             aria-label="Account"
           >
-            <div class="flex items-center justify-between border-b border-[var(--theme-border)] px-4 py-3">
-              <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)]">
+            <div class="account-modal-header flex items-center justify-between px-4 py-3">
+              <h3 class="account-modal-title text-[10px] font-black uppercase tracking-[0.2em]">
                 Account
               </h3>
               <button
                 type="button"
-                class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                class="account-modal-close rounded-full p-1 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
                 aria-label="Close account modal"
                 @click="isAccountModalOpen = false"
               >
@@ -133,7 +138,7 @@
 
             <div class="space-y-5 px-4 py-4">
               <div>
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
+                <p class="account-modal-label text-[10px] font-black uppercase tracking-[0.2em]">
                   Theme
                 </p>
                 <div class="mt-2 grid grid-cols-2 gap-2">
@@ -141,11 +146,9 @@
                     v-for="themeOption in accountThemeOptions"
                     :key="themeOption.value"
                     type="button"
-                    class="rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
-                    :class="selectedThemeOption === themeOption.value
-                      ? 'border-[var(--theme-text)] text-[var(--theme-text)] bg-[var(--theme-bg-subtle)]'
-                      : 'border-[var(--theme-border)] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:bg-[var(--theme-bg-soft)]'"
-                    @click="selectedThemeOption = themeOption.value"
+                    class="account-theme-button rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
+                    :class="{ 'account-theme-button-active': resolvedTheme === themeOption.value }"
+                    @click="setTheme(themeOption.value)"
                   >
                     {{ themeOption.label }}
                   </button>
@@ -154,7 +157,8 @@
 
               <button
                 type="button"
-                class="w-full rounded-xl border border-[var(--theme-border)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-[var(--theme-text)] hover:bg-[var(--theme-bg-soft)] transition-colors"
+                class="account-logout-button w-full rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
+                @click="handleLogout"
               >
                 Logout
               </button>
@@ -176,6 +180,64 @@
 .fade-leave-to {
   opacity: 0;
 }
+
+.account-modal-overlay {
+  background: var(--theme-overlay-30);
+}
+
+.account-modal-panel {
+  border: 1px solid var(--theme-border);
+  background: var(--theme-bg);
+  box-shadow: 0 20px 60px -24px var(--theme-overlay-50);
+}
+
+.account-modal-header {
+  border-bottom: 1px solid var(--theme-border);
+}
+
+.account-modal-title {
+  color: var(--theme-text);
+}
+
+.account-modal-label {
+  color: var(--theme-text-soft);
+}
+
+.account-modal-close {
+  color: var(--theme-text-soft);
+}
+
+.account-modal-close:hover {
+  color: var(--theme-text);
+  background: var(--theme-bg-soft);
+}
+
+.account-theme-button {
+  border-color: var(--theme-border);
+  color: var(--theme-text-soft);
+  background: var(--theme-bg);
+}
+
+.account-theme-button:hover {
+  color: var(--theme-text);
+  background: var(--theme-bg-soft);
+}
+
+.account-theme-button-active {
+  border-color: var(--theme-text);
+  color: var(--theme-text);
+  background: var(--theme-bg-subtle);
+}
+
+.account-logout-button {
+  border-color: var(--theme-border);
+  color: var(--theme-text);
+  background: var(--theme-bg);
+}
+
+.account-logout-button:hover {
+  background: var(--theme-bg-soft);
+}
 </style>
 
 <script setup>
@@ -186,6 +248,8 @@ import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
+import { useTheme } from '@/theme/useTheme.js';
+import { useAuth } from '@/shared/composables/useAuth.js';
 import { ChevronDown, ChevronRight, Search, X } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
@@ -203,10 +267,11 @@ const { state } = useDashboardState();
 const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
 const { selectTab } = useTabs();
+const { resolvedTheme, setTheme } = useTheme();
+const { logoutUser } = useAuth();
 
 const showRuleManagerModal = ref(false);
 const isAccountModalOpen = ref(false);
-const selectedThemeOption = ref('light');
 const accountThemeOptions = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' }
@@ -386,6 +451,11 @@ function handleCategorySelected(categoryName) {
   state.selected.category = categoryName;
   state.selected.transaction = false;
   dashboardView.value = 'category-detail';
+}
+
+function handleLogout() {
+  isAccountModalOpen.value = false;
+  logoutUser();
 }
 
 watch(
