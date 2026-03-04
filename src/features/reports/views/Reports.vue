@@ -120,7 +120,7 @@
                       class="flex items-center gap-2 min-w-0 flex-1 text-left"
                       @click="toggleFolderExpansion(item.folderName)"
                     >
-                      <span class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
+                      <span class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
                     </button>
                   </div>
 
@@ -185,7 +185,7 @@
                 @click="openReportFromList(item.report._id)"
               >
                 <div class="flex items-start justify-between gap-3">
-                  <h2 class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.report.name }}</h2>
+                  <h2 class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.report.name }}</h2>
 
                   <div class="flex items-center gap-2">
                     <span class="text-lg font-black" :class="fontColor(getReportTotal(item.report._id))">
@@ -226,7 +226,7 @@
                     class="flex items-center gap-2 min-w-0 flex-1 text-left"
                     @click="toggleFolderExpansion(item.folderName)"
                   >
-                    <span class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
+                    <span class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
                   </button>
 
                   <div class="flex items-center gap-1 ml-2 shrink-0">
@@ -309,16 +309,6 @@
             </template>
           </div>
         </template>
-
-        <button
-          class="fixed bottom-24 right-8 w-14 h-14 rounded-full bg-black text-white shadow-xl hover:bg-gray-800 flex items-center justify-center"
-          :class="isReorderingReports ? 'opacity-50 cursor-not-allowed' : ''"
-          :disabled="isReorderingReports"
-          @click="createNewReportFromFab"
-          title="Create report"
-        >
-          <Plus class="w-6 h-6" />
-        </button>
       </template>
 
       <template v-else>
@@ -340,7 +330,7 @@
                 </div>
               </div>
               <template v-else>
-                <h1 class="text-3xl font-black tracking-tight text-gray-900 truncate">{{ selectedReport.name }}</h1>
+                <h1 class="text-3xl font-black uppercase tracking-tight text-gray-900 truncate">{{ selectedReport.name }}</h1>
                 <p class="text-xs text-gray-500 mt-1">
                   {{ selectedReport.rows.length }} row{{ selectedReport.rows.length === 1 ? '' : 's' }}
                   <span v-if="isDraftSelected" class="ml-2 text-amber-700 font-bold">· Unsaved</span>
@@ -426,7 +416,7 @@
                         >
                           r{{ index + 1 }}
                         </span>
-                        <div class="text-lg font-bold text-gray-900 truncate">
+                        <div class="text-lg font-bold text-gray-900 truncate uppercase">
                           {{ rowTitle(row) }}
                         </div>
                       </div>
@@ -602,19 +592,34 @@
               </div>
             </div>
           </div>
-          <div v-else class="flex-1" />
+          <div v-else class="flex-1">
+            <button
+              class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isReorderingReports"
+              @click="openCreateReportModal"
+            >
+              <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
+                Create Report
+              </span>
+            </button>
+          </div>
 
           <button
-            @click="logoutUser"
+            @click="isAccountModalOpen = true"
             class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none flex-shrink-0"
           >
             <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
-              Logout
+              Account
             </span>
-            <LogOut class="w-4 h-4 text-black group-hover:text-black transition-colors" />
+            <ChevronRight class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
           </button>
         </div>
       </div>
+
+      <AccountModal
+        :is-open="isAccountModalOpen"
+        @close="isAccountModalOpen = false"
+      />
 
       <div
         v-if="isExistingRowPickerModalOpen"
@@ -910,18 +915,17 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronUp, GripVertical, LogOut, MoreVertical, Plus } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, MoreVertical } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
+import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
-import { useAuth } from '@/shared/composables/useAuth';
 
 const router = useRouter();
-const { logoutUser } = useAuth();
 const {
   state,
   sortedTabs,
@@ -985,6 +989,7 @@ const isSavingRow = ref(false);
 const isCreateReportModalOpen = ref(false);
 const createReportNameDraft = ref('');
 const isCreatingReport = ref(false);
+const isAccountModalOpen = ref(false);
 const duplicatingReportId = ref('');
 const isMoveToFolderModalOpen = ref(false);
 const moveToFolderReportId = ref('');
@@ -1783,10 +1788,6 @@ async function finishReorderRows() {
 }
 
 async function createFirstReport() {
-  openCreateReportModal();
-}
-
-async function createNewReportFromFab() {
   openCreateReportModal();
 }
 
