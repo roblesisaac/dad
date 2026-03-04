@@ -111,7 +111,7 @@
                         data-menu-surface
                       >
                         <button type="button" class="selector-menu-item" @click.stop="openAddLabelModal(account)">
-                          Add Label
+                          Edit Labels
                         </button>
                         <button type="button" class="selector-menu-item" @click.stop="openRenameAccount(account)">
                           Rename Account
@@ -391,100 +391,79 @@
     <BaseModal
       v-if="showAddLabelModal"
       :is-open="showAddLabelModal"
-      title="Add Label"
+      title="Edit Labels"
       size="md"
       @close="closeAddLabelModal"
     >
       <template #content>
-        <div class="py-2">
-          <div v-if="sortedLabelGroups.length" class="border-b selector-divider">
-            <button
-              v-for="label in sortedLabelGroups"
-              :key="`add-label-${label._id}`"
-              type="button"
-              class="w-full px-6 py-4 text-left label-option"
-              @click="toggleAddLabelSelection(label._id)"
-            >
-              <div class="flex items-center justify-between gap-3">
-                <span class="text-base font-black uppercase tracking-tight selector-text">{{ label.name }}</span>
-                <Check
-                  v-if="selectedLabelIds.includes(label._id)"
-                  class="w-4 h-4 selector-text"
-                />
-              </div>
-            </button>
+        <div class="edit-labels-modal">
+          <div class="py-2">
+            <div v-if="sortedLabelGroups.length" class="border-b selector-divider">
+              <button
+                v-for="label in sortedLabelGroups"
+                :key="`add-label-${label._id}`"
+                type="button"
+                class="w-full px-6 py-4 text-left label-option"
+                :disabled="isSavingAddLabel || isInlineCreatingLabel"
+                @click="toggleAddLabelSelection(label._id)"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <span class="text-base font-black uppercase tracking-tight selector-text">{{ label.name }}</span>
+                  <Check
+                    v-if="selectedLabelIds.includes(label._id)"
+                    class="w-4 h-4 selector-text"
+                  />
+                </div>
+              </button>
+            </div>
+
+            <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
+              No existing labels
+            </div>
           </div>
 
-          <div v-else class="px-6 py-8 text-center text-[10px] font-black uppercase tracking-[0.2em] selector-muted">
-            No existing labels
+          <div class="modal-footer modal-footer-sticky">
+            <div v-if="isInlineCreateMode" class="inline-create-row">
+              <input
+                v-model="newLabelInput"
+                type="text"
+                class="modal-input inline-create-input"
+                placeholder="Label name"
+                :disabled="isInlineCreatingLabel"
+                @keydown.enter.prevent="saveCreateLabelInline"
+              />
+              <button
+                type="button"
+                class="inline-create-confirm"
+                :disabled="!canSaveNewLabelInline || isInlineCreatingLabel"
+                @click="saveCreateLabelInline"
+              >
+                <Check class="w-4 h-4" />
+              </button>
+            </div>
+
+            <template v-else>
+              <button
+                class="modal-button-secondary"
+                :class="{ 'w-full': !showSaveAddLabelButton }"
+                type="button"
+                :disabled="isSavingAddLabel"
+                @click="openCreateLabelInline"
+              >
+                Create New Label
+              </button>
+
+              <button
+                v-if="showSaveAddLabelButton"
+                @click="saveAddLabel"
+                class="modal-button-primary"
+                :disabled="!canSaveAddLabel"
+                type="button"
+              >
+                {{ isSavingAddLabel ? 'Saving...' : 'Save' }}
+              </button>
+            </template>
           </div>
-
-          <div class="px-6 py-6">
-            <button
-              class="modal-button-secondary w-full"
-              type="button"
-              @click="openCreateLabelModal"
-            >
-              Create New Label
-            </button>
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            @click="closeAddLabelModal"
-            class="modal-button-secondary"
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveAddLabel"
-            class="modal-button-primary"
-            :disabled="!canSaveAddLabel"
-            type="button"
-          >
-            Save
-          </button>
-        </div>
-      </template>
-    </BaseModal>
-
-    <BaseModal
-      v-if="showCreateLabelModal"
-      :is-open="showCreateLabelModal"
-      title="Create New Label"
-      size="md"
-      @close="closeCreateLabelModal"
-    >
-
-      <template #content>
-        <div class="px-6 py-8">
-          <label class="modal-label">Label Name</label>
-          <input
-            v-model="newLabelInput"
-            type="text"
-            class="modal-input"
-            placeholder="Label name"
-          />
-        </div>
-
-        <div class="modal-footer">
-          <button
-            @click="closeCreateLabelModal"
-            class="modal-button-secondary"
-            type="button"
-          >
-            Cancel
-          </button>
-          <button
-            @click="saveCreateLabel"
-            class="modal-button-primary"
-            :disabled="!canSaveNewLabel"
-            type="button"
-          >
-            Save
-          </button>
         </div>
       </template>
     </BaseModal>
@@ -534,9 +513,7 @@ const dashboardAccounts = ref([]);
 
 const activeAccountMenuId = ref('');
 const activeLabelMenuId = ref('');
-const activeAccountLabelMenuKey = ref('');
 const activeLabelMenuPosition = ref({ top: 0, left: 0 });
-const expandedAccountLabelIds = ref([]);
 
 const showRenameModal = ref(false);
 const renameInput = ref('');
@@ -555,8 +532,11 @@ const showViewLabelDisabledAccounts = ref(false);
 const showAddLabelModal = ref(false);
 const addLabelTargetAccount = ref(null);
 const selectedLabelIds = ref([]);
-
-const showCreateLabelModal = ref(false);
+const initialSelectedLabelIds = ref([]);
+const createdLabelIds = ref([]);
+const isInlineCreateMode = ref(false);
+const isSavingAddLabel = ref(false);
+const isInlineCreatingLabel = ref(false);
 const newLabelInput = ref('');
 
 const showBanksModal = ref(false);
@@ -628,10 +608,35 @@ const canRestoreDefaultAccountName = computed(() => {
   return normalizedAccountText(currentName) !== normalizedAccountText(defaultName);
 });
 
-const canSaveAddLabel = computed(() => selectedLabelIds.value.length > 0);
+const hasLabelSelectionChanges = computed(() => {
+  const initial = [...new Set(initialSelectedLabelIds.value)].sort();
+  const selected = [...new Set(selectedLabelIds.value)].sort();
 
-const canSaveNewLabel = computed(() => {
-  return newLabelInput.value.trim().length > 0;
+  if (initial.length !== selected.length) {
+    return true;
+  }
+
+  return initial.some((id, index) => id !== selected[index]);
+});
+
+const showSaveAddLabelButton = computed(() => {
+  return createdLabelIds.value.length > 0 || hasLabelSelectionChanges.value;
+});
+
+const canSaveAddLabel = computed(() => {
+  if (isSavingAddLabel.value || isInlineCreatingLabel.value) {
+    return false;
+  }
+
+  return showSaveAddLabelButton.value;
+});
+
+const canSaveNewLabelInline = computed(() => {
+  if (isInlineCreatingLabel.value || isSavingAddLabel.value) {
+    return false;
+  }
+
+  return sanitizeAccountText(newLabelInput.value).length > 0;
 });
 
 const viewLabelEnabledAccounts = computed(() => {
@@ -647,9 +652,6 @@ const viewLabelDisabledAccounts = computed(() => {
 watch(
   () => sortedAccounts.value,
   (accounts) => {
-    const validAccountIds = new Set(accounts.map(account => accountKey(account)).filter(Boolean));
-    expandedAccountLabelIds.value = expandedAccountLabelIds.value.filter(id => validAccountIds.has(id));
-
     if (!dashboardEditMode.value) {
       dashboardAccounts.value = [...accounts];
     }
@@ -814,43 +816,9 @@ function labelsForAccount(account) {
   });
 }
 
-function labelCountText(account) {
-  const count = Number(labelsForAccount(account).length) || 0;
-  const labelWord = count === 1 ? 'label' : 'labels';
-  return `${count} ${labelWord}`;
-}
-
-function isAccountLabelsExpanded(account) {
-  const key = accountKey(account);
-  if (!key) {
-    return false;
-  }
-
-  return expandedAccountLabelIds.value.includes(key);
-}
-
-function toggleAccountLabels(account) {
-  const key = accountKey(account);
-  if (!key) {
-    return;
-  }
-
-  if (expandedAccountLabelIds.value.includes(key)) {
-    expandedAccountLabelIds.value = expandedAccountLabelIds.value.filter(id => id !== key);
-
-    if (activeAccountLabelMenuKey.value.startsWith(`${key}::`)) {
-      activeAccountLabelMenuKey.value = '';
-    }
-    return;
-  }
-
-  expandedAccountLabelIds.value = [...expandedAccountLabelIds.value, key];
-}
-
 function closeAllMenus() {
   activeAccountMenuId.value = '';
   activeLabelMenuId.value = '';
-  activeAccountLabelMenuKey.value = '';
   activeLabelMenuPosition.value = { top: 0, left: 0 };
 }
 
@@ -871,7 +839,6 @@ function toggleAccountMenu(account) {
   const nextId = activeAccountMenuId.value === accountKey(account) ? '' : accountKey(account);
   activeAccountMenuId.value = nextId;
   activeLabelMenuId.value = '';
-  activeAccountLabelMenuKey.value = '';
 }
 
 function toggleLabelMenu(labelId, event) {
@@ -882,7 +849,6 @@ function toggleLabelMenu(labelId, event) {
 
   activeLabelMenuId.value = labelId;
   activeAccountMenuId.value = '';
-  activeAccountLabelMenuKey.value = '';
 
   const triggerElement = event?.currentTarget;
   if (!(triggerElement instanceof Element)) {
@@ -905,28 +871,13 @@ function toggleLabelMenu(labelId, event) {
   };
 }
 
-function accountLabelMenuKey(account, label) {
-  return `${accountKey(account)}::${label._id}`;
-}
-
-function toggleAccountLabelMenu(account, label) {
-  const key = accountLabelMenuKey(account, label);
-  activeAccountLabelMenuKey.value = activeAccountLabelMenuKey.value === key ? '' : key;
-  activeAccountMenuId.value = '';
-  activeLabelMenuId.value = '';
-}
-
-function isAccountLabelMenuOpen(account, label) {
-  return activeAccountLabelMenuKey.value === accountLabelMenuKey(account, label);
-}
-
 function accountRowHasOpenMenu(account) {
   const key = accountKey(account);
   if (!key) {
     return false;
   }
 
-  return activeAccountMenuId.value === key || activeAccountLabelMenuKey.value.startsWith(`${key}::`);
+  return activeAccountMenuId.value === key;
 }
 
 function toggleDashboardReorder() {
@@ -1118,7 +1069,17 @@ function toggleViewLabelAccount(accountId) {
 
 function openAddLabelModal(account) {
   addLabelTargetAccount.value = account;
-  selectedLabelIds.value = [];
+  const assignedIds = labelsForAccount(account)
+    .map(label => label?._id)
+    .filter(Boolean);
+
+  selectedLabelIds.value = [...new Set(assignedIds)];
+  initialSelectedLabelIds.value = [...selectedLabelIds.value];
+  createdLabelIds.value = [];
+  isInlineCreateMode.value = false;
+  isSavingAddLabel.value = false;
+  isInlineCreatingLabel.value = false;
+  newLabelInput.value = '';
   showAddLabelModal.value = true;
   activeAccountMenuId.value = '';
 }
@@ -1127,10 +1088,16 @@ function closeAddLabelModal() {
   showAddLabelModal.value = false;
   addLabelTargetAccount.value = null;
   selectedLabelIds.value = [];
+  initialSelectedLabelIds.value = [];
+  createdLabelIds.value = [];
+  isInlineCreateMode.value = false;
+  isSavingAddLabel.value = false;
+  isInlineCreatingLabel.value = false;
+  newLabelInput.value = '';
 }
 
 function toggleAddLabelSelection(labelId) {
-  if (!labelId) {
+  if (!labelId || isSavingAddLabel.value || isInlineCreatingLabel.value) {
     return;
   }
 
@@ -1250,60 +1217,63 @@ async function persistLabelAccounts(labelGroup, nextAccounts) {
 }
 
 async function saveAddLabel() {
+  if (isSavingAddLabel.value || isInlineCreatingLabel.value) {
+    return;
+  }
+
   const targetAccount = addLabelTargetAccount.value;
   if (!targetAccount) {
     return;
   }
 
-  const selectedIds = [...new Set(selectedLabelIds.value)];
-  if (!selectedIds.length) {
-    return;
-  }
-
+  const selectedIds = new Set(selectedLabelIds.value);
   const changedGroupIds = [];
 
-  for (const labelId of selectedIds) {
-    const label = sortedLabelGroups.value.find(existingLabel => existingLabel._id === labelId);
-    if (!label) {
-      continue;
+  isSavingAddLabel.value = true;
+
+  try {
+    for (const label of sortedLabelGroups.value) {
+      if (!label?._id) {
+        continue;
+      }
+
+      const currentlyAssigned = (label.accounts || []).some(account => accountsMatch(account, targetAccount));
+      const shouldBeAssigned = selectedIds.has(label._id);
+
+      if (currentlyAssigned === shouldBeAssigned) {
+        continue;
+      }
+
+      const nextAccounts = shouldBeAssigned
+        ? [...(label.accounts || []), targetAccount]
+        : (label.accounts || []).filter(labelAccount => !accountsMatch(labelAccount, targetAccount));
+
+      const outcome = await persistLabelAccounts(label, nextAccounts);
+      if (outcome) {
+        changedGroupIds.push(label._id);
+      }
     }
 
-    const currentlyAssigned = (label.accounts || []).some(account => accountsMatch(account, targetAccount));
-    if (currentlyAssigned) {
-      continue;
-    }
+    closeAddLabelModal();
+    await refreshSelectedGroupIfNeeded(changedGroupIds);
+  } catch (error) {
+    console.error('Error saving account label changes', error);
+  } finally {
+    isSavingAddLabel.value = false;
+  }
+}
 
-    const nextAccounts = [...(label.accounts || []), targetAccount];
-    const outcome = await persistLabelAccounts(label, nextAccounts);
-    if (outcome) {
-      changedGroupIds.push(label._id);
-    }
+function openCreateLabelInline() {
+  if (isSavingAddLabel.value) {
+    return;
   }
 
-  closeAddLabelModal();
-  await refreshSelectedGroupIfNeeded(changedGroupIds);
-}
-
-async function removeLabelFromAccount(account, labelGroup) {
-  const nextAccounts = (labelGroup.accounts || []).filter(labelAccount => !accountsMatch(labelAccount, account));
-  closeAllMenus();
-
-  await persistLabelAccounts(labelGroup, nextAccounts);
-  await refreshSelectedGroupIfNeeded([labelGroup._id]);
-}
-
-function openCreateLabelModal() {
-  newLabelInput.value = '';
-  showCreateLabelModal.value = true;
-}
-
-function closeCreateLabelModal() {
-  showCreateLabelModal.value = false;
+  isInlineCreateMode.value = true;
   newLabelInput.value = '';
 }
 
-async function saveCreateLabel() {
-  if (!canSaveNewLabel.value) {
+async function saveCreateLabelInline() {
+  if (!canSaveNewLabelInline.value) {
     return;
   }
 
@@ -1312,8 +1282,10 @@ async function saveCreateLabel() {
     return;
   }
 
-  const nextName = newLabelInput.value.trim();
+  const nextName = sanitizeAccountText(newLabelInput.value);
   const selectedAccounts = [targetAccount];
+
+  isInlineCreatingLabel.value = true;
 
   const newGroup = {
     _id: '',
@@ -1328,21 +1300,32 @@ async function saveCreateLabel() {
   };
 
   const payload = buildGroupPayload(newGroup, selectedAccounts);
-  const created = await groupsAPI.createGroup({
-    ...payload,
-    isLabel: true,
-    isSelected: false,
-    sort: newGroup.sort
-  });
+  try {
+    const created = await groupsAPI.createGroup({
+      ...payload,
+      isLabel: true,
+      isSelected: false,
+      sort: newGroup.sort
+    });
 
-  if (created) {
+    if (!created?._id) {
+      return;
+    }
+
     created.isLabel = true;
     state.allUserGroups.push(created);
     state.allUserGroups.sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
-  }
 
-  closeCreateLabelModal();
-  closeAddLabelModal();
+    selectedLabelIds.value = [...new Set([...selectedLabelIds.value, created._id])];
+    initialSelectedLabelIds.value = [...new Set([...initialSelectedLabelIds.value, created._id])];
+    createdLabelIds.value = [...new Set([...createdLabelIds.value, created._id])];
+    isInlineCreateMode.value = false;
+    newLabelInput.value = '';
+  } catch (error) {
+    console.error('Error creating label inline', error);
+  } finally {
+    isInlineCreatingLabel.value = false;
+  }
 }
 
 async function saveViewLabelAccounts() {
@@ -1545,72 +1528,6 @@ async function handleBanksDataChanged() {
   background: var(--selector-bg-soft);
 }
 
-.label-count-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  border: 1px solid var(--selector-border);
-  background: var(--selector-bg-soft);
-  color: var(--selector-text-soft);
-  border-radius: 9999px;
-  padding: 0.25rem 0.625rem;
-  font-size: 0.625rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  transition: background-color 150ms ease, color 150ms ease;
-}
-
-.label-count-badge:hover {
-  background: var(--selector-bg-subtle);
-  color: var(--selector-text);
-}
-
-.label-count-badge-static {
-  pointer-events: none;
-}
-
-.label-count-chevron {
-  transition: transform 150ms ease;
-}
-
-.label-count-chevron-open {
-  transform: rotate(180deg);
-}
-
-.label-pill {
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--selector-border);
-  background: var(--selector-bg-soft);
-  color: var(--selector-text);
-  border-radius: 9999px;
-  font-size: 0.625rem;
-  font-weight: 900;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  padding: 0.25rem 0.5rem;
-}
-
-.label-pill-clickable {
-  padding-right: 0.25rem;
-}
-
-.label-pill-button {
-  padding: 0 0.25rem;
-}
-
-.label-pill-menu {
-  color: var(--selector-text-soft);
-  padding: 0.125rem;
-  border-radius: 9999px;
-}
-
-.label-pill-menu:hover {
-  background: var(--selector-bg-subtle);
-  color: var(--selector-text);
-}
-
 .utility-row {
   width: 100%;
   padding: 1.5rem 0;
@@ -1696,6 +1613,52 @@ async function handleBanksDataChanged() {
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.edit-labels-modal {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-footer-sticky {
+  position: sticky;
+  bottom: 0;
+  margin-top: auto;
+  background: var(--selector-bg);
+  z-index: 20;
+  padding-bottom: calc(2rem + env(safe-area-inset-bottom));
+}
+
+.inline-create-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inline-create-input {
+  flex: 1;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+}
+
+.inline-create-confirm {
+  width: 2.75rem;
+  height: 2.75rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  border: 1px solid var(--theme-border);
+  background: var(--theme-btn-primary-bg);
+  color: var(--theme-btn-primary-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 150ms ease;
+}
+
+.inline-create-confirm:disabled {
+  opacity: 0.4;
 }
 
 .modal-footer-no-border {
