@@ -2,7 +2,7 @@
   <Transition name="toast">
     <div
       v-if="state.blueBar.message"
-      class="pointer-events-none fixed inset-x-0 top-4 z-[120] flex justify-center px-4"
+      class="pointer-events-none fixed inset-x-0 bottom-20 sm:bottom-6 z-[120] flex justify-center px-4"
     >
       <div
         class="themed-bar pointer-events-auto flex items-center gap-2 rounded-full px-4 py-2 shadow-lg ring-1 ring-black/10 backdrop-blur-sm"
@@ -30,7 +30,7 @@
 .toast-enter-from,
 .toast-leave-to {
   opacity: 0;
-  transform: translateY(-12px) scale(0.98);
+  transform: translateY(12px) scale(0.98);
 }
 </style>
 
@@ -40,4 +40,3 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 
 const { state } = useDashboardState();
 </script>
-
