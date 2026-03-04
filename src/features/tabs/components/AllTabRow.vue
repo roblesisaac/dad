@@ -20,9 +20,40 @@
       
       <!-- Tab Info -->
       <div class="flex flex-col min-w-0">
-        <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">
-          {{ element.tabName }}
-        </h3>
+        <div class="flex items-center gap-1 min-w-0">
+          <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight min-w-0 flex-1">
+            {{ element.tabName }}
+          </h3>
+
+          <div
+            v-if="showInlineActions"
+            class="relative shrink-0"
+            @click.stop
+          >
+            <button
+              class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
+              :class="{ 'opacity-100': showActionsMenu }"
+              type="button"
+              aria-label="Tab actions"
+              @click.stop="toggleActionsMenu"
+            >
+              <EllipsisVertical class="w-4 h-4" />
+            </button>
+
+            <div
+              v-if="showActionsMenu"
+              class="absolute left-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40 min-w-[150px] py-1"
+            >
+              <button
+                class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
+                type="button"
+                @click.stop="openTabEditor"
+              >
+                Edit Tab
+              </button>
+            </div>
+          </div>
+        </div>
         <div v-if="element.description" class="text-[10px] font-black text-black uppercase tracking-widest mt-1 truncate">
           {{ element.description }}
         </div>
@@ -36,35 +67,6 @@
         <span class="text-base font-black tracking-tight" :class="fontColor(element.total)">
           {{ formatPrice(element.total, { toFixed: 0 }) }}
         </span>
-      </div>
-
-      <div
-        v-if="showInlineActions"
-        class="relative"
-        @click.stop
-      >
-        <button
-          class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
-          :class="{ 'opacity-100': showActionsMenu }"
-          type="button"
-          aria-label="Tab actions"
-          @click.stop="toggleActionsMenu"
-        >
-          <EllipsisVertical class="w-4 h-4" />
-        </button>
-
-        <div
-          v-if="showActionsMenu"
-          class="absolute right-0 top-full mt-1 bg-white border border-gray-100 rounded-xl shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40 min-w-[150px] py-1"
-        >
-          <button
-            class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 hover:text-black hover:bg-gray-50 transition-colors"
-            type="button"
-            @click.stop="openTabEditor"
-          >
-            Edit Tab
-          </button>
-        </div>
       </div>
 
       <!-- Edit/Toggle (Edit Mode) -->

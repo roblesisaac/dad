@@ -1,101 +1,107 @@
 <template>
   <div class="flex flex-col transition-all pb-12 sm:pb-20 bg-transparent">
-    <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-8 sm:mb-12 transition-all">
-      <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
-        <button
-          @click="emit('navigate-group')"
-          class="flex-shrink-0 text-black hover:opacity-70 transition-opacity focus:outline-none"
-          type="button"
-          aria-label="Home"
-        >
-          <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-        </button>
+    <div class="fixed inset-x-0 top-0 z-30">
+      <div class="max-w-5xl mx-auto w-full px-4 sm:px-6">
+        <div class="bg-white/90 backdrop-blur-md flex items-center justify-between py-4 transition-all">
+          <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <button
+              @click="emit('navigate-group')"
+              class="flex-shrink-0 text-black hover:opacity-70 transition-opacity focus:outline-none"
+              type="button"
+              aria-label="Home"
+            >
+              <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            </button>
 
-        <!-- Account segment -->
-        <template v-if="!isGroupSelectorView && !isTransactionSearchView">
-          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-          <span
-            v-if="isTabSelectorView"
-            class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
-          >
-            {{ selectedGroupLabel }}
-          </span>
-          <button
-            v-else
-            @click="emit('navigate-tab')"
-            class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
-            type="button"
-          >
-            {{ selectedGroupLabel }}
-          </button>
-        </template>
+            <!-- Account segment -->
+            <template v-if="!isGroupSelectorView && !isTransactionSearchView">
+              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              <span
+                v-if="isTabSelectorView"
+                class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+              >
+                {{ selectedGroupLabel }}
+              </span>
+              <button
+                v-else
+                @click="emit('navigate-tab')"
+                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+                type="button"
+              >
+                {{ selectedGroupLabel }}
+              </button>
+            </template>
 
-        <!-- Tab segment -->
-        <template v-if="isCategoryView || isCategoryDetailView">
-          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-          <span
-            v-if="isCategoryView"
-            class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
-          >
-            {{ selectedTabLabel }}
-          </span>
-          <button
-            v-else
-            @click="emit('navigate-category')"
-            class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
-            type="button"
-          >
-            {{ selectedTabLabel }}
-          </button>
-        </template>
+            <!-- Tab segment -->
+            <template v-if="isCategoryView || isCategoryDetailView">
+              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              <span
+                v-if="isCategoryView"
+                class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+              >
+                {{ selectedTabLabel }}
+              </span>
+              <button
+                v-else
+                @click="emit('navigate-category')"
+                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+                type="button"
+              >
+                {{ selectedTabLabel }}
+              </button>
+            </template>
 
-        <!-- Category segment -->
-        <template v-if="isCategoryDetailView">
-          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
-            {{ selectedCategoryLabel }}
-          </span>
-        </template>
+            <!-- Category segment -->
+            <template v-if="isCategoryDetailView">
+              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                {{ selectedCategoryLabel }}
+              </span>
+            </template>
 
-        <template v-if="isTransactionSearchView">
-          <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-          <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
-            Transactions
-          </span>
-        </template>
-      </nav>
+            <template v-if="isTransactionSearchView">
+              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                Transactions
+              </span>
+            </template>
+          </nav>
 
-      <div class="flex-shrink-0">
-        <ThemeCycleButton />
+          <div class="flex-shrink-0">
+            <ThemeCycleButton />
+          </div>
+        </div>
       </div>
     </div>
 
-    <div v-if="isTransactionSearchView" class="flex flex-col items-center justify-center text-center">
-      <span class="font-black text-black text-lg sm:text-xl uppercase tracking-[0.2em]">
-        Transaction Search
-      </span>
-    </div>
-
-    <div v-else class="flex flex-col items-center justify-center text-center">
-      <div class="flex items-center gap-2 sm:gap-3 mb-4">
-        <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter">
-          {{ formatPrice(headerTotal, { toFixed: 0 }) }}
+    <div class="pt-20 sm:pt-24">
+      <div v-if="isTransactionSearchView" class="flex flex-col items-center justify-center text-center">
+        <span class="font-black text-black text-lg sm:text-xl uppercase tracking-[0.2em]">
+          Transaction Search
         </span>
-        <button
-          type="button"
-          class="header-info-trigger inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
-          aria-label="What this total means"
-          :aria-expanded="isHeaderInfoModalOpen"
-          @click="openHeaderInfoModal"
-        >
-          <Info class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-        </button>
       </div>
-      <SelectDate
-        v-if="!isGroupSelectorView"
-        class="clickable-date-selector"
-      />
-      <span v-else>NET WORTH</span>
+
+      <div v-else class="flex flex-col items-center justify-center text-center">
+        <div class="flex items-center gap-2 sm:gap-3 mb-4">
+          <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter">
+            {{ formatPrice(headerTotal, { toFixed: 0 }) }}
+          </span>
+          <button
+            type="button"
+            class="header-info-trigger inline-flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+            aria-label="What this total means"
+            :aria-expanded="isHeaderInfoModalOpen"
+            @click="openHeaderInfoModal"
+          >
+            <Info class="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+          </button>
+        </div>
+        <SelectDate
+          v-if="!isGroupSelectorView"
+          class="clickable-date-selector"
+        />
+        <span v-else>NET WORTH</span>
+      </div>
     </div>
 
     <Teleport to="body">
