@@ -93,7 +93,7 @@
                         </div>
                       </div>
 
-                      <div class="row-title-actions flex-shrink-0">
+                      <div v-if="!isExternalReorderActive" class="row-title-actions flex-shrink-0">
                         <div class="relative row-menu-anchor-inline" data-menu-surface>
                           <button
                             type="button"
@@ -503,6 +503,12 @@ import BanksModal from '@/features/banks/components/BanksModal.vue';
 import Switch from '@/shared/components/Switch.vue';
 
 const emit = defineEmits(['group-selected']);
+const props = defineProps({
+  rearrangeActive: {
+    type: Boolean,
+    default: false
+  }
+});
 
 const router = useRouter();
 const { state } = useDashboardState();
@@ -574,6 +580,7 @@ const labelChipGroups = computed(() => {
 const allAccountsNetBalance = computed(() => {
   return (state.allUserAccounts || []).reduce((sum, account) => sum + accountNetBalance(account), 0);
 });
+const isExternalReorderActive = computed(() => props.rearrangeActive);
 
 const activeLabelGroup = computed(() => {
   if (!activeLabelMenuId.value) {
@@ -610,7 +617,9 @@ const sortedAccounts = computed(() => {
 
   return rows.map(({ account }) => account);
 });
-const isAccountReorderActive = computed(() => Boolean(longPressReorderAccountId.value));
+const isAccountReorderActive = computed(() => {
+  return Boolean(longPressReorderAccountId.value || isExternalReorderActive.value);
+});
 
 const renameModalTitle = computed(() => {
   return renameType.value === 'account' ? 'Rename Account' : 'Rename Label';
@@ -686,6 +695,18 @@ watch(
     if (!isAccountReorderActive.value) {
       dashboardAccounts.value = [...accounts];
     }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.rearrangeActive,
+  (isActive) => {
+    if (isActive) {
+      dashboardAccounts.value = [...sortedAccounts.value];
+    }
+
+    exitAccountReorderMode();
   },
   { immediate: true }
 );
@@ -873,6 +894,10 @@ function isAllAccountsGroup(group) {
 }
 
 function toggleAccountMenu(account) {
+  if (isExternalReorderActive.value) {
+    return;
+  }
+
   const key = accountKey(account);
   if (isAccountReorderActive.value) {
     exitAccountReorderMode();
@@ -885,6 +910,10 @@ function toggleAccountMenu(account) {
 }
 
 function startAccountReorderFromMenu(account) {
+  if (isExternalReorderActive.value) {
+    return;
+  }
+
   activeAccountMenuId.value = '';
   triggerAccountLongPress(account);
 }
@@ -930,14 +959,26 @@ function accountRowHasOpenMenu(account) {
 
 function isAccountInReorderMode(account) {
   const key = accountKey(account);
-  return Boolean(key) && longPressReorderAccountId.value === key;
+  if (!key) {
+    return false;
+  }
+
+  return isExternalReorderActive.value || longPressReorderAccountId.value === key;
 }
 
 function showNevermindForAccount(account) {
+  if (isExternalReorderActive.value) {
+    return false;
+  }
+
   return isAccountInReorderMode(account);
 }
 
 function shouldShowAccountRowMenu(account) {
+  if (isExternalReorderActive.value) {
+    return false;
+  }
+
   const key = accountKey(account);
   if (!key) {
     return false;
@@ -967,6 +1008,10 @@ function shouldIgnoreAccountLongPressTarget(event) {
 }
 
 function triggerAccountLongPress(account) {
+  if (isExternalReorderActive.value) {
+    return;
+  }
+
   const key = accountKey(account);
   if (!key) {
     return;
@@ -979,6 +1024,7 @@ function triggerAccountLongPress(account) {
 }
 
 function handleAccountRowTouchStart(event, account) {
+  if (isExternalReorderActive.value) return;
   if (isAccountInReorderMode(account)) return;
   if (shouldIgnoreAccountLongPressTarget(event)) return;
 
@@ -1014,6 +1060,7 @@ function handleAccountRowTouchEnd() {
 }
 
 function handleAccountRowMouseDown(event, account) {
+  if (isExternalReorderActive.value) return;
   if (event.button !== 0) return;
   if (isAccountInReorderMode(account)) return;
   if (shouldIgnoreAccountLongPressTarget(event)) return;
@@ -1096,6 +1143,10 @@ async function handleAccountReorderEnd() {
 }
 
 async function handleLabelChipSelect(labelGroup) {
+  if (isAccountReorderActive.value) {
+    return;
+  }
+
   if (isAllAccountsGroup(labelGroup)) {
     await handleAllAccountsRowSelect();
     return;
@@ -1116,6 +1167,10 @@ function buildAllAccountsSelectionGroup() {
 }
 
 async function handleAllAccountsRowSelect() {
+  if (isAccountReorderActive.value) {
+    return;
+  }
+
   closeAllMenus();
   const allAccountsGroup = buildAllAccountsSelectionGroup();
   state.selected.groupOverride = allAccountsGroup;

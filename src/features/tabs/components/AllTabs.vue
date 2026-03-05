@@ -137,6 +137,10 @@ const props = defineProps({
   isEditMode: {
     type: Boolean,
     default: false
+  },
+  rearrangeActive: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -150,12 +154,13 @@ const longPressReorderTabId = ref('');
 const reorderResetToken = ref(0);
 const dashboardTabs = ref([]);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
+const isHeaderRearrangeActive = computed(() => isDashboardVariant.value && props.rearrangeActive);
 const shouldUseDraggable = computed(() => {
   return isDashboardVariant.value || props.isEditMode;
 });
 const canDragInCurrentMode = computed(() => {
   if (isDashboardVariant.value) {
-    return Boolean(longPressReorderTabId.value);
+    return Boolean(longPressReorderTabId.value || isHeaderRearrangeActive.value);
   }
 
   return props.isEditMode;
@@ -187,6 +192,9 @@ const containerClasses = computed(() => {
 
 // Separate tabs into enabled and disabled based on current group
 const enabledTabs = computed(() => state.selected.tabsForGroup);
+const enabledTabIdSet = computed(() => {
+  return new Set(enabledTabs.value.map(tab => tab?._id).filter(Boolean));
+});
 const isAllAccountsScope = computed(() => {
   return state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID;
 });
@@ -234,6 +242,7 @@ function handleRequestReorderMode(tabId) {
 
 function handleTabActionsClicked() {
   if (!isDashboardVariant.value) return;
+  if (isHeaderRearrangeActive.value) return;
   if (!longPressReorderTabId.value) return;
 
   exitAllEditModes();
@@ -248,11 +257,19 @@ function isEditModeForTab(tabId) {
     return props.isEditMode;
   }
 
+  if (isHeaderRearrangeActive.value) {
+    return enabledTabIdSet.value.has(tabId);
+  }
+
   return longPressReorderTabId.value === tabId;
 }
 
 function showCancelEditButtonForTab(tabId) {
   if (!isDashboardVariant.value) {
+    return false;
+  }
+
+  if (isHeaderRearrangeActive.value) {
     return false;
   }
 
@@ -287,6 +304,20 @@ watch(
     if (!canDragInCurrentMode.value) {
       dashboardTabs.value = [...tabs];
     }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.rearrangeActive,
+  (isActive) => {
+    if (!isDashboardVariant.value) return;
+
+    if (isActive) {
+      dashboardTabs.value = [...enabledTabs.value];
+    }
+
+    longPressReorderTabId.value = '';
   },
   { immediate: true }
 );

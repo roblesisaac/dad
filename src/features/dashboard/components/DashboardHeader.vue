@@ -68,7 +68,23 @@
           </nav>
 
           <div class="flex-shrink-0">
-            <ThemeCycleButton />
+            <button
+              v-if="showRearrangeAction"
+              type="button"
+              class="px-3 py-2 rounded-xl border border-[var(--theme-border)] text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:border-[var(--theme-text)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+              @click="emit('toggle-rearrange')"
+            >
+              {{ isRearrangeActive ? 'Done' : 'Rearrange' }}
+            </button>
+
+            <button
+              v-else-if="showEditTabAction"
+              type="button"
+              class="px-3 py-2 rounded-xl border border-[var(--theme-border)] text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:border-[var(--theme-text)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+              @click="emit('edit-tab')"
+            >
+              Edit Tab
+            </button>
           </div>
         </div>
       </div>
@@ -156,17 +172,26 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useUtils } from '@/shared/composables/useUtils';
 import { Home, Info, X } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
-import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 
 const props = defineProps({
   view: {
     type: String,
     default: 'group',
     validator: (value) => ['group', 'tab', 'category', 'category-detail', 'transaction-search'].includes(value)
+  },
+  isRearrangeActive: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['navigate-group', 'navigate-tab', 'navigate-category']);
+const emit = defineEmits([
+  'navigate-group',
+  'navigate-tab',
+  'navigate-category',
+  'toggle-rearrange',
+  'edit-tab'
+]);
 const { state } = useDashboardState();
 const { formatPrice } = useUtils();
 const isHeaderInfoModalOpen = ref(false);
@@ -176,6 +201,9 @@ const isTabSelectorView = computed(() => props.view === 'tab');
 const isCategoryView = computed(() => props.view === 'category');
 const isCategoryDetailView = computed(() => props.view === 'category-detail');
 const isTransactionSearchView = computed(() => props.view === 'transaction-search');
+const isRearrangeActive = computed(() => props.isRearrangeActive);
+const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
+const showEditTabAction = computed(() => isCategoryView.value && Boolean(state.selected.tab));
 
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');

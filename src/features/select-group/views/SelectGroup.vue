@@ -1,7 +1,10 @@
 <template>
   <div :class="containerClasses">
     <template v-if="isDashboardVariant">
-      <DashboardGroupSelector @group-selected="emit('group-selected', $event)" />
+      <DashboardGroupSelector
+        :rearrange-active="rearrangeActive"
+        @group-selected="emit('group-selected', $event)"
+      />
     </template>
 
     <template v-else>
@@ -581,6 +584,10 @@ const props = defineProps({
     validator: (value) => ['modal', 'dashboard'].includes(value)
   },
   editMode: {
+    type: Boolean,
+    default: false
+  },
+  rearrangeActive: {
     type: Boolean,
     default: false
   }

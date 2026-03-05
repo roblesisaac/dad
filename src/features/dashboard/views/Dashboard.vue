@@ -6,9 +6,12 @@
       <div>
         <DashboardHeader
           :view="dashboardView"
+          :is-rearrange-active="isRearrangeModeActive"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
           @navigate-category="openCategoryView"
+          @toggle-rearrange="toggleRearrangeMode"
+          @edit-tab="openTabEditor"
         />
       </div>
 
@@ -27,6 +30,7 @@
             <SelectGroup
               variant="dashboard"
               :is-open="true"
+              :rearrange-active="isRearrangeModeActive"
               @group-selected="handleGroupSelected"
             />
 
@@ -45,7 +49,11 @@
 
         <Transition name="fade">
           <div v-if="!state.isLoading && isTabSelectorView" class="w-full">
-            <AllTabs variant="dashboard" @tab-selected="handleTabSelected" />
+            <AllTabs
+              variant="dashboard"
+              :rearrange-active="isRearrangeModeActive"
+              @tab-selected="handleTabSelected"
+            />
           </div>
         </Transition>
 
@@ -133,7 +141,7 @@ import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
+import { ChevronRight } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -155,6 +163,7 @@ const { selectTab, ensureDefaultTabsForTabView } = useTabs();
 
 const showRuleManagerModal = ref(false);
 const isAccountModalOpen = ref(false);
+const isRearrangeModeActive = ref(false);
 const dashboardView = ref('group');
 const isGroupSelectorView = computed(() => dashboardView.value === 'group');
 const isTabSelectorView = computed(() => dashboardView.value === 'tab');
@@ -420,6 +429,22 @@ function openCategoryView() {
   setDashboardView('category', { syncRoute: true });
 }
 
+function toggleRearrangeMode() {
+  if (!isGroupSelectorView.value && !isTabSelectorView.value) {
+    return;
+  }
+
+  isRearrangeModeActive.value = !isRearrangeModeActive.value;
+}
+
+function openTabEditor() {
+  if (!isCategoryView.value || !state.selected.tab) {
+    return;
+  }
+
+  showRuleManagerModal.value = true;
+}
+
 function openTransactionSearch() {
   setDashboardView('transaction-search', { syncRoute: true });
 }
@@ -439,6 +464,15 @@ function handleCategorySelected(categoryName) {
   state.selected.transaction = false;
   setDashboardView('category-detail', { syncRoute: true });
 }
+
+watch(
+  () => dashboardView.value,
+  (view, previousView) => {
+    if (view !== previousView) {
+      isRearrangeModeActive.value = false;
+    }
+  }
+);
 
 watch(
   [() => dashboardView.value, () => state.selected.group?._id],
