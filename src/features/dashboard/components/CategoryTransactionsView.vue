@@ -55,14 +55,18 @@
 import { computed } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
+import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
 import TransactionDetails from './TransactionDetails.vue';
 
 const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();
 
 const transactions = computed(() => {
-  const selectedCategoryName = state.selected.category;
   const categorizedItems = state.selected.tab?.categorizedItems || [];
+  const selectedCategoryName = state.selected.category
+    || (state.selected.tab?.groupByMode === NO_GROUPING_RULE_VALUE
+      ? categorizedItems[0]?.[0]
+      : '');
 
   if (!selectedCategoryName) {
     return [];

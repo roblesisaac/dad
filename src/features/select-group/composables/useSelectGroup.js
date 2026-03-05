@@ -299,6 +299,19 @@ export function useSelectGroup() {
     });
   }
 
+  function getLoadingMessagePrefix(selectedGroup) {
+    if (selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID) {
+      return 'Loading all accounts transactions';
+    }
+
+    const accountCount = Array.isArray(selectedGroup?.accounts) ? selectedGroup.accounts.length : 0;
+    if (selectedGroup?.isLabel === false || accountCount <= 1) {
+      return 'Loading account transactions';
+    }
+
+    return 'Loading group transactions';
+  }
+
   /**
    * Handle group selection change
    */
@@ -339,12 +352,37 @@ export function useSelectGroup() {
       }
     }
 
+    const shouldShowFetchProgress = showLoading;
+    const loadingMessagePrefix = getLoadingMessagePrefix(selectedGroup);
+    const updateLoadingMessage = (completed, total, percentage) => {
+      if (!shouldShowFetchProgress || !Number.isFinite(total) || total <= 0) {
+        return;
+      }
+
+      state.blueBar.message = `${loadingMessagePrefix}... ${percentage}% (${completed}/${total})`;
+      state.blueBar.loading = percentage < 100;
+    };
+
+    if (shouldShowFetchProgress) {
+      state.blueBar.message = `${loadingMessagePrefix}... 0%`;
+      state.blueBar.loading = true;
+    }
+
     const requestPromise = (async () => {
       // Fetch transactions for all accounts in the selected group
       state.selected.allGroupTransactions = await fetchTransactionsForGroup(
         selectedGroup,
         state.date,
-        { forceRefresh }
+        {
+          forceRefresh,
+          onProgress: (progress) => {
+            updateLoadingMessage(
+              progress.completedFetches,
+              progress.totalFetches,
+              progress.percentage
+            );
+          }
+        }
       );
 
       if (tabsForGroup.length) {
@@ -363,6 +401,16 @@ export function useSelectGroup() {
     } finally {
       if (GROUP_CHANGE_IN_FLIGHT_REQUESTS.get(requestKey) === requestPromise) {
         GROUP_CHANGE_IN_FLIGHT_REQUESTS.delete(requestKey);
+      }
+
+      if (shouldShowFetchProgress && typeof state.blueBar.message === 'string' && state.blueBar.message.startsWith(loadingMessagePrefix)) {
+        state.blueBar.loading = false;
+        setTimeout(() => {
+          if (typeof state.blueBar.message === 'string' && state.blueBar.message.startsWith(loadingMessagePrefix)) {
+            state.blueBar.message = null;
+            state.blueBar.loading = false;
+          }
+        }, 1200);
       }
     }
   }

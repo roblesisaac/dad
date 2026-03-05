@@ -4,6 +4,7 @@ import { useApi } from '@/shared/composables/useApi.js';
 const ACCOUNT_DATE_IN_FLIGHT_REQUESTS = new Map();
 const ACCOUNT_DATE_RESPONSE_CACHE = new Map();
 const REQUEST_CACHE_TTL_MS = 10000;
+const DATE_RANGE_BATCH_MONTHS = 4;
 
 export function useTransactions() {
   const api = useApi();
@@ -60,7 +61,7 @@ export function useTransactions() {
     return `${year}-${month}-${day}`;
   }
 
-  function buildMonthlyDateRanges(startDate, endDate) {
+  function buildMultiMonthDateRanges(startDate, endDate, monthsPerBatch = DATE_RANGE_BATCH_MONTHS) {
     const start = toUtcDate(startDate);
     const end = toUtcDate(endDate);
 
@@ -72,17 +73,27 @@ export function useTransactions() {
     let cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), 1));
 
     while (cursor <= end) {
-      const monthStart = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1));
-      const monthEnd = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 0));
+      const batchStart = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth(), 1));
+      const batchEnd = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + monthsPerBatch, 0));
 
-      const chunkStartDate = monthStart < start ? start : monthStart;
-      const chunkEndDate = monthEnd > end ? end : monthEnd;
+      const chunkStartDate = batchStart < start ? start : batchStart;
+      const chunkEndDate = batchEnd > end ? end : batchEnd;
 
       ranges.push(`${formatUtcDate(chunkStartDate)}_${formatUtcDate(chunkEndDate)}`);
-      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + 1, 1));
+      cursor = new Date(Date.UTC(cursor.getUTCFullYear(), cursor.getUTCMonth() + monthsPerBatch, 1));
     }
 
     return ranges.length ? ranges : [`${startDate}_${endDate}`];
+  }
+
+  function getBatchedDateRanges(dateRange) {
+    const parsedRange = parseDateRange(dateRange);
+
+    if (!parsedRange) {
+      return [dateRange];
+    }
+
+    return buildMultiMonthDateRanges(parsedRange.start, parsedRange.end);
   }
 
   function dedupeTransactions(transactions = []) {
@@ -150,30 +161,46 @@ export function useTransactions() {
       return [];
     }
 
-    const parsedRange = parseDateRange(dateRange);
+    const { onBatchComplete } = options;
+    const batchedDateRanges = getBatchedDateRanges(dateRange);
+    const [singleRange] = batchedDateRanges;
 
-    if (!parsedRange) {
-      return await fetchTransactionsForDateRange(account_id, dateRange, options);
-    }
+    if (batchedDateRanges.length <= 1) {
+      const result = await fetchTransactionsForDateRange(account_id, singleRange, options);
+      if (typeof onBatchComplete === 'function') {
+        onBatchComplete({
+          accountId: account_id,
+          batchIndex: 1,
+          totalBatches: 1,
+          range: singleRange
+        });
+      }
 
-    const monthlyRanges = buildMonthlyDateRanges(parsedRange.start, parsedRange.end);
-
-    if (monthlyRanges.length <= 1) {
-      return await fetchTransactionsForDateRange(account_id, dateRange, options);
+      return result;
     }
 
     const allTransactions = [];
 
-    for (const monthlyRange of monthlyRanges) {
+    for (let batchIndex = 0; batchIndex < batchedDateRanges.length; batchIndex++) {
+      const batchRange = batchedDateRanges[batchIndex];
       let result;
       try {
-        result = await fetchTransactionsForDateRange(account_id, monthlyRange, options);
+        result = await fetchTransactionsForDateRange(account_id, batchRange, options);
       } catch (error) {
-        throw new Error(`Failed to load account ${account_id} for range ${monthlyRange}: ${error.message}`);
+        throw new Error(`Failed to load account ${account_id} for range ${batchRange}: ${error.message}`);
       }
 
       if (Array.isArray(result) && result.length) {
         allTransactions.push(...result);
+      }
+
+      if (typeof onBatchComplete === 'function') {
+        onBatchComplete({
+          accountId: account_id,
+          batchIndex: batchIndex + 1,
+          totalBatches: batchedDateRanges.length,
+          range: batchRange
+        });
       }
     }
 
@@ -187,17 +214,69 @@ export function useTransactions() {
     if (!group || !group.accounts || !group.accounts.length) {
       return [];
     }
-    
+
+    const { onProgress, onBatchComplete } = options;
     const dateRange = extractDateRange(dateRangeState);
+    const batchedDateRanges = getBatchedDateRanges(dateRange);
+    const batchesPerAccount = batchedDateRanges.length || 1;
+
     let allTransactions = [];
+    let completedFetches = 0;
+
     const uniqueAccountIds = [...new Set(
       group.accounts
         .map(account => account?.account_id)
         .filter(Boolean)
     )];
 
-    for (const accountId of uniqueAccountIds) {
-      const transactions = await fetchTransactions(accountId, dateRange, options);
+    const totalAccounts = uniqueAccountIds.length;
+    const totalFetches = totalAccounts * batchesPerAccount;
+
+    if (typeof onProgress === 'function') {
+      onProgress({
+        accountId: null,
+        accountIndex: 0,
+        totalAccounts,
+        batchIndex: 0,
+        totalBatches: batchesPerAccount,
+        range: null,
+        completedFetches: 0,
+        totalFetches,
+        percentage: totalFetches > 0 ? 0 : 100
+      });
+    }
+
+    for (let accountIndex = 0; accountIndex < uniqueAccountIds.length; accountIndex++) {
+      const accountId = uniqueAccountIds[accountIndex];
+
+      const transactions = await fetchTransactions(accountId, dateRange, {
+        ...options,
+        onBatchComplete: (batchProgress) => {
+          completedFetches += 1;
+          const percentage = totalFetches > 0
+            ? Math.round((completedFetches / totalFetches) * 100)
+            : 100;
+
+          const progress = {
+            ...batchProgress,
+            accountId,
+            accountIndex: accountIndex + 1,
+            totalAccounts,
+            completedFetches,
+            totalFetches,
+            percentage
+          };
+
+          if (typeof onBatchComplete === 'function') {
+            onBatchComplete(progress);
+          }
+
+          if (typeof onProgress === 'function') {
+            onProgress(progress);
+          }
+        }
+      });
+
       if (transactions && transactions.length) {
         allTransactions = [...allTransactions, ...transactions];
       }
@@ -210,4 +289,4 @@ export function useTransactions() {
     fetchTransactions,
     fetchTransactionsForGroup
   };
-} 
+}

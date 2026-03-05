@@ -36,7 +36,7 @@
             <template v-if="isCategoryView || isCategoryDetailView">
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               <span
-                v-if="isCategoryView"
+                v-if="showTabAsCurrentLabel"
                 class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
               >
                 {{ selectedTabLabel }}
@@ -52,7 +52,7 @@
             </template>
 
             <!-- Category segment -->
-            <template v-if="isCategoryDetailView">
+            <template v-if="showCategoryBreadcrumb">
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
                 {{ selectedCategoryLabel }}
@@ -170,6 +170,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
+import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
 import { Home, Info, X } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 
@@ -201,6 +202,9 @@ const isTabSelectorView = computed(() => props.view === 'tab');
 const isCategoryView = computed(() => props.view === 'category');
 const isCategoryDetailView = computed(() => props.view === 'category-detail');
 const isTransactionSearchView = computed(() => props.view === 'transaction-search');
+const isNoGroupingTab = computed(() => state.selected.tab?.groupByMode === NO_GROUPING_RULE_VALUE);
+const showCategoryBreadcrumb = computed(() => isCategoryDetailView.value && !isNoGroupingTab.value);
+const showTabAsCurrentLabel = computed(() => isCategoryView.value || (isCategoryDetailView.value && isNoGroupingTab.value));
 const isRearrangeActive = computed(() => props.isRearrangeActive);
 const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const showEditTabAction = computed(() => isCategoryView.value && Boolean(state.selected.tab));
@@ -268,8 +272,10 @@ const totalNetBalance = computed(() => {
 });
 
 const selectedCategoryTotal = computed(() => {
-  const selectedCategoryName = state.selected.category;
   const categorizedItems = state.selected.tab?.categorizedItems || [];
+  const selectedCategoryName = isNoGroupingTab.value
+    ? categorizedItems[0]?.[0]
+    : state.selected.category;
   const selectedCategory = categorizedItems.find(
     ([categoryName]) => categoryName === selectedCategoryName
   );
