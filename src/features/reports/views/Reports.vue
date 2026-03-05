@@ -37,203 +37,130 @@
         <header class="mb-6 flex items-start justify-between gap-3">
           <div>
             <h1 class="text-3xl font-black tracking-tight text-gray-900">Reports</h1>
-            <p class="text-sm text-gray-500 mt-1">
-              {{ isReorderingReports ? 'Drag reports to rearrange, then tap done.' : 'Tap a report to see all rows and totals.' }}
-            </p>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <button
-              v-if="isReorderingReports"
-              class="btn-primary"
-              @click="finishReorderReports"
-            >
-              Done
-            </button>
-
-            <div class="relative" data-dropdown-root>
-              <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showListMenu = !showListMenu">
-                <MoreVertical class="w-5 h-5" />
-              </button>
-
-              <div
-                v-if="showListMenu"
-                data-dropdown-panel
-                class="absolute right-0 mt-1 w-48 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-              >
-                <button class="menu-item" @click="toggleReorderReports">
-                  {{ isReorderingReports ? 'Stop Rearranging' : 'Rearrange Reports' }}
-                </button>
-              </div>
-            </div>
           </div>
         </header>
 
-        <template v-if="isReorderingReports">
-          <draggable
-            v-model="reportReorderItems"
-            item-key="key"
-            class="space-y-1"
-            handle=".drag-handle-top"
-          >
-            <template #item="{ element: item }">
-              <article
-                v-if="item.type === 'report'"
-                class="relative w-full py-4 transition-colors hover:bg-gray-50/50"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="flex items-start gap-2 min-w-0">
-                    <button
-                      class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
-                      @click.stop
-                      title="Drag to reorder"
-                    >
-                      <GripVertical class="w-4 h-4" />
-                    </button>
+        <draggable
+          v-model="reportReorderItems"
+          item-key="key"
+          class="space-y-1"
+          handle=".drag-handle-top"
+          :disabled="!isReportReorderActive"
+          @end="onReportsDragEnd"
+        >
+          <template #item="{ element: item }">
+            <article
+              v-if="item.type === 'report'"
+              class="relative w-full py-4 transition-colors cursor-pointer hover:bg-gray-50/50 reports-row-group select-none"
+              @click="handleReportListRowClick(item.reportId, item.key)"
+              @mousedown="handleReportListMouseDown($event, item.key)"
+              @mousemove="handleReportListMouseMove"
+              @mouseup="handleReportListMouseUp"
+              @mouseleave="handleReportListMouseLeave"
+              @touchstart.passive="handleReportListTouchStart($event, item.key)"
+              @touchmove.passive="handleReportListTouchMove"
+              @touchend="handleReportListTouchEnd"
+              @touchcancel="clearReportLongPressTimer"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0 flex items-start gap-2 flex-1">
+                  <button
+                    v-if="isReportItemInReorderMode(item.key)"
+                    class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                    @click.stop
+                    title="Drag to reorder"
+                  >
+                    <GripVertical class="w-4 h-4" />
+                  </button>
 
-                    <h2 class="text-xl font-black text-gray-900 truncate uppercase tracking-tight">
+                  <div class="flex items-center gap-1 min-w-0">
+                    <h2 class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">
                       {{ item.reportName }}
                     </h2>
-                  </div>
-
-                  <span class="text-lg font-black" :class="fontColor(getReportTotal(item.reportId))">
-                    {{ formatReportTotal(item.reportId, { toFixed: 2 }) }}
-                  </span>
-                </div>
-              </article>
-
-              <section
-                v-else
-                class="w-full"
-              >
-                <div class="w-full py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50">
-                  <div class="flex items-center gap-2 min-w-0 flex-1">
-                    <button
-                      class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
-                      @click.stop
-                      title="Drag folder to reorder"
-                    >
-                      <GripVertical class="w-4 h-4" />
-                    </button>
-
-                    <button
-                      class="flex items-center gap-2 min-w-0 flex-1 text-left"
-                      @click="toggleFolderExpansion(item.folderName)"
-                    >
-                      <span class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
-                    </button>
-                  </div>
-
-                  <div class="flex items-center gap-2 shrink-0">
-                    <button
-                      class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
-                      @click.stop="toggleFolderExpansion(item.folderName)"
-                    >
-                      <ChevronUp
-                        v-if="folderIsExpanded(item.folderName)"
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
-                      <ChevronDown
-                        v-else
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
-                    </button>
-                  </div>
-                </div>
-
-                <div v-if="folderIsExpanded(item.folderName)" class="pl-6 pb-2">
-                  <draggable
-                    v-model="item.reports"
-                    item-key="key"
-                    class="space-y-1"
-                    handle=".drag-handle-nested"
-                  >
-                    <template #item="{ element: folderReport }">
-                      <article class="relative w-full py-3 transition-colors hover:bg-gray-50/50">
-                        <div class="flex items-start justify-between gap-3">
-                          <div class="flex items-start gap-2 min-w-0">
-                            <button
-                              class="drag-handle-nested mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
-                              @click.stop
-                              title="Drag to reorder"
-                            >
-                              <GripVertical class="w-4 h-4" />
-                            </button>
-
-                            <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">{{ folderReport.reportName }}</h3>
-                          </div>
-
-                          <span class="text-base font-black" :class="fontColor(getReportTotal(folderReport.reportId))">
-                            {{ formatReportTotal(folderReport.reportId, { toFixed: 2 }) }}
-                          </span>
-                        </div>
-                      </article>
-                    </template>
-                  </draggable>
-                </div>
-              </section>
-            </template>
-          </draggable>
-        </template>
-
-        <template v-else>
-          <div class="space-y-1">
-            <template v-for="item in topLevelReportItems" :key="item.key">
-              <article
-                v-if="item.type === 'report'"
-                class="relative w-full py-4 transition-colors cursor-pointer hover:bg-gray-50/50"
-                @click="openReportFromList(item.report._id)"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <h2 class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.report.name }}</h2>
-
-                  <div class="flex items-center gap-2">
-                    <span class="text-lg font-black" :class="fontColor(getReportTotal(item.report._id))">
-                      {{ formatReportTotal(item.report._id, { toFixed: 2 }) }}
-                    </span>
 
                     <div class="relative" data-dropdown-root>
                       <button
-                        class="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
-                        @click.stop="toggleReportMenu(item.report._id)"
+                        class="reports-row-menu-trigger p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                        :class="{ 'reports-row-menu-trigger-visible': shouldShowReportListMenu(item.key) }"
+                        @click.stop="toggleReportMenu(item.reportId, item.key)"
                       >
                         <MoreVertical class="w-4 h-4" />
                       </button>
 
                       <div
-                        v-if="activeReportMenuId === item.report._id"
+                        v-if="activeReportMenuId === item.reportId"
                         data-dropdown-panel
-                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                        class="absolute left-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                         @click.stop
                       >
-                        <button class="menu-item" @click="startRenameFromList(item.report)">Edit report name</button>
-                        <button class="menu-item" @click="copyReport(item.report._id)">Duplicate</button>
-                        <button class="menu-item" @click="openMoveToFolderModal(item.report._id)">{{ folderActionLabel(item.report) }}</button>
-                        <button class="menu-item" @click="refreshReportFromList(item.report._id)">Refresh totals</button>
-                        <button class="menu-item" @click="confirmDeleteReport(item.report._id)">Delete</button>
+                        <button class="menu-item" @click="startReportReorderFromMenu(item.key)">Rearrange Row</button>
+                        <button class="menu-item" @click="startRenameFromListById(item.reportId)">Edit report name</button>
+                        <button class="menu-item" @click="copyReport(item.reportId)">Duplicate</button>
+                        <button class="menu-item" @click="openMoveToFolderModal(item.reportId)">{{ folderActionLabel(reportById(item.reportId)) }}</button>
+                        <button class="menu-item" @click="refreshReportFromList(item.reportId)">Refresh totals</button>
+                        <button class="menu-item" @click="confirmDeleteReport(item.reportId)">Delete</button>
                       </div>
                     </div>
                   </div>
                 </div>
-              </article>
 
-              <section
-                v-else
-                class="w-full"
-              >
-                <div class="w-full py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50">
+                <div class="flex items-center gap-2">
                   <button
-                    class="flex items-center gap-2 min-w-0 flex-1 text-left"
-                    @click="toggleFolderExpansion(item.folderName)"
+                    v-if="showNevermindForReportItem(item.key)"
+                    type="button"
+                    class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+                    @click.stop="cancelReportReorder"
                   >
-                    <span class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
+                    Nevermind
                   </button>
 
-                  <div class="flex items-center gap-1 ml-2 shrink-0">
-                    <div class="relative" data-dropdown-root>
+                  <span v-else class="text-lg font-black" :class="fontColor(getReportTotal(item.reportId))">
+                    {{ formatReportTotal(item.reportId, { toFixed: 2 }) }}
+                  </span>
+                </div>
+              </div>
+            </article>
+
+            <section
+              v-else
+              class="w-full reports-row-group select-none"
+            >
+              <div
+                class="w-full py-4 flex items-center justify-between gap-3 hover:bg-gray-50/50"
+                @mousedown="handleReportListMouseDown($event, item.key)"
+                @mousemove="handleReportListMouseMove"
+                @mouseup="handleReportListMouseUp"
+                @mouseleave="handleReportListMouseLeave"
+                @touchstart.passive="handleReportListTouchStart($event, item.key)"
+                @touchmove.passive="handleReportListTouchMove"
+                @touchend="handleReportListTouchEnd"
+                @touchcancel="clearReportLongPressTimer"
+              >
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <button
+                    v-if="isReportItemInReorderMode(item.key)"
+                    class="drag-handle-top mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                    @click.stop
+                    title="Drag folder to reorder"
+                  >
+                    <GripVertical class="w-4 h-4" />
+                  </button>
+
+                  <div
+                    class="flex items-center gap-1 min-w-0 flex-1 text-left"
+                    @click="handleFolderRowClick(item.folderName, item.key)"
+                    role="button"
+                    tabindex="0"
+                    @keydown.enter.prevent="handleFolderRowClick(item.folderName, item.key)"
+                    @keydown.space.prevent="handleFolderRowClick(item.folderName, item.key)"
+                  >
+                    <span class="text-lg font-black text-gray-900 truncate uppercase tracking-tight">{{ item.folderName }}</span>
+
+                    <div class="relative shrink-0" data-dropdown-root>
                       <button
-                        class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
-                        @click.stop="toggleFolderMenu(item.folderName)"
+                        class="reports-row-menu-trigger p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+                        :class="{ 'reports-row-menu-trigger-visible': shouldShowReportListMenu(item.key) }"
+                        @click.stop="toggleFolderMenu(item.folderName, item.key)"
                       >
                         <MoreVertical class="w-4 h-4" />
                       </button>
@@ -241,74 +168,128 @@
                       <div
                         v-if="activeFolderMenuName === item.folderName"
                         data-dropdown-panel
-                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                        class="absolute left-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
                         @click.stop
                       >
+                        <button class="menu-item" @click="startReportReorderFromMenu(item.key)">Rearrange Row</button>
                         <button class="menu-item" @click="renameFolderFromMenu(item.folderName)">Rename folder</button>
                         <button class="menu-item" @click="removeFolderFromMenu(item.folderName)">Remove folder</button>
                       </div>
                     </div>
-
-                    <button
-                      class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
-                      @click.stop="toggleFolderExpansion(item.folderName)"
-                    >
-                      <ChevronUp
-                        v-if="folderIsExpanded(item.folderName)"
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
-                      <ChevronDown
-                        v-else
-                        class="w-4 h-4 text-gray-500 flex-shrink-0"
-                      />
-                    </button>
                   </div>
                 </div>
 
-                <div v-if="folderIsExpanded(item.folderName)" class="pl-6 pb-2 space-y-1">
-                  <article
-                    v-for="report in item.reports"
-                    :key="report._id"
-                    class="relative w-full py-3 transition-colors cursor-pointer hover:bg-gray-50/50"
-                    @click="openReportFromList(report._id)"
+                <div class="flex items-center gap-2 shrink-0">
+                  <button
+                    v-if="showNevermindForReportItem(item.key)"
+                    type="button"
+                    class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+                    @click.stop="cancelReportReorder"
                   >
-                    <div class="flex items-start justify-between gap-3">
-                      <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">{{ report.name }}</h3>
+                    Nevermind
+                  </button>
 
-                      <div class="flex items-center gap-2">
-                        <span class="text-base font-black" :class="fontColor(getReportTotal(report._id))">
-                          {{ formatReportTotal(report._id, { toFixed: 2 }) }}
-                        </span>
+                  <button
+                    v-else
+                    class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                    @click.stop="toggleFolderExpansion(item.folderName)"
+                  >
+                    <ChevronUp
+                      v-if="folderIsExpanded(item.folderName)"
+                      class="w-4 h-4 text-gray-500 flex-shrink-0"
+                    />
+                    <ChevronDown
+                      v-else
+                      class="w-4 h-4 text-gray-500 flex-shrink-0"
+                    />
+                  </button>
+                </div>
+              </div>
 
-                        <div class="relative" data-dropdown-root>
+              <div v-if="folderIsExpanded(item.folderName)" class="pl-4 pb-2">
+                <draggable
+                  v-model="item.reports"
+                  item-key="key"
+                  class="space-y-1"
+                  handle=".drag-handle-nested"
+                  :disabled="!isReportReorderActive"
+                  @end="onReportsDragEnd"
+                >
+                  <template #item="{ element: folderReport }">
+                    <article
+                      class="relative w-full py-3 transition-colors cursor-pointer hover:bg-gray-50/50 reports-row-group select-none"
+                      @click="handleReportListRowClick(folderReport.reportId, folderReport.key)"
+                      @mousedown="handleReportListMouseDown($event, folderReport.key)"
+                      @mousemove="handleReportListMouseMove"
+                      @mouseup="handleReportListMouseUp"
+                      @mouseleave="handleReportListMouseLeave"
+                      @touchstart.passive="handleReportListTouchStart($event, folderReport.key)"
+                      @touchmove.passive="handleReportListTouchMove"
+                      @touchend="handleReportListTouchEnd"
+                      @touchcancel="clearReportLongPressTimer"
+                    >
+                      <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex items-start gap-2 flex-1">
                           <button
-                            class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
-                            @click.stop="toggleReportMenu(report._id)"
+                            v-if="isReportItemInReorderMode(folderReport.key)"
+                            class="drag-handle-nested mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
+                            @click.stop
+                            title="Drag to reorder"
                           >
-                            <MoreVertical class="w-4 h-4" />
+                            <GripVertical class="w-4 h-4" />
                           </button>
 
-                          <div
-                            v-if="activeReportMenuId === report._id"
-                            data-dropdown-panel
-                            class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-                            @click.stop
-                          >
-                            <button class="menu-item" @click="startRenameFromList(report)">Edit report name</button>
-                            <button class="menu-item" @click="copyReport(report._id)">Duplicate</button>
-                            <button class="menu-item" @click="openMoveToFolderModal(report._id)">{{ folderActionLabel(report) }}</button>
-                            <button class="menu-item" @click="refreshReportFromList(report._id)">Refresh totals</button>
-                            <button class="menu-item" @click="confirmDeleteReport(report._id)">Delete</button>
+                          <div class="flex items-center gap-1 min-w-0">
+                            <h3 class="text-base font-black text-gray-900 truncate uppercase tracking-tight">{{ folderReport.reportName }}</h3>
+
+                            <div class="relative" data-dropdown-root>
+                              <button
+                                class="reports-row-menu-trigger p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                                :class="{ 'reports-row-menu-trigger-visible': shouldShowReportListMenu(folderReport.key) }"
+                                @click.stop="toggleReportMenu(folderReport.reportId, folderReport.key)"
+                              >
+                                <MoreVertical class="w-4 h-4" />
+                              </button>
+
+                              <div
+                                v-if="activeReportMenuId === folderReport.reportId"
+                                data-dropdown-panel
+                                class="absolute left-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                                @click.stop
+                              >
+                                <button class="menu-item" @click="startReportReorderFromMenu(folderReport.key)">Rearrange Row</button>
+                                <button class="menu-item" @click="startRenameFromListById(folderReport.reportId)">Edit report name</button>
+                                <button class="menu-item" @click="copyReport(folderReport.reportId)">Duplicate</button>
+                                <button class="menu-item" @click="openMoveToFolderModal(folderReport.reportId)">{{ folderActionLabel(reportById(folderReport.reportId)) }}</button>
+                                <button class="menu-item" @click="refreshReportFromList(folderReport.reportId)">Refresh totals</button>
+                                <button class="menu-item" @click="confirmDeleteReport(folderReport.reportId)">Delete</button>
+                              </div>
+                            </div>
                           </div>
                         </div>
+
+                        <div class="flex items-center gap-2">
+                          <button
+                            v-if="showNevermindForReportItem(folderReport.key)"
+                            type="button"
+                            class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+                            @click.stop="cancelReportReorder"
+                          >
+                            Nevermind
+                          </button>
+
+                          <span v-else class="text-base font-black" :class="fontColor(getReportTotal(folderReport.reportId))">
+                            {{ formatReportTotal(folderReport.reportId, { toFixed: 2 }) }}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                </div>
-              </section>
-            </template>
-          </div>
-        </template>
+                    </article>
+                  </template>
+                </draggable>
+              </div>
+            </section>
+          </template>
+        </draggable>
       </template>
 
       <template v-else>
@@ -342,14 +323,6 @@
               <button class="btn-primary" @click="saveDraftReport">Save</button>
             </template>
 
-            <button
-              v-if="isReorderingRows && !isDraftSelected"
-              class="btn-primary"
-              @click="finishReorderRows"
-            >
-              Done
-            </button>
-
             <div class="relative" data-dropdown-root>
               <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showDetailReportMenu = !showDetailReportMenu">
                 <MoreVertical class="w-5 h-5" />
@@ -364,9 +337,6 @@
                 <button class="menu-item" @click="startReportNameEdit">Edit report name</button>
                 <button class="menu-item" @click="copyReport(selectedReport._id)">Duplicate</button>
                 <button class="menu-item" @click="refreshSelectedReport">Refresh totals</button>
-                <button class="menu-item" @click="toggleReorderRows">
-                  {{ isReorderingRows ? 'Stop Rearranging Rows' : 'Rearrange Rows' }}
-                </button>
                 <button class="menu-item" @click="confirmDeleteReport(selectedReport._id)">Delete</button>
               </div>
             </div>
@@ -374,29 +344,33 @@
         </header>
 
         <div class="space-y-3 pb-20">
-          <p v-if="isReorderingRows" class="text-xs text-gray-500 px-1">
-            Drag rows to rearrange order, then tap done.
-          </p>
-
           <draggable
             v-model="rowsForDrag"
             item-key="rowId"
             class="space-y-3"
             handle=".drag-handle"
-            :disabled="!isReorderingRows"
+            :disabled="!isRowReorderActive"
             @end="onRowsDragEnd"
           >
             <template #item="{ element: row, index }">
               <article
-                class="relative border rounded-xl px-4 py-3 bg-white"
+                class="relative border rounded-xl px-4 py-3 bg-white reports-row-group select-none"
                 :class="[
-                  isReorderingRows ? 'border-dashed border-gray-300' : 'border-gray-200'
+                  isRowItemInReorderMode(row.rowId) ? 'border-dashed border-gray-300' : 'border-gray-200'
                 ]"
+                @mousedown="handleReportRowMouseDown($event, row.rowId)"
+                @mousemove="handleReportRowMouseMove"
+                @mouseup="handleReportRowMouseUp"
+                @mouseleave="handleReportRowMouseLeave"
+                @touchstart.passive="handleReportRowTouchStart($event, row.rowId)"
+                @touchmove.passive="handleReportRowTouchMove"
+                @touchend="handleReportRowTouchEnd"
+                @touchcancel="clearReportRowLongPressTimer"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 flex items-start gap-2">
                     <button
-                      v-if="isReorderingRows"
+                      v-if="isRowItemInReorderMode(row.rowId)"
                       class="drag-handle mt-0.5 p-1 rounded-lg text-gray-400 hover:text-gray-700 cursor-move"
                       @click.stop
                       title="Drag to reorder"
@@ -412,8 +386,32 @@
                         >
                           r{{ index + 1 }}
                         </span>
-                        <div class="text-lg font-bold text-gray-900 truncate uppercase">
-                          {{ rowTitle(row) }}
+                        <div class="min-w-0 flex items-center gap-1">
+                          <div class="text-lg font-bold text-gray-900 truncate uppercase">
+                            {{ rowTitle(row) }}
+                          </div>
+
+                          <div class="relative shrink-0" data-dropdown-root>
+                            <button
+                              class="reports-row-menu-trigger p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                              :class="{ 'reports-row-menu-trigger-visible': shouldShowReportRowMenu(row.rowId) }"
+                              @click.stop="toggleRowMenu(row.rowId)"
+                            >
+                              <MoreVertical class="w-4 h-4" />
+                            </button>
+
+                            <div
+                              v-if="activeRowMenuId === row.rowId"
+                              data-dropdown-panel
+                              class="absolute left-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                              @click.stop
+                            >
+                              <button class="menu-item" @click="startRowReorderFromMenu(row.rowId)">Rearrange Row</button>
+                              <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
+                              <button class="menu-item" @click="startRowEdit(row)">Edit</button>
+                              <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
                       <p class="text-sm text-gray-500 mt-1">
@@ -426,26 +424,18 @@
                   </div>
 
                   <div class="flex items-center gap-2">
-                    <span class="text-xl font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
+                    <button
+                      v-if="showNevermindForRow(row.rowId)"
+                      type="button"
+                      class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+                      @click.stop="cancelRowReorder"
+                    >
+                      Nevermind
+                    </button>
+
+                    <span v-else class="text-xl font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
                       {{ formatRowAmount(selectedReport._id, row, { toFixed: 2 }) }}
                     </span>
-
-                    <div v-if="!isReorderingRows" class="relative" data-dropdown-root>
-                      <button class="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100" @click.stop="toggleRowMenu(row.rowId)">
-                        <MoreVertical class="w-4 h-4" />
-                      </button>
-
-                      <div
-                        v-if="activeRowMenuId === row.rowId"
-                        data-dropdown-panel
-                        class="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
-                        @click.stop
-                      >
-                        <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
-                        <button class="menu-item" @click="startRowEdit(row)">Edit</button>
-                        <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </article>
@@ -458,9 +448,9 @@
 
           <div class="pt-2 relative" data-dropdown-root>
             <button
-              :disabled="isReorderingRows"
+              :disabled="isRowReorderActive"
               class="w-full border border-gray-300 rounded-xl py-3 text-sm font-black text-gray-800 hover:bg-gray-50"
-              :class="isReorderingRows ? 'opacity-50 cursor-not-allowed' : ''"
+              :class="isRowReorderActive ? 'opacity-50 cursor-not-allowed' : ''"
               @click="showAddRowPicker = !showAddRowPicker"
             >
               Add Row
@@ -493,7 +483,7 @@
 
       </template>
 
-      <div class="fixed bottom-0 left-0 right-0 border-t border-gray-200 bg-white z-30">
+      <div class="fixed bottom-0 left-0 right-0 bg-white z-30">
         <div class="max-w-5xl mx-auto px-4 py-4 flex items-start justify-between gap-3">
           <div v-if="selectedReport" class="flex-1 min-w-0">
             <div class="flex items-center gap-3 min-w-0">
@@ -534,7 +524,7 @@
           <div v-else class="flex-1">
             <button
               class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-              :disabled="isReorderingReports"
+              :disabled="isReportReorderActive"
               @click="openCreateReportModal"
             >
               <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
@@ -1010,7 +1000,6 @@ const activeFolderMenuName = ref('');
 const activeRowMenuId = ref('');
 const showAddRowPicker = ref(false);
 const isExistingRowPickerModalOpen = ref(false);
-const showListMenu = ref(false);
 
 const showDetailReportMenu = ref(false);
 const isEditingReportName = ref(false);
@@ -1039,12 +1028,25 @@ const newFolderNameDraft = ref('');
 const isMovingReportToFolder = ref(false);
 const expandedFoldersByName = ref({});
 const reportReorderItems = ref([]);
-const isReorderingReports = ref(false);
-const isReorderingRows = ref(false);
+const longPressReorderReportKey = ref('');
+const longPressVisibleReportKey = ref('');
+const suppressNextReportClickKey = ref('');
+const reportLongPressTimeoutId = ref(null);
+const reportLongPressStart = ref({ x: 0, y: 0 });
+
+const longPressReorderRowId = ref('');
+const longPressVisibleRowId = ref('');
+const reportRowLongPressTimeoutId = ref(null);
+const reportRowLongPressStart = ref({ x: 0, y: 0 });
+
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
 );
+const isReportReorderActive = computed(() => Boolean(longPressReorderReportKey.value));
+const isRowReorderActive = computed(() => Boolean(longPressReorderRowId.value));
 const isManualRowEditor = computed(() =>
   rowEditorDraft.value?.type === 'manual'
 );
@@ -1262,44 +1264,6 @@ const folderGroups = computed(() => {
     reports
   }));
 });
-const folderGroupsByName = computed(() => {
-  const map = new Map();
-  folderGroups.value.forEach((group) => {
-    map.set(group.name, group);
-  });
-  return map;
-});
-const topLevelReportItems = computed(() => {
-  const seenFolders = new Set();
-  const items = [];
-
-  sortedReports.value.forEach((report) => {
-    const folderName = String(report?.folderName || '').trim();
-
-    if (!folderName) {
-      items.push({
-        key: `report:${report._id}`,
-        type: 'report',
-        report
-      });
-      return;
-    }
-
-    if (seenFolders.has(folderName)) {
-      return;
-    }
-
-    seenFolders.add(folderName);
-    items.push({
-      key: `folder:${folderName}`,
-      type: 'folder',
-      folderName,
-      reports: folderGroupsByName.value.get(folderName)?.reports || []
-    });
-  });
-
-  return items;
-});
 const existingFolderOptions = computed(() => folderGroups.value.map(group => group.name));
 const reportBeingMoved = computed(() =>
   state.reports.find(report => report._id === moveToFolderReportId.value) || null
@@ -1358,6 +1322,16 @@ watch(
     totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
     isFormulaMenuModalOpen.value = false;
     isFormulaEditorModalOpen.value = false;
+  },
+  { immediate: true }
+);
+
+watch(
+  () => sortedReports.value,
+  () => {
+    if (!isReportReorderActive.value) {
+      reportReorderItems.value = buildReportReorderItems();
+    }
   },
   { immediate: true }
 );
@@ -1556,6 +1530,203 @@ function applyReportReorderItems() {
   });
 
   reorderReports(nextReports);
+}
+
+function reportById(reportId) {
+  return state.reports.find(report => report._id === reportId) || null;
+}
+
+function startRenameFromListById(reportId) {
+  const report = reportById(reportId);
+  if (!report?._id) {
+    return;
+  }
+
+  startRenameFromList(report);
+}
+
+function closeReportListMenus() {
+  activeReportMenuId.value = '';
+  activeFolderMenuName.value = '';
+}
+
+function isReportItemInReorderMode(itemKey) {
+  return Boolean(itemKey) && longPressReorderReportKey.value === itemKey;
+}
+
+function showNevermindForReportItem(itemKey) {
+  return isReportItemInReorderMode(itemKey);
+}
+
+function shouldShowReportListMenu(itemKey) {
+  if (!itemKey) {
+    return false;
+  }
+
+  if (longPressVisibleReportKey.value === itemKey || longPressReorderReportKey.value === itemKey) {
+    return true;
+  }
+
+  if (itemKey.startsWith('report:')) {
+    const reportId = itemKey.slice(7);
+    return Boolean(reportId) && activeReportMenuId.value === reportId;
+  }
+
+  if (itemKey.startsWith('folder:')) {
+    const folderName = itemKey.slice(7);
+    return Boolean(folderName) && activeFolderMenuName.value === folderName;
+  }
+
+  return false;
+}
+
+function clearReportLongPressTimer() {
+  if (reportLongPressTimeoutId.value) {
+    clearTimeout(reportLongPressTimeoutId.value);
+    reportLongPressTimeoutId.value = null;
+  }
+}
+
+function shouldIgnoreLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function triggerReportLongPress(itemKey) {
+  if (!itemKey) {
+    return;
+  }
+
+  closeReportListMenus();
+  longPressVisibleReportKey.value = itemKey;
+  longPressReorderReportKey.value = itemKey;
+  suppressNextReportClickKey.value = itemKey;
+}
+
+function handleReportListTouchStart(event, itemKey) {
+  if (!itemKey || isReportItemInReorderMode(itemKey)) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  reportLongPressStart.value = { x: touch.clientX, y: touch.clientY };
+  suppressNextReportClickKey.value = '';
+  clearReportLongPressTimer();
+
+  reportLongPressTimeoutId.value = setTimeout(() => {
+    triggerReportLongPress(itemKey);
+    reportLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleReportListTouchMove(event) {
+  if (!reportLongPressTimeoutId.value) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  const deltaX = Math.abs(touch.clientX - reportLongPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - reportLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearReportLongPressTimer();
+  }
+}
+
+function handleReportListTouchEnd() {
+  clearReportLongPressTimer();
+}
+
+function handleReportListMouseDown(event, itemKey) {
+  if (!itemKey || isReportItemInReorderMode(itemKey)) return;
+  if (event.button !== 0) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  reportLongPressStart.value = { x: event.clientX, y: event.clientY };
+  suppressNextReportClickKey.value = '';
+  clearReportLongPressTimer();
+
+  reportLongPressTimeoutId.value = setTimeout(() => {
+    triggerReportLongPress(itemKey);
+    reportLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleReportListMouseMove(event) {
+  if (!reportLongPressTimeoutId.value) return;
+
+  const deltaX = Math.abs(event.clientX - reportLongPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - reportLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearReportLongPressTimer();
+  }
+}
+
+function handleReportListMouseUp() {
+  clearReportLongPressTimer();
+}
+
+function handleReportListMouseLeave() {
+  clearReportLongPressTimer();
+}
+
+function handleReportListRowClick(reportId, itemKey) {
+  if (itemKey && suppressNextReportClickKey.value === itemKey) {
+    suppressNextReportClickKey.value = '';
+    return;
+  }
+
+  if (isReportReorderActive.value) {
+    return;
+  }
+
+  openReport(reportId);
+}
+
+function handleFolderRowClick(folderName, itemKey) {
+  if (itemKey && suppressNextReportClickKey.value === itemKey) {
+    suppressNextReportClickKey.value = '';
+    return;
+  }
+
+  if (isReportReorderActive.value) {
+    return;
+  }
+
+  toggleFolderExpansion(folderName);
+}
+
+function exitReportReorderMode({ clearVisible = true } = {}) {
+  longPressReorderReportKey.value = '';
+  suppressNextReportClickKey.value = '';
+  if (clearVisible) {
+    longPressVisibleReportKey.value = '';
+  }
+}
+
+function cancelReportReorder() {
+  exitReportReorderMode();
+}
+
+function startReportReorderFromMenu(itemKey) {
+  closeReportListMenus();
+  triggerReportLongPress(itemKey);
+}
+
+async function onReportsDragEnd() {
+  if (!isReportReorderActive.value) {
+    return;
+  }
+
+  applyReportReorderItems();
+  await saveReportsOrder();
+  exitReportReorderMode();
 }
 
 function tabName(tabId) {
@@ -1781,11 +1952,12 @@ function addExistingRowFromOption(optionKey) {
 }
 
 function openDashboardFromRow(row) {
-  if (!row || isReorderingRows.value || row.type !== 'tab') {
+  if (!row || isRowReorderActive.value || row.type !== 'tab') {
     return;
   }
 
   activeRowMenuId.value = '';
+  longPressVisibleRowId.value = '';
 
   if (!row.groupId || !row.tabId || !row.dateStart || !row.dateEnd) {
     return;
@@ -1810,18 +1982,13 @@ function openReport(reportId) {
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
-  showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
   closeExistingRowPickerModal();
   isMoveToFolderModalOpen.value = false;
-  isReorderingRows.value = false;
+  exitReportReorderMode();
+  exitRowReorderMode();
   closeFormulaModals();
-}
-
-function openReportFromList(reportId) {
-  if (isReorderingReports.value) return;
-  openReport(reportId);
 }
 
 function backToList() {
@@ -1838,24 +2005,39 @@ function backToList() {
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
-  showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
   closeExistingRowPickerModal();
   closeMoveToFolderModal();
   closeFormulaModals();
-  isReorderingRows.value = false;
+  exitReportReorderMode();
+  exitRowReorderMode();
   cancelReportNameEdit();
   cancelRowEditor();
 }
 
-function toggleReportMenu(reportId) {
-  if (isReorderingReports.value) return;
+function toggleReportMenu(reportId, itemKey = '') {
+  if (isReportReorderActive.value) {
+    exitReportReorderMode({ clearVisible: false });
+  }
+
+  if (itemKey) {
+    longPressVisibleReportKey.value = itemKey;
+  }
+
   activeFolderMenuName.value = '';
   activeReportMenuId.value = activeReportMenuId.value === reportId ? '' : reportId;
 }
 
-function toggleFolderMenu(folderName) {
+function toggleFolderMenu(folderName, itemKey = '') {
+  if (isReportReorderActive.value) {
+    exitReportReorderMode({ clearVisible: false });
+  }
+
+  if (itemKey) {
+    longPressVisibleReportKey.value = itemKey;
+  }
+
   activeReportMenuId.value = '';
   activeFolderMenuName.value = activeFolderMenuName.value === folderName ? '' : folderName;
 }
@@ -1891,9 +2073,16 @@ function closeDropdownMenus() {
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
-  showListMenu.value = false;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
+
+  if (!isReportReorderActive.value) {
+    longPressVisibleReportKey.value = '';
+  }
+
+  if (!isRowReorderActive.value) {
+    longPressVisibleRowId.value = '';
+  }
 }
 
 function openFormulaMenuModal() {
@@ -2024,51 +2213,139 @@ async function removeFolderFromMenu(folderName) {
   delete expandedFoldersByName.value[folderName];
 }
 
-function toggleRowMenu(rowId) {
-  if (isReorderingRows.value) return;
-  activeRowMenuId.value = activeRowMenuId.value === rowId ? '' : rowId;
+function isRowItemInReorderMode(rowId) {
+  return Boolean(rowId) && longPressReorderRowId.value === rowId;
 }
 
-async function toggleReorderReports() {
-  if (isReorderingReports.value) {
-    await finishReorderReports();
+function shouldShowReportRowMenu(rowId) {
+  if (!rowId) {
+    return false;
+  }
+
+  return (
+    activeRowMenuId.value === rowId
+    || longPressVisibleRowId.value === rowId
+    || longPressReorderRowId.value === rowId
+  );
+}
+
+function showNevermindForRow(rowId) {
+  return isRowItemInReorderMode(rowId);
+}
+
+function clearReportRowLongPressTimer() {
+  if (reportRowLongPressTimeoutId.value) {
+    clearTimeout(reportRowLongPressTimeoutId.value);
+    reportRowLongPressTimeoutId.value = null;
+  }
+}
+
+function triggerReportRowLongPress(rowId) {
+  if (!rowId) {
     return;
   }
 
-  showListMenu.value = false;
-  activeReportMenuId.value = '';
-  activeFolderMenuName.value = '';
-  reportReorderItems.value = buildReportReorderItems();
-  isReorderingReports.value = true;
-}
-
-async function finishReorderReports() {
-  if (!isReorderingReports.value) return;
-
-  applyReportReorderItems();
-  await saveReportsOrder();
-  reportReorderItems.value = [];
-  isReorderingReports.value = false;
-}
-
-function toggleReorderRows() {
-  isReorderingRows.value = !isReorderingRows.value;
   activeRowMenuId.value = '';
-  showAddRowPicker.value = false;
-  showDetailReportMenu.value = false;
-  closeExistingRowPickerModal();
-  closeFormulaModals();
+  longPressVisibleRowId.value = rowId;
+  longPressReorderRowId.value = rowId;
+}
+
+function handleReportRowTouchStart(event, rowId) {
+  if (!rowId || isRowItemInReorderMode(rowId)) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  reportRowLongPressStart.value = { x: touch.clientX, y: touch.clientY };
+  clearReportRowLongPressTimer();
+
+  reportRowLongPressTimeoutId.value = setTimeout(() => {
+    triggerReportRowLongPress(rowId);
+    reportRowLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleReportRowTouchMove(event) {
+  if (!reportRowLongPressTimeoutId.value) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  const deltaX = Math.abs(touch.clientX - reportRowLongPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - reportRowLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearReportRowLongPressTimer();
+  }
+}
+
+function handleReportRowTouchEnd() {
+  clearReportRowLongPressTimer();
+}
+
+function handleReportRowMouseDown(event, rowId) {
+  if (!rowId || isRowItemInReorderMode(rowId)) return;
+  if (event.button !== 0) return;
+  if (shouldIgnoreLongPressTarget(event)) return;
+
+  reportRowLongPressStart.value = { x: event.clientX, y: event.clientY };
+  clearReportRowLongPressTimer();
+
+  reportRowLongPressTimeoutId.value = setTimeout(() => {
+    triggerReportRowLongPress(rowId);
+    reportRowLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleReportRowMouseMove(event) {
+  if (!reportRowLongPressTimeoutId.value) return;
+
+  const deltaX = Math.abs(event.clientX - reportRowLongPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - reportRowLongPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearReportRowLongPressTimer();
+  }
+}
+
+function handleReportRowMouseUp() {
+  clearReportRowLongPressTimer();
+}
+
+function handleReportRowMouseLeave() {
+  clearReportRowLongPressTimer();
+}
+
+function exitRowReorderMode({ clearVisible = true } = {}) {
+  longPressReorderRowId.value = '';
+  if (clearVisible) {
+    longPressVisibleRowId.value = '';
+  }
+}
+
+function cancelRowReorder() {
+  exitRowReorderMode();
+}
+
+function startRowReorderFromMenu(rowId) {
+  activeRowMenuId.value = '';
+  triggerReportRowLongPress(rowId);
+}
+
+function toggleRowMenu(rowId) {
+  if (isRowReorderActive.value) {
+    exitRowReorderMode({ clearVisible: false });
+  }
+
+  longPressVisibleRowId.value = rowId;
+  activeRowMenuId.value = activeRowMenuId.value === rowId ? '' : rowId;
 }
 
 async function onRowsDragEnd() {
-  if (!selectedReport.value || !isReorderingRows.value) return;
+  if (!selectedReport.value || !isRowReorderActive.value) return;
   await saveReportLayout(selectedReport.value._id);
-}
-
-async function finishReorderRows() {
-  if (!selectedReport.value) return;
-  await saveReportLayout(selectedReport.value._id);
-  isReorderingRows.value = false;
+  exitRowReorderMode();
 }
 
 async function createFirstReport() {
@@ -2076,8 +2353,7 @@ async function createFirstReport() {
 }
 
 function openCreateReportModal() {
-  isReorderingReports.value = false;
-  showListMenu.value = false;
+  exitReportReorderMode();
   activeReportMenuId.value = '';
   closeExistingRowPickerModal();
   closeFormulaModals();
@@ -2113,7 +2389,7 @@ function startRenameFromList(report) {
 function startReportNameEdit() {
   if (!selectedReport.value) return;
 
-  isReorderingRows.value = false;
+  exitRowReorderMode();
   isEditingReportName.value = true;
   reportNameDraft.value = selectedReport.value.name;
   showDetailReportMenu.value = false;
@@ -2198,9 +2474,11 @@ function cancelDraftAndBack() {
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
   closeExistingRowPickerModal();
+  exitRowReorderMode();
 }
 
 function startRowEdit(row) {
+  exitRowReorderMode();
   rowEditorDraft.value = buildRowEditorDraft(row);
   editingRowId.value = row.rowId;
   editingRowWasNew.value = false;
@@ -2342,6 +2620,7 @@ async function refreshReportFromList(reportId) {
 async function deleteRowAndSave(rowId) {
   if (!selectedReport.value) return;
 
+  exitRowReorderMode();
   removeRow(selectedReport.value._id, rowId);
   activeRowMenuId.value = '';
 
@@ -2442,6 +2721,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  clearReportLongPressTimer();
+  clearReportRowLongPressTimer();
   window.removeEventListener('pointerdown', handleGlobalPointerDown);
 });
 </script>
@@ -2485,6 +2766,25 @@ onBeforeUnmount(() => {
 
 .btn-secondary:hover {
   background: var(--theme-btn-secondary-hover-bg);
+}
+
+.reports-row-menu-trigger {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.reports-row-menu-trigger:focus-visible,
+.reports-row-menu-trigger-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .reports-row-group:hover .reports-row-menu-trigger {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 
