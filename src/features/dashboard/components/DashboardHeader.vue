@@ -71,7 +71,7 @@
             <button
               v-if="showRearrangeAction"
               type="button"
-              class="px-3 py-2 rounded-xl border border-[var(--theme-border)] text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:border-[var(--theme-text)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+              class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] transition-colors focus:outline-none"
               @click="emit('toggle-rearrange')"
             >
               {{ isRearrangeActive ? 'Done' : 'Rearrange' }}
@@ -80,7 +80,7 @@
             <button
               v-else-if="showEditTabAction"
               type="button"
-              class="px-3 py-2 rounded-xl border border-[var(--theme-border)] text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:border-[var(--theme-text)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+              class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] transition-colors focus:outline-none"
               @click="emit('edit-tab')"
             >
               Edit Tab
