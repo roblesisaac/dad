@@ -28,6 +28,7 @@
               :key="element._id" 
               :is-edit-mode="isEditModeForTab(element._id)"
               :show-cancel-edit-button="showCancelEditButtonForTab(element._id)"
+              :reorder-reset-token="reorderResetToken"
               :variant="variant"
               @tab-selected="handleTabSelected"
               @request-reorder-mode="handleRequestReorderMode"
@@ -45,6 +46,7 @@
             :element="element"
             :is-edit-mode="isEditModeForTab(element._id)"
             :show-cancel-edit-button="showCancelEditButtonForTab(element._id)"
+            :reorder-reset-token="reorderResetToken"
             :variant="variant"
             @tab-selected="handleTabSelected"
             @request-reorder-mode="handleRequestReorderMode"
@@ -80,6 +82,7 @@
           :element="tab"
           :is-edit-mode="isEditModeForTab(tab._id)"
           :show-cancel-edit-button="showCancelEditButtonForTab(tab._id)"
+          :reorder-reset-token="reorderResetToken"
           :variant="variant"
           @tab-selected="handleTabSelected"
           @request-reorder-mode="handleRequestReorderMode"
@@ -144,6 +147,7 @@ const { state } = useDashboardState();
 const { createNewTab } = useTabs();
 const showDisabledTabs = ref(false);
 const longPressReorderTabId = ref('');
+const reorderResetToken = ref(0);
 const dashboardTabs = ref([]);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
 const shouldUseDraggable = computed(() => {
@@ -271,6 +275,8 @@ function handleDragEnd() {
   if (longPressReorderTabId.value) {
     longPressReorderTabId.value = '';
   }
+
+  reorderResetToken.value += 1;
 }
 
 watch(

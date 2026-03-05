@@ -178,6 +178,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  reorderResetToken: {
+    type: Number,
+    default: 0
+  },
   variant: {
     type: String,
     default: 'modal',
@@ -426,6 +430,11 @@ watch(() => props.isEditMode, (isEditMode) => {
     return;
   }
 
+  showLongPressActions.value = false;
+});
+
+watch(() => props.reorderResetToken, () => {
+  showActionsMenu.value = false;
   showLongPressActions.value = false;
 });
 

@@ -1059,6 +1059,9 @@ function handleAccountRowClick(account) {
 
 function exitAccountReorderMode() {
   longPressReorderAccountId.value = '';
+  activeAccountMenuId.value = '';
+  longPressVisibleAccountId.value = '';
+  suppressNextAccountSelectId.value = '';
 }
 
 function cancelAccountReorder() {
