@@ -238,8 +238,12 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', closeActionsMenuOnOutsideClick);
 });
 
-watch(props.element, (newVal) => {
-    updateGroupSort(newVal._id, newVal.sort);
+watch(() => props.element?.sort, (newSort, previousSort) => {
+    if (newSort === previousSort) {
+        return;
+    }
+
+    updateGroupSort(props.element._id, newSort);
 });
 </script>
 

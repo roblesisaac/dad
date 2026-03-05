@@ -162,7 +162,7 @@ const ruleSummaryParts = computed(() => {
     parts.push({ text: 'sort by' });
     parts.push({ text: sortPropertyName || 'property', highlight: true });
     parts.push({ text: '(' });
-    parts.push({ text: sortDirection === 'desc' ? 'high to low' : 'low to high', highlight: true });
+    parts.push({ text: getSortDirectionLabel(sortPropertyName, sortDirection), highlight: true });
     parts.push({ text: ')' });
   } 
   
@@ -189,7 +189,7 @@ const ruleSummaryParts = computed(() => {
   
   else if (type === 'groupBy') {
     parts.push({ text: 'group by' });
-    parts.push({ text: r[1] || 'property', highlight: true });
+    parts.push({ text: formatGroupByTarget(r[1]), highlight: true });
   }
 
   return parts.length > 0 ? parts : [{ text: 'Untitled Rule' }];
@@ -245,10 +245,45 @@ function getSortDirection(ruleArray = []) {
     : 'asc';
 }
 
+function formatGroupByTarget(target) {
+  if (target === 'none') {
+    return 'no grouping';
+  }
+
+  return target || 'property';
+}
+
 function normalizeCombinator(combinator) {
   return String(combinator || '').toLowerCase() === 'or'
     ? 'or'
     : 'and';
+}
+
+function getSortDirectionLabel(sortPropertyName, sortDirection) {
+  const normalizedSortPropertyName = String(sortPropertyName || '').toLowerCase();
+  const normalizedSortDirection = String(sortDirection || '').toLowerCase();
+
+  if (normalizedSortPropertyName === 'date') {
+    return normalizedSortDirection === 'asc'
+      ? 'oldest to newest'
+      : 'newest to oldest';
+  }
+
+  if (normalizedSortPropertyName === 'amount') {
+    return normalizedSortDirection === 'asc'
+      ? 'low to high'
+      : 'high to low';
+  }
+
+  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+    return normalizedSortDirection === 'asc'
+      ? 'A to Z'
+      : 'Z to A';
+  }
+
+  return normalizedSortDirection === 'asc'
+    ? 'ascending'
+    : 'descending';
 }
 
 function formatCombinator(combinator) {

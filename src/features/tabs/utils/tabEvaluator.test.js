@@ -461,4 +461,40 @@ describe('tabEvaluator', () => {
 
     expect(visibleTransactionIds).toEqual(['t-travel']);
   });
+
+  test('groupBy none returns a single all-transactions bucket and exposes groupByMode', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'tx-1',
+          amount: 12,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Alpha',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'tx-2',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Bravo',
+          personal_finance_category: { primary: 'GROCERIES' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-no-group',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'none', '', '', '']
+        }
+      ]
+    });
+
+    expect(result.groupByMode).toBe('none');
+    expect(result.categorizedItems).toHaveLength(1);
+    expect(result.categorizedItems[0][0]).toBe('all transactions');
+    expect(result.categorizedItems[0][1].map(item => item.transaction_id).sort()).toEqual(['tx-1', 'tx-2']);
+  });
 });

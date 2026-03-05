@@ -153,13 +153,6 @@
       @banks-data-changed="handleBanksDataChanged"
     />
     
-    <!-- Sync Sessions Modal for direct bank sync when only one bank exists -->
-    <SyncSessionsModal
-      :is-open="isSyncSessionsModalOpen"
-      :bank="selectedBank"
-      @close="closeSyncSessionsModal"
-    />
-
     <BaseModal
       v-if="showRenameModal"
       :is-open="showRenameModal"
@@ -545,10 +538,9 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import { useBanks } from '@/features/banks/composables/useBanks.js';
 import { useSelectGroup } from '../composables/useSelectGroup.js';
 import { useGroupsAPI } from '../composables/useGroupsAPI.js';
 import { useDraggable } from '@/shared/composables/useDraggable';
@@ -571,7 +563,6 @@ import {
 
 import EditGroupModal from '../components/EditGroupModal.vue';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
-import SyncSessionsModal from '@/features/banks/components/SyncSessionsModal.vue';
 
 const props = defineProps({
   isOpen: {
@@ -667,14 +658,6 @@ const closeEditGroupModal = () => {
 };
 
 const showBanksModal = ref(false);
-const {
-  banks,
-  selectedBank,
-  fetchBanks,
-  selectBank
-} = useBanks();
-
-const isSyncSessionsModalOpen = ref(false);
 
 const actionTarget = ref(null);
 const currentRowAction = ref('');
@@ -1164,13 +1147,8 @@ const handleManageBanks = async () => {
   showBanksModal.value = true;
 };
 
-const handleBankConnected = async () => {
-  try {
-    await fetchBanks();
-    showBanksModal.value = false;
-  } catch (error) {
-    console.error('Error refreshing data after bank connection:', error);
-  }
+const handleBankConnected = () => {
+  showBanksModal.value = false;
 };
 
 const handleBanksDataChanged = async () => {
@@ -1205,23 +1183,8 @@ const handleBanksDataChanged = async () => {
   }
 };
 
-const closeSyncSessionsModal = () => {
-  isSyncSessionsModalOpen.value = false;
-};
-
-onMounted(async () => {
+onMounted(() => {
   setGroupsAndAccounts();
-  await fetchBanks();
-
-  if (banks.value.length === 1) {
-    await selectBank(banks.value[0]);
-  }
-});
-
-watch(() => banks.value.length, (newCount) => {
-  if (newCount === 1) {
-    selectBank(banks.value[0]);
-  }
 });
 </script>
 

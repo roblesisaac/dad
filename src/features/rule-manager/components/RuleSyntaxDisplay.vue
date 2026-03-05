@@ -86,6 +86,7 @@ function formatPropName(propName) {
   if (normalizedPropName === 'date') return 'date';
   if (normalizedPropName === 'name') return 'name';
   if (normalizedPropName === 'category') return 'category';
+  if (normalizedPropName === 'none') return 'no grouping';
   
   // General case: convert camelCase to words
   return normalizedPropName
@@ -97,6 +98,11 @@ function formatPropName(propName) {
 function formatMethodName(methodName, propName = '') {
   if (!methodName) return '(not set)';
 
+  const normalizedMethodName = String(methodName).toLowerCase();
+  if (normalizedMethodName === 'asc' || normalizedMethodName === 'desc') {
+    return formatSortDirectionLabel(propName, normalizedMethodName);
+  }
+
   const normalizedProperty = String(propName || '').toLowerCase();
 
   if (normalizedProperty === 'date') {
@@ -107,8 +113,6 @@ function formatMethodName(methodName, propName = '') {
   
   // Handle special cases
   const methodMap = {
-    'asc': 'ascending',
-    'desc': 'descending',
     'is': 'is',
     'contains': 'contains',
     'startsWith': 'starts with',
@@ -126,6 +130,32 @@ function formatMethodName(methodName, propName = '') {
   };
   
   return methodMap[methodName] || methodName;
+}
+
+function formatSortDirectionLabel(sortPropertyName, sortDirection) {
+  const normalizedSortPropertyName = String(sortPropertyName || '').replace(/^-/, '').toLowerCase();
+
+  if (normalizedSortPropertyName === 'date') {
+    return sortDirection === 'asc'
+      ? 'oldest to newest'
+      : 'newest to oldest';
+  }
+
+  if (normalizedSortPropertyName === 'amount') {
+    return sortDirection === 'asc'
+      ? 'low to high'
+      : 'high to low';
+  }
+
+  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+    return sortDirection === 'asc'
+      ? 'A to Z'
+      : 'Z to A';
+  }
+
+  return sortDirection === 'asc'
+    ? 'ascending'
+    : 'descending';
 }
 
 function getAdditionalConditions(rule) {

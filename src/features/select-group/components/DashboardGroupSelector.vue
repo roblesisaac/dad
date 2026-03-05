@@ -494,7 +494,6 @@ import { Check, Building, ChevronDown, ChevronRight, EllipsisVertical, GripVerti
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
-import { useBanks } from '@/features/banks/composables/useBanks';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
@@ -522,7 +521,6 @@ const {
   fetchGroupsAndAccounts,
   handleGroupChange
 } = useSelectGroup();
-const { fetchBanks } = useBanks();
 
 const dashboardAccounts = ref([]);
 const longPressReorderAccountId = ref('');
@@ -711,8 +709,7 @@ watch(
   { immediate: true }
 );
 
-onMounted(async () => {
-  await fetchBanks();
+onMounted(() => {
   document.addEventListener('click', closeMenusOnOutsideClick);
   window.addEventListener('resize', closeAllMenus);
   window.addEventListener('scroll', closeAllMenus, true);
@@ -1619,12 +1616,7 @@ function goToOnboarding() {
 }
 
 async function handleBankConnected() {
-  try {
-    await fetchBanks();
-    showBanksModal.value = false;
-  } catch (error) {
-    console.error('Error refreshing data after bank connection', error);
-  }
+  showBanksModal.value = false;
 }
 
 async function handleBanksDataChanged() {

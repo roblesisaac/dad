@@ -141,6 +141,7 @@ import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import { NO_GROUPING_CATEGORY_NAME, NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
 import { ChevronRight } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
@@ -426,6 +427,13 @@ function openCategoryView() {
     return;
   }
 
+  if (isNoGroupingTab(state.selected.tab)) {
+    state.selected.category = resolveNoGroupingCategoryName();
+    state.selected.transaction = false;
+    setDashboardView('category-detail', { syncRoute: true });
+    return;
+  }
+
   setDashboardView('category', { syncRoute: true });
 }
 
@@ -453,8 +461,29 @@ function handleGroupSelected() {
   setDashboardView('tab', { syncRoute: true });
 }
 
-function handleTabSelected() {
+function isNoGroupingTab(tab = state.selected.tab) {
+  return tab?.groupByMode === NO_GROUPING_RULE_VALUE;
+}
+
+function resolveNoGroupingCategoryName() {
+  const firstCategoryName = state.selected.tab?.categorizedItems?.[0]?.[0];
+  return firstCategoryName || NO_GROUPING_CATEGORY_NAME;
+}
+
+function openSelectedTabView() {
+  if (isNoGroupingTab(state.selected.tab)) {
+    state.selected.category = resolveNoGroupingCategoryName();
+    state.selected.transaction = false;
+    setDashboardView('category-detail', { syncRoute: true });
+    return;
+  }
+
+  resetCategorySelection();
   setDashboardView('category', { syncRoute: true });
+}
+
+function handleTabSelected() {
+  openSelectedTabView();
 }
 
 function handleCategorySelected(categoryName) {
@@ -502,10 +531,18 @@ watch(
     if (selectedTabId !== previousTabId && previousTabId) {
       resetCategorySelection();
       if (isCategoryDetailView.value) {
-        setDashboardView('category', {
-          syncRoute: true,
-          historyMode: 'replace'
-        });
+        if (isNoGroupingTab(state.selected.tab)) {
+          state.selected.category = resolveNoGroupingCategoryName();
+          setDashboardView('category-detail', {
+            syncRoute: true,
+            historyMode: 'replace'
+          });
+        } else {
+          setDashboardView('category', {
+            syncRoute: true,
+            historyMode: 'replace'
+          });
+        }
       }
     }
   }
@@ -531,6 +568,13 @@ watch(
   [() => dashboardView.value, () => state.selected.category, () => state.selected.tab?.categorizedItems],
   ([view, selectedCategory]) => {
     if (view !== 'category-detail') {
+      return;
+    }
+
+    if (isNoGroupingTab(state.selected.tab)) {
+      if (!selectedCategory) {
+        state.selected.category = resolveNoGroupingCategoryName();
+      }
       return;
     }
 

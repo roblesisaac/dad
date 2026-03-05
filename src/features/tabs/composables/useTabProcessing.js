@@ -476,6 +476,7 @@ export function useTabProcessing() {
 
         tab.total = processed.tabTotal;
         tab.categorizedItems = processed.categorizedItems;
+        tab.groupByMode = processed.groupByMode || 'category';
       }
 
       await nextTick();

@@ -102,7 +102,7 @@
                       >
                         <option value="" disabled>Select direction...</option>
                         <option
-                          v-for="sortDirectionOption in SORT_DIRECTION_OPTIONS"
+                          v-for="sortDirectionOption in getSortDirectionOptions(ruleData.rule[1])"
                           :key="`sort-direction-option-${sortDirectionOption.value}`"
                           :value="sortDirectionOption.value"
                         >
@@ -401,11 +401,12 @@ const SORT_PROPERTY_OPTIONS = [
 ];
 
 const SORT_DIRECTION_OPTIONS = [
-  { value: 'asc', label: 'Ascending' },
-  { value: 'desc', label: 'Descending' }
+  { value: 'asc' },
+  { value: 'desc' }
 ];
 
 const GROUP_BY_OPTIONS = [
+  { value: 'none', label: 'No grouping' },
   { value: 'category', label: 'Category' },
   { value: 'year', label: 'Year' },
   { value: 'month', label: 'Month' },
@@ -504,6 +505,36 @@ function isSortPropertyAllowed(sortPropertyName) {
 
 function isSortDirectionAllowed(sortDirection) {
   return SORT_DIRECTION_OPTIONS.some(option => option.value === sortDirection);
+}
+
+function getSortDirectionOptions(sortPropertyName) {
+  const normalizedSortPropertyName = normalizeSortPropertyName(sortPropertyName);
+
+  if (normalizedSortPropertyName === 'date') {
+    return [
+      { value: 'desc', label: 'Newest to Oldest' },
+      { value: 'asc', label: 'Oldest to Newest' }
+    ];
+  }
+
+  if (normalizedSortPropertyName === 'amount') {
+    return [
+      { value: 'desc', label: 'High to Low' },
+      { value: 'asc', label: 'Low to High' }
+    ];
+  }
+
+  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+    return [
+      { value: 'asc', label: 'A to Z' },
+      { value: 'desc', label: 'Z to A' }
+    ];
+  }
+
+  return [
+    { value: 'asc', label: 'Ascending' },
+    { value: 'desc', label: 'Descending' }
+  ];
 }
 
 function normalizeSortRuleForUi() {

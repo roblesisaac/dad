@@ -222,28 +222,44 @@ export function useSelectGroup() {
     await groupsAPI.updateGroup(updatedGroup._id, newGroupData);
   }
 
+  function setSelectedGroupInMemory(groupToSelect, allGroups = state.allUserGroups) {
+    if (!groupToSelect?._id) {
+      return null;
+    }
+
+    let selectedGroup = null;
+    allGroups.forEach((group) => {
+      const isTargetGroup = group?._id === groupToSelect._id;
+      group.isSelected = Boolean(isTargetGroup);
+
+      if (isTargetGroup) {
+        selectedGroup = group;
+      }
+    });
+
+    if (!selectedGroup) {
+      groupToSelect.isSelected = true;
+      selectedGroup = groupToSelect;
+    }
+
+    return selectedGroup;
+  }
+
   /**
    * Select a group and deselect others
    */
   async function selectGroup(groupToSelect) {
     state.isLoading = true;
     state.selected.groupOverride = null;
-    const allGroups = state.allUserGroups;
-    // First deselect all groups
-    for (const group of allGroups) {
-      if (group.isSelected && group._id !== groupToSelect._id) {
-        group.isSelected = false;
-        await groupsAPI.updateGroupSelection(group._id, false);
-      }
+    const selectedGroup = setSelectedGroupInMemory(groupToSelect, state.allUserGroups);
+    if (!selectedGroup) {
+      state.isLoading = false;
+      return null;
     }
-
-    // Select the target group
-    groupToSelect.isSelected = true;
-    await groupsAPI.updateGroupSelection(groupToSelect._id, true);
 
     await handleGroupChange();
 
-    return groupToSelect;
+    return selectedGroup;
   }
 
   /**
@@ -254,9 +270,8 @@ export function useSelectGroup() {
     if (!firstGroup) return null;
 
     state.selected.groupOverride = null;
-    firstGroup.isSelected = true;
-    await groupsAPI.updateGroupSelection(firstGroup._id, true);
-    return firstGroup;
+
+    return setSelectedGroupInMemory(firstGroup, allGroups);
   }
 
   async function updateGroupSort(groupId, sort) {

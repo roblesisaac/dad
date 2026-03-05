@@ -37,21 +37,27 @@
                 </span>
               </div>
 
-              <div class="flex flex-wrap gap-5">
+              <div 
+                class="flex flex-wrap gap-6"
+                :style="{ '--active-ring-color': activeRingColor }"
+              >
                 <button
                   v-for="themeOption in accountThemeOptions"
                   :key="themeOption.value"
                   type="button"
-                  class="theme-circle-button relative rounded-full h-8 w-8 transition-all duration-300 border box-border focus:outline-none cursor-pointer"
+                  class="theme-circle-button relative rounded-full h-9 w-9 transition-all duration-300 border-0 focus:outline-none cursor-pointer"
                   :class="[
                     themePreference === themeOption.value 
                       ? 'theme-circle-active scale-110 z-10' 
                       : 'theme-circle-inactive hover:scale-110'
                   ]"
-                  :style="themeOption.style"
                   :title="themeOption.label"
                   @click="setTheme(themeOption.value)"
                 >
+                  <span 
+                    class="theme-circle-color block w-full h-full rounded-full"
+                    :style="themeOption.style"
+                  ></span>
                   <span class="sr-only">{{ themeOption.label }}</span>
                 </button>
               </div>
@@ -100,7 +106,7 @@ defineProps({
 });
 
 const emit = defineEmits(['close']);
-const { themePreference, setTheme } = useTheme();
+const { themePreference, setTheme, resolvedTheme } = useTheme();
 const { logoutUser } = useAuth();
 const { needRefresh, reload, checkForUpdates } = usePwaUpdate();
 const isCheckingUpdates = ref(false);
@@ -111,6 +117,10 @@ const accountThemeOptions = [
   { value: 'light', label: 'Light', style: { background: '#f3f3ee' } },
   { value: 'dark', label: 'Dark', style: { background: '#000000' } }
 ];
+
+const activeRingColor = computed(() => {
+  return resolvedTheme.value === 'dark' ? '#ffffff' : '#000000';
+});
 
 const updateButtonLabel = computed(() => {
   if (needRefresh.value) {
@@ -196,29 +206,35 @@ function handleLogout() {
 }
 
 .theme-circle-button {
-  box-shadow: 0 2px 4px var(--theme-overlay-10);
-  opacity: 1;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.theme-circle-color {
   overflow: hidden;
-  border-radius: 50%;
+  box-shadow: 0 2px 4px var(--theme-overlay-10);
+  border: 1px solid var(--theme-border);
+  /* Force Safari to clip correctly on transforms */
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  /* Safari clip bug fix for transformed border-radius */
   -webkit-mask-image: -webkit-radial-gradient(white, black);
   mask-image: radial-gradient(white, black);
 }
 
-.theme-circle-inactive {
-  border-color: var(--theme-border);
-}
-
-.theme-circle-inactive:hover {
+.theme-circle-inactive:hover .theme-circle-color {
   border-color: var(--theme-text-soft);
 }
 
-.theme-circle-active {
+.theme-circle-active .theme-circle-color {
   border-color: var(--theme-bg);
   border-width: 2px;
-  box-shadow: 0 0 0 3px var(--theme-text);
+}
+
+.theme-circle-active {
+  box-shadow: 0 0 0 4px var(--active-ring-color);
 }
 
 .account-logout-button {

@@ -12,13 +12,164 @@ const DEFAULT_TABS_FOR_EMPTY_STATE = [
   { tabName: 'money out', filterMethod: '<' }
 ];
 
+const DEFAULT_ORGANIZE_SETTINGS = Object.freeze({
+  sortKey: 'date',
+  sortDirection: 'desc',
+  groupBy: 'none'
+});
+
+const ALLOWED_SORT_KEYS = new Set(['amount', 'date', 'name', 'category']);
+const ALLOWED_SORT_DIRECTIONS = new Set(['asc', 'desc']);
+const ALLOWED_GROUP_BY_VALUES = new Set([
+  'none',
+  'category',
+  'year',
+  'month',
+  'year_month',
+  'day',
+  'date',
+  'weekday'
+]);
+
 let createDefaultTabsPromise = null;
+
+function normalizeConditionCombinator(combinator) {
+  return String(combinator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
+}
+
+function normalizeFilterJoinOperator(joinOperator) {
+  return String(joinOperator || '').toLowerCase() === 'or'
+    ? 'or'
+    : 'and';
+}
+
+function normalizeLegacyDateMethod(methodName) {
+  if (methodName === '<') {
+    return 'is before';
+  }
+
+  if (methodName === '>') {
+    return 'is after';
+  }
+
+  return methodName;
+}
+
+function normalizeLegacyTextMethod(methodName) {
+  if (methodName === 'contains') {
+    return 'includes';
+  }
+
+  return methodName;
+}
+
+function normalizeMethodForProperty(property, methodName) {
+  if (property === 'date') {
+    return normalizeLegacyDateMethod(methodName);
+  }
+
+  if (property === 'name' || property === 'category') {
+    return normalizeLegacyTextMethod(methodName);
+  }
+
+  return methodName;
+}
+
+function isConditionComplete(condition) {
+  if (!condition) {
+    return false;
+  }
+
+  return Boolean(
+    condition.property
+      && condition.method
+      && String(condition.value || '').trim()
+  );
+}
+
+function buildRuleWithConditions(ruleType, baseCondition, resultValue = '', extraConditions = []) {
+  const normalizedProperty = String(baseCondition?.property || '').trim();
+  const normalizedMethod = normalizeMethodForProperty(
+    normalizedProperty,
+    String(baseCondition?.method || '').trim()
+  );
+  const normalizedCriterion = String(baseCondition?.value || '').trim();
+  const normalizedResultValue = String(resultValue || '').trim();
+
+  const rule = [
+    ruleType,
+    normalizedProperty,
+    normalizedMethod,
+    normalizedCriterion,
+    normalizedResultValue
+  ];
+
+  for (const extraCondition of extraConditions) {
+    if (!isConditionComplete(extraCondition)) {
+      continue;
+    }
+
+    const extraProperty = String(extraCondition.property || '').trim();
+    rule.push(
+      normalizeConditionCombinator(extraCondition.combinator),
+      extraProperty,
+      normalizeMethodForProperty(extraProperty, String(extraCondition.method || '').trim()),
+      String(extraCondition.value || '').trim()
+    );
+  }
+
+  return rule;
+}
+
+function normalizeSortKey(sortKey) {
+  const normalizedSortKey = String(sortKey || '').trim().replace(/^-/, '');
+  return ALLOWED_SORT_KEYS.has(normalizedSortKey)
+    ? normalizedSortKey
+    : DEFAULT_ORGANIZE_SETTINGS.sortKey;
+}
+
+function normalizeSortDirection(sortDirection, sortKey = '') {
+  const normalizedSortDirection = String(sortDirection || '').toLowerCase();
+  if (ALLOWED_SORT_DIRECTIONS.has(normalizedSortDirection)) {
+    return normalizedSortDirection;
+  }
+
+  return String(sortKey || '').trim().startsWith('-')
+    ? 'desc'
+    : DEFAULT_ORGANIZE_SETTINGS.sortDirection;
+}
+
+function normalizeGroupByValue(groupByValue) {
+  const normalizedGroupByValue = String(groupByValue || '').trim();
+  return ALLOWED_GROUP_BY_VALUES.has(normalizedGroupByValue)
+    ? normalizedGroupByValue
+    : DEFAULT_ORGANIZE_SETTINGS.groupBy;
+}
+
+function normalizeRuleList(ruleList) {
+  return Array.isArray(ruleList) ? ruleList : [];
+}
 
 export function useTabs() {
   const { state } = useDashboardState();
   const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
   const tabsAPI = useTabsAPI();
   const rulesAPI = useRulesAPI();
+
+  function resolveReactiveTabById(tabId) {
+    if (!tabId) {
+      return null;
+    }
+
+    const tabInSelectedGroup = state.selected.tabsForGroup.find(tab => tab._id === tabId);
+    if (tabInSelectedGroup) {
+      return tabInSelectedGroup;
+    }
+
+    return state.allUserTabs.find(tab => tab._id === tabId) || null;
+  }
 
   /**
    * Select a tab and deselect the currently selected tab
@@ -37,9 +188,11 @@ export function useTabs() {
 
     tabToSelect.isSelected = true;
     tabToSelect.categorizedItems = [];
+    tabToSelect.groupByMode = 'category';
     const processed = processTabData(tabToSelect);
     if(processed) {
       tabToSelect.categorizedItems = processed.categorizedItems;
+      tabToSelect.groupByMode = processed.groupByMode || 'category';
     }
   }
 
@@ -104,11 +257,166 @@ export function useTabs() {
     };
 
     const newTab = await tabsAPI.createTab(newTabData);
+    if (!newTab?._id) {
+      return;
+    }
+
     newTab.isSelected = false;
 
     state.allUserTabs.push(newTab);
     await processAllTabsForSelectedGroup();
-    await selectTab(newTab);
+
+    const newReactiveTab = resolveReactiveTabById(newTab._id);
+    if (!newReactiveTab) {
+      return;
+    }
+
+    await selectTab(newReactiveTab);
+  }
+
+  async function createTabWithWizardConfig(config = {}) {
+    const { tabsForGroup } = state.selected;
+    const selectedGroup = state.selected.group;
+    const selectedTab = state.selected.tab;
+
+    const requestedTabName = String(config.tabName || '').trim();
+    const fallbackTabName = `Tab ${tabsForGroup.length + 1}`;
+    const tabName = requestedTabName || fallbackTabName;
+
+    if (!selectedGroup) {
+      return null;
+    }
+
+    const organizeConfig = {
+      ...DEFAULT_ORGANIZE_SETTINGS,
+      ...(config.organize || {})
+    };
+
+    const normalizedSortKey = normalizeSortKey(organizeConfig.sortKey);
+    const normalizedSortDirection = normalizeSortDirection(
+      organizeConfig.sortDirection,
+      organizeConfig.sortKey
+    );
+    const normalizedGroupByValue = normalizeGroupByValue(organizeConfig.groupBy);
+
+    const normalizedFilters = normalizeRuleList(config.filters);
+    const normalizedCategorizeRules = normalizeRuleList(config.categorizeRules);
+
+    state.blueBar.message = 'Saving tab...';
+    state.blueBar.loading = true;
+
+    try {
+      if (selectedTab) {
+        selectedTab.isSelected = false;
+        selectedTab.categorizedItems = [];
+      }
+
+      const newTabData = {
+        tabName,
+        showForGroup: selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID
+          ? ['_GLOBAL']
+          : [selectedGroup._id],
+        sort: tabsForGroup.length + 1
+      };
+
+      const newTab = await tabsAPI.createTab(newTabData);
+      if (!newTab?._id) {
+        throw new Error('Failed to create tab');
+      }
+
+      newTab.isSelected = false;
+      state.allUserTabs.push(newTab);
+
+      const rulePayloads = [];
+
+      normalizedFilters
+        .filter(filterRule => isConditionComplete(filterRule))
+        .forEach((filterRule, index) => {
+          rulePayloads.push({
+            applyForTabs: [newTab._id],
+            rule: buildRuleWithConditions('filter', filterRule, '', normalizeRuleList(filterRule.conditions)),
+            filterJoinOperator: index === 0
+              ? 'and'
+              : normalizeFilterJoinOperator(filterRule.joinOperator),
+            _isImportant: false,
+            orderOfExecution: index
+          });
+        });
+
+      normalizedCategorizeRules
+        .filter(categorizeRule =>
+          isConditionComplete(categorizeRule)
+          && String(categorizeRule.category || '').trim()
+        )
+        .forEach((categorizeRule, index) => {
+          rulePayloads.push({
+            applyForTabs: [newTab._id],
+            rule: buildRuleWithConditions(
+              'categorize',
+              categorizeRule,
+              categorizeRule.category,
+              normalizeRuleList(categorizeRule.conditions)
+            ),
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: index
+          });
+        });
+
+      rulePayloads.push({
+        applyForTabs: [newTab._id],
+        rule: ['sort', normalizedSortKey, normalizedSortDirection, '', ''],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 0
+      });
+
+      rulePayloads.push({
+        applyForTabs: [newTab._id],
+        rule: ['groupBy', normalizedGroupByValue, '', '', ''],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 0
+      });
+
+      let failedRuleCount = 0;
+      for (const rulePayload of rulePayloads) {
+        try {
+          const createdRule = await rulesAPI.createRule(rulePayload);
+          if (createdRule) {
+            state.allUserRules.push(createdRule);
+            continue;
+          }
+          failedRuleCount += 1;
+        } catch (error) {
+          failedRuleCount += 1;
+          console.error('Error creating tab wizard rule:', error);
+        }
+      }
+
+      await processAllTabsForSelectedGroup();
+      const newReactiveTab = resolveReactiveTabById(newTab._id);
+      if (newReactiveTab) {
+        await selectTab(newReactiveTab);
+      }
+
+      if (failedRuleCount > 0) {
+        state.blueBar.message = `Tab created. ${failedRuleCount} rule${failedRuleCount === 1 ? '' : 's'} failed to save.`;
+      } else {
+        state.blueBar.message = 'Tab saved';
+      }
+
+      return newReactiveTab || newTab;
+    } catch (error) {
+      console.error('Error creating tab from wizard:', error);
+      state.blueBar.message = 'Error creating tab';
+      return null;
+    } finally {
+      setTimeout(() => {
+        state.blueBar.loading = false;
+        state.blueBar.message = '';
+      }, 1200);
+    }
   }
 
   async function ensureDefaultTabsForTabView() {
@@ -286,6 +594,7 @@ export function useTabs() {
     selectTab,
     updateTabSort,
     createNewTab,
+    createTabWithWizardConfig,
     ensureDefaultTabsForTabView,
     toggleTabForGroup,
     updateTab

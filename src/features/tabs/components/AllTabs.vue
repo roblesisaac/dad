@@ -113,6 +113,14 @@
         </template>
       </button>
     </div>
+
+    <TabCreationWizardModal
+      v-if="isDashboardVariant"
+      :is-open="showCreateWizard"
+      :is-saving="isCreatingFromWizard"
+      @close="closeCreateWizard"
+      @save="handleWizardSave"
+    />
   </div>
 </template>
 
@@ -123,6 +131,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import AllTabRow from './AllTabRow.vue';
 import { useTabs } from '../composables/useTabs';
 import { useDraggable } from '@/shared/composables/useDraggable';
+import TabCreationWizardModal from './TabCreationWizardModal.vue';
 import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
@@ -148,11 +157,13 @@ const emit = defineEmits(['tab-selected']);
 
 const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
-const { createNewTab } = useTabs();
+const { createNewTab, createTabWithWizardConfig } = useTabs();
 const showDisabledTabs = ref(false);
 const longPressReorderTabId = ref('');
 const reorderResetToken = ref(0);
 const dashboardTabs = ref([]);
+const showCreateWizard = ref(false);
+const isCreatingFromWizard = ref(false);
 const isDashboardVariant = computed(() => props.variant === 'dashboard');
 const isHeaderRearrangeActive = computed(() => isDashboardVariant.value && props.rearrangeActive);
 const shouldUseDraggable = computed(() => {
@@ -226,7 +237,37 @@ function toggleDisabledSection() {
 }
 
 function handleCreateNew() {
+  if (isDashboardVariant.value) {
+    showCreateWizard.value = true;
+    return;
+  }
+
   createNewTab();
+}
+
+function closeCreateWizard() {
+  if (isCreatingFromWizard.value) {
+    return;
+  }
+
+  showCreateWizard.value = false;
+}
+
+async function handleWizardSave(config) {
+  if (isCreatingFromWizard.value) {
+    return;
+  }
+
+  isCreatingFromWizard.value = true;
+  try {
+    const createdTab = await createTabWithWizardConfig(config);
+    if (createdTab) {
+      showCreateWizard.value = false;
+      emit('tab-selected', createdTab);
+    }
+  } finally {
+    isCreatingFromWizard.value = false;
+  }
 }
 
 function handleTabSelected(tab) {

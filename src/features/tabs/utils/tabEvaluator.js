@@ -1,4 +1,6 @@
 const DEFAULT_MONTHS = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
+export const NO_GROUPING_RULE_VALUE = 'none';
+export const NO_GROUPING_CATEGORY_NAME = 'all transactions';
 
 function defaultGetDayOfWeekPST(dateString) {
   const date = new Date(`${dateString}T00:00:00`);
@@ -517,6 +519,7 @@ function groupFiltersByOr(filters) {
 
 function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {
   const groupByMethods = {
+    [NO_GROUPING_RULE_VALUE]: () => NO_GROUPING_CATEGORY_NAME,
     category: (item) => item.personal_finance_category?.primary || 'misc',
     year: (item) => {
       const [year] = String(item.authorized_date || item.date || '').split('-');
@@ -574,7 +577,8 @@ export function evaluateTabData({
   if (!tab || !Array.isArray(transactions) || !transactions.length) {
     return {
       tabTotal: 0,
-      categorizedItems: []
+      categorizedItems: [],
+      groupByMode: 'category'
     };
   }
 
@@ -627,6 +631,7 @@ export function evaluateTabData({
 
   return {
     tabTotal,
-    categorizedItems
+    categorizedItems,
+    groupByMode: propToGroupBy || 'category'
   };
 }

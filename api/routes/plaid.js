@@ -3,6 +3,14 @@ import itemController from '../controllers/plaid/itemController.js';
 import transactionController from '../controllers/plaid/transactionController.js';
 import Protect from '../middlewares/protect';
 
+function disableConditionalCaching(req, res, next) {
+  // Sync routes should always return a fresh payload and never short-circuit to 304.
+  delete req.headers['if-none-match'];
+  delete req.headers['if-modified-since'];
+  res.set('Cache-Control', 'no-store');
+  next();
+}
+
 export default function(api, baseUrl) {
   const protect = Protect.route(api, 'plaiditems', baseUrl);
   const member = protect('member');
@@ -20,7 +28,11 @@ export default function(api, baseUrl) {
   member.get('/plaid/download/all-data', itemController.downloadAllData);
   member.post('/plaid/delete/data', itemController.deleteSelectedData);
   member.get('/plaid/sync/items', itemController.syncItems);
-  member.get('/plaid/sync/accounts/and/groups', itemController.syncAccountsAndGroups);
+  member.get(
+    '/plaid/sync/accounts/and/groups',
+    disableConditionalCaching,
+    itemController.syncAccountsAndGroups
+  );
 
   // Transactions
   member.get('/plaid/transactions/search', transactionController.searchTransactions);
