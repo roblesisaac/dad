@@ -159,6 +159,7 @@ describe('useTheme', () => {
     themeModule.initTheme();
 
     expect(themeModule.resolvedTheme.value).toBe('light');
+    expect(themeModule.themePreference.value).toBe('system');
     expect(globalThis.document.documentElement.dataset.theme).toBe('light');
     expect(themeModule.isNonLightTheme.value).toBe(false);
   });
@@ -170,6 +171,7 @@ describe('useTheme', () => {
     themeModule.initTheme();
 
     expect(themeModule.resolvedTheme.value).toBe('dark');
+    expect(themeModule.themePreference.value).toBe('system');
     expect(globalThis.document.documentElement.dataset.theme).toBe('dark');
     expect(themeModule.isNonLightTheme.value).toBe(true);
   });
@@ -181,6 +183,7 @@ describe('useTheme', () => {
     themeModule.initTheme();
 
     expect(themeModule.resolvedTheme.value).toBe('dark');
+    expect(themeModule.themePreference.value).toBe('dark');
     expect(globalThis.document.documentElement.dataset.theme).toBe('dark');
   });
 
@@ -224,6 +227,24 @@ describe('useTheme', () => {
     themeModule.setTheme('light');
     env.emitSystemThemeChange(true);
     expect(themeModule.resolvedTheme.value).toBe('light');
+  });
+
+  test('setTheme(system) clears preference and follows system changes again', async () => {
+    const env = createThemeTestEnv({ storedTheme: 'dark', prefersDark: false });
+    const themeModule = await import('./useTheme.js');
+
+    themeModule.initTheme();
+    expect(themeModule.resolvedTheme.value).toBe('dark');
+    expect(themeModule.themePreference.value).toBe('dark');
+
+    themeModule.setTheme('system');
+    expect(themeModule.resolvedTheme.value).toBe('light');
+    expect(themeModule.themePreference.value).toBe('system');
+    expect(env.localStorage.removeItem).toHaveBeenCalledWith(THEME_STORAGE_KEY);
+    expect(env.storage.get(THEME_STORAGE_KEY)).toBeUndefined();
+
+    env.emitSystemThemeChange(true);
+    expect(themeModule.resolvedTheme.value).toBe('dark');
   });
 
   test('updates browser theme meta colors when theme changes', async () => {

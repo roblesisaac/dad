@@ -341,4 +341,89 @@ describe('tabEvaluator', () => {
 
     expect(leisureIds).toEqual(['entertainment-expense', 'travel-expense']);
   });
+
+  test('sort rules support explicit asc/desc directions', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'alpha-id',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'alpha',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'charlie-id',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'charlie',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'bravo-id',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          name: 'bravo',
+          personal_finance_category: { primary: 'TRAVEL' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 's-name-desc',
+          orderOfExecution: 0,
+          rule: ['sort', 'name', 'desc', '', '']
+        }
+      ]
+    });
+
+    const sortedTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id));
+
+    expect(sortedTransactionIds).toEqual(['charlie-id', 'bravo-id', 'alpha-id']);
+  });
+
+  test('sort rules keep legacy -property descending format working', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'oldest',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'middle',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'newest',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'TRAVEL' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 's-date-legacy',
+          orderOfExecution: 0,
+          rule: ['sort', '-date', '', '', '']
+        }
+      ]
+    });
+
+    const sortedTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id));
+
+    expect(sortedTransactionIds).toEqual(['newest', 'middle', 'oldest']);
+  });
 });

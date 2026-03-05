@@ -156,10 +156,13 @@ const ruleSummaryParts = computed(() => {
   const parts = [];
 
   if (type === 'sort') {
+    const sortPropertyName = normalizeSortPropertyName(r[1]);
+    const sortDirection = getSortDirection(r);
+
     parts.push({ text: 'sort by' });
-    parts.push({ text: r[1] || 'property', highlight: true });
+    parts.push({ text: sortPropertyName || 'property', highlight: true });
     parts.push({ text: '(' });
-    parts.push({ text: r[2] === 'desc' ? 'high to low' : 'low to high', highlight: true });
+    parts.push({ text: sortDirection === 'desc' ? 'high to low' : 'low to high', highlight: true });
     parts.push({ text: ')' });
   } 
   
@@ -225,6 +228,21 @@ function getOperatorDisplay(operator) {
     'endsWith': 'ends with'
   };
   return operators[operator] || operator;
+}
+
+function normalizeSortPropertyName(rawSortPropertyName) {
+  return String(rawSortPropertyName || '').trim().replace(/^-/, '');
+}
+
+function getSortDirection(ruleArray = []) {
+  const rawSortDirection = String(ruleArray[2] || '').toLowerCase();
+  if (rawSortDirection === 'asc' || rawSortDirection === 'desc') {
+    return rawSortDirection;
+  }
+
+  return String(ruleArray[1] || '').trim().startsWith('-')
+    ? 'desc'
+    : 'asc';
 }
 
 function normalizeCombinator(combinator) {

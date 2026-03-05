@@ -78,15 +78,17 @@ const props = defineProps({
 // Format property names for better readability
 function formatPropName(propName) {
   if (!propName) return '(not set)';
+
+  const normalizedPropName = String(propName).replace(/^-/, '');
   
   // Handle special cases
-  if (propName === 'amount') return 'amount';
-  if (propName === 'date') return 'date';
-  if (propName === 'name') return 'name';
-  if (propName === 'category') return 'category';
+  if (normalizedPropName === 'amount') return 'amount';
+  if (normalizedPropName === 'date') return 'date';
+  if (normalizedPropName === 'name') return 'name';
+  if (normalizedPropName === 'category') return 'category';
   
   // General case: convert camelCase to words
-  return propName
+  return normalizedPropName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase());
 }
@@ -105,6 +107,8 @@ function formatMethodName(methodName, propName = '') {
   
   // Handle special cases
   const methodMap = {
+    'asc': 'ascending',
+    'desc': 'descending',
     'is': 'is',
     'contains': 'contains',
     'startsWith': 'starts with',

@@ -61,6 +61,27 @@ export function useTabProcessing() {
     }
   }
 
+  function normalizeSortPropertyName(itemPropName) {
+    return String(itemPropName || '').trim().replace(/^-/, '');
+  }
+
+  function buildSortPropertyName(itemPropName, sortDirection) {
+    const rawSortPropertyName = String(itemPropName || '').trim();
+    const normalizedSortPropertyName = normalizeSortPropertyName(rawSortPropertyName);
+    const normalizedSortDirection = String(sortDirection || '').toLowerCase();
+
+    if (!normalizedSortPropertyName) {
+      return '';
+    }
+
+    const sortDescending = normalizedSortDirection === 'desc'
+      || (normalizedSortDirection !== 'asc' && rawSortPropertyName.startsWith('-'));
+
+    return sortDescending
+      ? `-${normalizedSortPropertyName}`
+      : normalizedSortPropertyName;
+  }
+
   function extractRules(tabRules) {
     const sorters = [], categorizers = [], filters = [], propToGroupBy = [];
 
@@ -85,7 +106,10 @@ export function useTabProcessing() {
       }
 
       if (ruleType === 'sort') {
-        sorters.push({ itemPropName, orderOfExecution });
+        sorters.push({
+          itemPropName: buildSortPropertyName(itemPropName, ruleMethodName),
+          orderOfExecution
+        });
       }
 
       if (ruleType === 'categorize') {
@@ -182,8 +206,12 @@ export function useTabProcessing() {
   }
 
   function getItemValue(item, propName) {
+    if (propName === 'date') {
+      return item.authorized_date || item.date;
+    }
+
     return propName === 'category'
-      ? item.personal_finance_category.primary
+      ? item.personal_finance_category?.primary
       : item[propName];
   }
 
@@ -218,10 +246,29 @@ export function useTabProcessing() {
         const propName = isInReverse ? itemPropName.slice(1) : itemPropName;
 
         arrayCopy.sort((a, b) => {
-          const valueA = propName === 'date' ? new Date(a[propName]) : a[propName];
-          const valueB = propName === 'date' ? new Date(b[propName]) : b[propName];
+          const valueA = getItemValue(a, propName);
+          const valueB = getItemValue(b, propName);
+          const numberA = Number(valueA);
+          const numberB = Number(valueB);
 
-          return isInReverse ? valueB - valueA : valueA - valueB;
+          let sortResult = 0;
+          if (Number.isFinite(numberA) && Number.isFinite(numberB)) {
+            sortResult = numberA - numberB;
+          } else {
+            const dateA = new Date(valueA);
+            const dateB = new Date(valueB);
+            const dateATimestamp = dateA.getTime();
+            const dateBTimestamp = dateB.getTime();
+
+            if (!Number.isNaN(dateATimestamp) && !Number.isNaN(dateBTimestamp)) {
+              sortResult = dateATimestamp - dateBTimestamp;
+            } else {
+              sortResult = String(valueA ?? '').toLowerCase()
+                .localeCompare(String(valueB ?? '').toLowerCase());
+            }
+          }
+
+          return isInReverse ? -sortResult : sortResult;
         });
       }
 

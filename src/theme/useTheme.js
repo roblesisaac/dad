@@ -7,6 +7,7 @@ import {
 } from './themes.js';
 
 const activeTheme = ref('light');
+const themePreference = ref('system');
 const hasStoredPreference = ref(false);
 const resolvedTheme = computed(() => activeTheme.value);
 const isNonLightTheme = computed(() => resolvedTheme.value !== 'light');
@@ -199,8 +200,17 @@ function setupSystemThemeListener() {
 }
 
 export function setTheme(themeName) {
+  if (themeName === 'system') {
+    hasStoredPreference.value = false;
+    themePreference.value = 'system';
+    clearStoredTheme();
+    applyTheme(getSystemTheme());
+    return;
+  }
+
   const nextTheme = isThemeName(themeName) ? themeName : 'light';
   hasStoredPreference.value = true;
+  themePreference.value = nextTheme;
   applyTheme(nextTheme);
   writeStoredTheme(nextTheme);
 }
@@ -222,9 +232,11 @@ export function initTheme() {
   const storedTheme = readStoredTheme();
   if (isThemeName(storedTheme)) {
     hasStoredPreference.value = true;
+    themePreference.value = storedTheme;
     applyTheme(storedTheme);
   } else {
     hasStoredPreference.value = false;
+    themePreference.value = 'system';
     clearStoredTheme();
     applyTheme(getSystemTheme());
   }
@@ -235,6 +247,7 @@ export function initTheme() {
 export function useTheme() {
   return {
     resolvedTheme,
+    themePreference,
     isNonLightTheme,
     cycleTheme,
     setTheme,
@@ -242,4 +255,4 @@ export function useTheme() {
   };
 }
 
-export { resolvedTheme, isNonLightTheme };
+export { resolvedTheme, themePreference, isNonLightTheme };

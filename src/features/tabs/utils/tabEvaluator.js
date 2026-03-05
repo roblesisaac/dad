@@ -309,6 +309,27 @@ function normalizeConditionCombinator(combinator) {
     : 'and';
 }
 
+function normalizeSortPropertyName(itemPropName) {
+  return String(itemPropName || '').trim().replace(/^-/, '');
+}
+
+function buildSortPropertyName(itemPropName, sortDirection) {
+  const rawSortPropertyName = String(itemPropName || '').trim();
+  const normalizedSortPropertyName = normalizeSortPropertyName(rawSortPropertyName);
+  const normalizedSortDirection = String(sortDirection || '').toLowerCase();
+
+  if (!normalizedSortPropertyName) {
+    return '';
+  }
+
+  const sortDescending = normalizedSortDirection === 'desc'
+    || (normalizedSortDirection !== 'asc' && rawSortPropertyName.startsWith('-'));
+
+  return sortDescending
+    ? `-${normalizedSortPropertyName}`
+    : normalizedSortPropertyName;
+}
+
 function extractRules(tabRules, ruleMethods) {
   const sorters = [];
   const categorizers = [];
@@ -317,7 +338,7 @@ function extractRules(tabRules, ruleMethods) {
 
   for (const ruleConfig of tabRules) {
     const rule = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
-    const [ruleType, itemPropName, , , categorizeAs] = rule;
+    const [ruleType, itemPropName, ruleMethodName, , categorizeAs] = rule;
 
     const ruleConditions = extractRuleConditions(rule);
     const ruleMethod = buildRuleMethod(ruleConditions, ruleMethods);
@@ -329,7 +350,10 @@ function extractRules(tabRules, ruleMethods) {
     }
 
     if (ruleType === 'sort') {
-      sorters.push({ itemPropName, orderOfExecution });
+      sorters.push({
+        itemPropName: buildSortPropertyName(itemPropName, ruleMethodName),
+        orderOfExecution
+      });
     }
 
     if (ruleType === 'categorize') {
@@ -365,6 +389,22 @@ function normalizeFilterJoinOperator(filterJoinOperator) {
     : 'and';
 }
 
+function compareSortValues(valueA, valueB) {
+  const aDateStamp = toUtcDateStamp(valueA);
+  const bDateStamp = toUtcDateStamp(valueB);
+  if (aDateStamp !== null && bDateStamp !== null) {
+    return aDateStamp - bDateStamp;
+  }
+
+  const aNumber = toFiniteNumber(valueA);
+  const bNumber = toFiniteNumber(valueB);
+  if (aNumber !== null && bNumber !== null) {
+    return aNumber - bNumber;
+  }
+
+  return String(valueA ?? '').toLowerCase().localeCompare(String(valueB ?? '').toLowerCase());
+}
+
 function buildSortMethod(sorters) {
   return (arrayToSort) => {
     const arrayCopy = arrayToSort.map(item => JSON.parse(JSON.stringify(item)));
@@ -382,10 +422,11 @@ function buildSortMethod(sorters) {
       const propName = isInReverse ? itemPropName.slice(1) : itemPropName;
 
       arrayCopy.sort((a, b) => {
-        const valueA = propName === 'date' ? new Date(a[propName]) : a[propName];
-        const valueB = propName === 'date' ? new Date(b[propName]) : b[propName];
+        const valueA = getItemValue(a, propName);
+        const valueB = getItemValue(b, propName);
+        const sortResult = compareSortValues(valueA, valueB);
 
-        return isInReverse ? valueB - valueA : valueA - valueB;
+        return isInReverse ? -sortResult : sortResult;
       });
     }
 

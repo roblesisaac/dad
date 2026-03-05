@@ -30,13 +30,13 @@
             <p class="account-modal-label text-[10px] font-black uppercase tracking-[0.2em]">
               Theme
             </p>
-            <div class="mt-2 grid grid-cols-2 gap-2">
+            <div class="mt-2 grid grid-cols-3 gap-2">
               <button
                 v-for="themeOption in accountThemeOptions"
                 :key="themeOption.value"
                 type="button"
                 class="account-theme-button rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
-                :class="{ 'account-theme-button-active': resolvedTheme === themeOption.value }"
+                :class="{ 'account-theme-button-active': themePreference === themeOption.value }"
                 @click="setTheme(themeOption.value)"
               >
                 {{ themeOption.label }}
@@ -70,10 +70,11 @@ defineProps({
 });
 
 const emit = defineEmits(['close']);
-const { resolvedTheme, setTheme } = useTheme();
+const { themePreference, setTheme } = useTheme();
 const { logoutUser } = useAuth();
 
 const accountThemeOptions = [
+  { value: 'system', label: 'System' },
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' }
 ];

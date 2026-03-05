@@ -68,7 +68,7 @@
                 type="button"
                 @click.stop="openTabEditor"
               >
-                Edit Tab Rules
+                Edit Tab
               </button>
 
               <button
@@ -112,7 +112,7 @@
           v-if="isEnabled"
           @click.stop="editTab" 
           class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-50 transition-colors"
-          title="Edit tab rules"
+          title="Edit tab"
         >
           <Settings size="16" />
         </button>

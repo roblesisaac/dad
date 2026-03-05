@@ -53,55 +53,110 @@
 
               <!-- Condition Builder -->
               <div class="space-y-4">
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">When Transaction Matches</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  {{
+                    ruleData.rule[0] === 'groupBy'
+                      ? 'Group Transactions By'
+                      : ruleData.rule[0] === 'sort'
+                        ? 'Sort Transactions By'
+                        : 'When Transaction Matches'
+                  }}
+                </label>
                 
                 <div class="bg-gray-50/50 rounded-2xl border-2 border-gray-100 p-6">
-                  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <select 
-                      v-model="ruleData.rule[1]" 
+                  <template v-if="ruleData.rule[0] === 'groupBy'">
+                    <select
+                      v-model="ruleData.rule[1]"
                       class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
                     >
-                      <option value="" disabled selected>Select property...</option>
-                      <option value="amount">Amount</option>
-                      <option value="date">Date</option>
-                      <option value="name">Name</option>
-                      <option value="category">Category</option>
-                    </select>
-                    
-                    <select 
-                      v-if="ruleData.rule[0] !== 'groupBy'"
-                      v-model="ruleData.rule[2]" 
-                      class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
-                    >
-                      <option value="" disabled selected>Select method...</option>
+                      <option value="" disabled>Select group option...</option>
                       <option
-                        v-for="methodOption in getMethodOptions(ruleData.rule[0], ruleData.rule[1])"
-                        :key="`main-method-${methodOption.value}`"
-                        :value="methodOption.value"
+                        v-for="groupByOption in GROUP_BY_OPTIONS"
+                        :key="`group-by-option-${groupByOption.value}`"
+                        :value="groupByOption.value"
                       >
-                        {{ methodOption.label }}
+                        {{ groupByOption.label }}
                       </option>
                     </select>
-                    
-                    <input
-                      v-if="useDateInputForPrimaryCondition"
-                      v-model="ruleData.rule[3]"
-                      type="date"
-                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
-                      :class="{'sm:col-span-2': ruleData.rule[0] === 'groupBy'}"
-                    />
+                  </template>
 
-                    <textarea
-                      v-else
-                      v-model="ruleData.rule[3]" 
-                      ref="criterionInput"
-                      class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors resize-none overflow-hidden"
-                      :class="{'sm:col-span-2': ruleData.rule[0] === 'groupBy'}"
-                      :placeholder="getCriterionPlaceholder()"
-                      rows="1"
-                      @input="adjustHeight"
-                    ></textarea>
-                  </div>
+                  <template v-else-if="ruleData.rule[0] === 'sort'">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <select
+                        v-model="ruleData.rule[1]"
+                        class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                      >
+                        <option value="" disabled>Select sort key...</option>
+                        <option
+                          v-for="sortPropertyOption in SORT_PROPERTY_OPTIONS"
+                          :key="`sort-property-option-${sortPropertyOption.value}`"
+                          :value="sortPropertyOption.value"
+                        >
+                          {{ sortPropertyOption.label }}
+                        </option>
+                      </select>
+
+                      <select
+                        v-model="ruleData.rule[2]"
+                        class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                      >
+                        <option value="" disabled>Select direction...</option>
+                        <option
+                          v-for="sortDirectionOption in SORT_DIRECTION_OPTIONS"
+                          :key="`sort-direction-option-${sortDirectionOption.value}`"
+                          :value="sortDirectionOption.value"
+                        >
+                          {{ sortDirectionOption.label }}
+                        </option>
+                      </select>
+                    </div>
+                  </template>
+
+                  <template v-else>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <select 
+                        v-model="ruleData.rule[1]" 
+                        class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                      >
+                        <option value="" disabled selected>Select property...</option>
+                        <option value="amount">Amount</option>
+                        <option value="date">Date</option>
+                        <option value="name">Name</option>
+                        <option value="category">Category</option>
+                      </select>
+                      
+                      <select
+                        v-model="ruleData.rule[2]" 
+                        class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                      >
+                        <option value="" disabled selected>Select method...</option>
+                        <option
+                          v-for="methodOption in getMethodOptions(ruleData.rule[0], ruleData.rule[1])"
+                          :key="`main-method-${methodOption.value}`"
+                          :value="methodOption.value"
+                        >
+                          {{ methodOption.label }}
+                        </option>
+                      </select>
+                      
+                      <input
+                        v-if="useDateInputForPrimaryCondition"
+                        v-model="ruleData.rule[3]"
+                        type="date"
+                        class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                      />
+
+                      <textarea
+                        v-else
+                        v-model="ruleData.rule[3]" 
+                        ref="criterionInput"
+                        class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors resize-none overflow-hidden"
+                        :placeholder="getCriterionPlaceholder()"
+                        rows="1"
+                        @input="adjustHeight"
+                      ></textarea>
+                    </div>
+                  </template>
 
                   <!-- AND condition -->
                   <div v-if="supportsAndCondition" class="mt-6 pt-6 border-t-2 border-gray-100 border-dashed">
@@ -330,6 +385,28 @@ const METHOD_OPTIONS = {
   ]
 };
 
+const SORT_PROPERTY_OPTIONS = [
+  { value: 'name', label: 'Name' },
+  { value: 'date', label: 'Date' },
+  { value: 'category', label: 'Category' },
+  { value: 'amount', label: 'Amount' }
+];
+
+const SORT_DIRECTION_OPTIONS = [
+  { value: 'asc', label: 'Ascending' },
+  { value: 'desc', label: 'Descending' }
+];
+
+const GROUP_BY_OPTIONS = [
+  { value: 'category', label: 'Category' },
+  { value: 'year', label: 'Year' },
+  { value: 'month', label: 'Month' },
+  { value: 'year_month', label: 'Year + Month' },
+  { value: 'day', label: 'Day' },
+  { value: 'date', label: 'Date' },
+  { value: 'weekday', label: 'Weekday' }
+];
+
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
 
@@ -394,11 +471,55 @@ function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
+function normalizeSortPropertyName(rawSortPropertyName) {
+  return String(rawSortPropertyName || '').trim().replace(/^-/, '');
+}
+
+function normalizeSortDirection(sortDirection, rawSortPropertyName = '') {
+  const normalizedSortDirection = String(sortDirection || '').toLowerCase();
+  if (normalizedSortDirection === 'asc' || normalizedSortDirection === 'desc') {
+    return normalizedSortDirection;
+  }
+
+  return String(rawSortPropertyName || '').trim().startsWith('-')
+    ? 'desc'
+    : 'asc';
+}
+
+function isSortPropertyAllowed(sortPropertyName) {
+  return SORT_PROPERTY_OPTIONS.some(option => option.value === sortPropertyName);
+}
+
+function isSortDirectionAllowed(sortDirection) {
+  return SORT_DIRECTION_OPTIONS.some(option => option.value === sortDirection);
+}
+
+function normalizeSortRuleForUi() {
+  if (ruleData.value.rule[0] !== 'sort') {
+    return;
+  }
+
+  const normalizedSortPropertyName = normalizeSortPropertyName(ruleData.value.rule[1]);
+  const normalizedSortDirection = normalizeSortDirection(ruleData.value.rule[2], ruleData.value.rule[1]);
+
+  ruleData.value.rule[1] = isSortPropertyAllowed(normalizedSortPropertyName)
+    ? normalizedSortPropertyName
+    : '';
+
+  ruleData.value.rule[2] = isSortDirectionAllowed(normalizedSortDirection)
+    ? normalizedSortDirection
+    : 'asc';
+}
+
 function updateRuleType() {
   ruleData.value.rule[1] = '';
   ruleData.value.rule[2] = '';
   ruleData.value.rule[3] = '';
   clearAndCondition();
+
+  if (ruleData.value.rule[0] === 'sort') {
+    ruleData.value.rule[2] = 'asc';
+  }
   
   if (ruleData.value.rule[0] === 'categorize') {
     ruleData.value.rule[4] = '';
@@ -463,8 +584,12 @@ function getMethodOptions(ruleType, propName) {
   return options;
 }
 
+function isGroupByOptionAllowed(groupByOption) {
+  return GROUP_BY_OPTIONS.some(option => option.value === groupByOption);
+}
+
 function isMethodAllowed(ruleType, propName, methodName) {
-  if (!methodName || ruleType === 'groupBy') {
+  if (!methodName || ['groupBy', 'sort'].includes(ruleType)) {
     return false;
   }
 
@@ -506,11 +631,21 @@ function normalizeDateMethodsForRuleType() {
 }
 
 watch(
-  () => [ruleData.value.rule[0], ruleData.value.rule[1]],
+  () => [ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2]],
   () => {
+    if (ruleData.value.rule[0] === 'groupBy' && !isGroupByOptionAllowed(ruleData.value.rule[1])) {
+      ruleData.value.rule[1] = '';
+    }
+
+    if (ruleData.value.rule[0] === 'sort') {
+      normalizeSortRuleForUi();
+      return;
+    }
+
     normalizeDateMethodsForRuleType();
 
-    if (!isMethodAllowed(ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2])) {
+    if (['filter', 'categorize'].includes(ruleData.value.rule[0])
+      && !isMethodAllowed(ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2])) {
       ruleData.value.rule[2] = '';
     }
   }
@@ -536,10 +671,22 @@ watch(
 );
 
 normalizeDateMethodsForRuleType();
+normalizeSortRuleForUi();
 
 function saveRule() {
   if (!validateRule()) {
     return;
+  }
+
+  if (ruleData.value.rule[0] === 'groupBy') {
+    ruleData.value.rule[2] = '';
+    ruleData.value.rule[3] = '';
+  }
+
+  if (ruleData.value.rule[0] === 'sort') {
+    ruleData.value.rule[1] = normalizeSortPropertyName(ruleData.value.rule[1]);
+    ruleData.value.rule[2] = normalizeSortDirection(ruleData.value.rule[2], ruleData.value.rule[1]);
+    ruleData.value.rule[3] = '';
   }
 
   normalizeAndCondition();
@@ -566,8 +713,25 @@ function validateRule() {
     alert('Please provide a category name');
     return false;
   }
+
+  if (rule[0] === 'groupBy' && !isGroupByOptionAllowed(rule[1])) {
+    alert('Please select a valid group option');
+    return false;
+  }
+
+  if (rule[0] === 'sort') {
+    if (!isSortPropertyAllowed(rule[1])) {
+      alert('Please select a valid sort key');
+      return false;
+    }
+
+    if (!isSortDirectionAllowed(rule[2])) {
+      alert('Please select a valid sort direction');
+      return false;
+    }
+  }
   
-  if (rule[0] !== 'groupBy' && !isMethodAllowed(rule[0], rule[1], rule[2])) {
+  if (['filter', 'categorize'].includes(rule[0]) && !isMethodAllowed(rule[0], rule[1], rule[2])) {
     alert('Please select a valid comparison method');
     return false;
   }
