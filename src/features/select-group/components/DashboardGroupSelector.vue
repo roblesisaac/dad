@@ -1688,12 +1688,14 @@ async function handleBanksDataChanged() {
   border-radius: 0.75rem;
   padding: 0.5rem;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 150ms ease, background-color 150ms ease, color 150ms ease;
 }
 
 .row-menu-trigger:focus-visible,
 .row-menu-trigger-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .row-menu-trigger:hover {
@@ -1704,6 +1706,7 @@ async function handleBanksDataChanged() {
 @media (hover: hover) and (pointer: fine) {
   .group:hover .row-menu-trigger {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 

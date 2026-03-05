@@ -42,7 +42,7 @@
           >
             <button
               class="tab-row-menu-trigger p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none"
-              :class="{ 'opacity-100': showActionsMenu || showLongPressActions }"
+              :class="{ 'tab-row-menu-trigger-visible': showActionsMenu || showLongPressActions }"
               type="button"
               aria-label="Tab actions"
               @click.stop="toggleActionsMenu"
@@ -446,15 +446,19 @@ onBeforeUnmount(() => {
 <style scoped>
 .tab-row-menu-trigger {
   opacity: 0;
+  pointer-events: none;
 }
 
-.tab-row-menu-trigger:focus-visible {
+.tab-row-menu-trigger:focus-visible,
+.tab-row-menu-trigger-visible {
   opacity: 1;
+  pointer-events: auto;
 }
 
 @media (hover: hover) and (pointer: fine) {
   .group:hover .tab-row-menu-trigger {
     opacity: 1;
+    pointer-events: auto;
   }
 }
 </style>
