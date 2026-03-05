@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col transition-all pb-12 sm:pb-20 bg-transparent">
     <div class="fixed inset-x-0 top-0 z-30">
-      <div class="max-w-5xl mx-auto w-full px-4 sm:px-6">
-        <div class="bg-white/90 backdrop-blur-md flex items-center justify-between py-4 transition-all">
+      <div class="max-w-5xl mx-auto w-full sm:px-6">
+        <div class="backdrop-blur-md px-4 flex items-center justify-between py-4 transition-all">
           <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <button
               @click="emit('navigate-group')"
@@ -71,7 +71,7 @@
             <button
               v-if="showRearrangeAction"
               type="button"
-              class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] transition-colors focus:outline-none"
+              class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none"
               @click="emit('toggle-rearrange')"
             >
               {{ isRearrangeActive ? 'Done' : 'Rearrange' }}
@@ -80,7 +80,7 @@
             <button
               v-else-if="showEditTabAction"
               type="button"
-              class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] transition-colors focus:outline-none"
+              class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none"
               @click="emit('edit-tab')"
             >
               Edit Tab
@@ -452,7 +452,15 @@ onBeforeUnmount(() => {
   background-color: inherit;
 }
 
+.header-action-button {
+  color: #000;
+}
+
 [data-theme]:not([data-theme='light']) .header-info-trigger {
   background-color: var(--theme-bg);
+}
+
+[data-theme]:not([data-theme='light']) .header-action-button {
+  color: #fff;
 }
 </style>

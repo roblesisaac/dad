@@ -426,4 +426,39 @@ describe('tabEvaluator', () => {
 
     expect(sortedTransactionIds).toEqual(['newest', 'middle', 'oldest']);
   });
+
+  test('legacy contains rules continue to behave like includes', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 't-travel',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 't-groceries',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'GROCERIES' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'f-legacy-contains',
+          orderOfExecution: 0,
+          rule: ['filter', 'category', 'contains', 'trav', '']
+        }
+      ]
+    });
+
+    const visibleTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(visibleTransactionIds).toEqual(['t-travel']);
+  });
 });

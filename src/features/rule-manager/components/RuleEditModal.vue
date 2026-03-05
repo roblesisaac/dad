@@ -146,6 +146,15 @@
                         class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
                       />
 
+                      <input
+                        v-else-if="useNumberInputForPrimaryCondition"
+                        v-model="ruleData.rule[3]"
+                        type="number"
+                        step="any"
+                        class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
+                        :placeholder="getCriterionPlaceholder()"
+                      />
+
                       <textarea
                         v-else
                         v-model="ruleData.rule[3]" 
@@ -241,7 +250,7 @@
 
                           <input
                             v-model="condition.value"
-                            :type="useDateInputForCondition(condition.property) ? 'date' : 'text'"
+                            :type="getConditionValueInputType(condition.property)"
                             class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
                             :placeholder="getCriterionPlaceholderForProperty(condition.property)"
                           />
@@ -372,7 +381,6 @@ const METHOD_OPTIONS = {
     { value: 'is not', label: 'is not' }
   ],
   text: [
-    { value: 'contains', label: 'contains' },
     { value: 'startsWith', label: 'starts with' },
     { value: 'endsWith', label: 'ends with' },
     { value: 'includes', label: 'includes' },
@@ -465,6 +473,10 @@ const hasAndConditions = computed(() => andConditions.value.length > 0);
 
 const useDateInputForPrimaryCondition = computed(() =>
   useDateInputForCondition(ruleData.value.rule[1])
+);
+
+const useNumberInputForPrimaryCondition = computed(() =>
+  useNumberInputForCondition(ruleData.value.rule[1])
 );
 
 function capitalizeFirstLetter(string) {
@@ -564,6 +576,22 @@ function useDateInputForCondition(propName) {
   return ['filter', 'categorize'].includes(ruleData.value.rule[0]) && isDateProperty(propName);
 }
 
+function useNumberInputForCondition(propName) {
+  return ['filter', 'categorize'].includes(ruleData.value.rule[0]) && isNumericProperty(propName);
+}
+
+function getConditionValueInputType(propName) {
+  if (useDateInputForCondition(propName)) {
+    return 'date';
+  }
+
+  if (useNumberInputForCondition(propName)) {
+    return 'number';
+  }
+
+  return 'text';
+}
+
 function getMethodOptions(ruleType, propName) {
   if (['filter', 'categorize'].includes(ruleType) && isDateProperty(propName)) {
     return METHOD_OPTIONS.dateCondition;
@@ -609,23 +637,40 @@ function normalizeLegacyDateMethod(methodName) {
   return methodName;
 }
 
-function normalizeDateMethodsForRuleType() {
+function normalizeLegacyTextMethod(methodName) {
+  if (methodName === 'contains') {
+    return 'includes';
+  }
+
+  return methodName;
+}
+
+function normalizeLegacyMethodForProperty(propName, methodName) {
+  if (isDateProperty(propName)) {
+    return normalizeLegacyDateMethod(methodName);
+  }
+
+  if (isTextProperty(propName)) {
+    return normalizeLegacyTextMethod(methodName);
+  }
+
+  return methodName;
+}
+
+function normalizeMethodsForRuleType() {
   if (!['filter', 'categorize'].includes(ruleData.value.rule[0])) {
     return;
   }
 
-  if (isDateProperty(ruleData.value.rule[1])) {
-    ruleData.value.rule[2] = normalizeLegacyDateMethod(ruleData.value.rule[2]);
-  }
+  ruleData.value.rule[2] = normalizeLegacyMethodForProperty(
+    ruleData.value.rule[1],
+    ruleData.value.rule[2]
+  );
 
   andConditions.value = andConditions.value.map(condition => {
-    if (!isDateProperty(condition.property)) {
-      return condition;
-    }
-
     return {
       ...condition,
-      method: normalizeLegacyDateMethod(condition.method)
+      method: normalizeLegacyMethodForProperty(condition.property, condition.method)
     };
   });
 }
@@ -642,7 +687,7 @@ watch(
       return;
     }
 
-    normalizeDateMethodsForRuleType();
+    normalizeMethodsForRuleType();
 
     if (['filter', 'categorize'].includes(ruleData.value.rule[0])
       && !isMethodAllowed(ruleData.value.rule[0], ruleData.value.rule[1], ruleData.value.rule[2])) {
@@ -655,8 +700,8 @@ watch(
   andConditions,
   () => {
     for (const condition of andConditions.value) {
-      if (['filter', 'categorize'].includes(ruleData.value.rule[0]) && isDateProperty(condition.property)) {
-        const normalizedMethod = normalizeLegacyDateMethod(condition.method);
+      if (['filter', 'categorize'].includes(ruleData.value.rule[0])) {
+        const normalizedMethod = normalizeLegacyMethodForProperty(condition.property, condition.method);
         if (normalizedMethod !== condition.method) {
           condition.method = normalizedMethod;
         }
@@ -670,7 +715,7 @@ watch(
   { deep: true }
 );
 
-normalizeDateMethodsForRuleType();
+normalizeMethodsForRuleType();
 normalizeSortRuleForUi();
 
 function saveRule() {

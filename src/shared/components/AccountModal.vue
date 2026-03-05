@@ -1,66 +1,96 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="isOpen"
-      class="account-modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4"
-      @click.self="closeModal"
-    >
+    <Transition name="modal-fade">
       <div
-        class="account-modal-panel w-full max-w-sm rounded-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Account"
+        v-if="isOpen"
+        class="account-modal-overlay fixed inset-0 z-50 flex items-center justify-center px-4"
+        @click.self="closeModal"
       >
-        <div class="account-modal-header flex items-center justify-between px-4 py-3">
-          <h3 class="account-modal-title text-[10px] font-black uppercase tracking-[0.2em]">
-            Account
-          </h3>
-          <button
-            type="button"
-            class="account-modal-close rounded-full p-1 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
-            aria-label="Close account modal"
-            @click="closeModal"
-          >
-            <X class="h-4 w-4" />
-          </button>
-        </div>
-
-        <div class="space-y-5 px-4 py-4">
-          <div>
-            <p class="account-modal-label text-[10px] font-black uppercase tracking-[0.2em]">
-              Theme
-            </p>
-            <div class="mt-2 grid grid-cols-3 gap-2">
-              <button
-                v-for="themeOption in accountThemeOptions"
-                :key="themeOption.value"
-                type="button"
-                class="account-theme-button rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
-                :class="{ 'account-theme-button-active': themePreference === themeOption.value }"
-                @click="setTheme(themeOption.value)"
-              >
-                {{ themeOption.label }}
-              </button>
-            </div>
+        <div
+          class="account-modal-panel w-full max-w-sm rounded-3xl"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Account"
+        >
+          <div class="account-modal-header flex items-center justify-between px-6 py-5">
+            <h3 class="account-modal-title text-[10px] font-black uppercase tracking-[0.2em]">
+              Account
+            </h3>
+            <button
+              type="button"
+              class="account-modal-close rounded-full p-2 transition-colors focus:outline-none"
+              aria-label="Close account modal"
+              @click="closeModal"
+            >
+              <X class="h-4 w-4" />
+            </button>
           </div>
 
-          <button
-            type="button"
-            class="account-logout-button w-full rounded-xl border px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] transition-colors"
-            @click="handleLogout"
-          >
-            Logout
-          </button>
+          <div class="px-6 py-8">
+            <div class="mb-10">
+              <div class="flex items-center justify-between mb-6">
+                <p class="account-modal-label text-[10px] font-black uppercase tracking-[0.2em]">
+                  Theme
+                </p>
+                <span class="theme-label-badge text-[9px] font-black tracking-[0.16em] uppercase px-3 py-1.5 rounded-lg">
+                  {{ accountThemeOptions.find(t => t.value === themePreference)?.label || 'System' }}
+                </span>
+              </div>
+
+              <div class="flex flex-wrap gap-5">
+                <button
+                  v-for="themeOption in accountThemeOptions"
+                  :key="themeOption.value"
+                  type="button"
+                  class="theme-circle-button relative rounded-full h-8 w-8 transition-all duration-300 border box-border focus:outline-none cursor-pointer"
+                  :class="[
+                    themePreference === themeOption.value 
+                      ? 'theme-circle-active scale-110 z-10' 
+                      : 'theme-circle-inactive hover:scale-110'
+                  ]"
+                  :style="themeOption.style"
+                  :title="themeOption.label"
+                  @click="setTheme(themeOption.value)"
+                >
+                  <span class="sr-only">{{ themeOption.label }}</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mb-6">
+              <button
+                type="button"
+                class="account-update-button w-full rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                :disabled="isCheckingUpdates"
+                @click="handleCheckForUpdates"
+              >
+                {{ updateButtonLabel }}
+              </button>
+              <p v-if="updateStatusMessage" class="account-update-status mt-3 text-[9px] font-black uppercase tracking-[0.15em]">
+                {{ updateStatusMessage }}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="account-logout-button w-full rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+              @click="handleLogout"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Transition>
   </Teleport>
 </template>
 
 <script setup>
+import { computed, ref } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useTheme } from '@/theme/useTheme.js';
 import { useAuth } from '@/shared/composables/useAuth.js';
+import { usePwaUpdate } from '@/shared/composables/usePwaUpdate.js';
 
 defineProps({
   isOpen: {
@@ -72,15 +102,52 @@ defineProps({
 const emit = defineEmits(['close']);
 const { themePreference, setTheme } = useTheme();
 const { logoutUser } = useAuth();
+const { needRefresh, reload, checkForUpdates } = usePwaUpdate();
+const isCheckingUpdates = ref(false);
+const updateStatusMessage = ref('');
 
 const accountThemeOptions = [
-  { value: 'system', label: 'System' },
-  { value: 'light', label: 'Light' },
-  { value: 'dark', label: 'Dark' }
+  { value: 'system', label: 'System', style: { background: 'linear-gradient(135deg, #f3f3ee 50%, #000000 50%)' } },
+  { value: 'light', label: 'Light', style: { background: '#f3f3ee' } },
+  { value: 'dark', label: 'Dark', style: { background: '#000000' } }
 ];
+
+const updateButtonLabel = computed(() => {
+  if (needRefresh.value) {
+    return 'Reload To Update';
+  }
+
+  return isCheckingUpdates.value ? 'Checking For Updates' : 'Check For Updates';
+});
 
 function closeModal() {
   emit('close');
+}
+
+async function handleCheckForUpdates() {
+  if (needRefresh.value) {
+    reload();
+    return;
+  }
+
+  isCheckingUpdates.value = true;
+  updateStatusMessage.value = '';
+
+  try {
+    const result = await checkForUpdates();
+    if (!result.supported) {
+      updateStatusMessage.value = 'Update Check Unavailable';
+      return;
+    }
+
+    updateStatusMessage.value = result.updateFound
+      ? 'Update Ready: Reload'
+      : 'You Are On Latest Version';
+  } catch {
+    updateStatusMessage.value = 'Update Check Failed';
+  } finally {
+    isCheckingUpdates.value = false;
+  }
 }
 
 function handleLogout() {
@@ -92,14 +159,14 @@ function handleLogout() {
 <style scoped>
 .account-modal-overlay {
   background: var(--theme-overlay-30);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .account-modal-panel {
   border: 1px solid var(--theme-border);
   background: var(--theme-bg);
-  box-shadow: 0 20px 60px -24px var(--theme-overlay-50);
+  box-shadow: 0 20px 60px -16px var(--theme-overlay-50);
 }
 
 .account-modal-header {
@@ -123,30 +190,83 @@ function handleLogout() {
   background: var(--theme-bg-soft);
 }
 
-.account-theme-button {
-  border-color: var(--theme-border);
-  color: var(--theme-text-soft);
-  background: var(--theme-bg);
-}
-
-.account-theme-button:hover {
+.theme-label-badge {
   color: var(--theme-text);
   background: var(--theme-bg-soft);
 }
 
-.account-theme-button-active {
-  border-color: var(--theme-text);
-  color: var(--theme-text);
-  background: var(--theme-bg-subtle);
+.theme-circle-button {
+  box-shadow: 0 2px 4px var(--theme-overlay-10);
+  opacity: 1;
+  overflow: hidden;
+  border-radius: 50%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  /* Safari clip bug fix for transformed border-radius */
+  -webkit-mask-image: -webkit-radial-gradient(white, black);
+  mask-image: radial-gradient(white, black);
+}
+
+.theme-circle-inactive {
+  border-color: var(--theme-border);
+}
+
+.theme-circle-inactive:hover {
+  border-color: var(--theme-text-soft);
+}
+
+.theme-circle-active {
+  border-color: var(--theme-bg);
+  border-width: 2px;
+  box-shadow: 0 0 0 3px var(--theme-text);
 }
 
 .account-logout-button {
-  border-color: var(--theme-border);
-  color: var(--theme-text);
-  background: var(--theme-bg);
+  background: var(--theme-text);
+  color: var(--theme-bg);
+  box-shadow: 0 4px 6px -1px var(--theme-overlay-10);
+  border: 1px solid transparent;
+}
+
+.account-update-button {
+  background: transparent;
+  color: var(--theme-btn-secondary-text);
+  border: 1px solid var(--theme-btn-secondary-border);
+}
+
+.account-update-button:hover:not(:disabled) {
+  background: var(--theme-btn-secondary-hover-bg);
+}
+
+.account-update-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.account-update-status {
+  color: var(--theme-text-soft);
 }
 
 .account-logout-button:hover {
-  background: var(--theme-bg-soft);
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 8px -1px var(--theme-overlay-20);
+}
+
+.account-logout-button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px -1px var(--theme-overlay-10);
+}
+
+/* Modal Fade Transition */
+.modal-fade-enter-active,
+.modal-fade-leave-active {
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-fade-enter-from,
+.modal-fade-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
 }
 </style>
