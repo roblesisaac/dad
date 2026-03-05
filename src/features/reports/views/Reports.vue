@@ -3,14 +3,14 @@
     <div class="max-w-5xl mx-auto w-full relative">
       <!-- Sticky Navigation Header -->
       <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
-        <!-- Left: Dashboard -->
+        <!-- Left: Dashboard / Reports -->
         <button 
-          @click="router.push('/dashboard')" 
+          @click="selectedReport ? backToList() : router.push('/dashboard')" 
           class="flex items-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
         >
           <ChevronLeft class="w-4 h-4 text-black group-hover:text-black transition-colors" />
           <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em]">
-            Dashboard
+            {{ selectedReport ? 'Reports' : 'Dashboard' }}
           </span>
         </button>
 
@@ -314,10 +314,6 @@
       <template v-else>
         <header class="mb-6 flex items-start justify-between gap-3">
           <div class="flex items-start gap-3 min-w-0 flex-1">
-            <button class="mt-1 p-2 rounded-lg hover:bg-gray-100 text-gray-600" @click="backToList">
-              <ChevronLeft class="w-4 h-4" />
-            </button>
-
             <div class="min-w-0 flex-1">
               <div v-if="isEditingReportName" class="space-y-2">
                 <input
