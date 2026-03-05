@@ -41,10 +41,10 @@
                     :key="t"
                     type="button"
                     @click="ruleData.rule[0] = t; updateRuleType()"
-                    class="px-4 py-4 rounded-xl text-base font-bold transition-all border-2 text-center flex justify-center items-center"
-                    :class="ruleData.rule[0] === t 
-                      ? 'bg-black text-white border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]' 
-                      : 'bg-white text-gray-500 border-gray-100 hover:border-black hover:text-black hover:bg-gray-50'"
+                    class="rule-action-button px-4 py-4 rounded-xl text-base font-bold transition-all text-center flex justify-center items-center"
+                    :class="ruleData.rule[0] === t
+                      ? 'rule-action-button-active'
+                      : 'rule-action-button-inactive'"
                   >
                     {{ t === 'groupBy' ? 'Group By' : capitalizeFirstLetter(t) }}
                   </button>
@@ -829,3 +829,29 @@ function normalizeConditionCombinator(combinator) {
     : 'and';
 }
 </script> 
+
+<style scoped>
+.rule-action-button {
+  border-width: 2px;
+  border-style: solid;
+}
+
+.rule-action-button-active {
+  background-color: var(--theme-text);
+  color: var(--theme-bg);
+  border-color: var(--theme-text);
+  box-shadow: 4px 4px 0 0 var(--theme-overlay-20);
+}
+
+.rule-action-button-inactive {
+  background-color: var(--theme-bg);
+  color: var(--theme-text-soft);
+  border-color: var(--theme-border);
+}
+
+.rule-action-button-inactive:hover {
+  background-color: var(--theme-bg-soft);
+  color: var(--theme-text);
+  border-color: var(--theme-text);
+}
+</style>
