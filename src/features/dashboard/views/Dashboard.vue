@@ -132,6 +132,7 @@ import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
@@ -342,10 +343,27 @@ async function applyReportRowContextFromQuery(context) {
 
   let didRunGroupChange = false;
   if (context.groupId) {
-    const targetGroup = state.allUserGroups.find(group => group._id === context.groupId);
-    if (targetGroup && state.selected.group?._id !== targetGroup._id) {
-      await selectGroup(targetGroup);
-      didRunGroupChange = true;
+    if (context.groupId === ALL_ACCOUNTS_GROUP_ID) {
+      const isAllAccountsSelected = Boolean(
+        state.selected.group?.isVirtualAllAccounts || state.selected.group?._id === ALL_ACCOUNTS_GROUP_ID
+      );
+
+      if (!isAllAccountsSelected) {
+        state.selected.groupOverride = {
+          _id: ALL_ACCOUNTS_GROUP_ID,
+          name: 'All Accounts',
+          isVirtualAllAccounts: true,
+          accounts: state.allUserAccounts
+        };
+        await handleGroupChange();
+        didRunGroupChange = true;
+      }
+    } else {
+      const targetGroup = state.allUserGroups.find(group => group._id === context.groupId);
+      if (targetGroup && state.selected.group?._id !== targetGroup._id) {
+        await selectGroup(targetGroup);
+        didRunGroupChange = true;
+      }
     }
   }
 

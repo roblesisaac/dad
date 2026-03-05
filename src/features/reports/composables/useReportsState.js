@@ -4,7 +4,7 @@ import { useReportsAPI } from '@/features/reports/composables/useReportsAPI.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI.js';
-import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
 import {
   buildDefaultRuleMethods,
@@ -510,7 +510,6 @@ export function useReportsState() {
   const tabsAPI = useTabsAPI();
   const rulesAPI = useRulesAPI();
   const groupsAPI = useGroupsAPI();
-  const { state: dashboardState } = useDashboardState();
   const { fetchTransactions } = useTransactions();
 
   const ruleMethods = buildDefaultRuleMethods();
@@ -671,19 +670,6 @@ export function useReportsState() {
     });
   }
 
-  function getDefaultGroupId() {
-    const selectedGroupId = dashboardState.selected?.group?._id;
-    if (selectedGroupId) {
-      return selectedGroupId;
-    }
-
-    return state.allUserGroups[0]?._id || '';
-  }
-
-  function getDefaultTabId() {
-    return sortedTabs.value[0]?._id || '';
-  }
-
   function getDefaultReferenceReportId(currentReportId = '') {
     const candidates = state.reports
       .filter(report => report?._id && report._id !== currentReportId);
@@ -695,8 +681,8 @@ export function useReportsState() {
     return {
       rowId: `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
       type: 'tab',
-      tabId: getDefaultTabId(),
-      groupId: getDefaultGroupId(),
+      tabId: '',
+      groupId: '',
       dateStart: toYyyyMmDd(startOfMonth(new Date())),
       dateEnd: toYyyyMmDd(new Date()),
       savedTotal: 0,
@@ -730,6 +716,22 @@ export function useReportsState() {
     };
   }
 
+  function resolveGroupForRowContext(groupId) {
+    if (!groupId) {
+      return null;
+    }
+
+    if (groupId === ALL_ACCOUNTS_GROUP_ID) {
+      return {
+        _id: ALL_ACCOUNTS_GROUP_ID,
+        name: 'All Accounts',
+        accounts: state.allUserAccounts
+      };
+    }
+
+    return state.allUserGroups.find(item => item._id === groupId) || null;
+  }
+
   async function fetchTransactionsForRowContext(groupId, dateStart, dateEnd) {
     const cacheKey = buildTransactionsCacheKey(groupId, dateStart, dateEnd);
 
@@ -741,7 +743,7 @@ export function useReportsState() {
       return await transactionsCache[cacheKey].promise;
     }
 
-    const group = state.allUserGroups.find(item => item._id === groupId);
+    const group = resolveGroupForRowContext(groupId);
     const accounts = Array.isArray(group?.accounts) ? group.accounts : [];
 
     if (!accounts.length || !dateStart || !dateEnd) {
@@ -790,7 +792,7 @@ export function useReportsState() {
 
   async function evaluateTabRow(row) {
     const tab = state.allUserTabs.find(item => item._id === row.tabId);
-    const group = state.allUserGroups.find(item => item._id === row.groupId);
+    const group = resolveGroupForRowContext(row.groupId);
 
     if (!tab) {
       return { amount: 0, issue: 'Tab not found' };

@@ -783,10 +783,16 @@
               </label>
 
               <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Group
+                Group / Account
                 <select v-model="rowEditorDraft.groupId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="">Select group</option>
-                  <option v-for="group in sortedGroups" :key="group._id" :value="group._id">{{ group.name }}</option>
+                  <option value="">Select group / account</option>
+                  <option
+                    v-for="option in groupAccountOptions"
+                    :key="option.id"
+                    :value="option.id"
+                  >
+                    {{ option.label }}
+                  </option>
                 </select>
               </label>
 
@@ -955,6 +961,7 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { normalizeManualAmountDisplayType, useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
@@ -1048,6 +1055,150 @@ const isRowEditorManualFormula = computed(() =>
   rowEditorDraft.value?.type === 'manual'
   && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
 );
+
+function sanitizeLabelText(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/\uFFFD+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function accountIdentifiers(account) {
+  if (!account) return [];
+  if (typeof account === 'string') return [account];
+
+  return [account._id, account.account_id].filter(Boolean);
+}
+
+function accountsMatch(accountA, accountB) {
+  const idsA = accountIdentifiers(accountA);
+  const idsB = new Set(accountIdentifiers(accountB));
+
+  return idsA.some(id => idsB.has(id));
+}
+
+function isLabelGroup(group) {
+  const accounts = Array.isArray(group?.accounts) ? group.accounts : [];
+
+  if (typeof group?.isLabel === 'boolean') {
+    return group.isLabel;
+  }
+
+  return accounts.length > 1;
+}
+
+function accountOptionLabel(account, fallbackName = '') {
+  const officialName = sanitizeLabelText(account?.official_name || account?.officialName || '');
+  const accountName = sanitizeLabelText(account?.name || '');
+  const fallback = sanitizeLabelText(fallbackName || '');
+  const mask = account?.mask !== undefined && account?.mask !== null
+    ? sanitizeLabelText(String(account.mask))
+    : '';
+  const base = officialName || accountName || fallback || (mask ? `Account ${mask}` : 'Account');
+
+  if (mask && !base.toLowerCase().includes(mask.toLowerCase())) {
+    return `${base} (${mask})`;
+  }
+
+  return base;
+}
+
+const groupAccountOptions = computed(() => {
+  const labelGroupOptions = [];
+  const accountGroupCandidates = [];
+  const accountOptions = [];
+  const usedAccountGroupIds = new Set();
+
+  sortedGroups.value.forEach((group) => {
+    const groupId = String(group?._id || '');
+    if (!groupId || groupId === ALL_ACCOUNTS_GROUP_ID) {
+      return;
+    }
+
+    const groupName = sanitizeLabelText(group?.name || '') || 'Unnamed Group';
+    if (isLabelGroup(group)) {
+      labelGroupOptions.push({
+        id: groupId,
+        label: groupName
+      });
+      return;
+    }
+
+    accountGroupCandidates.push(group);
+  });
+
+  state.allUserAccounts.forEach((account) => {
+    const matchingAccountGroup = accountGroupCandidates.find((group) => {
+      const groupId = String(group?._id || '');
+      if (!groupId || usedAccountGroupIds.has(groupId)) {
+        return false;
+      }
+
+      const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+      return groupAccounts.some(groupAccount => accountsMatch(groupAccount, account));
+    });
+
+    if (!matchingAccountGroup?._id) {
+      return;
+    }
+
+    usedAccountGroupIds.add(matchingAccountGroup._id);
+    accountOptions.push({
+      id: matchingAccountGroup._id,
+      label: accountOptionLabel(account, matchingAccountGroup.name)
+    });
+  });
+
+  accountGroupCandidates.forEach((group) => {
+    const groupId = String(group?._id || '');
+    if (!groupId || usedAccountGroupIds.has(groupId)) {
+      return;
+    }
+
+    usedAccountGroupIds.add(groupId);
+    const account = Array.isArray(group?.accounts) ? group.accounts[0] : null;
+    accountOptions.push({
+      id: groupId,
+      label: accountOptionLabel(account, group.name)
+    });
+  });
+
+  labelGroupOptions.sort((a, b) => a.label.localeCompare(b.label));
+  accountOptions.sort((a, b) => a.label.localeCompare(b.label));
+
+  return [
+    {
+      id: ALL_ACCOUNTS_GROUP_ID,
+      label: 'All Accounts'
+    },
+    ...labelGroupOptions,
+    ...accountOptions
+  ];
+});
+
+const groupAccountLabelById = computed(() => {
+  const labels = new Map();
+
+  groupAccountOptions.value.forEach((option) => {
+    labels.set(option.id, option.label);
+  });
+
+  sortedGroups.value.forEach((group) => {
+    const groupId = String(group?._id || '');
+    if (!groupId || labels.has(groupId)) {
+      return;
+    }
+
+    labels.set(groupId, sanitizeLabelText(group?.name || '') || 'Unnamed Group');
+  });
+
+  return labels;
+});
 
 const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
 const canCreateReport = computed(() => Boolean(createReportNameDraft.value.trim()));
@@ -1412,7 +1563,7 @@ function tabName(tabId) {
 }
 
 function groupName(groupId) {
-  return sortedGroups.value.find(group => group._id === groupId)?.name || 'Group not found';
+  return groupAccountLabelById.value.get(groupId) || 'Group / account not found';
 }
 
 function rowTitle(row) {
