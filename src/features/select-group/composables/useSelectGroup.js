@@ -359,7 +359,7 @@ export function useSelectGroup() {
         return;
       }
 
-      state.blueBar.message = `${loadingMessagePrefix}... ${percentage}% (${completed}/${total})`;
+      state.blueBar.message = `${loadingMessagePrefix} ${percentage}%`;
       state.blueBar.loading = percentage < 100;
     };
 

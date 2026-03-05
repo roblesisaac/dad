@@ -202,6 +202,10 @@ function normalizeDashboardView(view) {
 
 function defaultDashboardView() {
   if (state.selected.tab) {
+    if (isNoGroupingTab(state.selected.tab)) {
+      return 'category-detail';
+    }
+
     return state.selected.category ? 'category-detail' : 'category';
   }
 
@@ -218,12 +222,16 @@ function resolveDashboardViewForState(view) {
       return state.selected.group ? 'tab' : 'group';
     }
 
-    return 'category';
+    return isNoGroupingTab(state.selected.tab) ? 'category-detail' : 'category';
   }
 
   if (view === 'category-detail') {
     if (!state.selected.tab) {
       return state.selected.group ? 'tab' : 'group';
+    }
+
+    if (isNoGroupingTab(state.selected.tab)) {
+      return 'category-detail';
     }
 
     return state.selected.category ? 'category-detail' : 'category';

@@ -207,7 +207,10 @@ const showCategoryBreadcrumb = computed(() => isCategoryDetailView.value && !isN
 const showTabAsCurrentLabel = computed(() => isCategoryView.value || (isCategoryDetailView.value && isNoGroupingTab.value));
 const isRearrangeActive = computed(() => props.isRearrangeActive);
 const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
-const showEditTabAction = computed(() => isCategoryView.value && Boolean(state.selected.tab));
+const showEditTabAction = computed(() => (
+  (isCategoryView.value || (isCategoryDetailView.value && isNoGroupingTab.value))
+  && Boolean(state.selected.tab)
+));
 
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
