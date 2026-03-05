@@ -41,7 +41,7 @@
             @click.stop
           >
             <button
-              class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none opacity-0 group-hover:opacity-100"
+              class="tab-row-menu-trigger p-2 rounded-xl text-black hover:text-black hover:bg-gray-100 transition-all focus:outline-none"
               :class="{ 'opacity-100': showActionsMenu || showLongPressActions }"
               type="button"
               aria-label="Tab actions"
@@ -442,3 +442,19 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', closeActionsMenuOnOutsideClick);
 });
 </script>
+
+<style scoped>
+.tab-row-menu-trigger {
+  opacity: 0;
+}
+
+.tab-row-menu-trigger:focus-visible {
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .tab-row-menu-trigger {
+    opacity: 1;
+  }
+}
+</style>
