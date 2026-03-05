@@ -946,7 +946,7 @@ import {
 } from 'date-fns';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, MoreVertical } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
@@ -956,6 +956,7 @@ import { normalizeManualAmountDisplayType, useReportsState } from '@/features/re
 import { useUtils } from '@/shared/composables/useUtils.js';
 
 const router = useRouter();
+const route = useRoute();
 const {
   state,
   sortedTabs,
@@ -995,6 +996,8 @@ const {
 const { formatPrice, fontColor } = useUtils();
 
 const selectedReportId = ref('');
+const REPORT_ID_QUERY_KEY = 'reportId';
+const isSyncingReportRouteQuery = ref(false);
 const activeReportMenuId = ref('');
 const activeFolderMenuName = ref('');
 const activeRowMenuId = ref('');
@@ -1041,6 +1044,68 @@ const reportRowLongPressStart = ref({ x: 0, y: 0 });
 
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+
+function queryValue(key) {
+  const value = route.query[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function normalizeReportId(reportId) {
+  return typeof reportId === 'string' ? reportId.trim() : '';
+}
+
+function reportsQueryForSelectedReport(reportId) {
+  const nextQuery = { ...route.query };
+
+  if (reportId) {
+    nextQuery[REPORT_ID_QUERY_KEY] = reportId;
+  } else {
+    delete nextQuery[REPORT_ID_QUERY_KEY];
+  }
+
+  return Object.keys(nextQuery).length ? nextQuery : undefined;
+}
+
+async function syncSelectedReportQuery(reportId, historyMode = 'push') {
+  const normalizedReportId = normalizeReportId(reportId);
+  if (queryValue(REPORT_ID_QUERY_KEY) === normalizedReportId) {
+    return;
+  }
+
+  isSyncingReportRouteQuery.value = true;
+
+  try {
+    const routeTarget = {
+      name: 'reports',
+      query: reportsQueryForSelectedReport(normalizedReportId)
+    };
+
+    if (historyMode === 'replace') {
+      await router.replace(routeTarget);
+      return;
+    }
+
+    await router.push(routeTarget);
+  } finally {
+    isSyncingReportRouteQuery.value = false;
+  }
+}
+
+function setSelectedReportId(reportId, options = {}) {
+  const {
+    syncRoute = false,
+    historyMode = 'push'
+  } = options;
+  const normalizedReportId = normalizeReportId(reportId);
+
+  selectedReportId.value = normalizedReportId;
+
+  if (syncRoute) {
+    void syncSelectedReportQuery(normalizedReportId, historyMode);
+  }
+
+  return normalizedReportId;
+}
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
@@ -1334,6 +1399,47 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => queryValue(REPORT_ID_QUERY_KEY),
+  (routeReportIdRaw) => {
+    if (isSyncingReportRouteQuery.value) {
+      return;
+    }
+
+    const routeReportId = normalizeReportId(routeReportIdRaw);
+    if (!routeReportId) {
+      if (!selectedReportId.value) {
+        return;
+      }
+
+      const didReturnToList = backToList({ syncRoute: false });
+      if (!didReturnToList) {
+        void syncSelectedReportQuery(selectedReportId.value, 'replace');
+      }
+      return;
+    }
+
+    if (routeReportId !== selectedReportId.value) {
+      openReport(routeReportId, { syncRoute: false });
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [() => state.isLoading, () => selectedReportId.value, () => state.reports.map(report => report?._id || '').join('|')],
+  ([isLoading, activeSelectedReportId]) => {
+    if (isLoading || !activeSelectedReportId) {
+      return;
+    }
+
+    const reportExists = state.reports.some(report => report?._id === activeSelectedReportId);
+    if (!reportExists) {
+      setSelectedReportId('', { syncRoute: true, historyMode: 'replace' });
+    }
+  }
 );
 
 function getReportDisplayType(reportId) {
@@ -1977,8 +2083,17 @@ function openDashboardFromRow(row) {
   });
 }
 
-function openReport(reportId) {
-  selectedReportId.value = reportId;
+function openReport(reportId, options = {}) {
+  const {
+    syncRoute = true,
+    historyMode = 'push'
+  } = options;
+  const normalizedReportId = normalizeReportId(reportId);
+  if (!normalizedReportId) {
+    return false;
+  }
+
+  setSelectedReportId(normalizedReportId, { syncRoute, historyMode });
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
@@ -1989,19 +2104,27 @@ function openReport(reportId) {
   exitReportReorderMode();
   exitRowReorderMode();
   closeFormulaModals();
+
+  return true;
 }
 
-function backToList() {
+function backToList(options = {}) {
+  const {
+    syncRoute = true,
+    historyMode = 'push'
+  } = options;
   if (isDraftSelected.value) {
     const shouldDiscard = confirm('Discard this new report?');
     if (!shouldDiscard) {
-      return;
+      return false;
     }
 
-    cancelDraftReport(selectedReport.value._id);
+    if (selectedReport.value?._id) {
+      cancelDraftReport(selectedReport.value._id);
+    }
   }
 
-  selectedReportId.value = '';
+  setSelectedReportId('', { syncRoute, historyMode });
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
@@ -2014,6 +2137,8 @@ function backToList() {
   exitRowReorderMode();
   cancelReportNameEdit();
   cancelRowEditor();
+
+  return true;
 }
 
 function toggleReportMenu(reportId, itemKey = '') {
@@ -2412,7 +2537,7 @@ async function saveReportName() {
 
   const saved = await saveReportLayout(selectedReport.value._id);
   if (saved?._id) {
-    selectedReportId.value = saved._id;
+    setSelectedReportId(saved._id, { syncRoute: true, historyMode: 'replace' });
     cancelReportNameEdit();
   }
 }
@@ -2436,7 +2561,7 @@ async function applyReportFormula() {
   try {
     const saved = await saveReportLayout(reportId);
     if (saved?._id) {
-      selectedReportId.value = saved._id;
+      setSelectedReportId(saved._id, { syncRoute: true, historyMode: 'replace' });
       totalFormulaDraft.value = String(saved.totalFormula || '').trim();
       totalDisplayTypeDraft.value = String(saved.totalDisplayType || '').trim().toLowerCase() === 'percentage'
         ? 'percentage'
@@ -2459,7 +2584,7 @@ async function saveDraftReport() {
 
   const saved = await saveReport(selectedReport.value._id);
   if (saved?._id) {
-    selectedReportId.value = saved._id;
+    setSelectedReportId(saved._id, { syncRoute: true, historyMode: 'replace' });
   }
 }
 
@@ -2470,7 +2595,7 @@ function cancelDraftAndBack() {
   if (!shouldDiscard) return;
 
   cancelDraftReport(selectedReport.value._id);
-  selectedReportId.value = '';
+  setSelectedReportId('', { syncRoute: true });
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
   closeExistingRowPickerModal();
@@ -2544,7 +2669,7 @@ async function persistRowEditorChanges(reportId, rowId, { wasNewRow = false, was
     : await saveReport(reportId);
 
   if (saved?._id) {
-    selectedReportId.value = saved._id;
+    setSelectedReportId(saved._id, { syncRoute: true, historyMode: 'replace' });
   }
 }
 
@@ -2638,7 +2763,7 @@ async function confirmDeleteReport(reportId) {
   await deleteReport(reportId);
 
   if (selectedReportId.value === reportId) {
-    selectedReportId.value = '';
+    setSelectedReportId('', { syncRoute: true, historyMode: 'replace' });
   }
 
   if (moveToFolderReportId.value === reportId) {
