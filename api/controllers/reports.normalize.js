@@ -33,6 +33,46 @@ function normalizeTotalDisplayType(value) {
     : 'dollar';
 }
 
+function normalizeManualAmountDisplayType(value) {
+  const normalized = optionalString(value).toLowerCase();
+
+  if (normalized === 'percentage') {
+    return 'percentage';
+  }
+
+  if (normalized === 'none') {
+    return 'none';
+  }
+
+  return 'dollar';
+}
+
+function normalizeManualAmountFormula(value) {
+  const trimmed = optionalString(value);
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('=')) {
+    return optionalString(trimmed.slice(1));
+  }
+
+  return trimmed;
+}
+
+function parseManualAmountFormulaFromAmount(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('=')) {
+    return '';
+  }
+
+  return normalizeManualAmountFormula(trimmed);
+}
+
 function parseAmount(value) {
   const amount = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(amount)) {
@@ -127,11 +167,17 @@ function normalizeTabRow(row, fallbackSort) {
 }
 
 function normalizeManualRow(row, fallbackSort) {
+  const normalizedAmountFormula = normalizeManualAmountFormula(
+    row?.amountFormula ?? parseManualAmountFormulaFromAmount(row?.amount)
+  );
+
   return {
     rowId: normalizeRowId(row?.rowId),
     type: 'manual',
     title: nonEmptyString(row?.title, 'manual row title'),
-    amount: parseAmount(row?.amount),
+    amount: parseAmount(normalizedAmountFormula ? 0 : row?.amount),
+    amountFormula: normalizedAmountFormula,
+    amountDisplayType: normalizeManualAmountDisplayType(row?.amountDisplayType),
     sort: normalizeSort(row?.sort, fallbackSort)
   };
 }

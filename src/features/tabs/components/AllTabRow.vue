@@ -1,7 +1,7 @@
 <template>
 <div
   ref="rowElement"
-  class="relative bg-white transition-all duration-300 w-full group shrink-0 select-none"
+  class="relative bg-white transition-colors duration-150 w-full group shrink-0 select-none"
   @click.stop="handleRowClick"
   @mousedown="handleRowMouseDown"
   @mousemove="handleRowMouseMove"
@@ -130,6 +130,7 @@
 
   <!-- Rule Manager Modal -->
   <RuleManagerModal
+    v-if="showRuleManagerModal"
     :is-open="showRuleManagerModal"
     @close="showRuleManagerModal = false"
   />

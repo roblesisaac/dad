@@ -24,6 +24,41 @@ export function buildRowStateKey(reportId, rowId) {
   return `${reportId || ''}:${rowId || ''}`;
 }
 
+export function normalizeManualAmountDisplayType(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+
+  if (normalized === 'percentage') {
+    return 'percentage';
+  }
+
+  if (normalized === 'none') {
+    return 'none';
+  }
+
+  return 'dollar';
+}
+
+function normalizeManualFormulaValue(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return '';
+  }
+
+  if (trimmed.startsWith('=')) {
+    return trimmed.slice(1).trim();
+  }
+
+  return trimmed;
+}
+
+function hasManualFormula(row) {
+  return row?.type === 'manual' && Boolean(normalizeManualFormulaValue(row?.amountFormula));
+}
+
 export function normalizeRowsForLocal(rows = []) {
   if (!Array.isArray(rows)) {
     return [];
@@ -63,6 +98,14 @@ export function normalizeRowsForLocal(rows = []) {
       type: 'manual',
       title: typeof row?.title === 'string' ? row.title : '',
       amount: Number.isFinite(Number(row?.amount)) ? Number(row.amount) : 0,
+      amountFormula: normalizeManualFormulaValue(
+        typeof row?.amountFormula === 'string'
+          ? row.amountFormula
+          : typeof row?.amount === 'string' && row.amount.trim().startsWith('=')
+            ? row.amount
+            : ''
+      ),
+      amountDisplayType: normalizeManualAmountDisplayType(row?.amountDisplayType),
       sort: Number.isFinite(row?.sort) ? row.sort : index
     };
   });
@@ -100,7 +143,7 @@ export function normalizeReportsForLocal(reports = []) {
     }));
 }
 
-function getRowAmountForTotal(row, rowAmountByRowId = null) {
+function getStoredRowAmount(row, rowAmountByRowId = null) {
   if (row?.type === 'manual') {
     const manualAmount = Number(row?.amount);
     return Number.isFinite(manualAmount) ? manualAmount : 0;
@@ -110,6 +153,15 @@ function getRowAmountForTotal(row, rowAmountByRowId = null) {
   const savedAmount = Number(row?.savedTotal);
   const rowAmount = Number.isFinite(mappedAmount) ? mappedAmount : savedAmount;
   return Number.isFinite(rowAmount) ? rowAmount : 0;
+}
+
+function getRowAmountForTotal(row, rowAmountByRowId = null) {
+  const mappedAmount = rowAmountByRowId ? Number(rowAmountByRowId[row?.rowId]) : Number.NaN;
+  if (Number.isFinite(mappedAmount)) {
+    return mappedAmount;
+  }
+
+  return getStoredRowAmount(row, rowAmountByRowId);
 }
 
 function makeFormulaError(message) {
@@ -320,13 +372,116 @@ export function evaluateReportTotalFormulaExpression(formula = '', rows = [], ro
 }
 
 export function calculateReportTotal(rows = [], rowAmountByRowId = null) {
+  const resolvedRowAmounts = rowAmountByRowId || resolveReportRowAmounts(rows).rowAmountByRowId;
+
   return rows.reduce((total, row) => {
-    return total + getRowAmountForTotal(row, rowAmountByRowId);
+    return total + getRowAmountForTotal(row, resolvedRowAmounts);
   }, 0);
 }
 
+export function resolveReportRowAmounts(rows = [], rowAmountByRowId = null) {
+  const rowAmountByRowIdResolved = {};
+  const issuesByRowId = {};
+
+  if (!Array.isArray(rows) || !rows.length) {
+    return {
+      rowAmountByRowId: rowAmountByRowIdResolved,
+      issuesByRowId
+    };
+  }
+
+  const rowIndexByRowId = new Map();
+  rows.forEach((row, index) => {
+    if (row?.rowId) {
+      rowIndexByRowId.set(row.rowId, index);
+    }
+  });
+
+  const stack = new Set();
+
+  const lazyRowAmountByRowId = new Proxy({}, {
+    get(_, property) {
+      if (typeof property !== 'string') {
+        return undefined;
+      }
+
+      const rowIndex = rowIndexByRowId.get(property);
+      if (!Number.isInteger(rowIndex)) {
+        return undefined;
+      }
+
+      return evaluateRowAtIndex(rowIndex);
+    }
+  });
+
+  function evaluateRowAtIndex(index) {
+    const row = rows[index];
+    const rowId = row?.rowId;
+    const fallbackAmount = getStoredRowAmount(row, rowAmountByRowId);
+
+    if (!rowId) {
+      return fallbackAmount;
+    }
+
+    const existingAmount = Number(rowAmountByRowIdResolved[rowId]);
+    if (Number.isFinite(existingAmount)) {
+      return existingAmount;
+    }
+
+    if (!hasManualFormula(row)) {
+      rowAmountByRowIdResolved[rowId] = fallbackAmount;
+      if (row?.type === 'manual') {
+        issuesByRowId[rowId] = '';
+      }
+      return fallbackAmount;
+    }
+
+    const normalizedFormula = normalizeManualFormulaValue(row?.amountFormula);
+
+    if (!normalizedFormula) {
+      rowAmountByRowIdResolved[rowId] = fallbackAmount;
+      issuesByRowId[rowId] = '';
+      return fallbackAmount;
+    }
+
+    if (stack.has(rowId)) {
+      throw makeFormulaError('Circular row formula reference detected');
+    }
+
+    stack.add(rowId);
+
+    try {
+      const evaluated = evaluateReportTotalFormulaExpression(
+        normalizedFormula,
+        rows,
+        lazyRowAmountByRowId
+      );
+
+      rowAmountByRowIdResolved[rowId] = evaluated;
+      issuesByRowId[rowId] = '';
+      return evaluated;
+    } catch (error) {
+      rowAmountByRowIdResolved[rowId] = fallbackAmount;
+      issuesByRowId[rowId] = error?.message || 'Invalid formula';
+      return fallbackAmount;
+    } finally {
+      stack.delete(rowId);
+    }
+  }
+
+  rows.forEach((_, index) => {
+    evaluateRowAtIndex(index);
+  });
+
+  return {
+    rowAmountByRowId: rowAmountByRowIdResolved,
+    issuesByRowId
+  };
+}
+
 export function calculateReportTotalWithFormula(rows = [], totalFormula = '', rowAmountByRowId = null) {
-  const sumTotal = calculateReportTotal(rows, rowAmountByRowId);
+  const resolvedRowAmounts = rowAmountByRowId || resolveReportRowAmounts(rows).rowAmountByRowId;
+  const sumTotal = calculateReportTotal(rows, resolvedRowAmounts);
   const formula = typeof totalFormula === 'string' ? totalFormula.trim() : '';
 
   if (!formula) {
@@ -337,7 +492,7 @@ export function calculateReportTotalWithFormula(rows = [], totalFormula = '', ro
   }
 
   try {
-    const total = evaluateReportTotalFormulaExpression(formula, rows, rowAmountByRowId);
+    const total = evaluateReportTotalFormulaExpression(formula, rows, resolvedRowAmounts);
     return {
       total,
       issue: ''
@@ -370,6 +525,7 @@ export function useReportsState() {
     allUserAccounts: [],
     reportTotalsById: {},
     reportTotalIssuesById: {},
+    rowAmountsByKey: {},
     rowIssuesByKey: {},
     saveStatusByReportId: {}
   });
@@ -404,9 +560,40 @@ export function useReportsState() {
     });
   }
 
+  function clearReportRowAmounts(reportId) {
+    const prefix = `${reportId}:`;
+
+    Object.keys(state.rowAmountsByKey).forEach((key) => {
+      if (key.startsWith(prefix)) {
+        delete state.rowAmountsByKey[key];
+      }
+    });
+  }
+
   function resetTransactionsCache() {
     Object.keys(transactionsCache).forEach((key) => {
       delete transactionsCache[key];
+    });
+  }
+
+  function applyManualFormulaIssues(reportId, rows = [], manualIssuesByRowId = {}) {
+    rows.forEach((row) => {
+      if (row?.type !== 'manual' || !row?.rowId) {
+        return;
+      }
+
+      const issue = manualIssuesByRowId[row.rowId] || '';
+      state.rowIssuesByKey[buildRowStateKey(reportId, row.rowId)] = issue;
+    });
+  }
+
+  function applyRowAmounts(reportId, rowAmountByRowId = {}) {
+    clearReportRowAmounts(reportId);
+
+    Object.entries(rowAmountByRowId).forEach(([rowId, amount]) => {
+      state.rowAmountsByKey[buildRowStateKey(reportId, rowId)] = Number.isFinite(Number(amount))
+        ? Number(amount)
+        : 0;
     });
   }
 
@@ -414,13 +601,21 @@ export function useReportsState() {
     const report = findReport(reportId);
     if (!report) return;
 
+    const {
+      rowAmountByRowId,
+      issuesByRowId: manualIssuesByRowId
+    } = resolveReportRowAmounts(report.rows);
+
     const { total, issue } = calculateReportTotalWithFormula(
       report.rows,
-      report.totalFormula
+      report.totalFormula,
+      rowAmountByRowId
     );
 
     state.reportTotalsById[reportId] = total;
     state.reportTotalIssuesById[reportId] = issue || '';
+    applyRowAmounts(reportId, rowAmountByRowId);
+    applyManualFormulaIssues(reportId, report.rows, manualIssuesByRowId);
   }
 
   function applyRowIssues(reportId, issuesByRowId = {}) {
@@ -450,6 +645,20 @@ export function useReportsState() {
     Object.keys(state.saveStatusByReportId).forEach((reportId) => {
       if (!reportIds.has(reportId)) {
         delete state.saveStatusByReportId[reportId];
+      }
+    });
+
+    Object.keys(state.rowIssuesByKey).forEach((rowKey) => {
+      const reportId = rowKey.split(':')[0];
+      if (!reportIds.has(reportId)) {
+        delete state.rowIssuesByKey[rowKey];
+      }
+    });
+
+    Object.keys(state.rowAmountsByKey).forEach((rowKey) => {
+      const reportId = rowKey.split(':')[0];
+      if (!reportIds.has(reportId)) {
+        delete state.rowAmountsByKey[rowKey];
       }
     });
 
@@ -501,6 +710,8 @@ export function useReportsState() {
       type: 'manual',
       title: '',
       amount: 0,
+      amountFormula: '',
+      amountDisplayType: 'dollar',
       sort
     };
   }
@@ -1098,10 +1309,22 @@ export function useReportsState() {
 
       if (row.type === 'manual') {
         const nextAmount = Number(updates.amount);
+        const nextAmountFormula = normalizeManualFormulaValue(
+          typeof updates.amountFormula === 'string'
+            ? updates.amountFormula
+            : row.amountFormula
+        );
+
         return {
           ...row,
           title: typeof updates.title === 'string' ? updates.title : row.title,
-          amount: Number.isFinite(nextAmount) ? nextAmount : row.amount
+          amount: Number.isFinite(nextAmount) ? nextAmount : row.amount,
+          amountFormula: nextAmountFormula,
+          amountDisplayType: normalizeManualAmountDisplayType(
+            updates.amountDisplayType !== undefined
+              ? updates.amountDisplayType
+              : row.amountDisplayType
+          )
         };
       }
 
@@ -1118,8 +1341,11 @@ export function useReportsState() {
     });
 
     report.rows = normalizeRowsForLocal(report.rows);
+    const updatedRow = report.rows.find(item => item.rowId === rowId) || null;
     setReportTotal(reportId);
-    state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = '';
+    if (updatedRow?.type !== 'manual') {
+      state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = '';
+    }
   }
 
   function removeRow(reportId, rowId) {
@@ -1241,6 +1467,12 @@ export function useReportsState() {
   }
 
   function getRowAmount(reportId, rowId) {
+    const key = buildRowStateKey(reportId, rowId);
+    const mappedAmount = Number(state.rowAmountsByKey[key]);
+    if (Number.isFinite(mappedAmount)) {
+      return mappedAmount;
+    }
+
     const report = findReport(reportId);
     if (!report) return 0;
 

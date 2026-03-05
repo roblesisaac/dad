@@ -15,6 +15,8 @@ const rowSchema = {
   savedTotal: Number,
   title: String,
   amount: Number,
+  amountFormula: String,
+  amountDisplayType: String,
   sort: Number
 };
 

@@ -77,9 +77,52 @@ describe('reports normalize', () => {
       type: 'manual',
       title: 'Cash Adjustment',
       amount: 12.5,
+      amountFormula: '',
+      amountDisplayType: 'dollar',
       sort: 2
     });
     expect(manualRow).not.toHaveProperty('ignoreMe');
+  });
+
+  test('normalizes manual formula rows and formula display type', () => {
+    const fromAmountFormula = normalizeReportPayload({
+      name: 'Monthly',
+      rows: [
+        {
+          type: 'manual',
+          title: 'Tax',
+          amount: '=r1 + r2 * 0.08',
+          amountDisplayType: 'None'
+        }
+      ]
+    });
+
+    expect(fromAmountFormula.rows[0]).toMatchObject({
+      type: 'manual',
+      title: 'Tax',
+      amount: 0,
+      amountFormula: 'r1 + r2 * 0.08',
+      amountDisplayType: 'none'
+    });
+
+    const fromAmountFormulaField = normalizeReportPayload({
+      name: 'Monthly',
+      rows: [
+        {
+          type: 'manual',
+          title: 'Margin',
+          amount: 0,
+          amountFormula: '=r1/r2',
+          amountDisplayType: 'percentage'
+        }
+      ]
+    });
+
+    expect(fromAmountFormulaField.rows[0]).toMatchObject({
+      amount: 0,
+      amountFormula: 'r1/r2',
+      amountDisplayType: 'percentage'
+    });
   });
 
   test('throws on invalid tab row date range', () => {

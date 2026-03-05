@@ -431,7 +431,7 @@
 
                   <div class="flex items-center gap-2">
                     <span class="text-xl font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
-                      {{ formatPrice(getRowAmount(selectedReport._id, row.rowId), { toFixed: 2 }) }}
+                      {{ formatRowAmount(selectedReport._id, row, { toFixed: 2 }) }}
                     </span>
 
                     <div v-if="!isReorderingRows" class="relative" data-dropdown-root>
@@ -868,9 +868,33 @@
               </label>
 
               <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Amount
-                <input v-model.number="rowEditorDraft.amount" type="number" step="0.01" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                Value
+                <input
+                  v-model="rowEditorDraft.amountInput"
+                  type="text"
+                  class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="123.45 or =r1-r2+r3*1.0875"
+                />
               </label>
+
+              <label
+                v-if="isRowEditorManualFormula"
+                class="block text-xs font-black uppercase tracking-wider text-gray-500"
+              >
+                Format
+                <select
+                  v-model="rowEditorDraft.amountDisplayType"
+                  class="mt-1 w-full sm:w-52 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+                >
+                  <option value="dollar">Price</option>
+                  <option value="percentage">Percentage</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+
+              <p class="text-xs text-gray-500">
+                Start with <code>=</code> to use a formula with PEMDAS and rN row refs.
+              </p>
             </template>
           </div>
 
@@ -922,7 +946,7 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
-import { useReportsState } from '@/features/reports/composables/useReportsState.js';
+import { normalizeManualAmountDisplayType, useReportsState } from '@/features/reports/composables/useReportsState.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
 const router = useRouter();
@@ -1004,6 +1028,10 @@ const isReorderingRows = ref(false);
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
+);
+const isRowEditorManualFormula = computed(() =>
+  rowEditorDraft.value?.type === 'manual'
+  && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
 );
 
 const isDraftSelected = computed(() => isDraftReport(selectedReport.value));
@@ -1191,6 +1219,37 @@ function formatReportTotal(reportId, { toFixed = 2 } = {}) {
   }
 
   return formatPrice(total, { toFixed });
+}
+
+function formatPlainNumber(value, { toFixed = 2 } = {}) {
+  const numeric = Number(value);
+  const safeValue = Number.isFinite(numeric) ? numeric : 0;
+
+  return safeValue.toLocaleString('en-US', {
+    minimumFractionDigits: toFixed,
+    maximumFractionDigits: toFixed
+  });
+}
+
+function hasManualRowFormula(row) {
+  return row?.type === 'manual' && Boolean(String(row?.amountFormula || '').trim());
+}
+
+function formatRowAmount(reportId, row, { toFixed = 2 } = {}) {
+  const amount = getRowAmount(reportId, row?.rowId);
+
+  if (hasManualRowFormula(row)) {
+    const displayType = normalizeManualAmountDisplayType(row?.amountDisplayType);
+    if (displayType === 'percentage') {
+      return formatPercentage(amount, { toFixed });
+    }
+
+    if (displayType === 'none') {
+      return formatPlainNumber(amount, { toFixed });
+    }
+  }
+
+  return formatPrice(amount, { toFixed });
 }
 
 function folderIsExpanded(folderName) {
@@ -1446,7 +1505,60 @@ function buildRowCopyPayload(row) {
   return {
     type: 'manual',
     title: row?.title || '',
-    amount: Number.isFinite(amount) ? amount : 0
+    amount: Number.isFinite(amount) ? amount : 0,
+    amountFormula: String(row?.amountFormula || '').trim(),
+    amountDisplayType: normalizeManualAmountDisplayType(row?.amountDisplayType)
+  };
+}
+
+function buildManualAmountInput(row) {
+  const formula = String(row?.amountFormula || '').trim();
+  if (formula) {
+    return `=${formula}`;
+  }
+
+  const amount = Number(row?.amount);
+  return Number.isFinite(amount) ? String(amount) : '0';
+}
+
+function buildRowEditorDraft(row) {
+  const nextDraft = { ...row };
+
+  if (nextDraft.type === 'manual') {
+    nextDraft.amountInput = buildManualAmountInput(nextDraft);
+    nextDraft.amountDisplayType = normalizeManualAmountDisplayType(nextDraft.amountDisplayType);
+  }
+
+  if (nextDraft.type === 'report') {
+    const linkedReport = state.reports.find(report => report._id === nextDraft.reportId);
+    nextDraft.reportName = linkedReport?.name || nextDraft.reportName || '';
+  }
+
+  return nextDraft;
+}
+
+function buildManualRowPayloadFromDraft(draft) {
+  const rawInput = String(draft?.amountInput || '').trim();
+  const fallbackAmount = Number(draft?.amount);
+  const safeFallbackAmount = Number.isFinite(fallbackAmount) ? fallbackAmount : 0;
+
+  if (rawInput.startsWith('=')) {
+    return {
+      type: 'manual',
+      title: String(draft?.title || ''),
+      amount: safeFallbackAmount,
+      amountFormula: rawInput.slice(1).trim(),
+      amountDisplayType: normalizeManualAmountDisplayType(draft?.amountDisplayType)
+    };
+  }
+
+  const parsedAmount = Number(rawInput);
+  return {
+    type: 'manual',
+    title: String(draft?.title || ''),
+    amount: Number.isFinite(parsedAmount) ? parsedAmount : safeFallbackAmount,
+    amountFormula: '',
+    amountDisplayType: normalizeManualAmountDisplayType(draft?.amountDisplayType)
   };
 }
 
@@ -1489,7 +1601,7 @@ function addExistingRowFromOption(optionKey) {
   );
 
   const copiedRow = selectedReport.value.rows.find(row => row.rowId === nextRow.rowId);
-  rowEditorDraft.value = copiedRow ? { ...copiedRow } : { ...nextRow };
+  rowEditorDraft.value = buildRowEditorDraft(copiedRow || nextRow);
   editingRowId.value = nextRow.rowId;
   editingRowWasNew.value = true;
   isRowEditorOpen.value = true;
@@ -1917,13 +2029,7 @@ function cancelDraftAndBack() {
 }
 
 function startRowEdit(row) {
-  const nextDraft = { ...row };
-  if (nextDraft.type === 'report') {
-    const linkedReport = state.reports.find(report => report._id === nextDraft.reportId);
-    nextDraft.reportName = linkedReport?.name || nextDraft.reportName || '';
-  }
-
-  rowEditorDraft.value = nextDraft;
+  rowEditorDraft.value = buildRowEditorDraft(row);
   editingRowId.value = row.rowId;
   editingRowWasNew.value = false;
   isRowEditorOpen.value = true;
@@ -1949,7 +2055,7 @@ function addAndEditRow(type) {
 
   if (!newRow) return;
 
-  rowEditorDraft.value = { ...newRow };
+  rowEditorDraft.value = buildRowEditorDraft(newRow);
   editingRowId.value = newRow.rowId;
   editingRowWasNew.value = true;
   isRowEditorOpen.value = true;
@@ -1981,6 +2087,11 @@ async function saveRowEditor() {
     if (payload.type === 'report') {
       const linkedReport = state.reports.find(report => report._id === payload.reportId);
       payload.reportName = linkedReport?.name || payload.reportName || '';
+    }
+
+    if (payload.type === 'manual') {
+      Object.assign(payload, buildManualRowPayloadFromDraft(payload));
+      delete payload.amountInput;
     }
 
     updateRow(reportId, rowId, payload);

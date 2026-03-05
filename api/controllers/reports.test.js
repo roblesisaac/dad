@@ -89,6 +89,8 @@ describe('reports controller', () => {
             type: 'manual',
             title: 'manual',
             amount: 25,
+            amountFormula: '',
+            amountDisplayType: 'dollar',
             sort: 0
           }
         ]

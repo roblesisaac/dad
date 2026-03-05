@@ -4,6 +4,7 @@ let normalizeRowsForLocal;
 let normalizeReportsForLocal;
 let calculateReportTotal;
 let calculateReportTotalWithFormula;
+let resolveReportRowAmounts;
 let buildTransactionsCacheKey;
 let buildRowStateKey;
 
@@ -19,6 +20,7 @@ beforeAll(async () => {
   normalizeReportsForLocal = helpers.normalizeReportsForLocal;
   calculateReportTotal = helpers.calculateReportTotal;
   calculateReportTotalWithFormula = helpers.calculateReportTotalWithFormula;
+  resolveReportRowAmounts = helpers.resolveReportRowAmounts;
   buildTransactionsCacheKey = helpers.buildTransactionsCacheKey;
   buildRowStateKey = helpers.buildRowStateKey;
 });
@@ -74,6 +76,8 @@ describe('useReportsState helpers', () => {
       rowId: 'm1',
       type: 'manual',
       amount: 12.4,
+      amountFormula: '',
+      amountDisplayType: 'dollar',
       sort: 2
     });
   });
@@ -164,5 +168,35 @@ describe('useReportsState helpers', () => {
 
     expect(originalResult).toMatchObject({ total: -10, issue: '' });
     expect(reorderedResult).toMatchObject({ total: 10, issue: '' });
+  });
+
+  test('resolves manual row formulas and exposes per-row issues', () => {
+    const rows = [
+      { rowId: 'row-1', type: 'manual', title: 'Income', amount: 2000 },
+      { rowId: 'row-2', type: 'manual', title: 'Tax', amount: 0, amountFormula: 'r1 * 0.25', amountDisplayType: 'dollar' },
+      { rowId: 'row-3', type: 'manual', title: 'Net', amount: 0, amountFormula: 'r1-r2', amountDisplayType: 'none' },
+      { rowId: 'row-4', type: 'manual', title: 'Broken', amount: 12, amountFormula: 'r999', amountDisplayType: 'dollar' }
+    ];
+
+    const resolved = resolveReportRowAmounts(rows);
+    expect(resolved.rowAmountByRowId['row-1']).toBe(2000);
+    expect(resolved.rowAmountByRowId['row-2']).toBe(500);
+    expect(resolved.rowAmountByRowId['row-3']).toBe(1500);
+    expect(resolved.rowAmountByRowId['row-4']).toBe(12);
+    expect(resolved.issuesByRowId['row-2']).toBe('');
+    expect(resolved.issuesByRowId['row-3']).toBe('');
+    expect(resolved.issuesByRowId['row-4']).toContain('out of range');
+  });
+
+  test('uses resolved manual row formula amounts in report total formulas', () => {
+    const rows = [
+      { rowId: 'row-1', type: 'manual', amount: 100 },
+      { rowId: 'row-2', type: 'manual', amount: 0, amountFormula: 'r1 * 0.1', amountDisplayType: 'percentage' },
+      { rowId: 'row-3', type: 'manual', amount: 0, amountFormula: 'r1-r2', amountDisplayType: 'none' }
+    ];
+
+    const resolved = resolveReportRowAmounts(rows).rowAmountByRowId;
+    const total = calculateReportTotalWithFormula(rows, 'r1+r2+r3', resolved);
+    expect(total).toMatchObject({ total: 200, issue: '' });
   });
 });
