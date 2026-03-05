@@ -2070,14 +2070,33 @@ function cancelRowEditor() {
   isRowEditorOpen.value = false;
 }
 
+async function persistRowEditorChanges(reportId, rowId, { wasNewRow = false, wasDraftSelected = false } = {}) {
+  await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
+
+  if (wasDraftSelected) {
+    return;
+  }
+
+  const saved = wasNewRow
+    ? await saveReportLayout(reportId)
+    : await saveReport(reportId);
+
+  if (saved?._id) {
+    selectedReportId.value = saved._id;
+  }
+}
+
 async function saveRowEditor() {
   if (!selectedReport.value || !rowEditorDraft.value || !editingRowId.value || isSavingRow.value) return;
 
   isSavingRow.value = true;
+  const reportId = selectedReport.value._id;
+  const rowId = editingRowId.value;
+  const wasNewRow = editingRowWasNew.value;
+  const wasDraftSelected = isDraftSelected.value;
+  let didApplyLocalUpdate = false;
 
   try {
-    const reportId = selectedReport.value._id;
-    const rowId = editingRowId.value;
     const payload = { ...rowEditorDraft.value };
 
     if (payload.type === 'report') {
@@ -2091,17 +2110,7 @@ async function saveRowEditor() {
     }
 
     updateRow(reportId, rowId, payload);
-    await refreshRowTotal(reportId, rowId, { forceTransactionReload: true });
-
-    if (!isDraftSelected.value) {
-      const saved = editingRowWasNew.value
-        ? await saveReportLayout(reportId)
-        : await saveReport(reportId);
-
-      if (saved?._id) {
-        selectedReportId.value = saved._id;
-      }
-    }
+    didApplyLocalUpdate = true;
 
     rowEditorDraft.value = null;
     editingRowId.value = '';
@@ -2110,6 +2119,12 @@ async function saveRowEditor() {
   } finally {
     isSavingRow.value = false;
   }
+
+  if (!didApplyLocalUpdate) {
+    return;
+  }
+
+  void persistRowEditorChanges(reportId, rowId, { wasNewRow, wasDraftSelected });
 }
 
 async function refreshSelectedReport() {
