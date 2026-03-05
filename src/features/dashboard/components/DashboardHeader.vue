@@ -1,8 +1,8 @@
 <template>
   <div class="flex flex-col transition-all pb-12 sm:pb-20 bg-transparent">
-    <div class="fixed inset-x-0 top-0 z-30">
+    <div class="fixed inset-x-0 top-0 z-30 backdrop-blur-md">
       <div class="max-w-5xl mx-auto w-full sm:px-6">
-        <div class="backdrop-blur-md px-4 flex items-center justify-between py-4 transition-all">
+        <div class="px-4 flex items-center justify-between py-4 transition-all">
           <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
             <button
               @click="emit('navigate-group')"

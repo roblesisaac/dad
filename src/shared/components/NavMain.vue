@@ -1,5 +1,5 @@
 <template>
-  <nav class="shadow bg-white border-b-2 border-black transition-all duration-300">
+  <nav class="relative left-1/2 right-1/2 w-screen -ml-[50vw] -mr-[50vw] shadow bg-white border-b-2 border-black transition-all duration-300">
     <div class="max-w-7xl mx-auto w-full flex justify-between items-center px-5">
       <!-- logo -->
       <div class="flex items-center font-bold">
