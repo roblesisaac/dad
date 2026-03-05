@@ -407,7 +407,7 @@
                     <div class="min-w-0">
                       <div class="flex items-center gap-2 min-w-0">
                         <span
-                          v-if="isFormulaEditorModalOpen"
+                          v-if="showRowReferenceBadges"
                           class="flex-shrink-0 inline-flex items-center rounded-md border border-gray-300 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-gray-600"
                         >
                           r{{ index + 1 }}
@@ -530,63 +530,6 @@
               </div>
             </div>
 
-            <div
-              v-if="isFormulaEditorModalOpen"
-              class="mt-3 w-full max-w-2xl bg-white rounded-xl border border-gray-200 shadow-sm p-3"
-            >
-              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Type
-                <select
-                  v-model="totalDisplayTypeDraft"
-                  class="mt-1 w-full sm:w-52 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
-                >
-                  <option value="dollar">Dollar</option>
-                  <option value="percentage">Percentage</option>
-                </select>
-              </label>
-
-              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Formula
-                <input
-                  v-model="totalFormulaDraft"
-                  type="text"
-                  class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
-                  placeholder="r1-r2+r3*1.0875"
-                  @keydown.enter.prevent="applyReportFormula"
-                />
-              </label>
-
-              <p class="mt-2 text-xs text-gray-500">
-                Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
-              </p>
-              <p v-if="selectedReportTotalIssue" class="mt-2 text-xs text-red-600">
-                Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
-              </p>
-
-              <div class="mt-3 flex items-center justify-end gap-2">
-                <button
-                  class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="isApplyingReportFormula"
-                  @click="closeFormulaModals"
-                >
-                  Close
-                </button>
-                <button
-                  class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="isApplyingReportFormula"
-                  @click="clearReportFormula"
-                >
-                  Clear
-                </button>
-                <button
-                  class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                  :disabled="isApplyingReportFormula"
-                  @click="applyReportFormula"
-                >
-                  {{ isApplyingReportFormula ? 'Applying...' : 'Apply' }}
-                </button>
-              </div>
-            </div>
           </div>
           <div v-else class="flex-1">
             <button
@@ -616,6 +559,70 @@
         :is-open="isAccountModalOpen"
         @close="isAccountModalOpen = false"
       />
+
+      <div
+        v-if="isFormulaEditorModalOpen"
+        class="fixed inset-x-0 bottom-0 z-40 pointer-events-none"
+      >
+        <div class="pointer-events-auto w-full bg-white rounded-t-[1.75rem] border border-gray-200 border-b-0 shadow-2xl px-5 py-6 md:px-8 md:py-8 max-h-[75vh] overflow-y-auto">
+          <h2 class="text-xl font-black text-gray-900">Edit Formula</h2>
+
+          <div class="mt-4 space-y-4">
+            <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+              Format
+              <select
+                v-model="totalDisplayTypeDraft"
+                class="mt-1 w-full sm:w-52 border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
+              >
+                <option value="dollar">Dollar</option>
+                <option value="percentage">Percentage</option>
+              </select>
+            </label>
+
+            <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+              Custom Formula
+              <input
+                v-model="totalFormulaDraft"
+                type="text"
+                class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                placeholder="r1-r2+r3*1.0875"
+                @keydown.enter.prevent="applyReportFormula"
+              />
+            </label>
+
+            <p class="text-xs text-gray-500">
+              Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
+            </p>
+            <p v-if="selectedReportTotalIssue" class="text-xs text-red-600">
+              Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
+            </p>
+          </div>
+
+          <div class="mt-6 flex items-center justify-end gap-2">
+            <button
+              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="closeFormulaModals"
+            >
+              Close
+            </button>
+            <button
+              class="btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="clearReportFormula"
+            >
+              Clear
+            </button>
+            <button
+              class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isApplyingReportFormula"
+              @click="applyReportFormula"
+            >
+              {{ isApplyingReportFormula ? 'Applying...' : 'Apply' }}
+            </button>
+          </div>
+        </div>
+      </div>
 
       <div
         v-if="isExistingRowPickerModalOpen"
@@ -753,10 +760,16 @@
 
       <div
         v-if="isRowEditorOpen && rowEditorDraft"
-        class="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-end md:items-center justify-center p-4"
-        @click.self="cancelRowEditor"
+        :class="isManualRowEditor
+          ? 'fixed inset-x-0 bottom-0 z-40 pointer-events-none'
+          : 'fixed inset-0 z-40 bg-black/30 backdrop-blur-sm flex items-end md:items-center justify-center p-4'"
+        @click.self="onRowEditorBackdropClick"
       >
-        <div class="w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 md:p-6">
+        <div
+          :class="isManualRowEditor
+            ? 'pointer-events-auto w-full bg-white rounded-t-[1.75rem] border border-gray-200 border-b-0 shadow-2xl px-5 py-6 md:px-8 md:py-8 max-h-[75vh] overflow-y-auto'
+            : 'w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 md:p-6'"
+        >
           <h2 class="text-xl font-black text-gray-900">Edit Row</h2>
 
           <div class="mt-4 space-y-4">
@@ -1025,6 +1038,12 @@ const isReorderingRows = ref(false);
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
 );
+const isManualRowEditor = computed(() =>
+  rowEditorDraft.value?.type === 'manual'
+);
+const showRowReferenceBadges = computed(() =>
+  isFormulaEditorModalOpen.value || isManualRowEditor.value
+);
 const isRowEditorManualFormula = computed(() =>
   rowEditorDraft.value?.type === 'manual'
   && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
@@ -1161,8 +1180,12 @@ const saveStateLabel = computed(() => {
 });
 
 const footerPaddingClass = computed(() => {
+  if (isManualRowEditor.value) {
+    return 'pb-[30rem]';
+  }
+
   if (isFormulaEditorModalOpen.value) {
-    return 'pb-64';
+    return 'pb-[30rem]';
   }
 
   if (isFormulaMenuModalOpen.value) {
@@ -1725,15 +1748,17 @@ function closeDropdownMenus() {
 function openFormulaMenuModal() {
   if (!selectedReport.value?._id) return;
 
-  if (isFormulaMenuModalOpen.value) {
+  if (isFormulaEditorModalOpen.value) {
     closeFormulaModals();
     return;
   }
 
   closeDropdownMenus();
   closeExistingRowPickerModal();
-  isFormulaEditorModalOpen.value = false;
-  isFormulaMenuModalOpen.value = true;
+  totalFormulaDraft.value = selectedReport.value?.totalFormula || '';
+  totalDisplayTypeDraft.value = selectedReport.value?.totalDisplayType || 'dollar';
+  isFormulaMenuModalOpen.value = false;
+  isFormulaEditorModalOpen.value = true;
 }
 
 function openFormulaEditorModal() {
@@ -2068,6 +2093,14 @@ function cancelRowEditor() {
   editingRowId.value = '';
   editingRowWasNew.value = false;
   isRowEditorOpen.value = false;
+}
+
+function onRowEditorBackdropClick() {
+  if (isManualRowEditor.value) {
+    return;
+  }
+
+  cancelRowEditor();
 }
 
 async function persistRowEditorChanges(reportId, rowId, { wasNewRow = false, wasDraftSelected = false } = {}) {
