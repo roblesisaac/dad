@@ -9,6 +9,7 @@ import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js'
 const GROUP_CHANGE_IN_FLIGHT_REQUESTS = new Map();
 const GROUP_LABEL_MIGRATION_CACHE = new Set();
 const GROUP_LABEL_NORMALIZATION_CACHE = new Set();
+let GROUP_FETCH_TOAST_TOKEN = 0;
 
 export function useSelectGroup() {
   const { state } = useDashboardState();
@@ -299,19 +300,6 @@ export function useSelectGroup() {
     });
   }
 
-  function getLoadingMessagePrefix(selectedGroup) {
-    if (selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID) {
-      return 'Loading all accounts transactions';
-    }
-
-    const accountCount = Array.isArray(selectedGroup?.accounts) ? selectedGroup.accounts.length : 0;
-    if (selectedGroup?.isLabel === false || accountCount <= 1) {
-      return 'Loading account transactions';
-    }
-
-    return 'Loading group transactions';
-  }
-
   /**
    * Handle group selection change
    */
@@ -353,18 +341,20 @@ export function useSelectGroup() {
     }
 
     const shouldShowFetchProgress = showLoading;
-    const loadingMessagePrefix = getLoadingMessagePrefix(selectedGroup);
-    const updateLoadingMessage = (completed, total, percentage) => {
+    const toastToken = shouldShowFetchProgress ? ++GROUP_FETCH_TOAST_TOKEN : 0;
+    let latestProgressMessage = '0%';
+    const updateLoadingMessage = (_completed, total, percentage) => {
       if (!shouldShowFetchProgress || !Number.isFinite(total) || total <= 0) {
         return;
       }
 
-      state.blueBar.message = `${percentage}%`;
+      latestProgressMessage = `${percentage}%`;
+      state.blueBar.message = latestProgressMessage;
       state.blueBar.loading = percentage < 100;
     };
 
     if (shouldShowFetchProgress) {
-      state.blueBar.message = `${loadingMessagePrefix}... 0%`;
+      state.blueBar.message = latestProgressMessage;
       state.blueBar.loading = true;
     }
 
@@ -403,10 +393,15 @@ export function useSelectGroup() {
         GROUP_CHANGE_IN_FLIGHT_REQUESTS.delete(requestKey);
       }
 
-      if (shouldShowFetchProgress && typeof state.blueBar.message === 'string' && state.blueBar.message.startsWith(loadingMessagePrefix)) {
+      if (shouldShowFetchProgress && toastToken === GROUP_FETCH_TOAST_TOKEN) {
         state.blueBar.loading = false;
+
         setTimeout(() => {
-          if (typeof state.blueBar.message === 'string' && state.blueBar.message.startsWith(loadingMessagePrefix)) {
+          const currentMessage = state.blueBar.message;
+          const isLatestToast = toastToken === GROUP_FETCH_TOAST_TOKEN;
+          const isPercentageToast = typeof currentMessage === 'string' && /^\d{1,3}%$/.test(currentMessage);
+
+          if (isLatestToast && isPercentageToast) {
             state.blueBar.message = null;
             state.blueBar.loading = false;
           }
