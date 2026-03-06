@@ -3,7 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 const DEFAULT_TRIGGER_DISTANCE = 84;
 const DEFAULT_MAX_DISTANCE = 140;
 const DEFAULT_RESISTANCE = 0.55;
+const DEFAULT_WHEEL_RESISTANCE = 0.65;
 const DEFAULT_REFRESH_HOLD_MS = 220;
+const DEFAULT_WHEEL_IDLE_MS = 120;
 
 function defaultCanStart() {
   return true;
@@ -24,7 +26,7 @@ function shouldIgnoreTarget(target) {
 
   return Boolean(
     target.closest(
-      'input, textarea, select, button, a, label, [role="button"], [data-no-pull-refresh]'
+      'input, textarea, select, [contenteditable="true"], [data-no-pull-refresh]'
     )
   );
 }
@@ -35,7 +37,9 @@ export function usePullToRefresh(options = {}) {
   const triggerDistance = Number(options.triggerDistance) || DEFAULT_TRIGGER_DISTANCE;
   const maxDistance = Number(options.maxDistance) || DEFAULT_MAX_DISTANCE;
   const resistance = Number(options.resistance) || DEFAULT_RESISTANCE;
+  const wheelResistance = Number(options.wheelResistance) || DEFAULT_WHEEL_RESISTANCE;
   const refreshHoldMs = Number(options.refreshHoldMs) || DEFAULT_REFRESH_HOLD_MS;
+  const wheelIdleMs = Number(options.wheelIdleMs) || DEFAULT_WHEEL_IDLE_MS;
 
   const pullDistance = ref(0);
   const isPulling = ref(false);
@@ -83,6 +87,52 @@ export function usePullToRefresh(options = {}) {
   let pullStartY = 0;
   let pullStartX = 0;
   let hasVerticalIntent = false;
+  let wheelEndTimeoutId = null;
+  let isWheelGestureActive = false;
+  let wheelGestureStartedAtTop = false;
+
+  function clearWheelEndTimer() {
+    if (wheelEndTimeoutId) {
+      clearTimeout(wheelEndTimeoutId);
+      wheelEndTimeoutId = null;
+    }
+  }
+
+  function resetWheelGestureState() {
+    isWheelGestureActive = false;
+    wheelGestureStartedAtTop = false;
+  }
+
+  function startWheelGestureIfNeeded() {
+    if (isWheelGestureActive) {
+      return;
+    }
+
+    isWheelGestureActive = true;
+    wheelGestureStartedAtTop = readScrollTop() <= 0;
+  }
+
+  function settlePullGestureFromWheel() {
+    if (!isPulling.value || isRefreshing.value) {
+      return;
+    }
+
+    if (isReady.value) {
+      void triggerRefresh();
+      return;
+    }
+
+    resetPullState();
+  }
+
+  function scheduleWheelEnd() {
+    clearWheelEndTimer();
+    wheelEndTimeoutId = setTimeout(() => {
+      wheelEndTimeoutId = null;
+      settlePullGestureFromWheel();
+      resetWheelGestureState();
+    }, wheelIdleMs);
+  }
 
   function resetPullState() {
     pullDistance.value = 0;
@@ -101,6 +151,8 @@ export function usePullToRefresh(options = {}) {
       return;
     }
 
+    clearWheelEndTimer();
+    resetWheelGestureState();
     isRefreshing.value = true;
     isPulling.value = false;
     pullDistance.value = triggerDistance;
@@ -212,18 +264,86 @@ export function usePullToRefresh(options = {}) {
     }
   }
 
+  function handleWheel(event) {
+    if (isRefreshing.value || !canStart()) {
+      return;
+    }
+
+    if (event.ctrlKey || shouldIgnoreTarget(event.target)) {
+      return;
+    }
+
+    startWheelGestureIfNeeded();
+    const scrollTop = readScrollTop();
+
+    if (!wheelGestureStartedAtTop) {
+      if (isPulling.value) {
+        resetPullState();
+      }
+      scheduleWheelEnd();
+      return;
+    }
+
+    if (scrollTop > 0) {
+      if (isPulling.value) {
+        resetPullState();
+      }
+      scheduleWheelEnd();
+      return;
+    }
+
+    const deltaY = Number(event.deltaY);
+    if (!Number.isFinite(deltaY)) {
+      return;
+    }
+    scheduleWheelEnd();
+
+    if (deltaY < 0) {
+      pullDistance.value = Math.min(
+        maxDistance,
+        pullDistance.value + Math.abs(deltaY) * wheelResistance
+      );
+      isPulling.value = pullDistance.value > 0;
+
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    if (!isPulling.value) {
+      return;
+    }
+
+    pullDistance.value = Math.max(0, pullDistance.value - deltaY * wheelResistance);
+    isPulling.value = pullDistance.value > 0;
+
+    if (isPulling.value) {
+      if (event.cancelable) {
+        event.preventDefault();
+      }
+      return;
+    }
+
+    resetPullState();
+  }
+
   onMounted(() => {
     window.addEventListener('touchstart', handleTouchStart, { passive: true });
     window.addEventListener('touchmove', handleTouchMove, { passive: false });
     window.addEventListener('touchend', handleTouchEnd, { passive: true });
     window.addEventListener('touchcancel', handleTouchCancel, { passive: true });
+    window.addEventListener('wheel', handleWheel, { passive: false });
   });
 
   onBeforeUnmount(() => {
+    clearWheelEndTimer();
+    resetWheelGestureState();
     window.removeEventListener('touchstart', handleTouchStart);
     window.removeEventListener('touchmove', handleTouchMove);
     window.removeEventListener('touchend', handleTouchEnd);
     window.removeEventListener('touchcancel', handleTouchCancel);
+    window.removeEventListener('wheel', handleWheel);
   });
 
   return {
