@@ -308,8 +308,10 @@
               </div>
               <template v-else>
                 <h1 class="text-3xl font-black uppercase tracking-tight text-gray-900 truncate">{{ selectedReport.name }}</h1>
+                <p v-if="selectedReportFolderName" class="text-[10px] text-gray-500 mt-2 font-black uppercase tracking-[0.18em]">
+                  <span class="text-gray-700">{{ selectedReportFolderName }}</span>
+                </p>
                 <p class="text-xs text-gray-500 mt-1">
-                  {{ selectedReport.rows.length }} row{{ selectedReport.rows.length === 1 ? '' : 's' }}
                   <span v-if="isDraftSelected" class="ml-2 text-amber-700 font-bold">· Unsaved</span>
                   <span v-else-if="saveStateLabel" class="ml-2">· {{ saveStateLabel }}</span>
                 </p>
@@ -1109,6 +1111,9 @@ function setSelectedReportId(reportId, options = {}) {
 
 const selectedReport = computed(() =>
   state.reports.find(report => report._id === selectedReportId.value) || null
+);
+const selectedReportFolderName = computed(() =>
+  String(selectedReport.value?.folderName || '').trim()
 );
 const isReportReorderActive = computed(() => Boolean(longPressReorderReportKey.value));
 const isRowReorderActive = computed(() => Boolean(longPressReorderRowId.value));

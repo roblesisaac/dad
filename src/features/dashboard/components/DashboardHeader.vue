@@ -208,7 +208,7 @@ const showTabAsCurrentLabel = computed(() => isCategoryView.value || (isCategory
 const isRearrangeActive = computed(() => props.isRearrangeActive);
 const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const showEditTabAction = computed(() => (
-  (isCategoryView.value || (isCategoryDetailView.value && isNoGroupingTab.value))
+  (isCategoryView.value || isCategoryDetailView.value)
   && Boolean(state.selected.tab)
 ));
 

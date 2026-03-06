@@ -109,7 +109,7 @@
 
       <RuleManagerModal
         :is-open="showRuleManagerModal"
-        @close="showRuleManagerModal = false"
+        @close="handleRuleManagerClose"
       />
 
       <AccountModal
@@ -453,11 +453,34 @@ function toggleRearrangeMode() {
 }
 
 function openTabEditor() {
-  if (!isCategoryView.value || !state.selected.tab) {
+  if (!state.selected.tab) {
+    return;
+  }
+
+  const canEditFromCurrentView = isCategoryView.value || isCategoryDetailView.value;
+  if (!canEditFromCurrentView) {
     return;
   }
 
   showRuleManagerModal.value = true;
+}
+
+function handleRuleManagerClose() {
+  showRuleManagerModal.value = false;
+
+  if (!state.selected.tab) {
+    return;
+  }
+
+  if (!isNoGroupingTab(state.selected.tab)) {
+    return;
+  }
+
+  resetCategorySelection();
+  setDashboardView('category-detail', {
+    syncRoute: true,
+    historyMode: 'replace'
+  });
 }
 
 function openTransactionSearch() {

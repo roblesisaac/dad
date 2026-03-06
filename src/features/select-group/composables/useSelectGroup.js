@@ -10,6 +10,7 @@ const GROUP_CHANGE_IN_FLIGHT_REQUESTS = new Map();
 const GROUP_LABEL_MIGRATION_CACHE = new Set();
 const GROUP_LABEL_NORMALIZATION_CACHE = new Set();
 let GROUP_FETCH_TOAST_TOKEN = 0;
+let LATEST_GROUP_CHANGE_REQUEST_ID = 0;
 
 export function useSelectGroup() {
   const { state } = useDashboardState();
@@ -341,10 +342,12 @@ export function useSelectGroup() {
     }
 
     const shouldShowFetchProgress = showLoading;
+    const requestId = ++LATEST_GROUP_CHANGE_REQUEST_ID;
+    const isLatestRequest = () => requestId === LATEST_GROUP_CHANGE_REQUEST_ID;
     const toastToken = shouldShowFetchProgress ? ++GROUP_FETCH_TOAST_TOKEN : 0;
     let latestProgressMessage = '0%';
     const updateLoadingMessage = (_completed, total, percentage) => {
-      if (!shouldShowFetchProgress || !Number.isFinite(total) || total <= 0) {
+      if (!shouldShowFetchProgress || !isLatestRequest() || !Number.isFinite(total) || total <= 0) {
         return;
       }
 
@@ -360,7 +363,7 @@ export function useSelectGroup() {
 
     const requestPromise = (async () => {
       // Fetch transactions for all accounts in the selected group
-      state.selected.allGroupTransactions = await fetchTransactionsForGroup(
+      const fetchedTransactions = await fetchTransactionsForGroup(
         selectedGroup,
         state.date,
         {
@@ -375,11 +378,18 @@ export function useSelectGroup() {
         }
       );
 
+      // Ignore stale results from previous requests if a newer date/group request is in flight.
+      if (!isLatestRequest()) {
+        return;
+      }
+
+      state.selected.allGroupTransactions = fetchedTransactions;
+
       if (tabsForGroup.length) {
         return await processAllTabsForSelectedGroup({ showLoading });
       }
 
-      if (showLoading) {
+      if (showLoading && isLatestRequest()) {
         state.isLoading = false;
       }
     })();
@@ -388,17 +398,23 @@ export function useSelectGroup() {
 
     try {
       await requestPromise;
+    } catch (error) {
+      if (showLoading && isLatestRequest()) {
+        state.isLoading = false;
+      }
+
+      throw error;
     } finally {
       if (GROUP_CHANGE_IN_FLIGHT_REQUESTS.get(requestKey) === requestPromise) {
         GROUP_CHANGE_IN_FLIGHT_REQUESTS.delete(requestKey);
       }
 
-      if (shouldShowFetchProgress && toastToken === GROUP_FETCH_TOAST_TOKEN) {
+      if (shouldShowFetchProgress && isLatestRequest() && toastToken === GROUP_FETCH_TOAST_TOKEN) {
         state.blueBar.loading = false;
 
         setTimeout(() => {
           const currentMessage = state.blueBar.message;
-          const isLatestToast = toastToken === GROUP_FETCH_TOAST_TOKEN;
+          const isLatestToast = isLatestRequest() && toastToken === GROUP_FETCH_TOAST_TOKEN;
           const isPercentageToast = typeof currentMessage === 'string' && /^\d{1,3}%$/.test(currentMessage);
 
           if (isLatestToast && isPercentageToast) {
