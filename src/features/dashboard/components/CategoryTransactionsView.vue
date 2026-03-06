@@ -1,6 +1,6 @@
 <template>
   <div class="w-full bg-white">
-    <div v-if="transactions.length">
+    <div v-if="transactions.length || hiddenItems.length">
       <div
         v-for="item in transactions"
         :key="item._id"
@@ -40,6 +40,11 @@
           <TransactionDetails :state="state" :item="item" />
         </div>
       </div>
+
+      <HiddenItemsSection
+        :items="hiddenItems"
+        :with-horizontal-padding="true"
+      />
     </div>
 
     <div
@@ -57,6 +62,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useUtils } from '@/shared/composables/useUtils';
 import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
 import TransactionDetails from './TransactionDetails.vue';
+import HiddenItemsSection from './HiddenItemsSection.vue';
 
 const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();
@@ -74,6 +80,11 @@ const transactions = computed(() => {
 
   const selectedCategory = categorizedItems.find(([categoryName]) => categoryName === selectedCategoryName);
   return Array.isArray(selectedCategory?.[1]) ? selectedCategory[1] : [];
+});
+
+const hiddenItems = computed(() => {
+  const tabHiddenItems = state.selected.tab?.hiddenItems;
+  return Array.isArray(tabHiddenItems) ? tabHiddenItems : [];
 });
 
 function itemIsSelected(itemId) {

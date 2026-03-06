@@ -35,6 +35,8 @@ describe('tabEvaluator', () => {
 
     expect(noTab.tabTotal).toBe(0);
     expect(noTransactions.tabTotal).toBe(0);
+    expect(noTab.hiddenItems).toEqual([]);
+    expect(noTransactions.hiddenItems).toEqual([]);
   });
 
   test('buildTabRulesForId keeps global and tab-specific rules', () => {
@@ -87,8 +89,12 @@ describe('tabEvaluator', () => {
     const visibleTransactionIds = result.categorizedItems
       .flatMap(([, items]) => items.map(item => item.transaction_id))
       .sort();
+    const hiddenTransactionIds = result.hiddenItems
+      .map(item => item.transaction_id)
+      .sort();
 
     expect(visibleTransactionIds).toEqual(['entertainment-expense', 'travel-expense']);
+    expect(hiddenTransactionIds).toEqual(['groceries-expense']);
   });
 
   test('defaults missing filter join operator to AND', () => {

@@ -1,0 +1,517 @@
+<template>
+  <div v-if="hiddenItems.length" class="border-t border-gray-100">
+    <div
+      :class="[
+        'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none cursor-pointer select-none',
+        rowPaddingClass
+      ]"
+      role="button"
+      tabindex="0"
+      @click="toggleHiddenItems"
+      @keydown.enter.prevent="toggleHiddenItems"
+      @keydown.space.prevent="toggleHiddenItems"
+      @mousedown="handleHeaderMouseDown"
+      @mousemove="handleHeaderMouseMove"
+      @mouseup="handleHeaderMouseUp"
+      @mouseleave="handleHeaderMouseLeave"
+      @touchstart.passive="handleHeaderTouchStart"
+      @touchmove.passive="handleHeaderTouchMove"
+      @touchend="handleHeaderTouchEnd"
+      @touchcancel="clearLongPressTimer"
+    >
+      <div class="flex items-center gap-2">
+        <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Hidden Items</h2>
+        <span class="text-[10px] font-black text-black">{{ hiddenItems.length }}</span>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button
+          v-if="showHiddenItems && showGroupByControl"
+          type="button"
+          class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+          @click.stop="cycleHiddenItemsGroupBy"
+        >
+          Group by {{ hiddenItemsGroupBy }}
+        </button>
+
+        <div class="text-black transition-colors">
+          <ChevronUp v-if="showHiddenItems" class="w-4 h-4" />
+          <ChevronDown v-else class="w-4 h-4" />
+        </div>
+      </div>
+    </div>
+
+    <div v-if="showHiddenItems">
+      <template v-if="hiddenItemsGroupBy === 'name'">
+        <div
+          v-for="item in hiddenItemsByName"
+          :key="hiddenItemKey(item)"
+          class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300"
+        >
+          <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
+
+          <button
+            :class="[
+              'w-full py-6 flex items-center justify-between text-left cursor-pointer focus:outline-none',
+              rowPaddingClass
+            ]"
+            type="button"
+            @click="selectTransaction(item)"
+          >
+            <div class="min-w-0 flex-1 pr-4">
+              <div class="text-[10px] font-black text-black uppercase tracking-widest mb-1">
+                {{ transactionDate(item) }}
+              </div>
+              <div class="text-base font-black text-gray-900 uppercase tracking-tight truncate">
+                {{ item.name }}
+              </div>
+              <div class="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                Excluded by tab filters
+              </div>
+              <div
+                v-if="item.pending || item.check_number"
+                class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
+              >
+                <span v-if="item.pending">Pending</span>
+                <span v-if="item.check_number">#{{ item.check_number }}</span>
+              </div>
+            </div>
+
+            <div class="shrink-0 text-right">
+              <span :class="[fontColor(item.amount), 'text-base font-black tracking-tight']">
+                {{ formatPrice(item.amount, { toFixed: 0 }) }}
+              </span>
+            </div>
+          </button>
+
+          <div v-if="itemIsSelected(item._id)" class="border-t-2 border-gray-50 bg-gray-50/40">
+            <TransactionDetails :state="state" :item="item" />
+          </div>
+        </div>
+      </template>
+
+      <template v-else>
+        <div
+          v-for="group in hiddenItemGroups"
+          :key="group.key"
+          class="border-t border-gray-100 first:border-t-0"
+        >
+          <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300">
+            <div
+              v-if="isGroupExpanded(group.key)"
+              class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"
+            ></div>
+
+            <button
+              :class="[
+                'flex items-center justify-between w-full py-6 text-left cursor-pointer focus:outline-none',
+                rowPaddingClass
+              ]"
+              type="button"
+              @click="toggleGroupExpanded(group.key)"
+            >
+              <div class="flex items-center gap-4 flex-1 min-w-0">
+                <span
+                  v-if="isGroupExpanded(group.key)"
+                  class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0"
+                >
+                  {{ group.items.length }}
+                </span>
+                <span class="text-base font-black text-gray-900 uppercase tracking-tight truncate group-hover:text-black transition-colors">
+                  {{ group.label }}
+                </span>
+              </div>
+
+              <div class="flex items-center gap-3 ml-4 shrink-0">
+                <span :class="[fontColor(group.total), 'text-base font-black tracking-tight']">
+                  {{ formatPrice(group.total, { toFixed: 0 }) }}
+                </span>
+                <ChevronUp v-if="isGroupExpanded(group.key)" class="w-4 h-4 text-gray-300" />
+                <ChevronDown v-else class="w-4 h-4 text-gray-300" />
+              </div>
+            </button>
+          </div>
+
+          <div v-if="isGroupExpanded(group.key)">
+            <div
+              v-for="item in group.items"
+              :key="hiddenItemKey(item)"
+              class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300"
+            >
+              <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
+
+              <button
+                :class="[
+                  'w-full py-6 flex items-center justify-between text-left cursor-pointer focus:outline-none',
+                  rowPaddingClass
+                ]"
+                type="button"
+                @click="selectTransaction(item)"
+              >
+                <div class="min-w-0 flex-1 pr-4">
+                  <div class="text-[10px] font-black text-black uppercase tracking-widest mb-1">
+                    {{ transactionDate(item) }}
+                  </div>
+                  <div class="text-base font-black text-gray-900 uppercase tracking-tight truncate">
+                    {{ item.name }}
+                  </div>
+                  <div class="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                    Excluded by tab filters
+                  </div>
+                  <div
+                    v-if="item.pending || item.check_number"
+                    class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
+                  >
+                    <span v-if="item.pending">Pending</span>
+                    <span v-if="item.check_number">#{{ item.check_number }}</span>
+                  </div>
+                </div>
+
+                <div class="shrink-0 text-right">
+                  <span :class="[fontColor(item.amount), 'text-base font-black tracking-tight']">
+                    {{ formatPrice(item.amount, { toFixed: 0 }) }}
+                  </span>
+                </div>
+              </button>
+
+              <div v-if="itemIsSelected(item._id)" class="border-t-2 border-gray-50 bg-gray-50/40">
+                <TransactionDetails :state="state" :item="item" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { format, isValid, parseISO } from 'date-fns';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useUtils } from '@/shared/composables/useUtils';
+import TransactionDetails from './TransactionDetails.vue';
+
+const props = defineProps({
+  items: {
+    type: Array,
+    default: () => []
+  },
+  withHorizontalPadding: {
+    type: Boolean,
+    default: false
+  }
+});
+
+const { state } = useDashboardState();
+const { fontColor, formatPrice } = useUtils();
+const showHiddenItems = ref(false);
+const showGroupByControl = ref(false);
+const hiddenItemsGroupBy = ref('category');
+const expandedGroupKeys = ref([]);
+const longPressTimeoutId = ref(null);
+const longPressStart = ref({ x: 0, y: 0 });
+const lastLongPressTimestamp = ref(0);
+
+const GROUP_BY_OPTIONS = ['category', 'name', 'date'];
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+
+const rowPaddingClass = computed(() => (props.withHorizontalPadding ? 'px-6' : ''));
+const hiddenItems = computed(() => (Array.isArray(props.items) ? props.items : []));
+const hiddenItemsByName = computed(() => {
+  return [...hiddenItems.value].sort((itemA, itemB) => {
+    const nameSort = String(itemA?.name || '').localeCompare(String(itemB?.name || ''));
+    if (nameSort !== 0) {
+      return nameSort;
+    }
+
+    return sortHiddenItemsByDateDesc(itemA, itemB);
+  });
+});
+const hiddenItemGroups = computed(() => {
+  if (hiddenItemsGroupBy.value === 'name') {
+    return [];
+  }
+
+  const groupedHiddenItems = new Map();
+
+  hiddenItems.value.forEach((item) => {
+    const groupMeta = hiddenItemGroupMeta(item, hiddenItemsGroupBy.value);
+    const existingGroup = groupedHiddenItems.get(groupMeta.key);
+    const safeAmount = toSafeAmount(item?.amount);
+
+    if (existingGroup) {
+      existingGroup.items.push(item);
+      existingGroup.total += safeAmount;
+      return;
+    }
+
+    groupedHiddenItems.set(groupMeta.key, {
+      key: groupMeta.key,
+      label: groupMeta.label,
+      sortValue: groupMeta.sortValue,
+      total: safeAmount,
+      items: [item]
+    });
+  });
+
+  const groups = Array.from(groupedHiddenItems.values());
+  groups.forEach((group) => {
+    group.items.sort(sortHiddenItemsByDateDesc);
+  });
+
+  if (hiddenItemsGroupBy.value === 'date') {
+    groups.sort((groupA, groupB) => {
+      if (groupA.sortValue !== groupB.sortValue) {
+        return groupB.sortValue - groupA.sortValue;
+      }
+
+      return groupA.label.localeCompare(groupB.label);
+    });
+  } else {
+    groups.sort((groupA, groupB) => groupA.label.localeCompare(groupB.label));
+  }
+
+  return groups;
+});
+
+function toSafeAmount(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hiddenItemGroupMeta(item, groupByMode) {
+  if (groupByMode === 'date') {
+    const { label, sortValue } = hiddenItemDateMeta(item);
+    return {
+      key: label,
+      label,
+      sortValue
+    };
+  }
+
+  const category = String(item?.personal_finance_category?.primary || 'misc').trim() || 'misc';
+  return {
+    key: category.toLowerCase(),
+    label: category,
+    sortValue: 0
+  };
+}
+
+function hiddenItemDateMeta(item) {
+  const rawDate = transactionDate(item);
+  if (!rawDate) {
+    return { label: 'unknown date', sortValue: 0 };
+  }
+
+  const parsedDate = parseISO(rawDate);
+  if (!isValid(parsedDate)) {
+    return { label: 'unknown date', sortValue: 0 };
+  }
+
+  return {
+    label: `${format(parsedDate, 'yyyy')}, ${format(parsedDate, 'MMM d')}`,
+    sortValue: parsedDate.getTime()
+  };
+}
+
+function hiddenItemKey(item) {
+  return item?._id
+    || item?.transaction_id
+    || `${item?.account_id || ''}-${transactionDate(item)}-${item?.amount || ''}-${item?.name || ''}`;
+}
+
+function sortHiddenItemsByDateDesc(itemA, itemB) {
+  const dateA = hiddenItemDateMeta(itemA).sortValue;
+  const dateB = hiddenItemDateMeta(itemB).sortValue;
+  if (dateA !== dateB) {
+    return dateB - dateA;
+  }
+
+  return String(itemA?.name || '').localeCompare(String(itemB?.name || ''));
+}
+
+function resetGroupingState() {
+  hiddenItemsGroupBy.value = 'category';
+  showGroupByControl.value = false;
+  expandedGroupKeys.value = [];
+}
+
+function toggleHiddenItems() {
+  if (Date.now() - lastLongPressTimestamp.value < 500) {
+    lastLongPressTimestamp.value = 0;
+    return;
+  }
+
+  const nextOpen = !showHiddenItems.value;
+  showHiddenItems.value = nextOpen;
+
+  if (nextOpen) {
+    resetGroupingState();
+    return;
+  }
+
+  resetGroupingState();
+}
+
+function cycleHiddenItemsGroupBy() {
+  const currentIndex = GROUP_BY_OPTIONS.indexOf(hiddenItemsGroupBy.value);
+  const nextIndex = (currentIndex + 1) % GROUP_BY_OPTIONS.length;
+  hiddenItemsGroupBy.value = GROUP_BY_OPTIONS[nextIndex];
+  expandedGroupKeys.value = [];
+}
+
+function isGroupExpanded(groupKey) {
+  return expandedGroupKeys.value.includes(groupKey);
+}
+
+function toggleGroupExpanded(groupKey) {
+  if (isGroupExpanded(groupKey)) {
+    expandedGroupKeys.value = expandedGroupKeys.value.filter(key => key !== groupKey);
+    return;
+  }
+
+  expandedGroupKeys.value = [...expandedGroupKeys.value, groupKey];
+}
+
+function clearLongPressTimer() {
+  if (longPressTimeoutId.value) {
+    clearTimeout(longPressTimeoutId.value);
+    longPressTimeoutId.value = null;
+  }
+}
+
+function triggerLongPress() {
+  if (!showHiddenItems.value) {
+    return;
+  }
+
+  showGroupByControl.value = true;
+  lastLongPressTimestamp.value = Date.now();
+}
+
+function startLongPress(clientX, clientY) {
+  if (!showHiddenItems.value) {
+    return;
+  }
+
+  longPressStart.value = { x: clientX, y: clientY };
+  clearLongPressTimer();
+  longPressTimeoutId.value = setTimeout(() => {
+    triggerLongPress();
+    longPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function shouldIgnoreLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function handleHeaderMouseDown(event) {
+  if (event.button !== 0 || shouldIgnoreLongPressTarget(event)) {
+    return;
+  }
+
+  startLongPress(event.clientX, event.clientY);
+}
+
+function handleHeaderMouseMove(event) {
+  if (!longPressTimeoutId.value) return;
+
+  const deltaX = Math.abs(event.clientX - longPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - longPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearLongPressTimer();
+  }
+}
+
+function handleHeaderMouseUp() {
+  clearLongPressTimer();
+}
+
+function handleHeaderMouseLeave() {
+  clearLongPressTimer();
+}
+
+function handleHeaderTouchStart(event) {
+  if (shouldIgnoreLongPressTarget(event)) {
+    return;
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  startLongPress(touch.clientX, touch.clientY);
+}
+
+function handleHeaderTouchMove(event) {
+  if (!longPressTimeoutId.value) return;
+
+  const touch = event.touches?.[0];
+  if (!touch) return;
+
+  const deltaX = Math.abs(touch.clientX - longPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - longPressStart.value.y);
+
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearLongPressTimer();
+  }
+}
+
+function handleHeaderTouchEnd() {
+  clearLongPressTimer();
+}
+
+function itemIsSelected(itemId) {
+  return state.selected.transaction?._id === itemId;
+}
+
+function selectTransaction(item) {
+  if (itemIsSelected(item._id)) {
+    state.selected.transaction = false;
+    return;
+  }
+
+  state.selected.transaction = item;
+}
+
+function transactionDate(item) {
+  return item?.authorized_date || item?.date || '';
+}
+
+watch(
+  () => state.selected.tab?._id,
+  () => {
+    showHiddenItems.value = false;
+    lastLongPressTimestamp.value = 0;
+    clearLongPressTimer();
+    resetGroupingState();
+  }
+);
+
+watch(
+  () => hiddenItems.value.length,
+  (hiddenCount) => {
+    if (!hiddenCount) {
+      showHiddenItems.value = false;
+      lastLongPressTimestamp.value = 0;
+      clearLongPressTimer();
+      resetGroupingState();
+    }
+  }
+);
+
+onBeforeUnmount(() => {
+  clearLongPressTimer();
+});
+</script>

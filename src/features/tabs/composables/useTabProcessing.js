@@ -412,6 +412,7 @@ export function useTabProcessing() {
     for (const tab of selectedTabs.slice(1)) {
       tab.isSelected = false;
       tab.categorizedItems = [];
+      tab.hiddenItems = [];
     }
   }
 
@@ -476,6 +477,7 @@ export function useTabProcessing() {
 
         tab.total = processed.tabTotal;
         tab.categorizedItems = processed.categorizedItems;
+        tab.hiddenItems = Array.isArray(processed.hiddenItems) ? processed.hiddenItems : [];
         tab.groupByMode = processed.groupByMode || 'category';
       }
 

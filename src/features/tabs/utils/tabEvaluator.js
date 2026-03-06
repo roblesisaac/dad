@@ -578,6 +578,7 @@ export function evaluateTabData({
     return {
       tabTotal: 0,
       categorizedItems: [],
+      hiddenItems: [],
       groupByMode: 'category'
     };
   }
@@ -590,6 +591,7 @@ export function evaluateTabData({
 
   const dataCopy = sort(transactions);
   const categorizedItems = [];
+  const hiddenItems = [];
   let tabTotal = 0;
 
   for (const item of dataCopy) {
@@ -599,7 +601,13 @@ export function evaluateTabData({
 
     const typeToGroupBy = groupBy(item);
 
-    if (!filter(item)) continue;
+    const passesFilter = filter(item);
+    if (!passesFilter) {
+      if (tab.isSelected) {
+        hiddenItems.push(item);
+      }
+      continue;
+    }
 
     const amount = parseFloat(item.amount);
     const safeAmount = Number.isFinite(amount) ? amount : 0;
@@ -632,6 +640,7 @@ export function evaluateTabData({
   return {
     tabTotal,
     categorizedItems,
+    hiddenItems,
     groupByMode: propToGroupBy || 'category'
   };
 }

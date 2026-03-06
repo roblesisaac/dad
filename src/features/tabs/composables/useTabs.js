@@ -189,14 +189,17 @@ export function useTabs() {
     if(prevSelectedTab) {
       prevSelectedTab.isSelected = false;
       prevSelectedTab.categorizedItems = [];
+      prevSelectedTab.hiddenItems = [];
     }
 
     tabToSelect.isSelected = true;
     tabToSelect.categorizedItems = [];
+    tabToSelect.hiddenItems = [];
     tabToSelect.groupByMode = 'category';
     const processed = processTabData(tabToSelect);
     if(processed) {
       tabToSelect.categorizedItems = processed.categorizedItems;
+      tabToSelect.hiddenItems = Array.isArray(processed.hiddenItems) ? processed.hiddenItems : [];
       tabToSelect.groupByMode = processed.groupByMode || 'category';
     }
   }
@@ -269,6 +272,7 @@ export function useTabs() {
     if(selectedTab) {
       selectedTab.isSelected = false;
       selectedTab.categorizedItems = [];
+      selectedTab.hiddenItems = [];
     }
 
     const scopeId = resolveTabOrderScopeId(selectedGroup);
@@ -338,6 +342,7 @@ export function useTabs() {
       if (selectedTab) {
         selectedTab.isSelected = false;
         selectedTab.categorizedItems = [];
+        selectedTab.hiddenItems = [];
       }
 
       const scopeId = resolveTabOrderScopeId(selectedGroup);
