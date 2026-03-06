@@ -60,7 +60,8 @@ export function useInit() {
   async function init(options = {}) {
     const {
       preferredGroupId = '',
-      prioritizeFirstPaint = true
+      prioritizeFirstPaint = true,
+      runPlaidSync = true
     } = options;
     try {
       state.isInitialized = false;
@@ -107,7 +108,9 @@ export function useInit() {
           void (async () => {
             await fetchTabsAndRules();
             await handleGroupChange({ showLoading: false });
-            await syncLatestTransactionsForAllBanks();
+            if (runPlaidSync) {
+              await syncLatestTransactionsForAllBanks();
+            }
           })().catch((backgroundError) => {
             console.error('Background init workflow error:', backgroundError);
           });
@@ -116,9 +119,11 @@ export function useInit() {
           await handleGroupChange();
           state.isInitialized = true;
 
-          syncLatestTransactionsForAllBanks().catch((syncError) => {
-            console.error('Background sync error:', syncError);
-          });
+          if (runPlaidSync) {
+            syncLatestTransactionsForAllBanks().catch((syncError) => {
+              console.error('Background sync error:', syncError);
+            });
+          }
         }
 
         void plaidScriptPromise;

@@ -77,6 +77,20 @@
               </p>
             </div>
 
+            <div class="mb-6">
+              <button
+                type="button"
+                class="account-sync-button w-full rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
+                :disabled="isSyncingBanks"
+                @click="handleSyncBankData"
+              >
+                {{ syncButtonLabel }}
+              </button>
+              <p v-if="syncStatusMessage" class="account-update-status mt-3 text-[9px] font-black uppercase tracking-[0.15em]">
+                {{ syncStatusMessage }}
+              </p>
+            </div>
+
             <button
               type="button"
               class="account-logout-button w-full rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
@@ -97,6 +111,7 @@ import { X } from 'lucide-vue-next';
 import { useTheme } from '@/theme/useTheme.js';
 import { useAuth } from '@/shared/composables/useAuth.js';
 import { usePwaUpdate } from '@/shared/composables/usePwaUpdate.js';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 
 defineProps({
   isOpen: {
@@ -109,8 +124,10 @@ const emit = defineEmits(['close']);
 const { themePreference, setTheme, resolvedTheme } = useTheme();
 const { logoutUser } = useAuth();
 const { needRefresh, reload, checkForUpdates } = usePwaUpdate();
+const { isSyncing: isSyncingBanks, syncLatestTransactionsForAllBanks } = usePlaidSync();
 const isCheckingUpdates = ref(false);
 const updateStatusMessage = ref('');
+const syncStatusMessage = ref('');
 
 const accountThemeOptions = [
   { value: 'system', label: 'System', style: { background: 'linear-gradient(135deg, #f3f3ee 50%, #000000 50%)' } },
@@ -129,6 +146,10 @@ const updateButtonLabel = computed(() => {
 
   return isCheckingUpdates.value ? 'Checking For Updates' : 'Check For Updates';
 });
+
+const syncButtonLabel = computed(() => (
+  isSyncingBanks.value ? 'Syncing Bank Data' : 'Sync Bank Data'
+));
 
 function closeModal() {
   emit('close');
@@ -158,6 +179,25 @@ async function handleCheckForUpdates() {
   } finally {
     isCheckingUpdates.value = false;
   }
+}
+
+async function handleSyncBankData() {
+  if (isSyncingBanks.value) {
+    return;
+  }
+
+  syncStatusMessage.value = '';
+
+  const result = await syncLatestTransactionsForAllBanks();
+  if (!result?.completed) {
+    syncStatusMessage.value = 'Bank Sync Failed';
+    return;
+  }
+
+  const totalAdded = Number(result?.totalStats?.added || 0);
+  syncStatusMessage.value = totalAdded > 0
+    ? `Sync Complete · ${totalAdded} New`
+    : 'Sync Complete';
 }
 
 function handleLogout() {
@@ -250,11 +290,26 @@ function handleLogout() {
   border: 1px solid var(--theme-btn-secondary-border);
 }
 
+.account-sync-button {
+  background: transparent;
+  color: var(--theme-btn-secondary-text);
+  border: 1px solid var(--theme-btn-secondary-border);
+}
+
 .account-update-button:hover:not(:disabled) {
   background: var(--theme-btn-secondary-hover-bg);
 }
 
 .account-update-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.account-sync-button:hover:not(:disabled) {
+  background: var(--theme-btn-secondary-hover-bg);
+}
+
+.account-sync-button:disabled {
   opacity: 0.7;
   cursor: not-allowed;
 }

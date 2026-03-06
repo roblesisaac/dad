@@ -244,7 +244,7 @@ const {
   indicatorStyle: pullToRefreshIndicatorStyle
 } = usePullToRefresh({
   onRefresh: async () => {
-    await applyRemoteDashboardSyncRefresh();
+    await applyRemoteDashboardSyncRefresh({ runPlaidSync: false });
   },
   canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value
 });
@@ -710,7 +710,11 @@ watch(
   }
 );
 
-async function applyRemoteDashboardSyncRefresh() {
+async function applyRemoteDashboardSyncRefresh(options = {}) {
+  const {
+    runPlaidSync = true
+  } = options;
+
   if (isApplyingRemoteDashboardSync.value) {
     return true;
   }
@@ -724,7 +728,8 @@ async function applyRemoteDashboardSyncRefresh() {
 
     await init({
       preferredGroupId,
-      prioritizeFirstPaint: true
+      prioritizeFirstPaint: true,
+      runPlaidSync
     });
 
     const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
