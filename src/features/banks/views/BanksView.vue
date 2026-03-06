@@ -5,9 +5,10 @@
         <h1 class="text-2xl font-bold">Connected Banks</h1>
         <button 
           @click="handleConnectBank"
-          class="inline-flex items-center px-4 py-2 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none"
+          :disabled="loading.connectBank"
+          class="inline-flex items-center px-4 py-2 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          Connect a Bank
+          {{ loading.connectBank ? 'Connecting...' : 'Connect a Bank' }}
         </button>
       </div>
       
@@ -89,6 +90,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useBanks } from '../composables/useBanks.js';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 import { useApi } from '@/shared/composables/useApi.js';
 import loadScript from '@/shared/utils/loadScript.js';
 import BankList from '../components/BankList.vue';
@@ -98,6 +100,7 @@ import { CheckCircle, AlertCircle } from 'lucide-vue-next';
 
 const emit = defineEmits(['connect-bank-complete', 'banks-data-changed']);
 const api = useApi();
+const { syncLatestTransactionsForBank } = usePlaidSync();
 
 // Setup composable
 const {
@@ -130,6 +133,7 @@ const deleteBankStatus = ref('');
 const downloadSummary = ref(null);
 const deleteSummary = ref(null);
 const deleteBankSummary = ref(null);
+let connectPlaidHandler = null;
 let reconnectPlaidHandler = null;
 
 const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.js';
@@ -137,6 +141,7 @@ const PLAID_SCRIPT_URL = 'https://cdn.plaid.com/link/v2/stable/link-initialize.j
 // Initialize loading state for reconnect bank
 loading.value = {
   ...loading.value,
+  connectBank: false,
   reconnectBank: false,
   encryptAccessToken: false,
   downloadAllData: false,
@@ -148,6 +153,7 @@ loading.value = {
 // Initialize error state for reconnect bank
 error.value = {
   ...error.value,
+  connectBank: null,
   reconnectBank: null,
   encryptAccessToken: null,
   downloadAllData: null,
@@ -189,11 +195,89 @@ const closeSyncSessionsModal = () => {
   isSyncSessionsModalOpen.value = false;
 };
 
-const handleConnectBank = () => {
-  // TODO: Implement bank connection flow
-  showNotification('Bank connection feature is not implemented yet', 'error');
-  // Signal to parent component that bank connection was attempted
-  emit('connect-bank-complete');
+const clearConnectPlaidHandler = () => {
+  if (connectPlaidHandler?.destroy) {
+    connectPlaidHandler.destroy();
+  }
+  connectPlaidHandler = null;
+};
+
+const handleConnectBank = async () => {
+  if (loading.value.connectBank) {
+    return;
+  }
+
+  try {
+    loading.value.connectBank = true;
+    error.value.connectBank = null;
+
+    await loadScript(PLAID_SCRIPT_URL);
+
+    if (!window?.Plaid?.create) {
+      throw new Error('Plaid Link failed to load');
+    }
+
+    const { link_token } = await api.post('plaid/connect/link');
+    if (!link_token) {
+      throw new Error('No link token received from server');
+    }
+
+    clearConnectPlaidHandler();
+    connectPlaidHandler = window.Plaid.create({
+      token: link_token,
+      onSuccess: async (publicToken) => {
+        try {
+          const response = await api.post('plaid/exchange/token', { publicToken });
+          const itemId = response?.data?.itemId || response?.itemId;
+
+          if (!itemId) {
+            throw new Error('Bank connected but missing item ID from server response');
+          }
+
+          const syncResult = await syncLatestTransactionsForBank(itemId);
+          await fetchBanks();
+
+          emit('banks-data-changed', {
+            action: 'connected',
+            itemId,
+            syncResult
+          });
+          emit('connect-bank-complete');
+
+          if (syncResult?.completed === false) {
+            showNotification('Bank connected, but initial transaction sync failed. You can retry from Sync History.', 'error');
+          } else {
+            showNotification('Bank connected successfully!', 'success');
+          }
+        } catch (exchangeError) {
+          console.error('Error finalizing bank connection:', exchangeError);
+          error.value.connectBank = exchangeError.message || 'Failed to finalize bank connection';
+          showNotification(`Error connecting bank: ${error.value.connectBank}`, 'error');
+        } finally {
+          loading.value.connectBank = false;
+          clearConnectPlaidHandler();
+        }
+      },
+      onExit: (err) => {
+        if (err) {
+          const message = err.display_message || err.error_message || err.error_code || 'Connection process was interrupted';
+          error.value.connectBank = message;
+          showNotification(`Error connecting bank: ${message}`, 'error');
+        }
+
+        loading.value.connectBank = false;
+        clearConnectPlaidHandler();
+      }
+    });
+
+    connectPlaidHandler.open();
+  } catch (err) {
+    console.error('Error connecting bank:', err);
+    error.value.connectBank = err.message || 'Failed to connect bank';
+    showNotification(`Error connecting bank: ${error.value.connectBank}`, 'error');
+    loading.value.connectBank = false;
+    clearConnectPlaidHandler();
+  }
 };
 
 const handleSyncBank = async () => {
@@ -682,6 +766,11 @@ onUnmounted(() => {
   if (notification.value.timeout) {
     clearTimeout(notification.value.timeout);
   }
+
+  if (connectPlaidHandler?.destroy) {
+    connectPlaidHandler.destroy();
+  }
+  connectPlaidHandler = null;
 
   if (reconnectPlaidHandler?.destroy) {
     reconnectPlaidHandler.destroy();
