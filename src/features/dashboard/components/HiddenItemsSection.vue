@@ -31,7 +31,7 @@
           class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black transition-colors"
           @click.stop="cycleHiddenItemsGroupBy"
         >
-          Group by {{ hiddenItemsGroupBy }}
+          Group by {{ nextHiddenItemsGroupBy }}
         </button>
 
         <div class="text-black transition-colors">
@@ -274,6 +274,12 @@ const hiddenItemGroups = computed(() => {
   }
 
   return groups;
+});
+const nextHiddenItemsGroupBy = computed(() => {
+  const currentIndex = GROUP_BY_OPTIONS.indexOf(hiddenItemsGroupBy.value);
+  const safeCurrentIndex = currentIndex >= 0 ? currentIndex : 0;
+  const nextIndex = (safeCurrentIndex + 1) % GROUP_BY_OPTIONS.length;
+  return GROUP_BY_OPTIONS[nextIndex];
 });
 
 function toSafeAmount(value) {
