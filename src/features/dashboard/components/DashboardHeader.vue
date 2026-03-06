@@ -1,5 +1,8 @@
 <template>
-  <div class="flex flex-col transition-all pb-12 sm:pb-20 bg-transparent">
+  <div 
+    class="flex flex-col transition-all bg-transparent"
+    :class="state.isOnboarding ? 'pb-4 sm:pb-6' : 'pb-12 sm:pb-20'"
+  >
     <div class="fixed inset-x-0 top-0 z-30 backdrop-blur-md">
       <div class="max-w-5xl mx-auto w-full sm:px-6">
         <div class="px-4 flex items-center justify-between py-4 transition-all">
@@ -90,14 +93,14 @@
       </div>
     </div>
 
-    <div class="pt-20 sm:pt-24">
+    <div :class="state.isOnboarding ? 'pt-16' : 'pt-20 sm:pt-24'">
       <div v-if="isTransactionSearchView" class="flex flex-col items-center justify-center text-center">
         <span class="font-black text-black text-lg sm:text-xl uppercase tracking-[0.2em]">
           Transaction Search
         </span>
       </div>
 
-      <div v-else class="flex flex-col items-center justify-center text-center">
+      <div v-else-if="!state.isOnboarding" class="flex flex-col items-center justify-center text-center">
         <div class="flex items-center gap-2 sm:gap-3 mb-4">
           <span class="font-black text-black text-6xl sm:text-8xl tracking-tighter">
             {{ formatPrice(headerTotal, { toFixed: 0 }) }}

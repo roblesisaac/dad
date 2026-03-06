@@ -1640,7 +1640,7 @@ async function handleBanksDataChanged() {
 
     if (!state.allUserGroups.length || !state.allUserAccounts.length) {
       showBanksModal.value = false;
-      router.push({ name: 'onboarding' });
+      state.isOnboarding = true;
       return;
     }
 

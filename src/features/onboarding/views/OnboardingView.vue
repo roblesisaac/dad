@@ -1,75 +1,74 @@
 <template>
-  <div class="max-w-6xl mx-auto p-8">
-    <!-- Onboarding Flow -->
-    <div class="max-w-xl mx-auto bg-white p-8 border-2 border-black shadow-[5px_5px_0px_#000]">
-      <div class="mb-6 flex justify-end">
-        <button
-          class="px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] border-2 border-black text-black hover:bg-black hover:text-white transition-colors"
-          @click="logoutUser"
-        >
-          Sign Out
-        </button>
-      </div>
-
+  <div class="w-full flex flex-col justify-center items-center px-4 py-8 sm:py-12">
+    <div class="w-full max-w-md relative">
       <!-- Reconnection Banner (when credentials expired) -->
       <div 
         v-if="isReconnecting" 
-        class="mb-6 p-4 bg-amber-50 border-2 border-amber-500 text-amber-800 flex items-start gap-3"
+        class="mb-8 p-6 bg-[var(--theme-bg-soft)] text-[var(--theme-text)] flex items-start gap-4 rounded-xl"
       >
-        <LucideAlertTriangle class="w-6 h-6 flex-shrink-0 mt-0.5" />
+        <LucideAlertTriangle class="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--theme-text)]" />
         <div>
-          <p class="font-bold">Bank Connection Expired</p>
-          <p class="text-sm">Your bank connection needs to be re-established. Please reconnect your account below.</p>
+          <p class="font-black text-sm uppercase tracking-wider mb-2">Connection Expired</p>
+          <p class="text-sm opacity-70">Your bank connection needs to be re-established. Please reconnect below.</p>
         </div>
       </div>
 
-      <h2 class="text-3xl font-bold mb-3 text-center text-purple-800">
-        {{ isReconnecting ? 'Reconnect Your Bank Account' : 'Welcome to Your Financial Dashboard!' }}
-      </h2>
-      <p class="mb-8 text-center text-gray-700">
-        {{ isReconnecting 
-          ? 'Your previous connection has expired. Click below to securely reconnect.' 
-          : "Let's get started by connecting your first bank account." }}
-      </p>
+      <div class="mb-12 text-center">
+        <h2 class="text-3xl font-black mb-4 tracking-tight text-[var(--theme-text)]">
+          {{ isReconnecting ? 'Reconnect Bank' : 'Welcome' }}
+        </h2>
+        <p class="text-sm opacity-70 text-[var(--theme-text)] max-w-sm mx-auto">
+          {{ isReconnecting 
+            ? 'Your previous connection has expired. Securely reconnect below.' 
+            : 'Get started by connecting your first bank account.' }}
+        </p>
+      </div>
       
       <OnboardingStatus 
         v-if="['syncing', 'complete'].includes(state.onboardingStep)"
         :state="state"
         @retry="handleRetry"
+        @complete="$emit('complete')"
       />
 
       <div v-else>
-        <div class="mb-8 bg-gray-100 border-2 border-black p-6 shadow-[3px_3px_0px_#000]">
-          <ul class="space-y-4">
-            <li class="flex items-center gap-3 text-gray-800">
-              <LucideShieldCheck class="w-6 h-6 text-purple-700" />
-              <span class="text-lg">Securely connect your accounts</span>
-            </li>
-            <li class="flex items-center gap-3 text-gray-800">
-              <LucideLineChart class="w-6 h-6 text-purple-700" />
-              <span class="text-lg">Track your spending</span>
-            </li>
-            <li class="flex items-center gap-3 text-gray-800">
-              <LucideWallet class="w-6 h-6 text-purple-700" />
-              <span class="text-lg">Manage your finances</span>
-            </li>
-          </ul>
+        <div class="mb-12 space-y-6">
+          <div class="flex items-center gap-4">
+             <div class="w-12 h-12 rounded-full bg-[var(--theme-bg-soft)] flex items-center justify-center">
+              <LucideShieldCheck class="w-5 h-5 text-[var(--theme-text)]" />
+             </div>
+             <span class="text-sm font-bold text-[var(--theme-text)] uppercase tracking-wider">Secure Connection</span>
+          </div>
+          <div class="flex items-center gap-4">
+             <div class="w-12 h-12 rounded-full bg-[var(--theme-bg-soft)] flex items-center justify-center">
+              <LucideLineChart class="w-5 h-5 text-[var(--theme-text)]" />
+             </div>
+             <span class="text-sm font-bold text-[var(--theme-text)] uppercase tracking-wider">Track Spending</span>
+          </div>
+          <div class="flex items-center gap-4">
+             <div class="w-12 h-12 rounded-full bg-[var(--theme-bg-soft)] flex items-center justify-center">
+              <LucideWallet class="w-5 h-5 text-[var(--theme-text)]" />
+             </div>
+             <span class="text-sm font-bold text-[var(--theme-text)] uppercase tracking-wider">Manage Finances</span>
+          </div>
         </div>
         
         <button 
-          class="w-full py-3 px-4 bg-purple-700 hover:bg-purple-800 text-white font-bold border-2 border-black shadow-[4px_4px_0px_#000] hover:shadow-[2px_2px_0px_#000] transition-all duration-200 flex items-center justify-center"
+          class="w-full py-4 px-6 bg-[var(--theme-text)] hover:opacity-70 text-[var(--theme-bg)] transition-opacity flex items-center justify-center rounded-xl"
           @click="connectBank"
           :disabled="state.loading"
         >
-          <LucidePlus v-if="!state.loading" class="w-5 h-5 mr-2" />
-          <LucideLoader v-else class="w-5 h-5 mr-2 animate-spin" />
-          {{ state.loading ? 'Connecting...' : (isReconnecting ? 'Reconnect Your Bank' : 'Connect Your Bank') }}
+          <LucidePlus v-if="!state.loading" class="w-5 h-5 mr-3" />
+          <LucideLoader v-else class="w-5 h-5 mr-3 animate-spin" />
+          <span class="text-sm font-black uppercase tracking-[0.2em]">
+            {{ state.loading ? 'Connecting...' : (isReconnecting ? 'Reconnect' : 'Connect Bank') }}
+          </span>
         </button>
       </div>
 
-      <div v-if="state.error" class="mt-6 p-4 bg-red-100 border-2 border-red-600 text-red-700 flex items-center gap-2">
-        <LucideAlertCircle class="w-5 h-5 flex-shrink-0" />
-        <span>{{ state.error }}</span>
+      <div v-if="state.error" class="mt-8 p-4 bg-red-100 text-red-800 flex items-start gap-3 rounded-xl text-sm border-none shadow-none">
+        <LucideAlertCircle class="w-5 h-5 flex-shrink-0 mt-0.5" />
+        <span class="font-medium">{{ state.error }}</span>
       </div>
     </div>
   </div>
@@ -77,10 +76,10 @@
 
 <script setup>
 import { onMounted, computed } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { useRouter } from 'vue-router';
 import OnboardingStatus from '../components/OnboardingStatus.vue';
 import { usePlaidIntegration } from '../composables/usePlaidIntegration';
-import { useAuth } from '@/shared/composables/useAuth.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { 
   LucideShieldCheck, 
   LucideLineChart, 
@@ -91,9 +90,10 @@ import {
   LucideAlertTriangle
 } from 'lucide-vue-next';
 
+const emit = defineEmits(['complete']);
+const { state: dashboardState } = useDashboardState();
 const router = useRouter();
-const route = useRoute();
-const { logoutUser } = useAuth();
+
 const { 
   state, 
   initializePlaid, 
@@ -102,16 +102,15 @@ const {
 } = usePlaidIntegration();
 
 // Check if user is reconnecting due to expired credentials
-const isReconnecting = computed(() => route.query.reconnect === 'true');
+const isReconnecting = computed(() => dashboardState.itemsNeedingReauth?.length > 0);
 
 onMounted(async () => {
   try {
     await initializePlaid();
     
-    // If user already has items and not in onboarding, redirect to dashboard
-    // But NOT if they're reconnecting (they need to stay here)
+    // If user already has items and not in onboarding, remove onboarding view state
     if (state.hasItems && !state.isOnboarding && !isReconnecting.value) {
-      router.push('/dashboard');
+       emit('complete');
     }
   } catch (error) {
     console.error('Onboarding initialization error:', error);

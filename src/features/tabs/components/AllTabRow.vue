@@ -1,7 +1,7 @@
 <template>
 <div
   ref="rowElement"
-  class="relative bg-white transition-colors duration-150 w-full group shrink-0 select-none"
+  class="relative bg-[var(--theme-bg)] transition-colors duration-150 w-full group shrink-0 select-none"
   @click.stop="handleRowClick"
   @mousedown="handleRowMouseDown"
   @mousemove="handleRowMouseMove"
@@ -13,9 +13,9 @@
   @touchcancel="clearLongPressTimer"
   :class="[
     !isEnabled ? 'opacity-60 grayscale' : '',
-    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-gray-50/50' : '',
+    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-[var(--theme-bg-soft)]' : '',
     isEditMode && isEnabled ? 'cursor-move' : '',
-    isActiveTab && !isEditMode ? 'bg-gray-50/30 active-z-index' : ''
+    isActiveTab && !isEditMode ? 'bg-[var(--theme-bg-soft)] active-z-index' : ''
   ]"
 >
   <!-- Active Tab Indicator (Left Bar) -->

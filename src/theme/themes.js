@@ -1,6 +1,6 @@
 export const THEME_STORAGE_KEY = 'tracktabs.theme';
 
-export const THEME_ORDER = ['light', 'dark'];
+export const THEME_ORDER = ['light', 'dark', 'bw'];
 
 export const THEME_REGISTRY = Object.freeze({
   light: Object.freeze({
@@ -96,6 +96,53 @@ export const THEME_REGISTRY = Object.freeze({
     '--theme-toggle-border': '#ffffff',
     '--theme-toggle-hover-bg': '#000000',
     '--theme-scroll-arrow': 'rgba(255, 255, 255, 0.8)'
+  }),
+  bw: Object.freeze({
+    '--theme-bg': '#ffffff',
+    '--theme-browser-chrome': '#ffffff',
+    '--theme-bg-soft': '#ffffff',
+    '--theme-bg-subtle': '#ffffff',
+    '--theme-bg-muted': '#ffffff',
+    '--theme-text': '#000000',
+    '--theme-text-muted': '#000000',
+    '--theme-text-soft': '#000000',
+    '--theme-border': '#000000',
+    '--theme-ring': '#000000',
+    '--theme-overlay-20': 'rgba(0, 0, 0, 0.2)',
+    '--theme-overlay-30': 'rgba(0, 0, 0, 0.3)',
+    '--theme-overlay-50': 'rgba(0, 0, 0, 0.5)',
+    '--theme-overlay-80': 'rgba(255, 255, 255, 0.8)',
+    '--theme-overlay-90': 'rgba(255, 255, 255, 0.9)',
+    '--theme-gradient-from': '#000000',
+    '--theme-gradient-via': '#000000',
+    '--theme-gradient-to': '#000000',
+    '--theme-gradient-to-transparent': 'rgba(0, 0, 0, 0)',
+    '--theme-consent-bg': '#ffffff',
+    '--theme-consent-text': '#000000',
+    '--theme-swiper-bg': '#ffffff',
+    '--theme-swiper-bg-hover': '#ffffff',
+    '--theme-swiper-bg-active': '#ffffff',
+    '--theme-swiper-text': '#000000',
+    '--theme-callback-muted': '#000000',
+    '--theme-menu-item-text': '#000000',
+    '--theme-menu-item-hover-bg': '#ffffff',
+    '--theme-btn-primary-bg': '#ffffff',
+    '--theme-btn-primary-hover-bg': '#ffffff',
+    '--theme-btn-primary-text': '#000000',
+    '--theme-btn-secondary-border': '#000000',
+    '--theme-btn-secondary-text': '#000000',
+    '--theme-btn-secondary-hover-bg': '#ffffff',
+    '--theme-edit-row-border-hover': '#000000',
+    '--theme-edit-row-bg-hover': '#ffffff',
+    '--theme-edit-container-bg': 'rgba(0, 0, 0, 0.1)',
+    '--theme-rule-part-bg': '#ffffff',
+    '--theme-rule-part-text': '#000000',
+    '--theme-rule-part-border': '#000000',
+    '--theme-toggle-bg': '#ffffff',
+    '--theme-toggle-text': '#000000',
+    '--theme-toggle-border': '#000000',
+    '--theme-toggle-hover-bg': '#ffffff',
+    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.8)'
   })
 });
 

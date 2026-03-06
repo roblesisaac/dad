@@ -43,6 +43,107 @@ class ItemService extends PlaidBaseService {
     }
   }
 
+  async fetchInstitutionMetadata(accessToken) {
+    if (!accessToken) {
+      return {};
+    }
+
+    const plaidItem = await this.handleResponse(
+      this.client.itemGet({ access_token: accessToken })
+    );
+    const institutionId = plaidItem?.item?.institution_id;
+
+    if (!institutionId) {
+      return {};
+    }
+
+    let institutionName = '';
+    try {
+      const institutionResponse = await this.handleResponse(
+        this.client.institutionsGetById({
+          institution_id: institutionId,
+          country_codes: ['US']
+        })
+      );
+      institutionName = institutionResponse?.institution?.name || '';
+    } catch (institutionError) {
+      const errorMessage = institutionError?.error_message || institutionError?.message || 'Unknown error';
+      console.warn(`Institution name lookup failed for ${institutionId}: ${errorMessage}`);
+    }
+
+    return {
+      institutionId,
+      institutionName: institutionName || undefined
+    };
+  }
+
+  async hydrateInstitutionMetadata(item, user) {
+    if (!item || !user?._id || !user?.encryptedKey || !item.itemId) {
+      return item;
+    }
+
+    const hasInstitutionName = typeof item.institutionName === 'string' && item.institutionName.trim().length > 0;
+    const hasInstitutionId = typeof item.institutionId === 'string' && item.institutionId.trim().length > 0;
+    if (hasInstitutionName && hasInstitutionId) {
+      return item;
+    }
+
+    let decryptedAccessToken = '';
+    try {
+      decryptedAccessToken = this.decryptAccessToken(item, user);
+    } catch (tokenError) {
+      const errorMessage = tokenError?.message || 'Unknown error';
+      console.warn(`Could not decrypt token for item ${item.itemId}: ${errorMessage}`);
+      return item;
+    }
+
+    let metadata = {};
+    try {
+      metadata = await this.fetchInstitutionMetadata(decryptedAccessToken);
+    } catch (metadataError) {
+      const errorMessage = metadataError?.error_message || metadataError?.message || 'Unknown error';
+      console.warn(`Could not fetch institution metadata for item ${item.itemId}: ${errorMessage}`);
+      return item;
+    }
+
+    const updateData = {};
+    if (!hasInstitutionId && metadata.institutionId) {
+      updateData.institutionId = metadata.institutionId;
+    }
+    if (!hasInstitutionName && metadata.institutionName) {
+      updateData.institutionName = metadata.institutionName;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return item;
+    }
+
+    try {
+      await plaidItems.update({ itemId: item.itemId, userId: user._id }, updateData);
+    } catch (updateError) {
+      const errorMessage = updateError?.message || 'Unknown error';
+      console.warn(`Could not persist institution metadata for item ${item.itemId}: ${errorMessage}`);
+    }
+
+    return {
+      ...item,
+      ...updateData
+    };
+  }
+
+  async hydrateInstitutionMetadataForItems(items, user) {
+    if (!Array.isArray(items) || !user?._id || !user?.encryptedKey) {
+      return items;
+    }
+
+    const hydratedItems = [];
+    for (const item of items) {
+      hydratedItems.push(await this.hydrateInstitutionMetadata(item, user));
+    }
+
+    return hydratedItems;
+  }
+
   async getUserItems(userId) {
     if (!userId) {
       throw new Error('INVALID_USER: User ID is required');
@@ -150,11 +251,20 @@ class ItemService extends PlaidBaseService {
 
     try {
       const { access_token, item_id } = accessData;
+      let metadata = {};
+      try {
+        metadata = await this.fetchInstitutionMetadata(access_token);
+      } catch (metadataError) {
+        const errorMessage = metadataError?.error_message || metadataError?.message || 'Unknown error';
+        console.warn(`Unable to fetch institution metadata for item ${item_id}: ${errorMessage}`);
+      }
 
       // Let the model handle default syncData
       const itemData = {
         accessToken: access_token,
         itemId: item_id,
+        ...(metadata.institutionId ? { institutionId: metadata.institutionId } : {}),
+        ...(metadata.institutionName ? { institutionName: metadata.institutionName } : {}),
         user
       };
 
@@ -163,17 +273,27 @@ class ItemService extends PlaidBaseService {
       let savedItem;
       if (existingItem) {
         const encryptedAccessToken = this.encryptAccessToken(access_token, user);
+        const updateData = {
+          accessToken: encryptedAccessToken,
+          ...(metadata.institutionId ? { institutionId: metadata.institutionId } : {}),
+          ...(metadata.institutionName ? { institutionName: metadata.institutionName } : {})
+        };
+
         savedItem = await plaidItems.update(
           { itemId: item_id, userId: user._id },
-          { accessToken: encryptedAccessToken }
+          updateData
         );
       } else {
         savedItem = await plaidItems.save(itemData);
       }
 
+      const persistedItem = await this.getItem(item_id, user._id);
+
       return {
         itemId: item_id,
-        syncData: savedItem.syncData,
+        institutionId: persistedItem?.institutionId,
+        institutionName: persistedItem?.institutionName,
+        syncData: persistedItem?.syncData || savedItem?.syncData,
         userId: user._id
       };
     } catch (error) {

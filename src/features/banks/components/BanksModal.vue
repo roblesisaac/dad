@@ -2,8 +2,8 @@
   <BaseModal
     v-if="isOpen"
     :is-open="isOpen"
-    title="Manage Connected Banks"
-    size="xl"
+    title="Connected Banks"
+    size="md"
     @close="$emit('close')"
   >
     <template #content>

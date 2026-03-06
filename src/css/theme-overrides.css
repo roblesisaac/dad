@@ -1,4 +1,4 @@
-[data-theme]:not([data-theme='light']) {
+[data-theme='dark'] {
   color-scheme: dark;
 }
 
@@ -8,8 +8,7 @@
   color: var(--theme-text) !important;
 }
 
-[data-theme]:not([data-theme='light']) :where(
-  [class*='bg-white'],
+[data-theme]:not([data-theme='light']) :where([class*='bg-white'],
   [class*='bg-black'],
   [class*='bg-gray-'],
   [class*='bg-red-'],
@@ -25,8 +24,7 @@
   [class*='bg-neutral-'],
   [class*='bg-stone-'],
   [class*='bg-amber-'],
-  [class*='bg-emerald-']
-) {
+  [class*='bg-emerald-']) {
   background-color: var(--theme-bg) !important;
 }
 
@@ -50,8 +48,7 @@
   background-color: var(--theme-overlay-90) !important;
 }
 
-[data-theme]:not([data-theme='light']) :where(
-  [class*='text-white'],
+[data-theme]:not([data-theme='light']) :where([class*='text-white'],
   [class*='text-black'],
   [class*='text-gray-'],
   [class*='text-red-'],
@@ -68,8 +65,7 @@
   [class*='text-stone-'],
   [class*='text-amber-'],
   [class*='text-emerald-'],
-  [class*='text-transparent']
-) {
+  [class*='text-transparent']) {
   color: var(--theme-text) !important;
 }
 
@@ -106,4 +102,3 @@
 [data-theme]:not([data-theme='light']) :where([class*='stroke-']) {
   stroke: var(--theme-text) !important;
 }
-

@@ -1117,7 +1117,7 @@ async function saveCreateGroupFromAccount() {
 
 const goToOnboarding = () => {
   emit('close');
-  router.push({ name: 'onboarding' });
+  state.isOnboarding = true;
 };
 
 const handleDeleteGroup = () => {
@@ -1163,7 +1163,7 @@ const handleBanksDataChanged = async () => {
     if (!state.allUserGroups.length || !state.allUserAccounts.length) {
       showBanksModal.value = false;
       emit('close');
-      router.push({ name: 'onboarding' });
+      state.isOnboarding = true;
       return;
     }
 

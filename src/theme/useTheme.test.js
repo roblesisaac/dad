@@ -199,6 +199,10 @@ describe('useTheme', () => {
     expect(env.storage.get(THEME_STORAGE_KEY)).toBe('dark');
 
     themeModule.cycleTheme();
+    expect(themeModule.resolvedTheme.value).toBe('bw');
+    expect(env.storage.get(THEME_STORAGE_KEY)).toBe('bw');
+
+    themeModule.cycleTheme();
     expect(themeModule.resolvedTheme.value).toBe('light');
     expect(env.storage.get(THEME_STORAGE_KEY)).toBe('light');
   });

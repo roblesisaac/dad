@@ -3,7 +3,7 @@
     <!-- Enabled Tabs Header -->
     <div
       v-if="!isDashboardVariant"
-      class="py-5 bg-white border-b-2 border-gray-100 flex items-center justify-between"
+      class="py-5 bg-[var(--theme-bg)] border-b-2 border-[var(--theme-border)] flex items-center justify-between"
     >
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
       <span class="text-[10px] font-black text-black">{{ enabledTabs.length }} enabled</span>
@@ -62,7 +62,7 @@
       <button 
         @click="toggleDisabledSection" 
         :class="isDashboardVariant
-          ? 'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none'
+          ? 'flex items-center justify-between w-full py-6 hover:bg-[var(--theme-bg-soft)] transition-colors group focus:outline-none'
           : 'flex items-center justify-between w-full mb-4 group focus:outline-none'"
       >
         <div class="flex items-center gap-2">
@@ -96,12 +96,12 @@
     </div>
 
     <!-- Create New Tab Button -->
-    <div :class="isDashboardVariant ? '' : 'p-6 bg-gray-50/30 border-t-2 border-gray-100'">
+    <div :class="isDashboardVariant ? '' : 'p-6 bg-[var(--theme-bg-soft)] border-t-2 border-[var(--theme-border)]'">
       <button 
         @click="handleCreateNew" 
         :class="isDashboardVariant
-          ? 'w-full py-6 flex items-center justify-between text-left hover:bg-gray-50/50 transition-colors group focus:outline-none'
-          : 'w-full py-4 bg-black hover:bg-gray-800 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,0.15)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
+          ? 'w-full py-6 flex items-center justify-between text-left hover:bg-[var(--theme-bg-soft)] transition-colors group focus:outline-none'
+          : 'w-full py-4 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border-2 border-[var(--theme-border)] shadow-[4px_4px_0px_0px_var(--theme-border)] hover:shadow-[6px_6px_0px_0px_var(--theme-border)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
       >
         <template v-if="isDashboardVariant">
           <span class="text-base font-black text-gray-900 uppercase tracking-tight">Create New Tab</span>
@@ -199,10 +199,10 @@ const draggableTabs = computed({
 });
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
-    return 'bg-white w-full';
+    return 'w-full bg-transparent';
   }
 
-  return 'bg-white max-h-[80vh] overflow-y-auto w-full';
+  return 'bg-[var(--theme-bg)] max-h-[80vh] overflow-y-auto w-full';
 });
 
 // Separate tabs into enabled and disabled based on current group

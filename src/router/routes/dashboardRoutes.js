@@ -15,13 +15,7 @@ export default [
   },
   {
     path: '/onboarding',
-    name: 'onboarding',
-    component: () => import('@/features/onboarding/views/OnboardingView.vue'),
-    beforeEnter: authGuard,
-    meta: {
-      requiresAuth: true,
-      title: 'Connect Your Bank'
-    }
+    redirect: '/dashboard'
   },
   {
     path: '/reconnect',

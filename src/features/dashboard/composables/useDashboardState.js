@@ -15,6 +15,7 @@ const state = reactive({
   allUserTabs: [],
   allUserRules: [],
   itemsNeedingReauth: [], // Accounts that need to be reconnected
+  isOnboarding: false,
 
   blueBar: { message: false, loading: false },
   date: { start: 'firstOfMonth', end: 'today' },

@@ -86,13 +86,8 @@ export function useInit() {
         if (!groups || groups.length === 0 || !accounts || accounts.length === 0) {
           state.blueBar.message = null;
           state.blueBar.loading = false;
-
-          // If there are items needing reauth, pass that info to onboarding
-          const routeParams = { name: 'onboarding' };
-          if (itemsNeedingReauth && itemsNeedingReauth.length > 0) {
-            routeParams.query = { reconnect: 'true' };
-          }
-          router.push(routeParams);
+          state.isOnboarding = true;
+          state.isLoading = false;
           return;
         }
 

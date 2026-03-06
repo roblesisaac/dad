@@ -235,7 +235,7 @@ export function usePlaidIntegration() {
         return;
       }
 
-      console.log('Sync result:', syncResult);
+      // console.log('Sync result:', syncResult);
     } catch (error) {
       state.error = getErrorMessage(error);
       state.onboardingStep = 'connect';

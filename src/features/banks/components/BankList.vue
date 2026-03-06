@@ -1,97 +1,77 @@
 <template>
-  <div class="banks-list">
+  <div class="w-full">
     <!-- Loading state -->
-    <div v-if="loading" class="py-8 text-center">
-      <div class="animate-pulse mx-auto h-8 w-8 mb-4 text-blue-500">
-        <RefreshCw class="h-8 w-8" />
+    <div v-if="loading" class="py-12 text-center">
+      <div class="animate-pulse mx-auto h-8 w-8 mb-4 text-[var(--theme-text)]">
+        <RefreshCw class="h-8 w-8 animate-spin" />
       </div>
-      <p class="text-gray-600">Loading your connected banks...</p>
+      <p class="text-[10px] font-black uppercase tracking-widest text-[var(--theme-text)]">Loading banks...</p>
     </div>
     
     <!-- Error state -->
-    <div v-else-if="error" class="py-8 text-center">
+    <div v-else-if="error" class="py-12 text-center">
       <div class="mx-auto h-8 w-8 mb-4 text-red-500">
         <AlertTriangle class="h-8 w-8" />
       </div>
-      <p class="text-red-600 mb-2">{{ error }}</p>
+      <p class="text-[10px] font-black uppercase tracking-widest text-red-600 mb-6">{{ error }}</p>
       <button 
         @click="$emit('refresh')" 
-        class="inline-flex items-center px-3 py-2 border border-black shadow-sm text-sm leading-4 font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none"
+        class="px-6 py-4 bg-[var(--theme-bg-soft)] hover:opacity-70 text-[10px] font-black uppercase tracking-widest text-[var(--theme-text)] rounded-2xl transition-all inline-flex mx-auto border border-[var(--theme-border)]"
       >
         Retry
       </button>
     </div>
     
     <!-- Empty state -->
-    <div v-else-if="banks.length === 0" class="py-8 text-center">
-      <div class="mx-auto h-8 w-8 mb-4 text-gray-400">
+    <div v-else-if="banks.length === 0" class="py-12 text-center flex flex-col items-center">
+      <div class="mx-auto h-8 w-8 mb-4 text-[var(--theme-text-soft)]">
         <CreditCard class="h-8 w-8" />
       </div>
-      <p class="text-gray-600 mb-2">You don't have any connected banks</p>
-      <button 
-        @click="$emit('connect-bank')" 
-        class="inline-flex items-center px-3 py-2 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] text-sm leading-4 font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none"
-      >
-        Connect a Bank
-      </button>
+      <p class="text-[10px] font-black uppercase tracking-widest text-[var(--theme-text-soft)]">No connected banks</p>
     </div>
     
     <!-- Bank list -->
-    <div v-else class="space-y-4">
-      <div v-for="bank in banks" :key="bank.itemId" 
-           :class="[
-             'border-2 border-black rounded-md p-4 hover:bg-gray-50 transition-colors',
-             { 'border-blue-500 shadow-[4px_4px_0px_0px_rgba(59,130,246,1)]': isSelected(bank) }
-           ]"
+    <div v-else class="w-full flex flex-col">
+      <div 
+        v-for="bank in banks" 
+        :key="bank.itemId" 
+        class="relative bg-[var(--theme-browser-chrome)] transition-colors duration-150 w-full group shrink-0 select-none cursor-pointer hover:bg-[var(--theme-bg-soft)] block border-b border-[var(--theme-border)] last:border-0"
+        @click="$emit('select-bank', bank)"
       >
-        <div class="flex justify-between items-center">
-          <div class="flex items-center space-x-3">
-            <!-- Status indicator -->
-            <div 
-              :class="[getBankStatusClass(bank), 'w-3 h-3 rounded-full flex-shrink-0']" 
-              :title="getBankStatusText(bank)"
-            ></div>
-            
-            <!-- Bank name -->
-            <h3 class="font-medium">{{ bank.institutionName || 'Connected Bank' }}</h3>
+        <div class="flex items-center justify-between py-5 px-6 w-full relative">
+          <!-- Active bank indicator line -->
+          <div v-if="selectedBank?.itemId === bank.itemId" class="absolute left-0 top-0 bottom-0 w-1 bg-[var(--theme-text)]"></div>
+
+          <div class="flex items-center min-w-0 flex-1">
+            <div class="flex flex-col min-w-0 gap-1.5 w-full">
+              <div class="flex items-center gap-2 min-w-0">
+                <div 
+                  :class="[getBankStatusClass(bank), 'w-2 h-2 rounded-full flex-shrink-0']" 
+                  :title="getBankStatusText(bank)"
+                ></div>
+                <h3 class="text-base font-black text-[var(--theme-text)] truncate uppercase tracking-tight min-w-0 flex-1">
+                  {{ getBankDisplayName(bank) }}
+                </h3>
+              </div>
+              
+              <div class="text-[10px] font-black text-[var(--theme-text-soft)] uppercase tracking-widest truncate flex items-center gap-2">
+                <span>{{ getBankStatusText(bank) }}</span>
+                <template v-if="bank.syncData?.lastSyncTime">
+                  <span class="w-1 h-1 rounded-full bg-[var(--theme-border)] flex-shrink-0"></span>
+                  <span class="truncate">Sync: {{ formatDate(bank.syncData.lastSyncTime) }}</span>
+                </template>
+              </div>
+            </div>
           </div>
           
-          <!-- Action buttons -->
-          <div class="flex space-x-2">
+          <div class="flex items-center gap-3 ml-4 shrink-0">
             <button 
               @click.stop="$emit('edit-bank-name', bank)"
-              class="inline-flex items-center px-3 py-1 text-sm rounded-md text-gray-600 border border-gray-600 hover:bg-gray-50 focus:outline-none"
+              class="p-2 rounded-xl text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:bg-[var(--theme-bg-soft)] transition-colors focus:outline-none"
+              title="Edit bank settings"
             >
-              Edit
+              <Settings size="16" />
             </button>
-            <button 
-              @click.stop="$emit('select-bank', bank)"
-              class="inline-flex items-center space-x-1 px-3 py-1 text-sm rounded-md text-blue-600 border border-blue-600 hover:bg-blue-50 focus:outline-none"
-            >
-              <History class="h-4 w-4" />
-              <span>Sync History</span>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Last sync time & status -->
-        <div class="mt-2 text-sm text-gray-500 flex flex-col space-y-1">
-          <!-- Error indicator if bank has error status -->
-          <div v-if="bank.status === 'error'" class="text-red-500 font-medium flex items-center space-x-1">
-            <AlertTriangle class="h-4 w-4" />
-            <span>Sync failed. Click to view details.</span>
-          </div>
-          
-          <!-- Sync in progress indicator -->
-          <div v-else-if="bank.status === 'in_progress'" class="text-yellow-600 font-medium flex items-center space-x-1">
-            <RefreshCw class="h-4 w-4 animate-spin" />
-            <span>Sync in progress...</span>
-          </div>
-          
-          <!-- Last sync time -->
-          <div>
-            <span class="font-medium">Last sync:</span> 
-            {{ bank.syncData?.lastSyncTime ? formatDate(bank.syncData.lastSyncTime) : 'Never' }}
           </div>
         </div>
       </div>
@@ -101,7 +81,7 @@
 
 <script setup>
 import { computed } from 'vue';
-import { RefreshCw, AlertTriangle, CreditCard, History } from 'lucide-vue-next';
+import { RefreshCw, AlertTriangle, CreditCard, History, Settings } from 'lucide-vue-next';
 
 const props = defineProps({
   banks: {
@@ -139,6 +119,34 @@ const emit = defineEmits(['select-bank', 'sync-bank', 'refresh', 'connect-bank',
 // Computed
 const selectedBankId = computed(() => props.selectedBank?.itemId);
 const isSelected = (bank) => bank.itemId === selectedBankId.value;
+
+const normalizeText = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const getBankDisplayName = (bank) => {
+  return (
+    normalizeText(bank?.institutionName) ||
+    normalizeText(bank?.institution_name) ||
+    normalizeText(bank?.institutionId) ||
+    normalizeText(bank?.institution_id) ||
+    'Connected Bank'
+  );
+};
+
+const getBankMetaLine = (bank) => {
+  const institutionId = normalizeText(bank?.institutionId) || normalizeText(bank?.institution_id);
+  const itemId = normalizeText(bank?.itemId);
+  const metadata = [];
+
+  if (institutionId && institutionId !== getBankDisplayName(bank)) {
+    metadata.push(`Institution: ${institutionId}`);
+  }
+
+  if (itemId) {
+    metadata.push(`Item: ${itemId}`);
+  }
+
+  return metadata.join(' | ');
+};
 
 // Format date
 const formatDate = (timestamp) => {

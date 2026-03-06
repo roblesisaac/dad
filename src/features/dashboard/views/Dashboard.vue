@@ -37,13 +37,19 @@
         :class="showSelectorView ? 'pb-12 sm:pb-16 sm:px-6' : 'pb-32'"
       >
         <Transition name="fade">
-          <div v-if="state.isLoading && !isGroupSelectorView && !isTransactionSearchView" class="w-full flex justify-center py-20">
+          <div v-if="state.isLoading && !isGroupSelectorView && !isTransactionSearchView && !state.isOnboarding" class="w-full flex justify-center py-20">
             <LoadingDots />
           </div>
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && isGroupSelectorView" class="w-full">
+          <div v-if="!state.isLoading && state.isOnboarding" class="w-full">
+            <OnboardingView @complete="handleOnboardingComplete" />
+          </div>
+        </Transition>
+
+        <Transition name="fade">
+          <div v-if="!state.isLoading && !state.isOnboarding && isGroupSelectorView" class="w-full">
             <SelectGroup
               variant="dashboard"
               :is-open="true"
@@ -65,7 +71,7 @@
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && isTabSelectorView" class="w-full">
+          <div v-if="!state.isLoading && !state.isOnboarding && isTabSelectorView" class="w-full">
             <AllTabs
               variant="dashboard"
               :rearrange-active="isRearrangeModeActive"
@@ -75,19 +81,19 @@
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && isCategoryView" class="w-full">
+          <div v-if="!state.isLoading && !state.isOnboarding && isCategoryView" class="w-full">
             <CategoriesWrapper @category-selected="handleCategorySelected" />
           </div>
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && isCategoryDetailView" class="w-full">
+          <div v-if="!state.isLoading && !state.isOnboarding && isCategoryDetailView" class="w-full">
             <CategoryTransactionsView />
           </div>
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && isTransactionSearchView" class="w-full">
+          <div v-if="!state.isLoading && !state.isOnboarding && isTransactionSearchView" class="w-full">
             <TransactionSearchView />
           </div>
         </Transition>
@@ -204,6 +210,7 @@ import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
 import AllTabs from '@/features/tabs/components/AllTabs.vue';
 import RuleManagerModal from '@/features/rule-manager/components/RuleManagerModal.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
+import OnboardingView from '@/features/onboarding/views/OnboardingView.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -223,6 +230,7 @@ const isCategoryDetailView = computed(() => dashboardView.value === 'category-de
 const isTransactionSearchView = computed(() => dashboardView.value === 'transaction-search');
 const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const shouldShowFooter = computed(() => (
+  state.isOnboarding ||
   isGroupSelectorView.value ||
   isTabSelectorView.value ||
   isCategoryView.value ||
@@ -246,8 +254,14 @@ const {
   onRefresh: async () => {
     await applyRemoteDashboardSyncRefresh({ runPlaidSync: false });
   },
-  canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value
+  canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value && !state.isOnboarding
 });
+
+async function handleOnboardingComplete() {
+  state.isOnboarding = false;
+  state.isLoading = true;
+  await init({ prioritizeFirstPaint: true, runPlaidSync: false });
+}
 
 function resetCategorySelection() {
   state.selected.category = false;

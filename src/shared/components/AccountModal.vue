@@ -115,7 +115,8 @@ const updateStatusMessage = ref('');
 const accountThemeOptions = [
   { value: 'system', label: 'System', style: { background: 'linear-gradient(135deg, #f3f3ee 50%, #000000 50%)' } },
   { value: 'light', label: 'Light', style: { background: '#f3f3ee' } },
-  { value: 'dark', label: 'Dark', style: { background: '#000000' } }
+  { value: 'dark', label: 'Dark', style: { background: '#000000' } },
+  { value: 'bw', label: 'B/W', style: { background: '#ffffff', border: '1px solid #000000' } }
 ];
 
 const activeRingColor = computed(() => {

@@ -1,18 +1,6 @@
 <template>
-  <div class="banks-view">
-    <div class="px-4 py-2">
-      <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold">Connected Banks</h1>
-        <button 
-          @click="handleConnectBank"
-          :disabled="loading.connectBank"
-          class="inline-flex items-center px-4 py-2 border border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {{ loading.connectBank ? 'Connecting...' : 'Connect a Bank' }}
-        </button>
-      </div>
-      
-      <!-- Main content -->
+  <div class="banks-view w-full flex flex-col">
+    <div class="w-full">
       <BankList
           :banks="banks"
           :selected-bank="selectedBank"
@@ -27,6 +15,23 @@
           @connect-bank="handleConnectBank"
           @edit-bank-name="handleEditBankName"
       />
+    </div>
+    
+    <!-- Connect bank button -->
+    <div class="p-6 bg-[var(--theme-browser-chrome)] border-t-1 border-[var(--theme-border)] mt-auto">
+      <button 
+        @click="handleConnectBank" 
+        :disabled="loading.connectBank"
+        class="w-full py-4 bg-[var(--theme-text)] hover:opacity-80 text-[var(--theme-bg)] border-1 border-[var(--theme-border)] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
+      >
+        <template v-if="loading.connectBank">
+          <span>Connecting...</span>
+        </template>
+        <template v-else>
+          <span>+</span>
+          Connect New Bank
+        </template>
+      </button>
     </div>
     
     <!-- Sync Sessions Modal -->

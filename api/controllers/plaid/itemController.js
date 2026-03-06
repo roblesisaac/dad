@@ -21,10 +21,16 @@ export default {
     try {
       const { _id: itemId } = req.params;
       const userId = req.user._id;
-      const items = itemId 
+      let items = itemId 
         ? await itemService.getItem(itemId, userId) 
         : await itemService.getUserItems(userId);
-        
+
+      if (itemId) {
+        items = await itemService.hydrateInstitutionMetadata(items, req.user);
+      } else {
+        items = await itemService.hydrateInstitutionMetadataForItems(items, req.user);
+      }
+
       res.json(scrub(items, 'accessToken'));
     } catch (error) {
       const [errorCode = 'SYNC_ERROR', errorMessage = error.message] = error.message.split(': ');
