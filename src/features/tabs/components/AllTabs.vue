@@ -3,7 +3,7 @@
     <!-- Enabled Tabs Header -->
     <div
       v-if="!isDashboardVariant"
-      class="py-5 bg-[var(--theme-bg)] border-b-2 border-[var(--theme-border)] flex items-center justify-between"
+      class="py-5 bg-[var(--theme-browser-chrome)] border-b-2 border-[var(--theme-border)] flex items-center justify-between"
     >
       <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Active Tabs</h2>
       <span class="text-[10px] font-black text-black">{{ enabledTabs.length }} enabled</span>
@@ -202,7 +202,7 @@ const containerClasses = computed(() => {
     return 'w-full bg-transparent';
   }
 
-  return 'bg-[var(--theme-bg)] max-h-[80vh] overflow-y-auto w-full';
+  return 'bg-[var(--theme-browser-chrome)] max-h-[80vh] overflow-y-auto w-full';
 });
 
 // Separate tabs into enabled and disabled based on current group

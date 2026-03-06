@@ -4,13 +4,13 @@
       <div
         v-for="item in transactions"
         :key="item._id"
-        class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300"
+        class="relative group bg-[var(--theme-browser-chrome)] hover:bg-gray-50/50 transition-all duration-300"
       >
         <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
         <button
           @click="selectTransaction(item)"
-          class="w-full px-6 py-6 flex items-center justify-between text-left cursor-pointer focus:outline-none"
+          class="w-full px-6 py-6 bg-[var(--theme-browser-chrome)] flex items-center justify-between text-left cursor-pointer focus:outline-none"
           type="button"
         >
           <div class="min-w-0 flex-1 pr-4">

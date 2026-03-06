@@ -130,7 +130,7 @@
         @click.self="closeHeaderInfoModal"
       >
         <div
-          class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-bg)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
+          class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
           role="dialog"
           aria-modal="true"
           :aria-label="headerInfo.title"
@@ -469,7 +469,7 @@ onBeforeUnmount(() => {
 }
 
 [data-theme]:not([data-theme='light']) .header-info-trigger {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
 }
 
 [data-theme]:not([data-theme='light']) .header-action-button {

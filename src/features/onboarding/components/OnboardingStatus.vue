@@ -5,7 +5,7 @@
         <h3 class="text-sm font-black uppercase tracking-[0.2em] mb-2 text-[var(--theme-text)] text-center">Syncing Transactions</h3>
         <p class="mb-8 text-sm opacity-70 text-[var(--theme-text)] text-center">This may take a few minutes...</p>
         
-        <div class="relative h-2 bg-[var(--theme-bg)] rounded-full mb-8 overflow-hidden">
+        <div class="relative h-2 bg-[var(--theme-browser-chrome)] rounded-full mb-8 overflow-hidden">
           <div class="absolute top-0 left-0 h-full bg-[var(--theme-text)] transition-all duration-500 rounded-full" :style="{ width: progressWidth }"></div>
         </div>
         
@@ -27,8 +27,8 @@
         <div class="flex justify-center mt-8">
           <div class="inline-block px-4 py-1.5 rounded-full text-[0.65rem] font-black uppercase tracking-wider"
                :class="{
-                 'bg-[var(--theme-bg)] text-[var(--theme-text)] opacity-70': state.syncProgress.status === 'queued',
-                 'bg-[var(--theme-text)] text-[var(--theme-bg)]': ['syncing', 'in_progress'].includes(state.syncProgress.status),
+                 'bg-[var(--theme-browser-chrome)] text-[var(--theme-text)] opacity-70': state.syncProgress.status === 'queued',
+                 'bg-[var(--theme-text)] text-[var(--theme-browser-chrome)]': ['syncing', 'in_progress'].includes(state.syncProgress.status),
                  'bg-green-100 text-green-800': state.syncProgress.status === 'completed',
                  'bg-red-100 text-red-800': state.syncProgress.status === 'error'
                }">
@@ -39,7 +39,7 @@
         <div v-if="state.error" class="text-center mt-6">
           <p class="text-sm text-red-600 mb-4">{{ state.error }}</p>
           <button 
-            class="px-6 py-3 bg-[var(--theme-text)] text-[var(--theme-bg)] hover:opacity-70 transition-opacity rounded-xl text-xs font-black uppercase tracking-[0.2em]"
+            class="px-6 py-3 bg-[var(--theme-text)] text-[var(--theme-browser-chrome)] hover:opacity-70 transition-opacity rounded-xl text-xs font-black uppercase tracking-[0.2em]"
             @click="retrySync">
             Retry Sync
           </button>
@@ -65,7 +65,7 @@
       </div>
       
       <button 
-        class="w-full py-4 px-6 bg-[var(--theme-text)] hover:opacity-70 text-[var(--theme-bg)] transition-opacity flex items-center justify-center rounded-xl" 
+        class="w-full py-4 px-6 bg-[var(--theme-text)] hover:opacity-70 text-[var(--theme-browser-chrome)] transition-opacity flex items-center justify-center rounded-xl" 
         @click="$emit('complete')">
         <span class="text-sm font-black uppercase tracking-[0.2em]">Go to Dashboard</span>
         <ArrowRight class="ml-3 w-5 h-5" />

@@ -3,7 +3,7 @@
   type="date" 
   :value="formatDateForInput(date[when])" 
   @input="handleDateChange($event)"
-  class="bg-[var(--theme-bg-soft)] py-5 text-[var(--theme-text)] font-black w-full focus:outline-none transition-all uppercase tracking-[0.2em] text-xs"
+  class="bg-[var(--theme-browser-chrome)] py-5 text-[var(--theme-text)] font-black w-full focus:outline-none transition-all uppercase tracking-[0.2em] text-xs"
 />
 </template>
 

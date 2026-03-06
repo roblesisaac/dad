@@ -72,7 +72,7 @@
       </div>
       
       <!-- Sticky Footer Actions -->
-      <div class="border-t border-[var(--theme-border)]/20 bg-inherit backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
+      <div class="border-t border-[var(--theme-border)]/20 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
         <button 
           @click="onApplyDates" 
           class="w-full px-6 py-5 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-sm font-black uppercase tracking-[0.3em] rounded-2xl transition-all active:scale-[0.98] border border-[var(--theme-border)]/10"

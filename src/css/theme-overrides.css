@@ -4,7 +4,7 @@
 
 [data-theme]:not([data-theme='light']) body,
 [data-theme]:not([data-theme='light']) #app {
-  background-color: var(--theme-bg) !important;
+  background-color: var(--theme-browser-chrome) !important;
   color: var(--theme-text) !important;
 }
 
@@ -25,7 +25,7 @@
   [class*='bg-stone-'],
   [class*='bg-amber-'],
   [class*='bg-emerald-']) {
-  background-color: var(--theme-bg) !important;
+  background-color: var(--theme-browser-chrome) !important;
 }
 
 [data-theme]:not([data-theme='light']) :where([class*='bg-'][class*='/20']) {
@@ -79,7 +79,7 @@
 
 [data-theme]:not([data-theme='light']) :where([class*='ring-']) {
   --tw-ring-color: var(--theme-ring) !important;
-  --tw-ring-offset-color: var(--theme-bg) !important;
+  --tw-ring-offset-color: var(--theme-browser-chrome) !important;
 }
 
 [data-theme]:not([data-theme='light']) :where([class*='from-']) {

@@ -19,7 +19,7 @@
 <style scoped>
 .themed-bar {
   background-color: var(--theme-text);
-  color: var(--theme-bg);
+  color: var(--theme-browser-chrome);
 }
 
 .toast-enter-active,

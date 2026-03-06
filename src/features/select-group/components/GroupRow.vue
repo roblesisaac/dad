@@ -249,11 +249,11 @@ watch(() => props.element?.sort, (newSort, previousSort) => {
 
 <style scoped>
 .dashboard-row-bg {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
 }
 
 .group-row-bg {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
 }
 
 .selected-row-border {

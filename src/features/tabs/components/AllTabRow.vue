@@ -1,7 +1,7 @@
 <template>
 <div
   ref="rowElement"
-  class="relative bg-[var(--theme-bg)] transition-colors duration-150 w-full group shrink-0 select-none"
+  class="relative bg-[var(--theme-browser-chrome)] transition-colors duration-150 w-full group shrink-0 select-none"
   @click.stop="handleRowClick"
   @mousedown="handleRowMouseDown"
   @mousemove="handleRowMouseMove"

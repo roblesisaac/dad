@@ -1190,12 +1190,12 @@ onMounted(() => {
 
 <style scoped>
 .theme-bg {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
   color: var(--theme-text);
 }
 
 .theme-bg-element {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
 }
 
 .theme-btn-primary {

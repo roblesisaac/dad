@@ -54,7 +54,7 @@
         </div>
         
         <button 
-          class="w-full py-4 px-6 bg-[var(--theme-text)] hover:opacity-70 text-[var(--theme-bg)] transition-opacity flex items-center justify-center rounded-xl"
+          class="w-full py-4 px-6 bg-[var(--theme-text)] hover:opacity-70 text-[var(--theme-browser-chrome)] transition-opacity flex items-center justify-center rounded-xl"
           @click="connectBank"
           :disabled="state.loading"
         >

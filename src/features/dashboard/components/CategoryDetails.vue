@@ -1,10 +1,10 @@
 <template>
-  <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300">
+  <div class="relative group bg-[var(--theme-browser-chrome)] hover:bg-gray-50/50 transition-all duration-300">
     <div v-if="isSelected" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
     <button
       @click="selectCategory"
-      class="flex items-center justify-between w-full py-6 text-left cursor-pointer focus:outline-none"
+      class="flex items-center bg-[var(--theme-browser-chrome)] justify-between w-full py-6 text-left cursor-pointer focus:outline-none"
       type="button"
     >
       <div class="flex items-center gap-4 flex-1 min-w-0">

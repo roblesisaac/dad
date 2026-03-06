@@ -176,7 +176,7 @@ function handleLogout() {
 
 .account-modal-panel {
   border: 1px solid var(--theme-border);
-  background: var(--theme-bg);
+  background: var(--theme-browser-chrome);
   box-shadow: 0 20px 60px -16px var(--theme-overlay-50);
 }
 
@@ -230,7 +230,7 @@ function handleLogout() {
 }
 
 .theme-circle-active .theme-circle-color {
-  border-color: var(--theme-bg);
+  border-color: var(--theme-browser-chrome);
   border-width: 2px;
 }
 
@@ -240,7 +240,7 @@ function handleLogout() {
 
 .account-logout-button {
   background: var(--theme-text);
-  color: var(--theme-bg);
+  color: var(--theme-browser-chrome);
   box-shadow: 0 4px 6px -1px var(--theme-overlay-10);
   border: 1px solid transparent;
 }

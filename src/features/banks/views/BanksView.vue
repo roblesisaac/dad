@@ -22,7 +22,7 @@
       <button 
         @click="handleConnectBank" 
         :disabled="loading.connectBank"
-        class="w-full py-4 bg-[var(--theme-text)] hover:opacity-80 text-[var(--theme-bg)] border-1 border-[var(--theme-border)] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
+        class="w-full py-4 bg-[var(--theme-text)] hover:opacity-80 text-[var(--theme-browser-chrome)] border-1 border-[var(--theme-border)] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2 active:translate-y-0.5"
       >
         <template v-if="loading.connectBank">
           <span>Connecting...</span>

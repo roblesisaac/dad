@@ -914,13 +914,13 @@ function normalizeConditionCombinator(combinator) {
 
 .rule-action-button-active {
   background-color: var(--theme-text);
-  color: var(--theme-bg);
+  color: var(--theme-browser-chrome);
   border-color: var(--theme-text);
   box-shadow: 4px 4px 0 0 var(--theme-overlay-20);
 }
 
 .rule-action-button-inactive {
-  background-color: var(--theme-bg);
+  background-color: var(--theme-browser-chrome);
   color: var(--theme-text-soft);
   border-color: var(--theme-border);
 }

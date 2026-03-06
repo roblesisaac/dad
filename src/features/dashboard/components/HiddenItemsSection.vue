@@ -2,7 +2,7 @@
   <div v-if="hiddenItems.length" class="hidden-items-section">
     <div
       :class="[
-        'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none cursor-pointer select-none',
+        'flex items-center bg-[var(--theme-browser-chrome)] justify-between w-full py-6 transition-colors group focus:outline-none cursor-pointer select-none',
         rowPaddingClass
       ]"
       role="button"
@@ -52,7 +52,7 @@
 
           <button
             :class="[
-              'w-full py-6 flex items-center justify-between text-left cursor-pointer focus:outline-none',
+              'w-full py-6 bg-[var(--theme-browser-chrome)] flex items-center justify-between text-left cursor-pointer focus:outline-none',
               rowPaddingClass
             ]"
             type="button"
@@ -95,7 +95,7 @@
           v-for="group in hiddenItemGroups"
           :key="group.key"
         >
-          <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300 opacity-85 hover:opacity-95">
+          <div class="relative group bg-[var(--theme-browser-chrome)] hover:bg-gray-50/50 transition-all duration-300 opacity-85 hover:opacity-95">
             <div
               v-if="isGroupExpanded(group.key)"
               class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"
@@ -103,7 +103,7 @@
 
             <button
               :class="[
-                'flex items-center justify-between w-full py-6 text-left cursor-pointer focus:outline-none',
+                'flex items-center bg-[var(--theme-browser-chrome)] justify-between w-full py-6 text-left cursor-pointer focus:outline-none',
                 rowPaddingClass
               ]"
               type="button"
@@ -141,7 +141,7 @@
 
               <button
                 :class="[
-                  'w-full py-6 flex items-center justify-between text-left cursor-pointer focus:outline-none',
+                  'w-full py-6 bg-[var(--theme-browser-chrome)] flex items-center justify-between text-left cursor-pointer focus:outline-none',
                   rowPaddingClass
                 ]"
                 type="button"
@@ -529,11 +529,18 @@ onBeforeUnmount(() => {
   --hidden-groupby-hover: rgba(75, 85, 99, 0.96);
 }
 
-[data-theme]:not([data-theme='light']) .hidden-items-section {
+[data-theme='dark'] .hidden-items-section {
   --hidden-tone-main: rgba(255, 255, 255, 0.62);
   --hidden-tone-soft: rgba(255, 255, 255, 0.52);
   --hidden-tone-faint: rgba(255, 255, 255, 0.42);
   --hidden-groupby-hover: rgba(255, 255, 255, 0.74);
+}
+
+[data-theme='bw'] .hidden-items-section {
+  --hidden-tone-main: rgba(0, 0, 0, 0.62);
+  --hidden-tone-soft: rgba(0, 0, 0, 0.42);
+  --hidden-tone-faint: rgba(0, 0, 0, 0.28);
+  --hidden-groupby-hover: rgba(0, 0, 0, 0.84);
 }
 
 .hidden-items-section .hidden-tone-main {

@@ -1096,15 +1096,15 @@ watch(
 
 <style scoped>
 .wizard-shell {
-  --wizard-bg: var(--theme-bg);
+  --wizard-bg: var(--theme-browser-chrome);
   --wizard-text: var(--theme-text);
   --wizard-muted: var(--theme-text-soft);
   --wizard-border: var(--theme-border);
-  --wizard-surface: var(--theme-bg);
+  --wizard-surface: var(--theme-browser-chrome);
   --wizard-surface-soft: var(--theme-bg-soft);
   --wizard-surface-subtle: var(--theme-bg-subtle);
   --wizard-button-primary-bg: var(--theme-text);
-  --wizard-button-primary-text: var(--theme-bg);
+  --wizard-button-primary-text: var(--theme-browser-chrome);
   --wizard-progress-bg: var(--theme-overlay-20);
   --wizard-progress-fill: var(--theme-text);
   min-height: 100vh;

@@ -1653,7 +1653,7 @@ async function handleBanksDataChanged() {
 
 <style scoped>
 .dashboard-group-selector {
-  --selector-bg: var(--theme-bg);
+  --selector-bg: var(--theme-browser-chrome);
   --selector-bg-soft: var(--theme-bg-soft);
   --selector-bg-subtle: var(--theme-bg-subtle);
   --selector-text: var(--theme-text);
@@ -1870,7 +1870,7 @@ async function handleBanksDataChanged() {
 .modal-input {
   width: 100%;
   border: 1px solid var(--theme-border);
-  background: var(--theme-bg);
+  background: var(--theme-browser-chrome);
   color: var(--selector-text);
   border-radius: 1rem;
   padding: 1rem 1.25rem;
