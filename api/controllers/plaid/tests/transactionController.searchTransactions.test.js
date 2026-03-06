@@ -60,18 +60,16 @@ describe('transactionController.searchTransactions', () => {
     const expectedResponse = {
       items: [{ _id: 'tx-1' }],
       pagination: {
-        offset: 0,
         limit: 100,
-        nextOffset: null,
-        hasMore: false,
-        total: 1
+        nextCursor: null,
+        hasMore: false
       }
     };
     transactionQueryService.searchTransactions.mockResolvedValue(expectedResponse);
 
     const req = {
       user: { _id: 'user-1' },
-      query: { keyword: 'coffee', offset: '0', limit: '100' }
+      query: { keyword: 'coffee', cursor: 'abc123', limit: '100' }
     };
     const res = createResponse();
 
@@ -80,5 +78,26 @@ describe('transactionController.searchTransactions', () => {
     expect(transactionQueryService.searchTransactions).toHaveBeenCalledWith(req.user, req.query);
     expect(res.json).toHaveBeenCalledWith(expectedResponse);
     expect(res.status).not.toHaveBeenCalled();
+  });
+
+  test('maps service cursor validation errors to 400 response', async () => {
+    transactionQueryService.searchTransactions.mockRejectedValue({
+      code: 'INVALID_CURSOR',
+      message: 'Invalid cursor'
+    });
+
+    const req = {
+      user: { _id: 'user-1' },
+      query: { keyword: 'coffee', cursor: 'invalid' }
+    };
+    const res = createResponse();
+
+    await transactionController.searchTransactions(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'INVALID_CURSOR',
+      message: 'Invalid cursor'
+    });
   });
 });

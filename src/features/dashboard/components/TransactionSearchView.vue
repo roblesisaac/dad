@@ -39,8 +39,14 @@
       {{ searchError }}
     </div>
 
-    <div v-else-if="isSearching" class="mt-8 flex justify-center">
+    <div v-else-if="isSearching" class="mt-8 flex flex-col items-center gap-2">
       <LoadingDots />
+      <p
+        v-if="showDeepScanHint"
+        class="text-[10px] font-black uppercase tracking-[0.16em] search-muted"
+      >
+        Digging deeper...
+      </p>
     </div>
 
     <div
@@ -52,7 +58,7 @@
 
     <div v-else-if="results.length" class="mt-4">
       <p class="mb-2 text-[10px] font-black uppercase tracking-[0.16em] search-muted">
-        Showing {{ results.length }} of {{ pagination.total }} matches
+        Loaded {{ results.length }} matching transactions
       </p>
 
       <div class="search-results">
@@ -114,6 +120,8 @@ import { useApi } from '@/shared/composables/useApi.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
 const SEARCH_LIMIT = 100;
+const DEEP_SCAN_HINT_DELAY_MS = 2500;
+const AUTO_CONTINUE_GUARD_LIMIT = 100;
 
 const api = useApi();
 const { fontColor, formatPrice } = useUtils();
@@ -124,15 +132,15 @@ const results = ref([]);
 const hasSearched = ref(false);
 const isSearching = ref(false);
 const isLoadingMore = ref(false);
+const showDeepScanHint = ref(false);
 const searchError = ref('');
 const loadMoreSentinel = ref(null);
 const loadMoreObserver = ref(null);
+const deepScanHintTimeoutId = ref(null);
 const pagination = ref({
-  offset: 0,
   limit: SEARCH_LIMIT,
-  nextOffset: null,
-  hasMore: false,
-  total: 0
+  nextCursor: null,
+  hasMore: false
 });
 
 const trimmedKeyword = computed(() => keyword.value.trim());
@@ -140,7 +148,8 @@ const canSearch = computed(() => trimmedKeyword.value.length > 0);
 const canLoadMore = computed(() => (
   hasSearched.value
   && pagination.value.hasMore
-  && Number.isFinite(pagination.value.nextOffset)
+  && typeof pagination.value.nextCursor === 'string'
+  && pagination.value.nextCursor.length > 0
   && !isSearching.value
   && !isLoadingMore.value
   && !searchError.value
@@ -208,34 +217,60 @@ function transactionAmount(transaction) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function normalizePagination(paginationResponse = {}, fallbackOffset = 0, fallbackLimit = SEARCH_LIMIT) {
-  const nextOffsetRaw = Number(paginationResponse?.nextOffset);
-  const hasNextOffset = Number.isFinite(nextOffsetRaw) && nextOffsetRaw >= 0;
-  const hasMore = Boolean(paginationResponse?.hasMore && hasNextOffset);
-
+function buildDefaultPagination() {
   return {
-    offset: Number.isFinite(Number(paginationResponse?.offset))
-      ? Number(paginationResponse.offset)
-      : fallbackOffset,
-    limit: Number.isFinite(Number(paginationResponse?.limit))
-      ? Number(paginationResponse.limit)
-      : fallbackLimit,
-    nextOffset: hasMore ? nextOffsetRaw : null,
-    hasMore,
-    total: Number.isFinite(Number(paginationResponse?.total))
-      ? Number(paginationResponse.total)
-      : 0
+    limit: SEARCH_LIMIT,
+    nextCursor: null,
+    hasMore: false
   };
 }
 
-async function fetchSearchPage({ keywordValue, offset = 0 }) {
+function normalizePagination(paginationResponse = {}, fallbackLimit = SEARCH_LIMIT) {
+  const limitRaw = Number(paginationResponse?.limit);
+  const normalizedLimit = Number.isFinite(limitRaw) && limitRaw > 0
+    ? limitRaw
+    : fallbackLimit;
+  const nextCursorRaw = typeof paginationResponse?.nextCursor === 'string'
+    ? paginationResponse.nextCursor.trim()
+    : '';
+  const hasMore = Boolean(paginationResponse?.hasMore && nextCursorRaw);
+
+  return {
+    limit: normalizedLimit,
+    nextCursor: hasMore ? nextCursorRaw : null,
+    hasMore
+  };
+}
+
+async function fetchSearchPage({ keywordValue, cursor = null }) {
   const params = new URLSearchParams({
     keyword: keywordValue,
-    offset: String(offset),
     limit: String(SEARCH_LIMIT)
   });
 
+  if (cursor) {
+    params.set('cursor', cursor);
+  }
+
   return await api.get(`plaid/transactions/search?${params.toString()}`);
+}
+
+function clearDeepScanHintTimer() {
+  if (deepScanHintTimeoutId.value) {
+    clearTimeout(deepScanHintTimeoutId.value);
+    deepScanHintTimeoutId.value = null;
+  }
+}
+
+function startDeepScanHintTimer() {
+  clearDeepScanHintTimer();
+  showDeepScanHint.value = false;
+
+  deepScanHintTimeoutId.value = setTimeout(() => {
+    if (isSearching.value && results.value.length === 0) {
+      showDeepScanHint.value = true;
+    }
+  }, DEEP_SCAN_HINT_DELAY_MS);
 }
 
 function disconnectObserver() {
@@ -255,27 +290,52 @@ async function executeSearch() {
   activeKeyword.value = keywordValue;
   searchError.value = '';
   results.value = [];
-  pagination.value = {
-    offset: 0,
-    limit: SEARCH_LIMIT,
-    nextOffset: null,
-    hasMore: false,
-    total: 0
-  };
+  pagination.value = buildDefaultPagination();
   isSearching.value = true;
+  startDeepScanHintTimer();
 
   try {
-    const response = await fetchSearchPage({
-      keywordValue,
-      offset: 0
-    });
-    const nextItems = Array.isArray(response?.items) ? response.items : [];
-    results.value = nextItems;
-    pagination.value = normalizePagination(response?.pagination, 0, SEARCH_LIMIT);
+    let cursor = null;
+    const seenCursors = new Set();
+    let attempts = 0;
+    let resolved = false;
+
+    while (attempts < AUTO_CONTINUE_GUARD_LIMIT) {
+      attempts += 1;
+      const response = await fetchSearchPage({
+        keywordValue,
+        cursor
+      });
+      const nextItems = Array.isArray(response?.items) ? response.items : [];
+      pagination.value = normalizePagination(response?.pagination, SEARCH_LIMIT);
+
+      if (nextItems.length > 0) {
+        results.value = nextItems;
+        resolved = true;
+        break;
+      }
+
+      if (!pagination.value.hasMore || !pagination.value.nextCursor) {
+        resolved = true;
+        break;
+      }
+
+      cursor = pagination.value.nextCursor;
+      if (seenCursors.has(cursor)) {
+        throw new Error('Search cursor repeated while scanning results');
+      }
+      seenCursors.add(cursor);
+    }
+
+    if (!resolved) {
+      throw new Error('Search pagination exceeded safe limit');
+    }
   } catch (error) {
     searchError.value = error?.response?.data?.message || 'Unable to search transactions right now.';
   } finally {
     isSearching.value = false;
+    showDeepScanHint.value = false;
+    clearDeepScanHintTimer();
     await nextTick();
   }
 }
@@ -285,21 +345,52 @@ async function loadMoreResults() {
     return;
   }
 
-  const nextOffset = Number(pagination.value.nextOffset);
-  if (!Number.isFinite(nextOffset) || nextOffset < 0 || !activeKeyword.value) {
+  const nextCursor = typeof pagination.value.nextCursor === 'string'
+    ? pagination.value.nextCursor
+    : '';
+
+  if (!nextCursor || !activeKeyword.value) {
     return;
   }
 
   isLoadingMore.value = true;
 
   try {
-    const response = await fetchSearchPage({
-      keywordValue: activeKeyword.value,
-      offset: nextOffset
-    });
-    const nextItems = Array.isArray(response?.items) ? response.items : [];
-    results.value = [...results.value, ...nextItems];
-    pagination.value = normalizePagination(response?.pagination, nextOffset, SEARCH_LIMIT);
+    let cursor = nextCursor;
+    const seenCursors = new Set([cursor]);
+    let attempts = 0;
+    let resolved = false;
+
+    while (attempts < AUTO_CONTINUE_GUARD_LIMIT) {
+      attempts += 1;
+      const response = await fetchSearchPage({
+        keywordValue: activeKeyword.value,
+        cursor
+      });
+      const nextItems = Array.isArray(response?.items) ? response.items : [];
+      pagination.value = normalizePagination(response?.pagination, SEARCH_LIMIT);
+
+      if (nextItems.length > 0) {
+        results.value = [...results.value, ...nextItems];
+        resolved = true;
+        break;
+      }
+
+      if (!pagination.value.hasMore || !pagination.value.nextCursor) {
+        resolved = true;
+        break;
+      }
+
+      cursor = pagination.value.nextCursor;
+      if (seenCursors.has(cursor)) {
+        throw new Error('Search cursor repeated while loading more results');
+      }
+      seenCursors.add(cursor);
+    }
+
+    if (!resolved) {
+      throw new Error('Search pagination exceeded safe limit');
+    }
   } catch (error) {
     searchError.value = error?.response?.data?.message || 'Unable to load more transactions.';
   } finally {
@@ -341,6 +432,7 @@ watch(
 
 onBeforeUnmount(() => {
   disconnectObserver();
+  clearDeepScanHintTimer();
 });
 </script>
 

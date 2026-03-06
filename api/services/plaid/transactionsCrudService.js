@@ -10,15 +10,7 @@ class TransactionQueryService extends PlaidBaseService {
   _datePattern = /^\d{4}-\d{2}-\d{2}$/;
   _pageLimit = 250;
   _searchPageLimit = 100;
-
-  _parseSearchOffset(offsetValue) {
-    const parsed = Number.parseInt(offsetValue, 10);
-    if (!Number.isInteger(parsed) || parsed < 0) {
-      return 0;
-    }
-
-    return parsed;
-  }
+  _searchScanPageCap = 24;
 
   _parseSearchLimit(limitValue) {
     const parsed = Number.parseInt(limitValue, 10);
@@ -27,6 +19,61 @@ class TransactionQueryService extends PlaidBaseService {
     }
 
     return Math.min(parsed, this._searchPageLimit);
+  }
+
+  _normalizeCursorSignature(cursor) {
+    if (!cursor) {
+      return '';
+    }
+
+    if (typeof cursor === 'string') {
+      return cursor;
+    }
+
+    try {
+      return JSON.stringify(cursor, Object.keys(cursor).sort());
+    } catch (_error) {
+      return String(cursor);
+    }
+  }
+
+  _encodeSearchCursor(lastKey) {
+    if (!lastKey) {
+      return null;
+    }
+
+    return Buffer.from(JSON.stringify({ lastKey })).toString('base64url');
+  }
+
+  _decodeSearchCursor(cursorValue) {
+    if (!cursorValue) {
+      return null;
+    }
+
+    if (typeof cursorValue !== 'string') {
+      throw new CustomError('INVALID_CURSOR', 'Invalid cursor');
+    }
+
+    const trimmedCursor = cursorValue.trim();
+    if (!trimmedCursor) {
+      return null;
+    }
+
+    try {
+      const decodedString = Buffer.from(trimmedCursor, 'base64url').toString('utf8');
+      const decodedObject = JSON.parse(decodedString);
+      const lastKey = decodedObject?.lastKey;
+      const isValidStringKey = typeof lastKey === 'string' && lastKey.length > 0;
+      const isValidObjectKey = lastKey && typeof lastKey === 'object';
+
+      if (!isValidStringKey && !isValidObjectKey) {
+        throw new Error('Invalid cursor payload');
+      }
+
+      return lastKey;
+    } catch (_error) {
+      throw new CustomError('INVALID_CURSOR', 'Invalid cursor');
+    }
   }
 
   _normalizeSearchField(value) {
@@ -229,34 +276,77 @@ class TransactionQueryService extends PlaidBaseService {
         throw new CustomError('INVALID_PARAMS', 'Keyword is required');
       }
 
-      const offset = this._parseSearchOffset(query.offset);
       const limit = this._parseSearchLimit(query.limit);
-      const safeUserId = String(userId).replaceAll(':', '-');
+      const startCursor = this._decodeSearchCursor(query.cursor);
+      const seenCursors = new Set();
+      let cursor = startCursor;
+      let lastScannedCursor = null;
 
-      const allTransactions = await plaidTransactions.findAll(
-        `plaidtransactions-${safeUserId}:*`,
-        { limit: this._pageLimit }
-      );
+      for (let page = 0; page < this._searchScanPageCap; page += 1) {
+        if (cursor) {
+          const normalizedCursor = this._normalizeCursorSignature(cursor);
+          if (seenCursors.has(normalizedCursor)) {
+            throw new CustomError('PAGINATION_CURSOR_LOOP', 'Pagination cursor repeated during transaction search');
+          }
+          seenCursors.add(normalizedCursor);
+        }
 
-      const matchedTransactions = allTransactions.filter((transaction) => {
-        const searchText = this._transactionSearchText(transaction);
-        return searchText.includes(keyword);
-      });
+        const findOptions = {
+          limit: this._pageLimit,
+          reverse: true
+        };
 
-      const sortedMatches = this._sortTransactionsForSearch(matchedTransactions);
-      const pagedItems = sortedMatches.slice(offset, offset + limit);
-      const total = sortedMatches.length;
-      const nextOffsetValue = offset + pagedItems.length;
-      const hasMore = nextOffsetValue < total;
+        if (cursor) {
+          findOptions.start = cursor;
+        }
+
+        const pageResponse = await plaidTransactions.find(
+          { userId, date: '*' },
+          findOptions
+        );
+
+        const pageItems = Array.isArray(pageResponse?.items)
+          ? pageResponse.items.filter(Boolean)
+          : [];
+
+        const pageMatches = pageItems.filter((transaction) => {
+          const searchText = this._transactionSearchText(transaction);
+          return searchText.includes(keyword);
+        });
+
+        const nextCursorRaw = pageResponse?.lastKey || null;
+        if (pageMatches.length > 0) {
+          return {
+            items: this._sortTransactionsForSearch(pageMatches).slice(0, limit),
+            pagination: {
+              limit,
+              hasMore: Boolean(nextCursorRaw),
+              nextCursor: this._encodeSearchCursor(nextCursorRaw)
+            }
+          };
+        }
+
+        if (!nextCursorRaw) {
+          return {
+            items: [],
+            pagination: {
+              limit,
+              hasMore: false,
+              nextCursor: null
+            }
+          };
+        }
+
+        lastScannedCursor = nextCursorRaw;
+        cursor = nextCursorRaw;
+      }
 
       return {
-        items: pagedItems,
+        items: [],
         pagination: {
-          offset,
           limit,
-          nextOffset: hasMore ? nextOffsetValue : null,
-          hasMore,
-          total
+          hasMore: Boolean(lastScannedCursor),
+          nextCursor: this._encodeSearchCursor(lastScannedCursor)
         }
       };
     } catch (error) {

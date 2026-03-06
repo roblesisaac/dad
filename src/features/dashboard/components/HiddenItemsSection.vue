@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hiddenItems.length" class="border-t border-gray-100">
+  <div v-if="hiddenItems.length">
     <div
       :class="[
         'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none cursor-pointer select-none',
@@ -28,7 +28,7 @@
         <button
           v-if="showHiddenItems && showGroupByControl"
           type="button"
-          class="px-3 py-2 rounded-xl border border-gray-200 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
+          class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black transition-colors"
           @click.stop="cycleHiddenItemsGroupBy"
         >
           Group by {{ hiddenItemsGroupBy }}
@@ -84,7 +84,7 @@
             </div>
           </button>
 
-          <div v-if="itemIsSelected(item._id)" class="border-t-2 border-gray-50 bg-gray-50/40">
+          <div v-if="itemIsSelected(item._id)" class="bg-gray-50/40">
             <TransactionDetails :state="state" :item="item" />
           </div>
         </div>
@@ -94,7 +94,6 @@
         <div
           v-for="group in hiddenItemGroups"
           :key="group.key"
-          class="border-t border-gray-100 first:border-t-0"
         >
           <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300">
             <div
@@ -113,7 +112,7 @@
               <div class="flex items-center gap-4 flex-1 min-w-0">
                 <span
                   v-if="isGroupExpanded(group.key)"
-                  class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0"
+                  class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest group-hover:text-black transition-colors shrink-0"
                 >
                   {{ group.items.length }}
                 </span>
@@ -174,7 +173,7 @@
                 </div>
               </button>
 
-              <div v-if="itemIsSelected(item._id)" class="border-t-2 border-gray-50 bg-gray-50/40">
+              <div v-if="itemIsSelected(item._id)" class="bg-gray-50/40">
                 <TransactionDetails :state="state" :item="item" />
               </div>
             </div>
