@@ -203,12 +203,13 @@
 
     <div class="selector-divider">
       <button
-        @click="goToOnboarding"
+        @click="handleSyncBankData"
         class="utility-row"
         type="button"
+        :disabled="isSyncingBankData"
       >
-        <span class="text-base font-black uppercase tracking-tight selector-text">Re-Sync All</span>
-        <RefreshCw class="w-4 h-4 selector-muted" />
+        <span class="text-base font-black uppercase tracking-tight selector-text">{{ syncBankDataLabel }}</span>
+        <RefreshCw class="w-4 h-4 selector-muted" :class="{ 'animate-spin': isSyncingBankData }" />
       </button>
 
       <button
@@ -496,6 +497,7 @@ import { useSelectGroup } from '@/features/select-group/composables/useSelectGro
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
@@ -514,6 +516,7 @@ const { state } = useDashboardState();
 const groupsAPI = useGroupsAPI();
 const { formatPrice } = useUtils();
 const { Draggable, dragOptions } = useDraggable();
+const { isSyncing: isSyncingBankData, syncLatestTransactionsForAllBanks } = usePlaidSync();
 const {
   labelGroups,
   selectGroup,
@@ -579,6 +582,9 @@ const allAccountsNetBalance = computed(() => {
   return (state.allUserAccounts || []).reduce((sum, account) => sum + accountNetBalance(account), 0);
 });
 const isExternalReorderActive = computed(() => props.rearrangeActive);
+const syncBankDataLabel = computed(() => (
+  isSyncingBankData.value ? 'Syncing Bank Data' : 'Sync Bank Data'
+));
 
 const activeLabelGroup = computed(() => {
   if (!activeLabelMenuId.value) {
@@ -1611,8 +1617,13 @@ async function refreshSelectedGroupIfNeeded(changedGroupIds = []) {
   await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
 }
 
-function goToOnboarding() {
-  router.push({ name: 'onboarding' });
+async function handleSyncBankData() {
+  if (isSyncingBankData.value) {
+    return;
+  }
+
+  await syncLatestTransactionsForAllBanks();
+  await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
 }
 
 async function handleBankConnected() {
@@ -1804,6 +1815,11 @@ async function handleBanksDataChanged() {
 
 .utility-row:hover {
   background: var(--selector-bg-soft);
+}
+
+.utility-row:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .modal-header {

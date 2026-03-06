@@ -58,7 +58,7 @@
 
     <div v-else-if="results.length" class="mt-4">
       <p class="mb-2 text-[10px] font-black uppercase tracking-[0.16em] search-muted">
-        Loaded {{ results.length }} matching transactions
+        Loaded {{ results.length }} matching transactions totaling {{ formatPrice(totalMatchingAmount, { toFixed: 0 }) }}
       </p>
 
       <div class="search-results">
@@ -145,6 +145,9 @@ const pagination = ref({
 
 const trimmedKeyword = computed(() => keyword.value.trim());
 const canSearch = computed(() => trimmedKeyword.value.length > 0);
+const totalMatchingAmount = computed(() => (
+  results.value.reduce((sum, transaction) => sum + transactionAmount(transaction), 0)
+));
 const canLoadMore = computed(() => (
   hasSearched.value
   && pagination.value.hasMore
