@@ -57,9 +57,10 @@
     </div>
 
     <div v-else-if="results.length" class="mt-4">
-      <p class="mb-2 text-[10px] font-black uppercase tracking-[0.16em] search-muted">
-        Loaded {{ results.length }} matching transactions totaling {{ formatPrice(totalMatchingAmount, { toFixed: 0 }) }}
-      </p>
+      <div class="search-results-summary mb-1 sticky top-12 sm:top-14 z-20 flex items-center justify-between gap-3 px-1 sm:px-2 py-2 text-[14px] font-black uppercase tracking-[0.16em] search-muted">
+        <span>{{ results.length }} {{ results.length === 1 ? 'result' : 'results' }}</span>
+        <span>{{ formatPrice(totalMatchingAmount, { toFixed: 0 }) }}</span>
+      </div>
 
       <div class="search-results">
         <article
@@ -489,8 +490,9 @@ onBeforeUnmount(() => {
   border-color: var(--theme-border);
 }
 
-.search-results {
-  border-top: 1px solid var(--theme-border);
+.search-results-summary {
+  background-color: var(--theme-browser-chrome);
+  border-bottom: 1px solid var(--theme-border);
 }
 
 .search-row {

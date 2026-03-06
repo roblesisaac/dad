@@ -1,5 +1,5 @@
 <template>
-  <div v-if="hiddenItems.length">
+  <div v-if="hiddenItems.length" class="hidden-items-section">
     <div
       :class="[
         'flex items-center justify-between w-full py-6 hover:bg-gray-50/50 transition-colors group focus:outline-none cursor-pointer select-none',
@@ -20,21 +20,21 @@
       @touchcancel="clearLongPressTimer"
     >
       <div class="flex items-center gap-2">
-        <h2 class="text-[10px] font-black uppercase tracking-widest text-black">Hidden Items</h2>
-        <span class="text-[10px] font-black text-black">{{ hiddenItems.length }}</span>
+        <h2 class="text-[10px] font-black uppercase tracking-widest hidden-tone-soft">Hidden Items</h2>
+        <span class="text-[10px] font-black hidden-tone-soft">{{ hiddenItems.length }}</span>
       </div>
 
       <div class="flex items-center gap-2">
         <button
           v-if="showHiddenItems && showGroupByControl"
           type="button"
-          class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black transition-colors"
+          class="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hidden-groupby-button transition-colors"
           @click.stop="cycleHiddenItemsGroupBy"
         >
           Group by {{ nextHiddenItemsGroupBy }}
         </button>
 
-        <div class="text-black transition-colors">
+        <div class="hidden-tone-faint transition-colors">
           <ChevronUp v-if="showHiddenItems" class="w-4 h-4" />
           <ChevronDown v-else class="w-4 h-4" />
         </div>
@@ -46,7 +46,7 @@
         <div
           v-for="item in hiddenItemsByName"
           :key="hiddenItemKey(item)"
-          class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300"
+          class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300 opacity-80 hover:opacity-95"
         >
           <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
@@ -59,18 +59,18 @@
             @click="selectTransaction(item)"
           >
             <div class="min-w-0 flex-1 pr-4">
-              <div class="text-[10px] font-black text-black uppercase tracking-widest mb-1">
+              <div class="text-[10px] font-black hidden-tone-soft uppercase tracking-widest mb-1">
                 {{ transactionDate(item) }}
               </div>
-              <div class="text-base font-black text-gray-900 uppercase tracking-tight truncate">
+              <div class="text-base font-black hidden-tone-main uppercase tracking-tight truncate">
                 {{ item.name }}
               </div>
-              <div class="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+              <div class="mt-2 text-[10px] font-black uppercase tracking-widest hidden-tone-faint">
                 Excluded by tab filters
               </div>
               <div
                 v-if="item.pending || item.check_number"
-                class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
+                class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hidden-tone-faint"
               >
                 <span v-if="item.pending">Pending</span>
                 <span v-if="item.check_number">#{{ item.check_number }}</span>
@@ -78,7 +78,7 @@
             </div>
 
             <div class="shrink-0 text-right">
-              <span :class="[fontColor(item.amount), 'text-base font-black tracking-tight']">
+              <span class="text-base font-black tracking-tight hidden-tone-main">
                 {{ formatPrice(item.amount, { toFixed: 0 }) }}
               </span>
             </div>
@@ -95,7 +95,7 @@
           v-for="group in hiddenItemGroups"
           :key="group.key"
         >
-          <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300">
+          <div class="relative group bg-white hover:bg-gray-50/50 transition-all duration-300 opacity-85 hover:opacity-95">
             <div
               v-if="isGroupExpanded(group.key)"
               class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"
@@ -112,21 +112,21 @@
               <div class="flex items-center gap-4 flex-1 min-w-0">
                 <span
                   v-if="isGroupExpanded(group.key)"
-                  class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest group-hover:text-black transition-colors shrink-0"
+                  class="px-2 py-1 text-[10px] font-black hidden-tone-soft bg-gray-50 rounded-lg uppercase tracking-widest transition-colors shrink-0"
                 >
                   {{ group.items.length }}
                 </span>
-                <span class="text-base font-black text-gray-900 uppercase tracking-tight truncate group-hover:text-black transition-colors">
+                <span class="text-base font-black hidden-tone-main uppercase tracking-tight truncate transition-colors">
                   {{ group.label }}
                 </span>
               </div>
 
               <div class="flex items-center gap-3 ml-4 shrink-0">
-                <span :class="[fontColor(group.total), 'text-base font-black tracking-tight']">
+                <span class="text-base font-black tracking-tight hidden-tone-main">
                   {{ formatPrice(group.total, { toFixed: 0 }) }}
                 </span>
-                <ChevronUp v-if="isGroupExpanded(group.key)" class="w-4 h-4 text-gray-300" />
-                <ChevronDown v-else class="w-4 h-4 text-gray-300" />
+                <ChevronUp v-if="isGroupExpanded(group.key)" class="w-4 h-4 hidden-tone-faint" />
+                <ChevronDown v-else class="w-4 h-4 hidden-tone-faint" />
               </div>
             </button>
           </div>
@@ -135,7 +135,7 @@
             <div
               v-for="item in group.items"
               :key="hiddenItemKey(item)"
-              class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300"
+              class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300 opacity-80 hover:opacity-95"
             >
               <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
@@ -148,18 +148,18 @@
                 @click="selectTransaction(item)"
               >
                 <div class="min-w-0 flex-1 pr-4">
-                  <div class="text-[10px] font-black text-black uppercase tracking-widest mb-1">
+                  <div class="text-[10px] font-black hidden-tone-soft uppercase tracking-widest mb-1">
                     {{ transactionDate(item) }}
                   </div>
-                  <div class="text-base font-black text-gray-900 uppercase tracking-tight truncate">
+                  <div class="text-base font-black hidden-tone-main uppercase tracking-tight truncate">
                     {{ item.name }}
                   </div>
-                  <div class="mt-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                  <div class="mt-2 text-[10px] font-black uppercase tracking-widest hidden-tone-faint">
                     Excluded by tab filters
                   </div>
                   <div
                     v-if="item.pending || item.check_number"
-                    class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
+                    class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest hidden-tone-faint"
                   >
                     <span v-if="item.pending">Pending</span>
                     <span v-if="item.check_number">#{{ item.check_number }}</span>
@@ -167,7 +167,7 @@
                 </div>
 
                 <div class="shrink-0 text-right">
-                  <span :class="[fontColor(item.amount), 'text-base font-black tracking-tight']">
+                  <span class="text-base font-black tracking-tight hidden-tone-main">
                     {{ formatPrice(item.amount, { toFixed: 0 }) }}
                   </span>
                 </div>
@@ -204,7 +204,7 @@ const props = defineProps({
 });
 
 const { state } = useDashboardState();
-const { fontColor, formatPrice } = useUtils();
+const { formatPrice } = useUtils();
 const showHiddenItems = ref(false);
 const showGroupByControl = ref(false);
 const hiddenItemsGroupBy = ref('category');
@@ -520,3 +520,39 @@ onBeforeUnmount(() => {
   clearLongPressTimer();
 });
 </script>
+
+<style>
+.hidden-items-section {
+  --hidden-tone-main: rgba(75, 85, 99, 0.92);
+  --hidden-tone-soft: rgba(107, 114, 128, 0.9);
+  --hidden-tone-faint: rgba(156, 163, 175, 0.9);
+  --hidden-groupby-hover: rgba(75, 85, 99, 0.96);
+}
+
+[data-theme]:not([data-theme='light']) .hidden-items-section {
+  --hidden-tone-main: rgba(255, 255, 255, 0.62);
+  --hidden-tone-soft: rgba(255, 255, 255, 0.52);
+  --hidden-tone-faint: rgba(255, 255, 255, 0.42);
+  --hidden-groupby-hover: rgba(255, 255, 255, 0.74);
+}
+
+.hidden-items-section .hidden-tone-main {
+  color: var(--hidden-tone-main) !important;
+}
+
+.hidden-items-section .hidden-tone-soft {
+  color: var(--hidden-tone-soft) !important;
+}
+
+.hidden-items-section .hidden-tone-faint {
+  color: var(--hidden-tone-faint) !important;
+}
+
+.hidden-items-section .hidden-groupby-button {
+  color: var(--hidden-tone-soft) !important;
+}
+
+.hidden-items-section .hidden-groupby-button:hover {
+  color: var(--hidden-groupby-hover) !important;
+}
+</style>
