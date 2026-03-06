@@ -3,6 +3,11 @@ import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
 } from '@/features/dashboard/constants/groups.js';
+import {
+  getTabSortForScope,
+  resolveTabOrderScopeId,
+  setTabSortForScope
+} from '@/features/tabs/utils/tabOrder.js';
 
 const state = reactive({
   allUserAccounts: [],
@@ -34,7 +39,8 @@ const state = reactive({
     tabsForGroup: computed({
       get: () => getTabsForGroup(state.selected.group),
       set: (reorderedTabs) => {
-        reorderedTabs.forEach((tab, newTabIndex) => tab.sort = newTabIndex);
+        const scopeId = resolveTabOrderScopeId(state.selected.group);
+        reorderedTabs.forEach((tab, newTabIndex) => setTabSortForScope(tab, scopeId, newTabIndex));
       }
     }),
     tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected)),
@@ -48,23 +54,41 @@ export function useDashboardState() {
   return { state };
 }
 
+function sortTabsForScope(tabs, group) {
+  const scopeId = resolveTabOrderScopeId(group);
+
+  return [...tabs]
+    .map((tab, index) => ({ tab, index }))
+    .sort((a, b) => {
+      const sortA = getTabSortForScope(a.tab, scopeId, a.index);
+      const sortB = getTabSortForScope(b.tab, scopeId, b.index);
+
+      if (sortA !== sortB) {
+        return sortA - sortB;
+      }
+
+      return a.index - b.index;
+    })
+    .map(({ tab }) => tab);
+}
+
 function getTabsForGroup(group) {
   if (!group) return [];
 
   if (group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID) {
-    return state.allUserTabs
+    return sortTabsForScope(state.allUserTabs
       .filter((tab) => {
         const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
         return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
-      })
-      .sort((a, b) => a.sort - b.sort);
+      }), group);
   }
 
   const tabs = state.allUserTabs.filter(tab => {
-    const tabMatchesGroupId = tab.showForGroup.includes(group._id);
-    const tabIsGlobal = tab.showForGroup.includes('_GLOBAL');
+    const showForGroup = Array.isArray(tab.showForGroup) ? tab.showForGroup : [];
+    const tabMatchesGroupId = showForGroup.includes(group._id);
+    const tabIsGlobal = showForGroup.includes('_GLOBAL');
     return tabMatchesGroupId || tabIsGlobal;
   });
 
-  return tabs.sort((a, b) => a.sort - b.sort);
+  return sortTabsForScope(tabs, group);
 }

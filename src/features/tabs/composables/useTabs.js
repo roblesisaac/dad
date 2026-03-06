@@ -6,6 +6,11 @@ import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
 } from '@/features/dashboard/constants/groups.js';
+import {
+  getTabSortForScope,
+  resolveTabOrderScopeId,
+  setTabSortForScope
+} from '@/features/tabs/utils/tabOrder.js';
 
 const DEFAULT_TABS_FOR_EMPTY_STATE = [
   { tabName: 'money in', filterMethod: '>' },
@@ -199,11 +204,23 @@ export function useTabs() {
   /**
    * Updates the sort order of a tab
    */
-  async function updateTabSort(tabId, newSort) {
+  async function updateTabSort(tabId, newSort, options = {}) {
     try {
       // Find the tab in state
       const tab = state.allUserTabs.find(t => t._id === tabId);
       if (!tab) return;
+
+      const scopeId = resolveTabOrderScopeId(options.scopeId || state.selected.group);
+      const normalizedSort = Number(newSort);
+      if (!Number.isFinite(normalizedSort)) {
+        return;
+      }
+
+      if (scopeId) {
+        setTabSortForScope(tab, scopeId, normalizedSort);
+      } else {
+        tab.sort = normalizedSort;
+      }
       
       // Set loading indicator if not already set
       if (!state.blueBar.loading) {
@@ -212,7 +229,13 @@ export function useTabs() {
       }
       
       // Call API to update sort value
-      const updatedTab = await tabsAPI.updateTabSort(tabId, newSort);
+      const updatedTab = await tabsAPI.updateTabSort(tabId, normalizedSort, scopeId);
+      if (updatedTab?._id) {
+        const index = state.allUserTabs.findIndex(existingTab => existingTab._id === updatedTab._id);
+        if (index !== -1) {
+          state.allUserTabs[index] = updatedTab;
+        }
+      }
       
       return updatedTab;
     } catch (error) {
@@ -248,12 +271,18 @@ export function useTabs() {
       selectedTab.categorizedItems = [];
     }
 
+    const scopeId = resolveTabOrderScopeId(selectedGroup);
+    const nextSort = tabsForGroup.length + 1;
+
     const newTabData = {
       tabName,
       showForGroup: selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID
         ? ['_GLOBAL']
         : [selectedGroup._id],
-      sort: tabsForGroup.length+1
+      sort: nextSort,
+      sortByGroup: scopeId
+        ? { [scopeId]: nextSort }
+        : {}
     };
 
     const newTab = await tabsAPI.createTab(newTabData);
@@ -311,12 +340,18 @@ export function useTabs() {
         selectedTab.categorizedItems = [];
       }
 
+      const scopeId = resolveTabOrderScopeId(selectedGroup);
+      const nextSort = tabsForGroup.length + 1;
+
       const newTabData = {
         tabName,
         showForGroup: selectedGroup?.isVirtualAllAccounts || selectedGroup?._id === ALL_ACCOUNTS_GROUP_ID
           ? ['_GLOBAL']
           : [selectedGroup._id],
-        sort: tabsForGroup.length + 1
+        sort: nextSort,
+        sortByGroup: scopeId
+          ? { [scopeId]: nextSort }
+          : {}
       };
 
       const newTab = await tabsAPI.createTab(newTabData);
@@ -438,7 +473,10 @@ export function useTabs() {
           const createdTab = await tabsAPI.createTab({
             tabName: defaultTab.tabName,
             showForGroup: ['_GLOBAL'],
-            sort
+            sort,
+            sortByGroup: {
+              [ALL_ACCOUNTS_GROUP_ID]: sort
+            }
           });
 
           if (!createdTab) {
@@ -538,13 +576,14 @@ export function useTabs() {
         // If we just enabled the tab, update its sort value to be at the end
         if (isEnabled && groupId !== ALL_ACCOUNTS_HIDDEN_GROUP_ID) {
           const enabledTabs = state.allUserTabs.filter(t => 
-            t.showForGroup.includes(groupId) || t.showForGroup.includes('_GLOBAL')
+            (Array.isArray(t.showForGroup) ? t.showForGroup : []).includes(groupId)
+              || (Array.isArray(t.showForGroup) ? t.showForGroup : []).includes('_GLOBAL')
           );
           
           if (enabledTabs.length > 0) {
             // Set sort to be higher than the highest current sort value
-            const maxSort = Math.max(...enabledTabs.map(t => t.sort || 0));
-            await updateTabSort(tabId, maxSort + 1);
+            const maxSort = Math.max(...enabledTabs.map(t => getTabSortForScope(t, groupId, 0)));
+            await updateTabSort(tabId, maxSort + 1, { scopeId: groupId });
           }
         }
       }

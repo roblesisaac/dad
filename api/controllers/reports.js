@@ -1,5 +1,7 @@
 import Reports from '../models/reports';
 import { normalizeReportPayload, isReportOwnedByUser } from './reports.normalize';
+import { getRequestClientId } from '../utils/clientIdentity.js';
+import { markResourceUpdated } from '../services/syncMetaService.js';
 
 function respondWithError(res, error) {
   const status = error.status || 400;
@@ -66,6 +68,7 @@ export default {
       const normalized = normalizeReportPayload(req.body);
       const now = new Date().toISOString();
       const userId = req.user._id;
+      const clientId = getRequestClientId(req);
       const hasSort = Number.isFinite(Number(normalized.sort));
 
       let nextSort = hasSort ? Number(normalized.sort) : 0;
@@ -86,6 +89,8 @@ export default {
         req: { user: req.user }
       });
 
+      await markResourceUpdated({ userId, resource: 'reports', clientId });
+
       return res.json(saved);
     } catch (error) {
       return respondWithError(res, error);
@@ -95,6 +100,7 @@ export default {
   async updateReport(req, res) {
     try {
       const userId = req.user._id;
+      const clientId = getRequestClientId(req);
       const { _reportId } = req.params;
 
       await fetchOwnedReport(_reportId, userId);
@@ -112,6 +118,7 @@ export default {
       }
 
       const updated = await Reports.update(_reportId, updates);
+      await markResourceUpdated({ userId, resource: 'reports', clientId });
 
       return res.json(updated);
     } catch (error) {
@@ -122,11 +129,13 @@ export default {
   async deleteReport(req, res) {
     try {
       const userId = req.user._id;
+      const clientId = getRequestClientId(req);
       const { _reportId } = req.params;
 
       await fetchOwnedReport(_reportId, userId);
 
       const removed = await Reports.erase(_reportId);
+      await markResourceUpdated({ userId, resource: 'reports', clientId });
       return res.json(removed);
     } catch (error) {
       return respondWithError(res, error);

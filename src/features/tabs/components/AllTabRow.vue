@@ -152,7 +152,7 @@ import {
 
 const { fontColor, formatPrice } = useUtils();
 const { state } = useDashboardState();
-const { toggleTabForGroup, selectTab, updateTabSort } = useTabs();
+const { toggleTabForGroup, selectTab } = useTabs();
 
 const rowElement = ref(null);
 const showRuleManagerModal = ref(false);
@@ -436,10 +436,6 @@ watch(() => props.isEditMode, (isEditMode) => {
 watch(() => props.reorderResetToken, () => {
   showActionsMenu.value = false;
   showLongPressActions.value = false;
-});
-
-watch(() => props.element.sort, (newSort) => {
-  updateTabSort(props.element._id, newSort);
 });
 
 onMounted(() => {

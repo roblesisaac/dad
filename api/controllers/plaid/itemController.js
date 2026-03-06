@@ -5,6 +5,8 @@ import dataExportService from '../../services/plaid/dataExportService.js';
 import dataDeletionService from '../../services/plaid/dataDeletionService.js';
 import itemDeletionService from '../../services/plaid/itemDeletionService.js';
 import scrub from '../../utils/scrub';
+import { getRequestClientId } from '../../utils/clientIdentity.js';
+import { markResourceUpdated } from '../../services/syncMetaService.js';
 
 function parseBooleanFlag(value, defaultValue = true) {
   if (value === undefined) {
@@ -53,9 +55,15 @@ export default {
     }
   },
 
-  async syncAccountsAndGroups({ user }, res) {
+  async syncAccountsAndGroups(req, res) {
     try {
+      const { user } = req;
       const syncedData = await accountService.syncAccountsAndGroups(user);
+      await markResourceUpdated({
+        userId: user._id,
+        resource: 'groups',
+        clientId: getRequestClientId(req)
+      });
       res.json(syncedData);
     } catch (error) {
       // Always return 400 for expected errors

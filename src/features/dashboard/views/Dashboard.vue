@@ -1,5 +1,22 @@
 <template>
-  <div class="min-h-screen bg-white">
+  <div class="min-h-screen bg-white pull-refresh-root">
+    <div
+      class="pull-refresh-indicator"
+      :style="pullToRefreshIndicatorStyle"
+      aria-live="polite"
+    >
+      <Loader2
+        v-if="isPullRefreshing"
+        class="w-4 h-4 text-black animate-spin"
+      />
+      <ChevronDown
+        v-else
+        class="w-4 h-4 text-black transition-transform duration-150"
+        :class="{ 'rotate-180': isPullReady }"
+      />
+      <span class="pull-refresh-label">{{ pullToRefreshLabel }}</span>
+    </div>
+
     <BlueBar />
 
     <div class="max-w-5xl mx-auto w-full relative">
@@ -130,10 +147,41 @@
 .fade-leave-to {
   opacity: 0;
 }
+
+.pull-refresh-root {
+  overscroll-behavior-y: contain;
+}
+
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  pointer-events: none;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.14);
+  backdrop-filter: blur(8px);
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.pull-refresh-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #111827;
+  white-space: nowrap;
+}
 </style>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { isValid, parseISO } from 'date-fns';
 import { useRoute, useRouter } from 'vue-router';
 import { useDashboardState } from '../composables/useDashboardState.js';
@@ -142,7 +190,9 @@ import { useSelectGroup } from '@/features/select-group/composables/useSelectGro
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
-import { ChevronRight } from 'lucide-vue-next';
+import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
+import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
+import { ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -185,6 +235,19 @@ const DASHBOARD_VIEW_QUERY_KEY = 'dashboardView';
 const DASHBOARD_VIEWS = ['group', 'tab', 'category', 'category-detail', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
+const isApplyingRemoteDashboardSync = ref(false);
+
+const {
+  isRefreshing: isPullRefreshing,
+  isReady: isPullReady,
+  label: pullToRefreshLabel,
+  indicatorStyle: pullToRefreshIndicatorStyle
+} = usePullToRefresh({
+  onRefresh: async () => {
+    await applyRemoteDashboardSyncRefresh();
+  },
+  canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value
+});
 
 function resetCategorySelection() {
   state.selected.category = false;
@@ -647,6 +710,55 @@ watch(
   }
 );
 
+async function applyRemoteDashboardSyncRefresh() {
+  if (isApplyingRemoteDashboardSync.value) {
+    return true;
+  }
+
+  isApplyingRemoteDashboardSync.value = true;
+
+  try {
+    const preferredGroupId = state.selected.group?.isVirtualAllAccounts
+      ? ''
+      : (state.selected.group?._id || '');
+
+    await init({
+      preferredGroupId,
+      prioritizeFirstPaint: true
+    });
+
+    const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
+    if (routeView) {
+      const resolvedRouteView = setDashboardView(routeView);
+      if (resolvedRouteView !== routeView) {
+        await syncDashboardViewQuery(resolvedRouteView, 'replace');
+      }
+      return true;
+    }
+
+    const fallbackView = setDefaultDashboardView();
+    await syncDashboardViewQuery(fallbackView, 'replace');
+    return true;
+  } finally {
+    isApplyingRemoteDashboardSync.value = false;
+  }
+}
+
+const {
+  start: startRemoteDashboardSync,
+  stop: stopRemoteDashboardSync
+} = useRemoteSync({
+  resourceKeys: ['groups', 'tabs', 'rules'],
+  intervalMs: 15000,
+  onChange: async () => {
+    if (showRuleManagerModal.value || state.isLoading) {
+      return false;
+    }
+
+    return await applyRemoteDashboardSyncRefresh();
+  }
+});
+
 onMounted(async () => {
   await init({
     preferredGroupId: reportContext.groupId,
@@ -660,10 +772,15 @@ onMounted(async () => {
     if (resolvedRouteView !== routeView) {
       await syncDashboardViewQuery(resolvedRouteView, 'replace');
     }
-    return;
+  } else {
+    const initialView = setDefaultDashboardView();
+    await syncDashboardViewQuery(initialView, 'replace');
   }
 
-  const initialView = setDefaultDashboardView();
-  await syncDashboardViewQuery(initialView, 'replace');
+  startRemoteDashboardSync();
+});
+
+onBeforeUnmount(() => {
+  stopRemoteDashboardSync();
 });
 </script>

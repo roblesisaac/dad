@@ -136,6 +136,10 @@ import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
 } from '@/features/dashboard/constants/groups.js';
+import {
+  resolveTabOrderScopeId,
+  setTabSortForScope
+} from '@/features/tabs/utils/tabOrder.js';
 
 const props = defineProps({
   variant: {
@@ -157,7 +161,7 @@ const emit = defineEmits(['tab-selected']);
 
 const { Draggable, dragOptions } = useDraggable();
 const { state } = useDashboardState();
-const { createNewTab, createTabWithWizardConfig } = useTabs();
+const { createNewTab, createTabWithWizardConfig, updateTabSort } = useTabs();
 const showDisabledTabs = ref(false);
 const longPressReorderTabId = ref('');
 const reorderResetToken = ref(0);
@@ -318,17 +322,26 @@ function showCancelEditButtonForTab(tabId) {
 }
 
 // Handle drag end event
-function handleDragEnd() {
+async function handleDragEnd() {
   const orderedTabs = isDashboardVariant.value
     ? dashboardTabs.value
     : state.selected.tabsForGroup;
 
-  // Update tab ordering in the database
+  const scopeId = resolveTabOrderScopeId(state.selected.group);
+  const reorderOperations = [];
+
+  // Update tab ordering in memory and persist for the active scope.
   orderedTabs.forEach((tab, index) => {
-    if (tab.sort !== index) {
-      tab.sort = index;
+    setTabSortForScope(tab, scopeId, index);
+
+    if (tab?._id) {
+      reorderOperations.push(updateTabSort(tab._id, index, { scopeId }));
     }
   });
+
+  if (reorderOperations.length) {
+    await Promise.allSettled(reorderOperations);
+  }
 
   if (longPressReorderTabId.value) {
     longPressReorderTabId.value = '';

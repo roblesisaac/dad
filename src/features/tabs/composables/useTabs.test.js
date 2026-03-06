@@ -110,12 +110,18 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
     expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(1, {
       tabName: 'money in',
       showForGroup: ['_GLOBAL'],
-      sort: 0
+      sort: 0,
+      sortByGroup: {
+        _ALL_ACCOUNTS: 0
+      }
     });
     expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(2, {
       tabName: 'money out',
       showForGroup: ['_GLOBAL'],
-      sort: 1
+      sort: 1,
+      sortByGroup: {
+        _ALL_ACCOUNTS: 1
+      }
     });
 
     expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(1, {
@@ -169,6 +175,42 @@ describe('useTabs toggleTabForGroup', () => {
     });
     expect(updatedTab.showForGroup).toEqual(['group-2', 'group-3']);
     expect(tabsApiMock.updateTabSort).not.toHaveBeenCalled();
+  });
+
+  test('enabling a tab appends its scoped order for that group only', async () => {
+    state.allUserGroups = [{ _id: 'group-1' }];
+    state.allUserTabs = [
+      {
+        _id: 'tab-enabled',
+        showForGroup: ['group-1'],
+        sort: 0,
+        sortByGroup: { 'group-1': 3 }
+      },
+      {
+        _id: 'tab-hidden',
+        showForGroup: [],
+        sort: 0,
+        sortByGroup: {}
+      }
+    ];
+
+    tabsApiMock.updateTab.mockResolvedValue({
+      _id: 'tab-hidden',
+      showForGroup: ['group-1'],
+      sort: 0,
+      sortByGroup: {}
+    });
+    tabsApiMock.updateTabSort.mockResolvedValue({
+      _id: 'tab-hidden',
+      showForGroup: ['group-1'],
+      sort: 0,
+      sortByGroup: { 'group-1': 4 }
+    });
+
+    const { toggleTabForGroup } = useTabs();
+    await toggleTabForGroup('tab-hidden', 'group-1');
+
+    expect(tabsApiMock.updateTabSort).toHaveBeenCalledWith('tab-hidden', 4, 'group-1');
   });
 });
 
@@ -242,7 +284,10 @@ describe('useTabs createTabWithWizardConfig', () => {
     expect(tabsApiMock.createTab).toHaveBeenCalledWith({
       tabName: 'Travel Tracker',
       showForGroup: ['group-1'],
-      sort: 2
+      sort: 2,
+      sortByGroup: {
+        'group-1': 2
+      }
     });
 
     expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(1, {

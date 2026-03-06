@@ -16,8 +16,13 @@ export function useTabsAPI() {
   /**
    * Update a tab's sort order
    */
-  async function updateTabSort(tabId, newSort) {
-    return await api.put(`tabs/${tabId}`, { sort: newSort });
+  async function updateTabSort(tabId, newSort, scopeId = '') {
+    const payload = { sort: newSort };
+    if (scopeId) {
+      payload.sortScopeId = scopeId;
+    }
+
+    return await api.put(`tabs/${tabId}`, payload);
   }
 
   /**

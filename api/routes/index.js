@@ -6,6 +6,7 @@ import groups from './groups';
 import plaid from './plaid';
 import reports from './reports';
 import rules from './rules';
+import sync from './sync';
 import tabs from './tabs';
 import transactions from './transactions';
 
@@ -23,6 +24,7 @@ export default (app) => {
         plaid,
         reports,
         rules,
+        sync,
         tabs,
         transactions,
         // db

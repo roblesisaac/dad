@@ -2,6 +2,15 @@
   <div class="max-w-6xl mx-auto p-8">
     <!-- Onboarding Flow -->
     <div class="max-w-xl mx-auto bg-white p-8 border-2 border-black shadow-[5px_5px_0px_#000]">
+      <div class="mb-6 flex justify-end">
+        <button
+          class="px-3 py-2 text-xs font-bold uppercase tracking-[0.12em] border-2 border-black text-black hover:bg-black hover:text-white transition-colors"
+          @click="logoutUser"
+        >
+          Sign Out
+        </button>
+      </div>
+
       <!-- Reconnection Banner (when credentials expired) -->
       <div 
         v-if="isReconnecting" 
@@ -71,6 +80,7 @@ import { onMounted, computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import OnboardingStatus from '../components/OnboardingStatus.vue';
 import { usePlaidIntegration } from '../composables/usePlaidIntegration';
+import { useAuth } from '@/shared/composables/useAuth.js';
 import { 
   LucideShieldCheck, 
   LucideLineChart, 
@@ -83,6 +93,7 @@ import {
 
 const router = useRouter();
 const route = useRoute();
+const { logoutUser } = useAuth();
 const { 
   state, 
   initializePlaid, 

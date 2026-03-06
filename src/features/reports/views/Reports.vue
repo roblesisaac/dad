@@ -1,5 +1,22 @@
 <template>
-  <main :class="['min-h-screen bg-white', footerPaddingClass]">
+  <main :class="['min-h-screen bg-white pull-refresh-root', footerPaddingClass]">
+    <div
+      class="pull-refresh-indicator"
+      :style="pullToRefreshIndicatorStyle"
+      aria-live="polite"
+    >
+      <Loader2
+        v-if="isPullRefreshing"
+        class="w-4 h-4 text-black animate-spin"
+      />
+      <ChevronDown
+        v-else
+        class="w-4 h-4 text-black transition-transform duration-150"
+        :class="{ 'rotate-180': isPullReady }"
+      />
+      <span class="pull-refresh-label">{{ pullToRefreshLabel }}</span>
+    </div>
+
     <div class="max-w-5xl mx-auto w-full relative">
       <!-- Sticky Navigation Header -->
       <div class="sticky top-0 z-20 bg-white/90 backdrop-blur-md flex items-center justify-between px-4 sm:px-6 py-4 mb-2 transition-all">
@@ -946,7 +963,7 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, MoreVertical } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, Loader2, MoreVertical } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRoute, useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -955,6 +972,8 @@ import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { normalizeManualAmountDisplayType, useReportsState } from '@/features/reports/composables/useReportsState.js';
+import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
+import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
 
 const router = useRouter();
@@ -1043,6 +1062,7 @@ const longPressReorderRowId = ref('');
 const longPressVisibleRowId = ref('');
 const reportRowLongPressTimeoutId = ref(null);
 const reportRowLongPressStart = ref({ x: 0, y: 0 });
+const isApplyingRemoteReportsSync = ref(false);
 
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
@@ -1383,6 +1403,35 @@ const footerPaddingClass = computed(() => {
 const selectedReportTotalIssue = computed(() => {
   if (!selectedReport.value?._id) return '';
   return getReportTotalIssue(selectedReport.value._id);
+});
+
+const shouldDeferRemoteReportsSync = computed(() => (
+  state.isLoading
+  || isApplyingRemoteReportsSync.value
+  || isCreatingReport.value
+  || isSavingRow.value
+  || isApplyingReportFormula.value
+  || isEditingReportName.value
+  || isCreateReportModalOpen.value
+  || isMoveToFolderModalOpen.value
+  || isFormulaEditorModalOpen.value
+  || isFormulaMenuModalOpen.value
+  || isRowEditorOpen.value
+  || isDraftSelected.value
+  || isReportReorderActive.value
+  || isRowReorderActive.value
+));
+
+const {
+  isRefreshing: isPullRefreshing,
+  isReady: isPullReady,
+  label: pullToRefreshLabel,
+  indicatorStyle: pullToRefreshIndicatorStyle
+} = usePullToRefresh({
+  onRefresh: async () => {
+    await applyRemoteReportsSyncRefresh();
+  },
+  canStart: () => !shouldDeferRemoteReportsSync.value
 });
 
 watch(
@@ -2845,12 +2894,58 @@ function applyQuickSelect(period) {
   }
 }
 
+async function applyRemoteReportsSyncRefresh() {
+  if (isApplyingRemoteReportsSync.value) {
+    return true;
+  }
+
+  isApplyingRemoteReportsSync.value = true;
+
+  try {
+    const activeReportId = selectedReportId.value;
+
+    await initReports();
+
+    if (!activeReportId) {
+      return true;
+    }
+
+    const reportStillExists = state.reports.some(report => report?._id === activeReportId);
+    if (reportStillExists) {
+      setSelectedReportId(activeReportId, { syncRoute: false, historyMode: 'replace' });
+      return true;
+    }
+
+    setSelectedReportId('', { syncRoute: true, historyMode: 'replace' });
+    return true;
+  } finally {
+    isApplyingRemoteReportsSync.value = false;
+  }
+}
+
+const {
+  start: startRemoteReportsSync,
+  stop: stopRemoteReportsSync
+} = useRemoteSync({
+  resourceKeys: ['reports', 'groups', 'tabs', 'rules'],
+  intervalMs: 15000,
+  onChange: async () => {
+    if (shouldDeferRemoteReportsSync.value) {
+      return false;
+    }
+
+    return await applyRemoteReportsSyncRefresh();
+  }
+});
+
 onMounted(() => {
   initReports();
+  startRemoteReportsSync();
   window.addEventListener('pointerdown', handleGlobalPointerDown);
 });
 
 onBeforeUnmount(() => {
+  stopRemoteReportsSync();
   clearReportLongPressTimer();
   clearReportRowLongPressTimer();
   window.removeEventListener('pointerdown', handleGlobalPointerDown);
@@ -2915,6 +3010,37 @@ onBeforeUnmount(() => {
     opacity: 1;
     pointer-events: auto;
   }
+}
+
+.pull-refresh-root {
+  overscroll-behavior-y: contain;
+}
+
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 50%;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  pointer-events: none;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.14);
+  backdrop-filter: blur(8px);
+  transition: transform 140ms ease, opacity 140ms ease;
+}
+
+.pull-refresh-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: #111827;
+  white-space: nowrap;
 }
 
 

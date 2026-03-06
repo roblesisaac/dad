@@ -1,5 +1,6 @@
 import { useAuth } from './useAuth';
 import { useNotifications } from '@/shared/composables/useNotifications';
+import { getClientId } from '@/shared/utils/clientIdentity.js';
 import { ref } from 'vue';
 
 const API_URL = `${window.location.origin}/api`;
@@ -23,7 +24,8 @@ export function useApi() {
       const normalizedUrl = url.startsWith('/') ? url.slice(1) : url;
 
       const headers = {
-        ...settings.headers
+        ...settings.headers,
+        'X-TrackTabs-Client-Id': getClientId()
       };
 
       if (!(body instanceof FormData)) {
