@@ -64,18 +64,36 @@ function normalizeRuleList(rules = [], fallbackType = '') {
     .sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0));
 }
 
+function normalizeRecategorizeBehaviorDecision(value) {
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  if (normalizedValue === 'honor' || normalizedValue === 'override') {
+    return normalizedValue;
+  }
+
+  return '';
+}
+
 function normalizeLevel(level = {}, fallbackIndex = 0) {
   const sortRules = normalizeRuleList(level?.sortRules, 'sort');
   const categorizeRules = normalizeRuleList(level?.categorizeRules, 'categorize');
   const filterRules = normalizeRuleList(level?.filterRules, 'filter');
   const groupByRule = normalizeRuleList(level?.groupByRules, 'groupBy')
     .find(ruleConfig => ruleConfig.rule?.[0] === 'groupBy');
+  const explicitRecategorizeBehaviorDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision);
+  const fallbackHonorRecategorizeAs = Boolean(level?.honorRecategorizeAs);
+  const honorRecategorizeAs = explicitRecategorizeBehaviorDecision
+    ? explicitRecategorizeBehaviorDecision === 'honor'
+    : fallbackHonorRecategorizeAs;
+  const recategorizeBehaviorDecision = explicitRecategorizeBehaviorDecision
+    || (fallbackHonorRecategorizeAs ? 'honor' : '');
 
   return {
     id: String(level?.id || `level-${fallbackIndex + 1}`),
     sortRules,
     categorizeRules,
     filterRules,
+    honorRecategorizeAs,
+    recategorizeBehaviorDecision,
     groupByRules: groupByRule
       ? [groupByRule]
       : [{

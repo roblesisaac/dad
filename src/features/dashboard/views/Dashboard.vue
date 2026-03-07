@@ -214,6 +214,7 @@ import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
 import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
@@ -241,6 +242,7 @@ const { state } = useDashboardState();
 const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
 const { selectTab, ensureDefaultTabsForTabView } = useTabs();
+const { processAllTabsForSelectedGroup } = useTabProcessing();
 
 const showRuleManagerModal = ref(false);
 const isAccountModalOpen = ref(false);
@@ -268,6 +270,7 @@ const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
 const pendingSingleTabSelection = ref(null);
+const tabEditorSnapshot = ref({ tabId: '', fingerprint: '' });
 const drillState = computed(() => resolveDrillState({
   tab: state.selected.tab,
   transactions: state.selected.allGroupTransactions,
@@ -624,11 +627,46 @@ function openTabEditor() {
     return;
   }
 
+  tabEditorSnapshot.value = {
+    tabId: String(state.selected.tab._id || ''),
+    fingerprint: buildTabEditorFingerprint(state.selected.tab)
+  };
   showRuleManagerModal.value = true;
 }
 
-function handleRuleManagerClose() {
+function buildTabEditorFingerprint(tab) {
+  if (!tab?._id) {
+    return '';
+  }
+
+  try {
+    return JSON.stringify({
+      tabId: String(tab._id || ''),
+      drillSchema: tab.drillSchema || null,
+      honorRecategorizeAs: Boolean(tab.honorRecategorizeAs),
+      recategorizeBehaviorDecision: String(tab.recategorizeBehaviorDecision || '')
+    });
+  } catch (_error) {
+    return '';
+  }
+}
+
+async function handleRuleManagerClose() {
   showRuleManagerModal.value = false;
+
+  const currentTab = state.selected.tab;
+  const previousSnapshot = tabEditorSnapshot.value;
+  tabEditorSnapshot.value = { tabId: '', fingerprint: '' };
+  const hasRuleManagerChanges = Boolean(
+    currentTab
+    && previousSnapshot.fingerprint
+    && previousSnapshot.tabId === String(currentTab._id || '')
+    && previousSnapshot.fingerprint !== buildTabEditorFingerprint(currentTab)
+  );
+
+  if (hasRuleManagerChanges) {
+    await processAllTabsForSelectedGroup({ showLoading: true });
+  }
 
   if (!state.selected.tab) {
     return;
