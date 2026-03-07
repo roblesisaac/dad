@@ -27,7 +27,7 @@
               </span>
               <button
                 v-else
-                @click="emit('navigate-tab')"
+                @click="handleGroupSegmentNavigation"
                 class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
                 type="button"
               >
@@ -36,7 +36,7 @@
             </template>
 
             <!-- Tab segment -->
-            <template v-if="isDrillView">
+            <template v-if="isDrillView && !shouldCondenseSingleTabBreadcrumb">
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               <button
                 @click="emit('navigate-category')"
@@ -222,6 +222,10 @@ const isDrillView = computed(() => props.view === 'drill');
 const isTransactionSearchView = computed(() => props.view === 'transaction-search');
 const drillBreadcrumbs = computed(() => (Array.isArray(props.drillBreadcrumbs) ? props.drillBreadcrumbs : []));
 const selectedDrillLabel = computed(() => drillBreadcrumbs.value[drillBreadcrumbs.value.length - 1]?.label || 'Selected Level');
+const shouldCondenseSingleTabBreadcrumb = computed(() => (
+  isDrillView.value
+  && state.selected.tabsForGroup.length === 1
+));
 const isRearrangeActive = computed(() => props.isRearrangeActive);
 const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const showEditTabAction = computed(() => (
@@ -232,6 +236,15 @@ const showEditTabAction = computed(() => (
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
+
+function handleGroupSegmentNavigation() {
+  if (isDrillView.value && shouldCondenseSingleTabBreadcrumb.value) {
+    emit('navigate-category');
+    return;
+  }
+
+  emit('navigate-tab');
+}
 
 function numberOrZero(value) {
   const parsed = Number(value);

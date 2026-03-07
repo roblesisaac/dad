@@ -716,6 +716,48 @@ describe('tabEvaluator', () => {
     expect(visibleTransactionIds).toEqual(['t-travel']);
   });
 
+  test('includes supports comma and newline separated terms with surrounding whitespace', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 't-cash',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'CASH_DEPOSIT' }
+        },
+        {
+          transaction_id: 't-government',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'GOVERNMENT' }
+        },
+        {
+          transaction_id: 't-other',
+          amount: 5,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'TRANSFER_IN' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'f-multi-term-includes',
+          orderOfExecution: 0,
+          rule: ['filter', 'category', 'includes', 'fdms okb,  cash deposit,\n  government  ', '']
+        }
+      ]
+    });
+
+    const visibleTransactionIds = result.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(visibleTransactionIds).toEqual(['t-cash', 't-government']);
+  });
+
   test('groupBy none returns a single all-transactions bucket and exposes groupByMode', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

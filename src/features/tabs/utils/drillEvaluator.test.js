@@ -225,6 +225,50 @@ describe('drillEvaluator', () => {
     expect(result.groups.map(group => group.key)).not.toContain('rides local');
   });
 
+  test('global categorize runs before local categorize even when global order is higher', () => {
+    const tab = createTab([
+      {
+        id: 'level-1',
+        sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [
+          createRule('local-shop', ['categorize', 'category', 'includes', 'fdms okb', 'shop related'], {
+            orderOfExecution: 0
+          })
+        ],
+        filterRules: [],
+        groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+      }
+    ]);
+
+    const transactions = [
+      createTransaction('t-fdms', {
+        name: 'FDMS merchant',
+        personal_finance_category: { primary: 'MISC' }
+      })
+    ];
+
+    const sharedRules = [
+      {
+        _id: 'global-fdms',
+        applyForTabs: ['_GLOBAL'],
+        rule: ['categorize', 'name', 'includes', 'fdms', 'fdms okb'],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 100
+      }
+    ];
+
+    const result = resolveDrillState({
+      tab,
+      transactions,
+      allRules: sharedRules,
+      drillPath: []
+    });
+
+    expect(result.groups.map(group => group.key)).toContain('shop related');
+    expect(result.groups.map(group => group.key)).not.toContain('fdms okb');
+  });
+
   test('missing depth config defaults to leaf view', () => {
     const tab = createTab([
       {

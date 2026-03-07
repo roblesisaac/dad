@@ -84,8 +84,13 @@ function evaluateLevel({
   getDayOfWeekPST,
   months
 }) {
+  const globalCategorizeRuleConfigs = (Array.isArray(sharedGlobalCategorizeRules) ? sharedGlobalCategorizeRules : [])
+    .map(ruleConfig => ({
+      ...ruleConfig,
+      _isGlobalCategorizeRule: true
+    }));
   const combinedRules = [
-    ...(Array.isArray(sharedGlobalCategorizeRules) ? sharedGlobalCategorizeRules : []),
+    ...globalCategorizeRuleConfigs,
     ...(Array.isArray(levelRuleConfigs) ? levelRuleConfigs : [])
   ];
   const sourceTransactions = Array.isArray(transactions) ? transactions : [];

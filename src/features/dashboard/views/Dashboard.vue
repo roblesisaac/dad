@@ -211,7 +211,10 @@ import { useDashboardState } from '../composables/useDashboardState.js';
 import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 import { decodeDrillPath, encodeDrillPath, sameDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
@@ -260,6 +263,7 @@ const DASHBOARD_VIEWS = ['group', 'tab', 'drill', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
+const pendingSingleTabSelection = ref(null);
 const drillState = computed(() => resolveDrillState({
   tab: state.selected.tab,
   transactions: state.selected.allGroupTransactions,
@@ -288,6 +292,37 @@ async function handleOnboardingComplete() {
 function resetDrillSelection() {
   state.selected.drillPath = [];
   state.selected.transaction = false;
+}
+
+function normalizeSelectionGroupId(group) {
+  if (!group) {
+    return '';
+  }
+
+  if (group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID) {
+    return ALL_ACCOUNTS_GROUP_ID;
+  }
+
+  return String(group?._id || '').trim();
+}
+
+function tabsEnabledForGroup(group) {
+  const targetGroupId = normalizeSelectionGroupId(group);
+  if (!targetGroupId) {
+    return [];
+  }
+
+  const isAllAccountsGroup = targetGroupId === ALL_ACCOUNTS_GROUP_ID;
+
+  return state.allUserTabs.filter((tab) => {
+    const showForGroup = Array.isArray(tab?.showForGroup) ? tab.showForGroup : [];
+
+    if (isAllAccountsGroup) {
+      return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
+    }
+
+    return showForGroup.includes(targetGroupId) || showForGroup.includes('_GLOBAL');
+  });
 }
 
 function queryValue(key) {
@@ -518,10 +553,12 @@ function setDefaultDashboardView(options = {}) {
 }
 
 function openGroupSelector() {
+  pendingSingleTabSelection.value = null;
   setDashboardView('group', { syncRoute: true });
 }
 
 function openTabSelector() {
+  pendingSingleTabSelection.value = null;
   if (!state.selected.group) {
     setDashboardView('group', { syncRoute: true });
     return;
@@ -582,7 +619,24 @@ function openTransactionSearch() {
   setDashboardView('transaction-search', { syncRoute: true });
 }
 
-function handleGroupSelected() {
+function handleGroupSelected(group) {
+  const enabledTabs = tabsEnabledForGroup(group);
+  if (enabledTabs.length === 1) {
+    const targetGroupId = normalizeSelectionGroupId(group);
+    const targetTabId = String(enabledTabs[0]?._id || '').trim();
+
+    if (targetGroupId && targetTabId) {
+      pendingSingleTabSelection.value = {
+        groupId: targetGroupId,
+        tabId: targetTabId
+      };
+    } else {
+      pendingSingleTabSelection.value = null;
+    }
+  } else {
+    pendingSingleTabSelection.value = null;
+  }
+
   setDashboardView('tab', { syncRoute: true });
 }
 
@@ -592,6 +646,7 @@ function openSelectedTabView() {
 }
 
 function handleTabSelected() {
+  pendingSingleTabSelection.value = null;
   openSelectedTabView();
 }
 
@@ -635,6 +690,37 @@ watch(
 );
 
 watch(
+  [
+    () => pendingSingleTabSelection.value?.groupId || '',
+    () => pendingSingleTabSelection.value?.tabId || '',
+    () => normalizeSelectionGroupId(state.selected.group),
+    () => state.selected.tabsForGroup.map(tab => tab?._id).filter(Boolean).join(',')
+  ],
+  ([pendingGroupId, pendingTabId, selectedGroupId]) => {
+    if (!pendingGroupId || !pendingTabId) {
+      return;
+    }
+
+    if (pendingGroupId !== selectedGroupId) {
+      return;
+    }
+
+    const tabToSelect = state.selected.tabsForGroup.find(tab => tab?._id === pendingTabId);
+    if (!tabToSelect) {
+      return;
+    }
+
+    selectTab(tabToSelect);
+    resetDrillSelection();
+    setDashboardView('drill', {
+      syncRoute: true,
+      historyMode: 'replace'
+    });
+    pendingSingleTabSelection.value = null;
+  }
+);
+
+watch(
   () => state.selected.tab?._id,
   (selectedTabId, previousTabId) => {
     if (!selectedTabId) {
@@ -665,6 +751,12 @@ watch(
   (selectedGroupId, previousGroupId) => {
     if (selectedGroupId !== previousGroupId) {
       resetDrillSelection();
+    }
+
+    const pendingGroupId = pendingSingleTabSelection.value?.groupId || '';
+    const normalizedSelectedGroupId = normalizeSelectionGroupId(state.selected.group);
+    if (pendingGroupId && pendingGroupId !== normalizedSelectedGroupId) {
+      pendingSingleTabSelection.value = null;
     }
 
     if (!selectedGroupId && !state.isLoading) {

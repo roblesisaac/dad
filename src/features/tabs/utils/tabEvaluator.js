@@ -11,12 +11,16 @@ function defaultGetDayOfWeekPST(dateString) {
   });
 }
 
-function makeArray(value) {
-  return Array.isArray(value) ? value : [value];
-}
-
 function lowercase(string) {
   return typeof string === 'string' ? string.toLowerCase() : string;
+}
+
+function parseTextMatchTerms(valueToCheck) {
+  return String(valueToCheck || '')
+    .toLowerCase()
+    .split(/[\n,]/)
+    .map(term => term.trim())
+    .filter(Boolean);
 }
 
 function toFiniteNumber(value) {
@@ -127,26 +131,32 @@ function equals(itemValue, valueToCheck) {
 
 function includes(itemValue, valueToCheck) {
   itemValue = String(itemValue || '').toLowerCase();
-  valueToCheck = String(valueToCheck || '').toLowerCase();
+  const valueTerms = parseTextMatchTerms(valueToCheck);
+  if (!valueTerms.length) {
+    return false;
+  }
 
-  return makeArray(valueToCheck.split(','))
-    .some(valueToCheckItem => itemValue.includes(valueToCheckItem));
+  return valueTerms.some(valueToCheckItem => itemValue.includes(valueToCheckItem));
 }
 
 function startsWith(itemValue, valueToCheck) {
   itemValue = String(itemValue || '').toLowerCase();
-  valueToCheck = String(valueToCheck || '').toLowerCase();
+  const valueTerms = parseTextMatchTerms(valueToCheck);
+  if (!valueTerms.length) {
+    return false;
+  }
 
-  return makeArray(valueToCheck.split(','))
-    .some(valueToCheckItem => itemValue.startsWith(valueToCheckItem.trim()));
+  return valueTerms.some(valueToCheckItem => itemValue.startsWith(valueToCheckItem));
 }
 
 function endsWith(itemValue, valueToCheck) {
   itemValue = String(itemValue || '').toLowerCase();
-  valueToCheck = String(valueToCheck || '').toLowerCase();
+  const valueTerms = parseTextMatchTerms(valueToCheck);
+  if (!valueTerms.length) {
+    return false;
+  }
 
-  return makeArray(valueToCheck.split(','))
-    .some(valueToCheckItem => itemValue.endsWith(valueToCheckItem.trim()));
+  return valueTerms.some(valueToCheckItem => itemValue.endsWith(valueToCheckItem));
 }
 
 export function buildDefaultRuleMethods() {
@@ -494,7 +504,8 @@ function extractRules(tabRules, ruleMethods) {
         method: ruleMethod,
         categorizeAs,
         orderOfExecution,
-        _isImportant
+        _isImportant,
+        _isGlobalCategorizeRule: Boolean(ruleConfig?._isGlobalCategorizeRule)
       });
     }
 
@@ -509,7 +520,13 @@ function extractRules(tabRules, ruleMethods) {
 
   return [
     sorters.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
-    categorizers.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
+    categorizers.sort((a, b) => {
+      if (a._isGlobalCategorizeRule !== b._isGlobalCategorizeRule) {
+        return a._isGlobalCategorizeRule ? -1 : 1;
+      }
+
+      return (a.orderOfExecution || 0) - (b.orderOfExecution || 0);
+    }),
     filters.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
     propToGroupBy
   ];
