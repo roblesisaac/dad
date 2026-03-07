@@ -582,11 +582,58 @@ function buildSortMethod(sorters) {
   };
 }
 
+function parseTransactionAmount(value) {
+  const directNumber = Number(value);
+  if (Number.isFinite(directNumber)) {
+    return directNumber;
+  }
+
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return 0;
+    }
+
+    const isAccountingNegative = /^\(.*\)$/.test(trimmed);
+
+    let normalized = trimmed
+      .replace(/\u2212/g, '-')
+      .replace(/[$,\s]/g, '');
+
+    if (isAccountingNegative) {
+      normalized = `-${normalized.slice(1, -1)}`;
+    }
+
+    if (normalized.endsWith('-')) {
+      normalized = `-${normalized.slice(0, -1)}`;
+    }
+
+    const normalizedNumber = Number(normalized);
+    if (Number.isFinite(normalizedNumber)) {
+      return normalizedNumber;
+    }
+
+    const numericMatch = normalized.match(/-?\d+(?:\.\d+)?/);
+    if (numericMatch) {
+      const parsedMatch = Number(numericMatch[0]);
+      if (Number.isFinite(parsedMatch)) {
+        return isAccountingNegative ? parsedMatch * -1 : parsedMatch;
+      }
+    }
+
+    const parsedFloat = parseFloat(
+      normalized.replace(/[^0-9.+-]/g, '')
+    );
+    if (Number.isFinite(parsedFloat)) {
+      return parsedFloat;
+    }
+  }
+
+  return 0;
+}
+
 function createEvaluationItem(item) {
-  const numericAmount = Number(item?.amount);
-  const normalizedAmount = Number.isFinite(numericAmount)
-    ? numericAmount * -1
-    : 0;
+  const normalizedAmount = parseTransactionAmount(item?.amount) * -1;
   const personalFinanceCategory = item?.personal_finance_category;
 
   return {

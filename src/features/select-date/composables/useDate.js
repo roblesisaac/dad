@@ -205,10 +205,16 @@ export function useDate() {
     }
   };
 
-  const applyDates = () => {
+  const applyDates = async () => {
     state.date.start = tempDate.start;
     state.date.end = tempDate.end;
-    handleGroupChange({ preserveSelectedTab: true });
+
+    try {
+      await handleGroupChange({ preserveSelectedTab: true });
+    } catch (error) {
+      console.error('Error applying date range:', error);
+    }
+
     return false; // To close modal in component
   };
 

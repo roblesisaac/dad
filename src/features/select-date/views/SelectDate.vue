@@ -132,13 +132,13 @@ const onDateSelected = () => {
   // This now only updates the temporary date values in the composable
 };
 
-const onQuickSelect = (period) => {
+const onQuickSelect = async (period) => {
   quickSelect(period);
-  onApplyDates();
+  await onApplyDates();
 };
 
-const onApplyDates = () => {
-  const shouldClose = applyDates();
+const onApplyDates = async () => {
+  const shouldClose = await applyDates();
   showDatePicker.value = shouldClose === false ? shouldClose : true;
 };
 </script>

@@ -533,6 +533,7 @@ const newLabelInput = ref('');
 // const showBanksModal = ref(false);
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+const PREFERRED_GROUP_STORAGE_KEY = 'tracktabs.preferred-group-id';
 
 const sortedLabelGroups = computed(() => {
   return [...labelGroups.value].sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
@@ -863,6 +864,19 @@ function isAllAccountsGroup(group) {
   return Boolean(group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID);
 }
 
+function writePreferredGroupIdToStorage(groupId) {
+  const normalizedGroupId = String(groupId || '').trim();
+  if (!normalizedGroupId || typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(PREFERRED_GROUP_STORAGE_KEY, normalizedGroupId);
+  } catch (_error) {
+    // Ignore storage write failures.
+  }
+}
+
 function toggleAccountMenu(account) {
   if (isExternalReorderActive.value) {
     return;
@@ -1142,9 +1156,22 @@ async function handleAllAccountsRowSelect() {
   }
 
   closeAllMenus();
+  writePreferredGroupIdToStorage(ALL_ACCOUNTS_GROUP_ID);
+
+  const selectedGroupIds = state.allUserGroups
+    .filter(group => Boolean(group?.isSelected && group?._id))
+    .map(group => String(group._id));
+  state.allUserGroups.forEach((group) => {
+    group.isSelected = false;
+  });
+
   const allAccountsGroup = buildAllAccountsSelectionGroup();
   state.selected.groupOverride = allAccountsGroup;
   emit('group-selected', allAccountsGroup);
+
+  if (selectedGroupIds.length) {
+    void Promise.allSettled(selectedGroupIds.map(groupId => groupsAPI.deselectGroup(groupId)));
+  }
 
   try {
     await handleGroupChange();

@@ -7,6 +7,7 @@ import { useSelectGroup } from '@/features/select-group/composables/useSelectGro
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import loadScript from '@/shared/utils/loadScript.js';
 import { normalizeTabWithDrillSchema } from '@/features/tabs/utils/drillSchema.js';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 
 /**
@@ -69,22 +70,39 @@ export function useInit() {
     }
   }
 
-  function applyPreferredGroupSelection(groups, preferredGroupId) {
+  function applyPreferredGroupSelection(groups, preferredGroupId, accounts = []) {
     if (!Array.isArray(groups) || !groups.length) {
       return;
     }
 
-    if (!preferredGroupId) {
+    const normalizedPreferredGroupId = String(preferredGroupId || '').trim();
+    if (normalizedPreferredGroupId === ALL_ACCOUNTS_GROUP_ID) {
+      groups.forEach((group) => {
+        group.isSelected = false;
+      });
+
+      state.selected.groupOverride = {
+        _id: ALL_ACCOUNTS_GROUP_ID,
+        name: 'All Accounts',
+        isVirtualAllAccounts: true,
+        accounts
+      };
       return;
     }
 
-    const preferredGroup = groups.find(group => group?._id === preferredGroupId);
+    state.selected.groupOverride = null;
+
+    if (!normalizedPreferredGroupId) {
+      return;
+    }
+
+    const preferredGroup = groups.find(group => group?._id === normalizedPreferredGroupId);
     if (!preferredGroup) {
       return;
     }
 
     groups.forEach((group) => {
-      group.isSelected = group._id === preferredGroupId;
+      group.isSelected = group._id === normalizedPreferredGroupId;
     });
   }
 
@@ -123,7 +141,7 @@ export function useInit() {
           return;
         }
 
-        applyPreferredGroupSelection(groups, preferredGroupId);
+        applyPreferredGroupSelection(groups, preferredGroupId, accounts || []);
 
         state.allUserAccounts = accounts;
         state.allUserGroups = groups;

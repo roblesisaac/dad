@@ -758,6 +758,97 @@ describe('tabEvaluator', () => {
     expect(visibleTransactionIds).toEqual(['t-cash', 't-government']);
   });
 
+  test('amount-based categorize rules handle formatted numeric strings', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 't-in',
+          amount: '-1,200.50',
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'MISC' }
+        },
+        {
+          transaction_id: 't-out',
+          amount: '44.00',
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'MISC' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'c-money-in',
+          orderOfExecution: 0,
+          rule: ['categorize', 'amount', '>', '0', 'money in']
+        },
+        {
+          _id: 'c-money-out',
+          orderOfExecution: 1,
+          rule: ['categorize', 'amount', '<', '0', 'money out']
+        },
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        }
+      ]
+    });
+
+    const groupNames = result.categorizedItems.map(([groupName]) => groupName).sort();
+    expect(groupNames).toEqual(['money in', 'money out']);
+  });
+
+  test('amount-based categorize rules handle accounting and unicode minus formats', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 't-in-parentheses',
+          amount: '(1,200.50)',
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          personal_finance_category: { primary: 'MISC' }
+        },
+        {
+          transaction_id: 't-out-standard',
+          amount: '44.00',
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          personal_finance_category: { primary: 'MISC' }
+        },
+        {
+          transaction_id: 't-in-unicode-minus',
+          amount: '−12.75',
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          personal_finance_category: { primary: 'MISC' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'c-money-in',
+          orderOfExecution: 0,
+          rule: ['categorize', 'amount', '>', '0', 'money in']
+        },
+        {
+          _id: 'c-money-out',
+          orderOfExecution: 1,
+          rule: ['categorize', 'amount', '<', '0', 'money out']
+        },
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        }
+      ]
+    });
+
+    const groupNames = result.categorizedItems.map(([groupName]) => groupName).sort();
+    expect(groupNames).toEqual(['money in', 'money out']);
+  });
+
   test('groupBy none returns a single all-transactions bucket and exposes groupByMode', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

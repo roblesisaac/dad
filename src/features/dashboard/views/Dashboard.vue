@@ -259,6 +259,7 @@ const shouldShowFooter = computed(() => (
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DASHBOARD_VIEW_QUERY_KEY = 'dashboardView';
 const DRILL_PATH_QUERY_KEY = 'drillPath';
+const PREFERRED_GROUP_STORAGE_KEY = 'tracktabs.preferred-group-id';
 const DASHBOARD_VIEWS = ['group', 'tab', 'drill', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
@@ -304,6 +305,31 @@ function normalizeSelectionGroupId(group) {
   }
 
   return String(group?._id || '').trim();
+}
+
+function readPreferredGroupIdFromStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return '';
+  }
+
+  try {
+    return String(window.localStorage.getItem(PREFERRED_GROUP_STORAGE_KEY) || '').trim();
+  } catch (_error) {
+    return '';
+  }
+}
+
+function writePreferredGroupIdToStorage(group) {
+  const preferredGroupId = normalizeSelectionGroupId(group);
+  if (!preferredGroupId || typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(PREFERRED_GROUP_STORAGE_KEY, preferredGroupId);
+  } catch (_error) {
+    // Ignore storage write failures.
+  }
 }
 
 function tabsEnabledForGroup(group) {
@@ -753,6 +779,10 @@ watch(
       resetDrillSelection();
     }
 
+    if (selectedGroupId) {
+      writePreferredGroupIdToStorage(state.selected.group);
+    }
+
     const pendingGroupId = pendingSingleTabSelection.value?.groupId || '';
     const normalizedSelectedGroupId = normalizeSelectionGroupId(state.selected.group);
     if (pendingGroupId && pendingGroupId !== normalizedSelectedGroupId) {
@@ -765,7 +795,8 @@ watch(
         historyMode: 'replace'
       });
     }
-  }
+  },
+  { flush: 'sync' }
 );
 
 watch(
@@ -842,9 +873,7 @@ async function applyRemoteDashboardSyncRefresh(options = {}) {
   isApplyingRemoteDashboardSync.value = true;
 
   try {
-    const preferredGroupId = state.selected.group?.isVirtualAllAccounts
-      ? ''
-      : (state.selected.group?._id || '');
+    const preferredGroupId = normalizeSelectionGroupId(state.selected.group);
 
     await init({
       preferredGroupId,
@@ -889,8 +918,11 @@ const {
 });
 
 onMounted(async () => {
+  const preferredGroupIdFromStorage = readPreferredGroupIdFromStorage();
+  const initialPreferredGroupId = String(reportContext.groupId || preferredGroupIdFromStorage || '').trim();
+
   await init({
-    preferredGroupId: reportContext.groupId,
+    preferredGroupId: initialPreferredGroupId,
     prioritizeFirstPaint: !reportContext.hasContext
   });
   await applyReportRowContextFromQuery(reportContext);

@@ -122,4 +122,17 @@ describe('useSelectGroup handleGroupChange', () => {
     expect(state.isLoading).toBe(false);
     expect(state.selected.allGroupTransactions).toEqual([{ transaction_id: 'tx-new' }]);
   });
+
+  test('clears selected-group transactions when the latest fetch fails', async () => {
+    state.selected.tabsForGroup = [{ _id: 'tab-1', isSelected: true }];
+    state.selected.allGroupTransactions = [{ transaction_id: 'tx-old' }];
+    fetchTransactionsForGroupMock.mockRejectedValueOnce(new Error('network error'));
+
+    const { handleGroupChange } = useSelectGroup();
+
+    await expect(handleGroupChange()).rejects.toThrow('network error');
+    expect(state.selected.allGroupTransactions).toEqual([]);
+    expect(processAllTabsForSelectedGroupMock).toHaveBeenCalledWith({ showLoading: false });
+    expect(state.isLoading).toBe(false);
+  });
 });

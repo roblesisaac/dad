@@ -5,6 +5,7 @@ const ACCOUNT_DATE_IN_FLIGHT_REQUESTS = new Map();
 const ACCOUNT_DATE_RESPONSE_CACHE = new Map();
 const REQUEST_CACHE_TTL_MS = 10000;
 const DATE_RANGE_BATCH_MONTHS = 4;
+const ACCOUNT_FETCH_CONCURRENCY = 4;
 
 export function useTransactions() {
   const api = useApi();
@@ -220,7 +221,6 @@ export function useTransactions() {
     const batchedDateRanges = getBatchedDateRanges(dateRange);
     const batchesPerAccount = batchedDateRanges.length || 1;
 
-    let allTransactions = [];
     let completedFetches = 0;
 
     const uniqueAccountIds = [...new Set(
@@ -246,40 +246,112 @@ export function useTransactions() {
       });
     }
 
-    for (let accountIndex = 0; accountIndex < uniqueAccountIds.length; accountIndex++) {
-      const accountId = uniqueAccountIds[accountIndex];
+    const accountTransactions = new Array(uniqueAccountIds.length).fill(null);
+    const accountErrors = [];
+    const completedBatchesPerAccount = new Map();
+    let nextAccountIndex = 0;
 
-      const transactions = await fetchTransactions(accountId, dateRange, {
-        ...options,
-        onBatchComplete: (batchProgress) => {
-          completedFetches += 1;
-          const percentage = totalFetches > 0
-            ? Math.round((completedFetches / totalFetches) * 100)
-            : 100;
+    const reportProgress = (batchProgress, accountId, accountIndex) => {
+      const batchNumber = Number(batchProgress?.batchIndex);
+      const previousCompletedBatches = Number(completedBatchesPerAccount.get(accountId) || 0);
+      const nextCompletedBatches = Number.isFinite(batchNumber)
+        ? Math.max(previousCompletedBatches, batchNumber)
+        : previousCompletedBatches + 1;
+      const completedBatchDelta = Math.max(0, nextCompletedBatches - previousCompletedBatches);
+      completedBatchesPerAccount.set(accountId, nextCompletedBatches);
+      completedFetches += completedBatchDelta;
 
-          const progress = {
-            ...batchProgress,
-            accountId,
-            accountIndex: accountIndex + 1,
-            totalAccounts,
-            completedFetches,
-            totalFetches,
-            percentage
-          };
+      const percentage = totalFetches > 0
+        ? Math.round((completedFetches / totalFetches) * 100)
+        : 100;
 
-          if (typeof onBatchComplete === 'function') {
-            onBatchComplete(progress);
-          }
+      const progress = {
+        ...batchProgress,
+        accountId,
+        accountIndex: accountIndex + 1,
+        totalAccounts,
+        completedFetches,
+        totalFetches,
+        percentage
+      };
 
-          if (typeof onProgress === 'function') {
-            onProgress(progress);
-          }
-        }
-      });
-
-      if (transactions && transactions.length) {
-        allTransactions = [...allTransactions, ...transactions];
+      if (typeof onBatchComplete === 'function') {
+        onBatchComplete(progress);
       }
+
+      if (typeof onProgress === 'function') {
+        onProgress(progress);
+      }
+    };
+
+    const markAccountAsCompleted = (accountId, accountIndex) => {
+      const previousCompletedBatches = Number(completedBatchesPerAccount.get(accountId) || 0);
+      const remainingBatches = Math.max(0, batchesPerAccount - previousCompletedBatches);
+      if (!remainingBatches) {
+        return;
+      }
+
+      completedBatchesPerAccount.set(accountId, batchesPerAccount);
+      completedFetches += remainingBatches;
+      const percentage = totalFetches > 0
+        ? Math.round((completedFetches / totalFetches) * 100)
+        : 100;
+
+      if (typeof onProgress === 'function') {
+        onProgress({
+          accountId,
+          accountIndex: accountIndex + 1,
+          totalAccounts,
+          batchIndex: batchesPerAccount,
+          totalBatches: batchesPerAccount,
+          range: null,
+          completedFetches,
+          totalFetches,
+          percentage
+        });
+      }
+    };
+
+    const workerCount = Math.max(1, Math.min(ACCOUNT_FETCH_CONCURRENCY, uniqueAccountIds.length));
+
+    const workers = Array.from({ length: workerCount }, async () => {
+      while (nextAccountIndex < uniqueAccountIds.length) {
+        const accountIndex = nextAccountIndex;
+        nextAccountIndex += 1;
+        const accountId = uniqueAccountIds[accountIndex];
+
+        try {
+          const transactions = await fetchTransactions(accountId, dateRange, {
+            ...options,
+            onBatchComplete: (batchProgress) => {
+              reportProgress(batchProgress, accountId, accountIndex);
+            }
+          });
+
+          accountTransactions[accountIndex] = Array.isArray(transactions) ? transactions : [];
+          markAccountAsCompleted(accountId, accountIndex);
+        } catch (error) {
+          accountErrors.push({
+            accountId,
+            message: error?.message || 'Unknown fetch error'
+          });
+          accountTransactions[accountIndex] = [];
+          markAccountAsCompleted(accountId, accountIndex);
+        }
+      }
+    });
+
+    await Promise.all(workers);
+
+    const allTransactions = accountTransactions.flatMap((transactions) => transactions || []);
+
+    if (accountErrors.length) {
+      console.error('Failed to fetch transactions for some accounts:', accountErrors);
+    }
+
+    if (!allTransactions.length && accountErrors.length === uniqueAccountIds.length) {
+      const firstError = accountErrors[0];
+      throw new Error(firstError?.message || 'Failed to fetch transactions for all accounts');
     }
 
     return allTransactions;

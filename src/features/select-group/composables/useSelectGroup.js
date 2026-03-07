@@ -247,20 +247,20 @@ export function useSelectGroup() {
     return selectedGroup;
   }
 
-  async function persistSelectedGroupSelection(selectedGroupId) {
+  async function persistSelectedGroupSelection(selectedGroupId, previousSelectedGroupId = '') {
     const normalizedSelectedGroupId = String(selectedGroupId || '').trim();
+    const normalizedPreviousGroupId = String(previousSelectedGroupId || '').trim();
     if (!normalizedSelectedGroupId) {
       return;
     }
 
-    const selectionUpdates = state.allUserGroups
-      .map(group => String(group?._id || '').trim())
-      .filter(Boolean)
-      .map((groupId) => (
-        groupId === normalizedSelectedGroupId
-          ? groupsAPI.updateGroupSelection(groupId, true)
-          : groupsAPI.deselectGroup(groupId)
-      ));
+    const selectionUpdates = [];
+
+    if (normalizedPreviousGroupId && normalizedPreviousGroupId !== normalizedSelectedGroupId) {
+      selectionUpdates.push(groupsAPI.deselectGroup(normalizedPreviousGroupId));
+    }
+
+    selectionUpdates.push(groupsAPI.updateGroupSelection(normalizedSelectedGroupId, true));
 
     if (!selectionUpdates.length) {
       return;
@@ -275,13 +275,14 @@ export function useSelectGroup() {
   async function selectGroup(groupToSelect) {
     state.isLoading = true;
     state.selected.groupOverride = null;
+    const previousSelectedGroupId = String(state.selected.group?._id || '').trim();
     const selectedGroup = setSelectedGroupInMemory(groupToSelect, state.allUserGroups);
     if (!selectedGroup) {
       state.isLoading = false;
       return null;
     }
 
-    void persistSelectedGroupSelection(selectedGroup._id);
+    void persistSelectedGroupSelection(selectedGroup._id, previousSelectedGroupId);
     await handleGroupChange();
 
     return selectedGroup;
@@ -422,6 +423,13 @@ export function useSelectGroup() {
     try {
       await requestPromise;
     } catch (error) {
+      if (isLatestRequest()) {
+        state.selected.allGroupTransactions = [];
+        if (state.selected.tabsForGroup.length) {
+          await processAllTabsForSelectedGroup({ showLoading: false });
+        }
+      }
+
       if (showLoading && isLatestRequest()) {
         state.isLoading = false;
       }
