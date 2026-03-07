@@ -1,7 +1,6 @@
 import { useTabsAPI } from './useTabsAPI.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useTabProcessing } from './useTabProcessing.js';
-import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import {
   ALL_ACCOUNTS_GROUP_ID,
   ALL_ACCOUNTS_HIDDEN_GROUP_ID
@@ -11,6 +10,13 @@ import {
   resolveTabOrderScopeId,
   setTabSortForScope
 } from '@/features/tabs/utils/tabOrder.js';
+import {
+  normalizeDrillSchema,
+  normalizeDrillPath,
+  ensureDrillLevel,
+  replaceRulesAtDepth,
+  replaceRulesAtPath
+} from '@/features/tabs/utils/drillSchema.js';
 
 const DEFAULT_TABS_FOR_EMPTY_STATE = [
   { tabName: 'money in', filterMethod: '>' },
@@ -157,11 +163,100 @@ function normalizeRuleList(ruleList) {
   return Array.isArray(ruleList) ? ruleList : [];
 }
 
+function createLocalRuleConfig(rule, options = {}) {
+  const {
+    filterJoinOperator = 'and',
+    isImportant = false,
+    orderOfExecution = 0,
+    idPrefix = 'rule'
+  } = options;
+
+  return {
+    _id: `${idPrefix}-${Math.random().toString(36).slice(2, 10)}`,
+    rule,
+    filterJoinOperator,
+    _isImportant: Boolean(isImportant),
+    orderOfExecution: Number.isFinite(Number(orderOfExecution))
+      ? Number(orderOfExecution)
+      : 0
+  };
+}
+
+function buildDefaultDrillSchema() {
+  return normalizeDrillSchema({});
+}
+
+function buildDrillSchemaFromWizardConfig({
+  filters = [],
+  categorizeRules = [],
+  sortKey = DEFAULT_ORGANIZE_SETTINGS.sortKey,
+  sortDirection = DEFAULT_ORGANIZE_SETTINGS.sortDirection,
+  groupBy = DEFAULT_ORGANIZE_SETTINGS.groupBy
+} = {}) {
+  const filterRules = normalizeRuleList(filters)
+    .filter(filterRule => isConditionComplete(filterRule))
+    .map((filterRule, index) => createLocalRuleConfig(
+      buildRuleWithConditions('filter', filterRule, '', normalizeRuleList(filterRule.conditions)),
+      {
+        idPrefix: 'filter',
+        filterJoinOperator: index === 0
+          ? 'and'
+          : normalizeFilterJoinOperator(filterRule.joinOperator),
+        orderOfExecution: index
+      }
+    ));
+
+  const localCategorizeRules = normalizeRuleList(categorizeRules)
+    .filter(categorizeRule =>
+      isConditionComplete(categorizeRule)
+      && String(categorizeRule.category || '').trim()
+    )
+    .map((categorizeRule, index) => createLocalRuleConfig(
+      buildRuleWithConditions(
+        'categorize',
+        categorizeRule,
+        categorizeRule.category,
+        normalizeRuleList(categorizeRule.conditions)
+      ),
+      {
+        idPrefix: 'categorize',
+        filterJoinOperator: 'and',
+        orderOfExecution: index
+      }
+    ));
+
+  const sortRules = [createLocalRuleConfig(
+    ['sort', sortKey, sortDirection, '', ''],
+    {
+      idPrefix: 'sort',
+      orderOfExecution: 0
+    }
+  )];
+
+  const groupByRules = [createLocalRuleConfig(
+    ['groupBy', groupBy, '', '', ''],
+    {
+      idPrefix: 'group-by',
+      orderOfExecution: 0
+    }
+  )];
+
+  return normalizeDrillSchema({
+    version: 1,
+    levels: [{
+      id: 'level-1',
+      sortRules,
+      categorizeRules: localCategorizeRules,
+      filterRules,
+      groupByRules
+    }]
+  });
+}
+
 export function useTabs() {
   const { state } = useDashboardState();
   const { processTabData, processAllTabsForSelectedGroup } = useTabProcessing();
   const tabsAPI = useTabsAPI();
-  const rulesAPI = useRulesAPI();
 
   function resolveReactiveTabById(tabId) {
     if (!tabId) {
@@ -174,6 +269,68 @@ export function useTabs() {
     }
 
     return state.allUserTabs.find(tab => tab._id === tabId) || null;
+  }
+
+  function tabIsVisibleInGroup(tab, groupId) {
+    const showForGroup = Array.isArray(tab?.showForGroup) ? tab.showForGroup : [];
+
+    if (groupId === ALL_ACCOUNTS_GROUP_ID) {
+      return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
+    }
+
+    return showForGroup.includes(groupId) || showForGroup.includes('_GLOBAL');
+  }
+
+  function mergeRuntimeTabFields(existingTab = {}, updatedTab = {}) {
+    const hasNumericExistingTotal = Number.isFinite(Number(existingTab?.total));
+    const hasNumericUpdatedTotal = Number.isFinite(Number(updatedTab?.total));
+
+    return {
+      ...existingTab,
+      ...updatedTab,
+      isSelected: Boolean(existingTab?.isSelected),
+      categorizedItems: Array.isArray(existingTab?.categorizedItems) ? existingTab.categorizedItems : [],
+      hiddenItems: Array.isArray(existingTab?.hiddenItems) ? existingTab.hiddenItems : [],
+      groupByMode: String(existingTab?.groupByMode || updatedTab?.groupByMode || 'category'),
+      total: hasNumericExistingTotal
+        ? Number(existingTab.total)
+        : (hasNumericUpdatedTotal ? Number(updatedTab.total) : 0)
+    };
+  }
+
+  function replaceTabInState(updatedTab) {
+    if (!updatedTab?._id) {
+      return updatedTab;
+    }
+
+    const index = state.allUserTabs.findIndex(tab => tab._id === updatedTab._id);
+    if (index === -1) {
+      return updatedTab;
+    }
+
+    const existingTab = state.allUserTabs[index];
+    const mergedTab = mergeRuntimeTabFields(existingTab, updatedTab);
+    state.allUserTabs[index] = mergedTab;
+    return mergedTab;
+  }
+
+  async function persistTabUpdate(tabId, updates = {}) {
+    const updatedTab = await tabsAPI.updateTab(tabId, updates);
+    return replaceTabInState(updatedTab);
+  }
+
+  async function setTabDrillSchema(tabId, drillSchema, options = {}) {
+    const { reprocess = true } = options;
+    const normalizedDrillSchema = normalizeDrillSchema(drillSchema);
+    const updatedTab = await persistTabUpdate(tabId, {
+      drillSchema: normalizedDrillSchema
+    });
+
+    if (reprocess) {
+      await processAllTabsForSelectedGroup({ showLoading: false });
+    }
+
+    return updatedTab;
   }
 
   /**
@@ -233,14 +390,7 @@ export function useTabs() {
       
       // Call API to update sort value
       const updatedTab = await tabsAPI.updateTabSort(tabId, normalizedSort, scopeId);
-      if (updatedTab?._id) {
-        const index = state.allUserTabs.findIndex(existingTab => existingTab._id === updatedTab._id);
-        if (index !== -1) {
-          state.allUserTabs[index] = updatedTab;
-        }
-      }
-      
-      return updatedTab;
+      return replaceTabInState(updatedTab);
     } catch (error) {
       console.error('Error updating tab sort:', error);
       state.blueBar.message = "Error saving tab order";
@@ -286,7 +436,8 @@ export function useTabs() {
       sort: nextSort,
       sortByGroup: scopeId
         ? { [scopeId]: nextSort }
-        : {}
+        : {},
+      drillSchema: buildDefaultDrillSchema()
     };
 
     const newTab = await tabsAPI.createTab(newTabData);
@@ -334,6 +485,13 @@ export function useTabs() {
 
     const normalizedFilters = normalizeRuleList(config.filters);
     const normalizedCategorizeRules = normalizeRuleList(config.categorizeRules);
+    const drillSchema = buildDrillSchemaFromWizardConfig({
+      filters: normalizedFilters,
+      categorizeRules: normalizedCategorizeRules,
+      sortKey: normalizedSortKey,
+      sortDirection: normalizedSortDirection,
+      groupBy: normalizedGroupByValue
+    });
 
     state.blueBar.message = 'Saving tab...';
     state.blueBar.loading = true;
@@ -356,7 +514,8 @@ export function useTabs() {
         sort: nextSort,
         sortByGroup: scopeId
           ? { [scopeId]: nextSort }
-          : {}
+          : {},
+        drillSchema
       };
 
       const newTab = await tabsAPI.createTab(newTabData);
@@ -367,84 +526,13 @@ export function useTabs() {
       newTab.isSelected = false;
       state.allUserTabs.push(newTab);
 
-      const rulePayloads = [];
-
-      normalizedFilters
-        .filter(filterRule => isConditionComplete(filterRule))
-        .forEach((filterRule, index) => {
-          rulePayloads.push({
-            applyForTabs: [newTab._id],
-            rule: buildRuleWithConditions('filter', filterRule, '', normalizeRuleList(filterRule.conditions)),
-            filterJoinOperator: index === 0
-              ? 'and'
-              : normalizeFilterJoinOperator(filterRule.joinOperator),
-            _isImportant: false,
-            orderOfExecution: index
-          });
-        });
-
-      normalizedCategorizeRules
-        .filter(categorizeRule =>
-          isConditionComplete(categorizeRule)
-          && String(categorizeRule.category || '').trim()
-        )
-        .forEach((categorizeRule, index) => {
-          rulePayloads.push({
-            applyForTabs: [newTab._id],
-            rule: buildRuleWithConditions(
-              'categorize',
-              categorizeRule,
-              categorizeRule.category,
-              normalizeRuleList(categorizeRule.conditions)
-            ),
-            filterJoinOperator: 'and',
-            _isImportant: false,
-            orderOfExecution: index
-          });
-        });
-
-      rulePayloads.push({
-        applyForTabs: [newTab._id],
-        rule: ['sort', normalizedSortKey, normalizedSortDirection, '', ''],
-        filterJoinOperator: 'and',
-        _isImportant: false,
-        orderOfExecution: 0
-      });
-
-      rulePayloads.push({
-        applyForTabs: [newTab._id],
-        rule: ['groupBy', normalizedGroupByValue, '', '', ''],
-        filterJoinOperator: 'and',
-        _isImportant: false,
-        orderOfExecution: 0
-      });
-
-      let failedRuleCount = 0;
-      for (const rulePayload of rulePayloads) {
-        try {
-          const createdRule = await rulesAPI.createRule(rulePayload);
-          if (createdRule) {
-            state.allUserRules.push(createdRule);
-            continue;
-          }
-          failedRuleCount += 1;
-        } catch (error) {
-          failedRuleCount += 1;
-          console.error('Error creating tab wizard rule:', error);
-        }
-      }
-
       await processAllTabsForSelectedGroup();
       const newReactiveTab = resolveReactiveTabById(newTab._id);
       if (newReactiveTab) {
         await selectTab(newReactiveTab);
       }
 
-      if (failedRuleCount > 0) {
-        state.blueBar.message = `Tab created. ${failedRuleCount} rule${failedRuleCount === 1 ? '' : 's'} failed to save.`;
-      } else {
-        state.blueBar.message = 'Tab saved';
-      }
+      state.blueBar.message = 'Tab saved';
 
       return newReactiveTab || newTab;
     } catch (error) {
@@ -475,13 +563,44 @@ export function useTabs() {
         const createdTabs = [];
 
         for (const [sort, defaultTab] of DEFAULT_TABS_FOR_EMPTY_STATE.entries()) {
+          const defaultFilterRule = createLocalRuleConfig(
+            ['filter', 'amount', defaultTab.filterMethod, '0', ''],
+            {
+              idPrefix: 'filter',
+              filterJoinOperator: 'and',
+              orderOfExecution: 0
+            }
+          );
+
           const createdTab = await tabsAPI.createTab({
             tabName: defaultTab.tabName,
             showForGroup: ['_GLOBAL'],
             sort,
             sortByGroup: {
               [ALL_ACCOUNTS_GROUP_ID]: sort
-            }
+            },
+            drillSchema: normalizeDrillSchema({
+              version: 1,
+              levels: [{
+                id: 'level-1',
+                sortRules: [createLocalRuleConfig(
+                  ['sort', 'date', 'desc', '', ''],
+                  {
+                    idPrefix: 'sort',
+                    orderOfExecution: 0
+                  }
+                )],
+                categorizeRules: [],
+                filterRules: [defaultFilterRule],
+                groupByRules: [createLocalRuleConfig(
+                  ['groupBy', 'none', '', '', ''],
+                  {
+                    idPrefix: 'group-by',
+                    orderOfExecution: 0
+                  }
+                )]
+              }]
+            })
           });
 
           if (!createdTab) {
@@ -490,28 +609,11 @@ export function useTabs() {
 
           createdTab.isSelected = false;
           state.allUserTabs.push(createdTab);
-          createdTabs.push({
-            tab: createdTab,
-            filterMethod: defaultTab.filterMethod
-          });
-        }
-
-        for (const createdTabWithFilter of createdTabs) {
-          const createdRule = await rulesAPI.createRule({
-            applyForTabs: [createdTabWithFilter.tab._id],
-            rule: ['filter', 'amount', createdTabWithFilter.filterMethod, '0', ''],
-            filterJoinOperator: 'and',
-            _isImportant: false,
-            orderOfExecution: 0
-          });
-
-          if (createdRule) {
-            state.allUserRules.push(createdRule);
-          }
+          createdTabs.push(createdTab);
         }
 
         await processAllTabsForSelectedGroup({ showLoading: false });
-        return createdTabs.map(({ tab }) => tab);
+        return createdTabs;
       })()
         .catch((error) => {
           console.error('Error creating default tabs for empty state:', error);
@@ -523,6 +625,102 @@ export function useTabs() {
     }
 
     return await createDefaultTabsPromise;
+  }
+
+  async function updateTabDrillSchemaAtDepth(tabId, depth, replacement = {}) {
+    const tab = state.allUserTabs.find(tabItem => tabItem?._id === tabId);
+    if (!tab) {
+      return null;
+    }
+
+    const safeDepth = Number.isFinite(Number(depth)) && Number(depth) >= 0
+      ? Number(depth)
+      : 0;
+    const schemaWithDepth = ensureDrillLevel(tab.drillSchema, safeDepth);
+    const nextDrillSchema = replaceRulesAtDepth(schemaWithDepth, safeDepth, replacement);
+
+    return await setTabDrillSchema(tabId, nextDrillSchema);
+  }
+
+  async function updateTabDrillSchemaAtPath(tabId, drillPath = [], replacement = {}) {
+    const tab = state.allUserTabs.find(tabItem => tabItem?._id === tabId);
+    if (!tab) {
+      return null;
+    }
+
+    const normalizedPath = normalizeDrillPath(drillPath);
+    if (!normalizedPath.length) {
+      return await updateTabDrillSchemaAtDepth(tabId, 0, replacement);
+    }
+
+    const nextDrillSchema = replaceRulesAtPath(tab.drillSchema, normalizedPath, replacement);
+    return await setTabDrillSchema(tabId, nextDrillSchema);
+  }
+
+  function nextUniqueTabName(baseName, targetGroupId) {
+    const normalizedBaseName = String(baseName || '').trim() || 'copy of tab';
+    const existingTabNames = new Set(
+      state.allUserTabs
+        .filter(tab => tabIsVisibleInGroup(tab, targetGroupId))
+        .map(tab => String(tab?.tabName || '').trim().toLowerCase())
+        .filter(Boolean)
+    );
+
+    if (!existingTabNames.has(normalizedBaseName.toLowerCase())) {
+      return normalizedBaseName;
+    }
+
+    let index = 2;
+    let candidate = `${normalizedBaseName} ${index}`;
+
+    while (existingTabNames.has(candidate.toLowerCase())) {
+      index += 1;
+      candidate = `${normalizedBaseName} ${index}`;
+    }
+
+    return candidate;
+  }
+
+  async function copyTabSchemaToGroup(tabId, targetGroupId) {
+    const sourceTab = state.allUserTabs.find(tab => tab?._id === tabId);
+    const normalizedTargetGroupId = String(targetGroupId || '').trim();
+
+    if (!sourceTab || !normalizedTargetGroupId) {
+      return null;
+    }
+
+    const isAllAccountsTarget = normalizedTargetGroupId === ALL_ACCOUNTS_GROUP_ID;
+    const visibleTabsInTarget = state.allUserTabs.filter(tab => tabIsVisibleInGroup(tab, normalizedTargetGroupId));
+    const nextSort = visibleTabsInTarget.length
+      ? Math.max(...visibleTabsInTarget.map((tab, index) => getTabSortForScope(tab, normalizedTargetGroupId, index))) + 1
+      : 0;
+
+    const copiedTabName = nextUniqueTabName(
+      `copy of ${String(sourceTab.tabName || 'tab').trim() || 'tab'}`,
+      normalizedTargetGroupId
+    );
+
+    const newTab = await tabsAPI.createTab({
+      tabName: copiedTabName,
+      showForGroup: isAllAccountsTarget
+        ? ['_GLOBAL']
+        : [normalizedTargetGroupId],
+      sort: nextSort,
+      sortByGroup: {
+        [normalizedTargetGroupId]: nextSort
+      },
+      drillSchema: normalizeDrillSchema(sourceTab.drillSchema)
+    });
+
+    if (!newTab?._id) {
+      return null;
+    }
+
+    newTab.isSelected = false;
+    state.allUserTabs.push(newTab);
+    await processAllTabsForSelectedGroup({ showLoading: false });
+
+    return newTab;
   }
 
   /**
@@ -573,10 +771,7 @@ export function useTabs() {
       
       // Update tab in state with response from server
       if (updatedTab) {
-        const index = state.allUserTabs.findIndex(t => t._id === updatedTab._id);
-        if (index !== -1) {
-          state.allUserTabs[index] = updatedTab;
-        }
+        const mergedTab = replaceTabInState(updatedTab);
         
         // If we just enabled the tab, update its sort value to be at the end
         if (isEnabled && groupId !== ALL_ACCOUNTS_HIDDEN_GROUP_ID) {
@@ -591,8 +786,10 @@ export function useTabs() {
             await updateTabSort(tabId, maxSort + 1, { scopeId: groupId });
           }
         }
+
+        return mergedTab;
       }
-      
+
       return updatedTab;
     } catch (error) {
       console.error('Error toggling tab visibility:', error);
@@ -616,12 +813,7 @@ export function useTabs() {
       const updatedTab = await tabsAPI.updateTab(tab._id, tab);
       
       // Update the tab in state
-      const index = state.allUserTabs.findIndex(t => t._id === updatedTab._id);
-      if (index !== -1) {
-        state.allUserTabs[index] = updatedTab;
-      }
-      
-      return updatedTab;
+      return replaceTabInState(updatedTab);
     } catch (error) {
       console.error('Error updating tab:', error);
       state.blueBar.message = "Error saving changes";
@@ -640,7 +832,11 @@ export function useTabs() {
     createNewTab,
     createTabWithWizardConfig,
     ensureDefaultTabsForTabView,
+    updateTabDrillSchemaAtDepth,
+    updateTabDrillSchemaAtPath,
+    copyTabSchemaToGroup,
+    setTabDrillSchema,
     toggleTabForGroup,
     updateTab
   };
-} 
+}

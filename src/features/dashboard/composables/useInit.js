@@ -6,6 +6,7 @@ import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js'
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { usePlaidSync } from '@/shared/composables/usePlaidSync';
 import loadScript from '@/shared/utils/loadScript.js';
+import { normalizeTabWithDrillSchema } from '@/features/tabs/utils/drillSchema.js';
 
 
 /**
@@ -31,8 +32,38 @@ export function useInit() {
         rulesAPI.fetchUserRules()
       ]);
 
-      state.allUserTabs = tabs;
-      state.allUserRules = rules;
+      const safeTabs = Array.isArray(tabs) ? tabs : [];
+      const safeRules = Array.isArray(rules) ? rules : [];
+      const pendingMigrationUpdates = [];
+
+      const normalizedTabs = safeTabs.map((tab) => {
+        const hasStoredSchema = Boolean(
+          tab
+            && Object.prototype.hasOwnProperty.call(tab, 'drillSchema')
+            && tab.drillSchema
+            && Array.isArray(tab.drillSchema.levels)
+        );
+
+        const normalizedTab = normalizeTabWithDrillSchema(tab, safeRules);
+        const shouldPersistSchema = !hasStoredSchema;
+
+        if (shouldPersistSchema && tab?._id) {
+          pendingMigrationUpdates.push(
+            tabsAPI.updateTab(tab._id, {
+              drillSchema: normalizedTab.drillSchema
+            })
+          );
+        }
+
+        return normalizedTab;
+      });
+
+      if (pendingMigrationUpdates.length) {
+        await Promise.allSettled(pendingMigrationUpdates);
+      }
+
+      state.allUserTabs = normalizedTabs;
+      state.allUserRules = safeRules;
     } catch (error) {
       console.error('Error fetching tabs/rules:', error);
     }

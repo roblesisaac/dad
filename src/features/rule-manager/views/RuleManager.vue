@@ -372,7 +372,7 @@ import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
 import { useRulesAPI } from '../composables/useRulesAPI';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 import { useTabs } from '@/features/tabs/composables/useTabs';
-import { ensureDrillLevel, normalizeDrillSchema } from '@/features/tabs/utils/drillSchema.js';
+import { levelRulesForDepth } from '@/features/tabs/utils/drillSchema.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import draggable from 'vuedraggable';
 
@@ -385,7 +385,7 @@ const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
 const rulesAPI = useRulesAPI();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 const {
-  updateTabDrillSchemaAtDepth,
+  updateTabDrillSchemaAtPath,
   copyTabSchemaToGroup
 } = useTabs();
 
@@ -610,8 +610,8 @@ function syncLocalRulesFromCurrentDepth() {
     return;
   }
 
-  const schema = ensureDrillLevel(state.selected.tab.drillSchema, currentDepth.value);
-  const level = schema.levels[currentDepth.value] || {};
+  const activePath = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+  const { level } = levelRulesForDepth(state.selected.tab.drillSchema, currentDepth.value, activePath);
 
   localRulesByType.value = {
     groupBy: normalizeLocalRuleList('groupBy', level.groupByRules),
@@ -645,7 +645,7 @@ async function persistDepthRules() {
     return;
   }
 
-  await updateTabDrillSchemaAtDepth(tabId, currentDepth.value, buildDepthReplacementPayload());
+  await updateTabDrillSchemaAtPath(tabId, state.selected.drillPath, buildDepthReplacementPayload());
   syncLocalRulesFromCurrentDepth();
 }
 
@@ -1118,15 +1118,4 @@ async function deleteRule() {
   ruleToDelete.value = null;
 }
 
-watch(
-  () => state.selected.tab?.drillSchema,
-  (schema) => {
-    if (!state.selected.tab) {
-      return;
-    }
-
-    state.selected.tab.drillSchema = normalizeDrillSchema(schema);
-  },
-  { deep: true }
-);
 </script>

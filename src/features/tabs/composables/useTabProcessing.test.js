@@ -77,7 +77,9 @@ function resetMockState() {
   combinedRulesForTabMock.mockReturnValue([]);
   evaluateTabDataMock.mockImplementation(({ transactions }) => ({
     tabTotal: transactions.length,
-    categorizedItems: [['all', transactions.map(tx => tx.transaction_id)]]
+    categorizedItems: [['all', transactions, transactions.length]],
+    hiddenItems: [],
+    groupByMode: 'none'
   }));
 }
 

@@ -3,8 +3,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 const {
   state,
   processAllTabsForSelectedGroupMock,
-  tabsApiMock,
-  rulesApiMock
+  tabsApiMock
 } = vi.hoisted(() => ({
   state: {
     allUserGroups: [],
@@ -26,9 +25,6 @@ const {
     createTab: vi.fn(),
     updateTabSort: vi.fn(),
     updateTab: vi.fn()
-  },
-  rulesApiMock: {
-    createRule: vi.fn()
   }
 }));
 
@@ -47,10 +43,6 @@ vi.mock('./useTabsAPI.js', () => ({
   useTabsAPI: () => tabsApiMock
 }));
 
-vi.mock('@/features/rule-manager/composables/useRulesAPI.js', () => ({
-  useRulesAPI: () => rulesApiMock
-}));
-
 import { useTabs } from './useTabs.js';
 
 function resetState() {
@@ -59,6 +51,10 @@ function resetState() {
   state.allUserRules = [];
   state.selected.tab = null;
   state.selected.tabsForGroup = [];
+}
+
+function levelZeroFor(tabPayload) {
+  return tabPayload?.drillSchema?.levels?.[0] || null;
 }
 
 describe('useTabs ensureDefaultTabsForTabView', () => {
@@ -76,7 +72,6 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
     expect(createdTabs).toEqual([]);
     expect(tabsApiMock.fetchUserTabs).not.toHaveBeenCalled();
     expect(tabsApiMock.createTab).not.toHaveBeenCalled();
-    expect(rulesApiMock.createRule).not.toHaveBeenCalled();
     expect(processAllTabsForSelectedGroupMock).not.toHaveBeenCalled();
   });
 
@@ -90,7 +85,6 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
     expect(createdTabs).toEqual([]);
     expect(state.allUserTabs).toEqual(remoteTabs);
     expect(tabsApiMock.createTab).not.toHaveBeenCalled();
-    expect(rulesApiMock.createRule).not.toHaveBeenCalled();
     expect(processAllTabsForSelectedGroupMock).not.toHaveBeenCalled();
   });
 
@@ -99,48 +93,44 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
     tabsApiMock.createTab
       .mockResolvedValueOnce({ _id: 'tab-money-in', tabName: 'money in' })
       .mockResolvedValueOnce({ _id: 'tab-money-out', tabName: 'money out' });
-    rulesApiMock.createRule
-      .mockResolvedValueOnce({ _id: 'rule-money-in' })
-      .mockResolvedValueOnce({ _id: 'rule-money-out' });
 
     const { ensureDefaultTabsForTabView } = useTabs();
     const createdTabs = await ensureDefaultTabsForTabView();
 
     expect(createdTabs.map(tab => tab._id)).toEqual(['tab-money-in', 'tab-money-out']);
-    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(1, {
+    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(1, expect.objectContaining({
       tabName: 'money in',
       showForGroup: ['_GLOBAL'],
       sort: 0,
       sortByGroup: {
         _ALL_ACCOUNTS: 0
-      }
-    });
-    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(2, {
+      },
+      drillSchema: expect.objectContaining({ version: 1 })
+    }));
+    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(2, expect.objectContaining({
       tabName: 'money out',
       showForGroup: ['_GLOBAL'],
       sort: 1,
       sortByGroup: {
         _ALL_ACCOUNTS: 1
-      }
-    });
+      },
+      drillSchema: expect.objectContaining({ version: 1 })
+    }));
 
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(1, {
-      applyForTabs: ['tab-money-in'],
+    const moneyInLevel = levelZeroFor(tabsApiMock.createTab.mock.calls[0][0]);
+    const moneyOutLevel = levelZeroFor(tabsApiMock.createTab.mock.calls[1][0]);
+    expect(moneyInLevel.filterRules[0]).toEqual(expect.objectContaining({
       rule: ['filter', 'amount', '>', '0', ''],
       filterJoinOperator: 'and',
-      _isImportant: false,
       orderOfExecution: 0
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(2, {
-      applyForTabs: ['tab-money-out'],
+    }));
+    expect(moneyOutLevel.filterRules[0]).toEqual(expect.objectContaining({
       rule: ['filter', 'amount', '<', '0', ''],
       filterJoinOperator: 'and',
-      _isImportant: false,
       orderOfExecution: 0
-    });
+    }));
 
     expect(state.allUserTabs.map(tab => tab._id)).toEqual(['tab-money-in', 'tab-money-out']);
-    expect(state.allUserRules.map(rule => rule._id)).toEqual(['rule-money-in', 'rule-money-out']);
     expect(processAllTabsForSelectedGroupMock).toHaveBeenCalledWith({ showLoading: false });
   });
 });
@@ -231,13 +221,6 @@ describe('useTabs createTabWithWizardConfig', () => {
       sort: 2
     });
 
-    rulesApiMock.createRule
-      .mockResolvedValueOnce({ _id: 'rule-filter-1' })
-      .mockResolvedValueOnce({ _id: 'rule-filter-2' })
-      .mockResolvedValueOnce({ _id: 'rule-categorize-1' })
-      .mockResolvedValueOnce({ _id: 'rule-sort' })
-      .mockResolvedValueOnce({ _id: 'rule-group' });
-
     const { createTabWithWizardConfig } = useTabs();
 
     const createdTab = await createTabWithWizardConfig({
@@ -281,69 +264,52 @@ describe('useTabs createTabWithWizardConfig', () => {
     });
 
     expect(createdTab?._id).toBe('new-tab');
-    expect(tabsApiMock.createTab).toHaveBeenCalledWith({
+    expect(tabsApiMock.createTab).toHaveBeenCalledWith(expect.objectContaining({
       tabName: 'Travel Tracker',
       showForGroup: ['group-1'],
       sort: 2,
       sortByGroup: {
         'group-1': 2
-      }
-    });
+      },
+      drillSchema: expect.objectContaining({ version: 1 })
+    }));
 
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(1, {
-      applyForTabs: ['new-tab'],
+    const newTabPayload = tabsApiMock.createTab.mock.calls[0][0];
+    const levelZero = levelZeroFor(newTabPayload);
+    expect(levelZero.filterRules).toHaveLength(2);
+    expect(levelZero.filterRules[0]).toEqual(expect.objectContaining({
       rule: [
         'filter', 'amount', '>', '50', '',
         'and', 'name', 'includes', 'flight'
       ],
       filterJoinOperator: 'and',
-      _isImportant: false,
       orderOfExecution: 0
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(2, {
-      applyForTabs: ['new-tab'],
+    }));
+    expect(levelZero.filterRules[1]).toEqual(expect.objectContaining({
       rule: [
         'filter', 'date', 'is after', '2026-01-01', '',
         'or', 'category', 'includes', 'travel'
       ],
       filterJoinOperator: 'or',
-      _isImportant: false,
       orderOfExecution: 1
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(3, {
-      applyForTabs: ['new-tab'],
+    }));
+    expect(levelZero.categorizeRules[0]).toEqual(expect.objectContaining({
       rule: [
         'categorize', 'name', 'includes', 'uber', 'transportation',
         'or', 'category', '=', 'transport'
       ],
       filterJoinOperator: 'and',
-      _isImportant: false,
       orderOfExecution: 0
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(4, {
-      applyForTabs: ['new-tab'],
-      rule: ['sort', 'date', 'desc', '', ''],
-      filterJoinOperator: 'and',
-      _isImportant: false,
-      orderOfExecution: 0
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(5, {
-      applyForTabs: ['new-tab'],
-      rule: ['groupBy', 'none', '', '', ''],
-      filterJoinOperator: 'and',
-      _isImportant: false,
-      orderOfExecution: 0
-    });
+    }));
+    expect(levelZero.sortRules[0]).toEqual(expect.objectContaining({
+      rule: ['sort', 'date', 'desc', '', '']
+    }));
+    expect(levelZero.groupByRules[0]).toEqual(expect.objectContaining({
+      rule: ['groupBy', 'none', '', '', '']
+    }));
 
     expect(processAllTabsForSelectedGroupMock).toHaveBeenCalled();
     expect(state.allUserTabs.some(tab => tab._id === 'new-tab')).toBe(true);
-    expect(state.allUserRules.map(rule => rule._id)).toEqual([
-      'rule-filter-1',
-      'rule-filter-2',
-      'rule-categorize-1',
-      'rule-sort',
-      'rule-group'
-    ]);
   });
 
   test('uses organize defaults when omitted', async () => {
@@ -355,10 +321,6 @@ describe('useTabs createTabWithWizardConfig', () => {
       tabName: 'New Tab'
     });
 
-    rulesApiMock.createRule
-      .mockResolvedValueOnce({ _id: 'rule-sort-default' })
-      .mockResolvedValueOnce({ _id: 'rule-group-default' });
-
     const { createTabWithWizardConfig } = useTabs();
     await createTabWithWizardConfig({
       tabName: 'New Tab',
@@ -366,20 +328,16 @@ describe('useTabs createTabWithWizardConfig', () => {
       categorizeRules: [{ property: '', method: '', value: '', category: '' }]
     });
 
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(1, {
-      applyForTabs: ['new-tab-default-organize'],
-      rule: ['sort', 'date', 'desc', '', ''],
-      filterJoinOperator: 'and',
-      _isImportant: false,
-      orderOfExecution: 0
-    });
-    expect(rulesApiMock.createRule).toHaveBeenNthCalledWith(2, {
-      applyForTabs: ['new-tab-default-organize'],
-      rule: ['groupBy', 'none', '', '', ''],
-      filterJoinOperator: 'and',
-      _isImportant: false,
-      orderOfExecution: 0
-    });
+    const newTabPayload = tabsApiMock.createTab.mock.calls[0][0];
+    const levelZero = levelZeroFor(newTabPayload);
+    expect(levelZero.sortRules[0]).toEqual(expect.objectContaining({
+      rule: ['sort', 'date', 'desc', '', '']
+    }));
+    expect(levelZero.groupByRules[0]).toEqual(expect.objectContaining({
+      rule: ['groupBy', 'none', '', '', '']
+    }));
+    expect(levelZero.filterRules).toEqual([]);
+    expect(levelZero.categorizeRules).toEqual([]);
   });
 
   test('returns and selects the state-backed tab instance after processing', async () => {
@@ -390,10 +348,6 @@ describe('useTabs createTabWithWizardConfig', () => {
       _id: 'new-tab-reactive',
       tabName: 'Reactive Tab'
     });
-
-    rulesApiMock.createRule
-      .mockResolvedValueOnce({ _id: 'rule-sort-reactive' })
-      .mockResolvedValueOnce({ _id: 'rule-group-reactive' });
 
     const processedTabInstance = {
       _id: 'new-tab-reactive',
@@ -421,5 +375,246 @@ describe('useTabs createTabWithWizardConfig', () => {
 
     expect(createdTab).toBe(processedTabInstance);
     expect(processedTabInstance.isSelected).toBe(true);
+  });
+});
+
+describe('useTabs copyTabSchemaToGroup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetState();
+  });
+
+  test('copies full drill schema to target group with unique copy-of naming', async () => {
+    const sourceDrillSchema = {
+      version: 1,
+      levels: [{
+        id: 'level-1',
+        sortRules: [{
+          _id: 'sort-1',
+          rule: ['sort', 'date', 'desc', '', ''],
+          filterJoinOperator: 'and',
+          _isImportant: false,
+          orderOfExecution: 0
+        }],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [{
+          _id: 'group-1',
+          rule: ['groupBy', 'category', '', '', ''],
+          filterJoinOperator: 'and',
+          _isImportant: false,
+          orderOfExecution: 0
+        }]
+      }]
+    };
+
+    state.allUserTabs = [
+      {
+        _id: 'source-tab',
+        tabName: 'Travel',
+        showForGroup: ['group-1'],
+        sortByGroup: { 'group-1': 0 },
+        drillSchema: sourceDrillSchema
+      },
+      {
+        _id: 'target-existing-1',
+        tabName: 'copy of Travel',
+        showForGroup: ['group-2'],
+        sortByGroup: { 'group-2': 1 }
+      },
+      {
+        _id: 'target-existing-2',
+        tabName: 'copy of Travel 2',
+        showForGroup: ['group-2'],
+        sortByGroup: { 'group-2': 4 }
+      }
+    ];
+
+    tabsApiMock.createTab.mockResolvedValue({
+      _id: 'copied-tab',
+      tabName: 'copy of Travel 3',
+      showForGroup: ['group-2'],
+      sortByGroup: { 'group-2': 5 },
+      drillSchema: sourceDrillSchema
+    });
+
+    const { copyTabSchemaToGroup } = useTabs();
+    const copiedTab = await copyTabSchemaToGroup('source-tab', 'group-2');
+
+    expect(tabsApiMock.createTab).toHaveBeenCalledWith({
+      tabName: 'copy of Travel 3',
+      showForGroup: ['group-2'],
+      sort: 5,
+      sortByGroup: { 'group-2': 5 },
+      drillSchema: {
+        ...sourceDrillSchema,
+        pathLevels: []
+      }
+    });
+    expect(copiedTab?._id).toBe('copied-tab');
+    expect(state.allUserTabs.some(tab => tab._id === 'copied-tab')).toBe(true);
+    expect(processAllTabsForSelectedGroupMock).toHaveBeenCalledWith({ showLoading: false });
+  });
+});
+
+describe('useTabs drill schema updates', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetState();
+  });
+
+  test('preserves selected tab runtime state when persisting drill schema', async () => {
+    const selectedTab = {
+      _id: 'tab-1',
+      tabName: 'all',
+      isSelected: true,
+      total: 42,
+      groupByMode: 'none',
+      categorizedItems: [['all transactions', [{ transaction_id: 't1' }], 42]],
+      hiddenItems: [],
+      showForGroup: ['group-1'],
+      drillSchema: {
+        version: 1,
+        levels: [{
+          id: 'level-1',
+          sortRules: [],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [{
+            _id: 'group-by-1',
+            rule: ['groupBy', 'none', '', '', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          }]
+        }]
+      }
+    };
+
+    state.selected.group = { _id: 'group-1' };
+    state.selected.tab = selectedTab;
+    state.allUserTabs = [selectedTab];
+    state.selected.tabsForGroup = [selectedTab];
+
+    tabsApiMock.updateTab.mockResolvedValue({
+      _id: 'tab-1',
+      tabName: 'all',
+      showForGroup: ['group-1'],
+      drillSchema: {
+        version: 1,
+        levels: [{
+          id: 'level-1',
+          sortRules: [],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [{
+            _id: 'group-by-updated',
+            rule: ['groupBy', 'category', '', '', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          }]
+        }]
+      }
+    });
+
+    const { updateTabDrillSchemaAtDepth } = useTabs();
+    await updateTabDrillSchemaAtDepth('tab-1', 0, {
+      groupByRules: [{
+        _id: 'group-by-local',
+        rule: ['groupBy', 'category', '', '', ''],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 0
+      }]
+    });
+
+    expect(tabsApiMock.updateTab).toHaveBeenCalledTimes(1);
+    expect(state.allUserTabs[0].isSelected).toBe(true);
+    expect(state.allUserTabs[0].total).toBe(42);
+    expect(state.allUserTabs[0].groupByMode).toBe('none');
+    expect(processAllTabsForSelectedGroupMock).toHaveBeenCalledWith({ showLoading: false });
+  });
+
+  test('writes non-root edits as path-level drill schema overrides', async () => {
+    const selectedTab = {
+      _id: 'tab-2',
+      tabName: 'all',
+      isSelected: true,
+      showForGroup: ['group-1'],
+      drillSchema: {
+        version: 1,
+        levels: [{
+          id: 'level-1',
+          sortRules: [],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [{
+            _id: 'group-by-root',
+            rule: ['groupBy', 'category', '', '', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          }]
+        }, {
+          id: 'level-2',
+          sortRules: [],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [{
+            _id: 'group-by-depth-two',
+            rule: ['groupBy', 'none', '', '', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          }]
+        }]
+      }
+    };
+
+    state.selected.group = { _id: 'group-1' };
+    state.selected.tab = selectedTab;
+    state.allUserTabs = [selectedTab];
+    state.selected.tabsForGroup = [selectedTab];
+
+    tabsApiMock.updateTab.mockResolvedValue({
+      _id: 'tab-2',
+      tabName: 'all',
+      showForGroup: ['group-1'],
+      drillSchema: {
+        version: 1,
+        levels: selectedTab.drillSchema.levels,
+        pathLevels: [{
+          id: 'path-dining',
+          path: ['dining'],
+          sortRules: [],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [{
+            _id: 'group-by-dining',
+            rule: ['groupBy', 'category', '', '', ''],
+            filterJoinOperator: 'and',
+            _isImportant: false,
+            orderOfExecution: 0
+          }]
+        }]
+      }
+    });
+
+    const { updateTabDrillSchemaAtPath } = useTabs();
+    await updateTabDrillSchemaAtPath('tab-2', ['dining'], {
+      groupByRules: [{
+        _id: 'group-by-branch-local',
+        rule: ['groupBy', 'category', '', '', ''],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 0
+      }]
+    });
+
+    const payload = tabsApiMock.updateTab.mock.calls[0][1];
+    expect(payload.drillSchema.pathLevels).toHaveLength(1);
+    expect(payload.drillSchema.pathLevels[0].path).toEqual(['dining']);
+    expect(payload.drillSchema.levels[1].groupByRules[0].rule[1]).toBe('none');
   });
 });

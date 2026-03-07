@@ -36,16 +36,9 @@
             </template>
 
             <!-- Tab segment -->
-            <template v-if="isCategoryView || isCategoryDetailView">
+            <template v-if="isDrillView">
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-              <span
-                v-if="showTabAsCurrentLabel"
-                class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
-              >
-                {{ selectedTabLabel }}
-              </span>
               <button
-                v-else
                 @click="emit('navigate-category')"
                 class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
                 type="button"
@@ -54,11 +47,22 @@
               </button>
             </template>
 
-            <!-- Category segment -->
-            <template v-if="showCategoryBreadcrumb">
+            <!-- Drill path segments -->
+            <template
+              v-for="(segment, index) in drillBreadcrumbs"
+              :key="`drill-segment-${index}-${segment.key}`"
+            >
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-              <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
-                {{ selectedCategoryLabel }}
+              <button
+                v-if="index < drillBreadcrumbs.length - 1"
+                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+                type="button"
+                @click="emit('navigate-drill-depth', index + 1)"
+              >
+                {{ segment.label }}
+              </button>
+              <span v-else class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                {{ segment.label }}
               </span>
             </template>
 
@@ -173,7 +177,6 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
 import { Home, Info, X } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 
@@ -181,9 +184,21 @@ const props = defineProps({
   view: {
     type: String,
     default: 'group',
-    validator: (value) => ['group', 'tab', 'category', 'category-detail', 'transaction-search'].includes(value)
+    validator: (value) => ['group', 'tab', 'drill', 'transaction-search'].includes(value)
   },
   isRearrangeActive: {
+    type: Boolean,
+    default: false
+  },
+  drillBreadcrumbs: {
+    type: Array,
+    default: () => []
+  },
+  drillTabTotal: {
+    type: Number,
+    default: 0
+  },
+  isDrillLeaf: {
     type: Boolean,
     default: false
   }
@@ -193,6 +208,7 @@ const emit = defineEmits([
   'navigate-group',
   'navigate-tab',
   'navigate-category',
+  'navigate-drill-depth',
   'toggle-rearrange',
   'edit-tab'
 ]);
@@ -202,22 +218,19 @@ const isHeaderInfoModalOpen = ref(false);
 
 const isGroupSelectorView = computed(() => props.view === 'group');
 const isTabSelectorView = computed(() => props.view === 'tab');
-const isCategoryView = computed(() => props.view === 'category');
-const isCategoryDetailView = computed(() => props.view === 'category-detail');
+const isDrillView = computed(() => props.view === 'drill');
 const isTransactionSearchView = computed(() => props.view === 'transaction-search');
-const isNoGroupingTab = computed(() => state.selected.tab?.groupByMode === NO_GROUPING_RULE_VALUE);
-const showCategoryBreadcrumb = computed(() => isCategoryDetailView.value && !isNoGroupingTab.value);
-const showTabAsCurrentLabel = computed(() => isCategoryView.value || (isCategoryDetailView.value && isNoGroupingTab.value));
+const drillBreadcrumbs = computed(() => (Array.isArray(props.drillBreadcrumbs) ? props.drillBreadcrumbs : []));
+const selectedDrillLabel = computed(() => drillBreadcrumbs.value[drillBreadcrumbs.value.length - 1]?.label || 'Selected Level');
 const isRearrangeActive = computed(() => props.isRearrangeActive);
 const showRearrangeAction = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const showEditTabAction = computed(() => (
-  (isCategoryView.value || isCategoryDetailView.value)
+  isDrillView.value
   && Boolean(state.selected.tab)
 ));
 
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
-const selectedCategoryLabel = computed(() => state.selected.category || 'Category');
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
 
 function numberOrZero(value) {
@@ -277,17 +290,17 @@ const totalNetBalance = computed(() => {
   return allAccounts.reduce((accumulator, account) => accumulator + accountNetBalance(account), 0);
 });
 
-const selectedCategoryTotal = computed(() => {
-  const categorizedItems = state.selected.tab?.categorizedItems || [];
-  const selectedCategoryName = isNoGroupingTab.value
-    ? categorizedItems[0]?.[0]
-    : state.selected.category;
-  const selectedCategory = categorizedItems.find(
-    ([categoryName]) => categoryName === selectedCategoryName
-  );
+const selectedDrillTotal = computed(() => {
+  if (!props.isDrillLeaf) {
+    return Number(props.drillTabTotal || 0);
+  }
 
-  const categoryTotal = Number(selectedCategory?.[2]);
-  return Number.isFinite(categoryTotal) ? categoryTotal : 0;
+  const selectedCrumbTotal = Number(drillBreadcrumbs.value[drillBreadcrumbs.value.length - 1]?.total);
+  if (Number.isFinite(selectedCrumbTotal)) {
+    return selectedCrumbTotal;
+  }
+
+  return Number(props.drillTabTotal || 0);
 });
 
 const headerTotal = computed(() => {
@@ -299,8 +312,8 @@ const headerTotal = computed(() => {
     return selectedGroupNetBalance.value;
   }
 
-  if (isCategoryDetailView.value) {
-    return selectedCategoryTotal.value;
+  if (isDrillView.value) {
+    return selectedDrillTotal.value;
   }
 
   const overrideTotal = Number(state.reportRowTotalOverride);
@@ -336,10 +349,10 @@ const headerInfo = computed(() => {
     };
   }
 
-  if (isCategoryDetailView.value) {
+  if (isDrillView.value && props.isDrillLeaf) {
     return {
-      title: 'Category Total',
-      summary: `This is the total for ${selectedCategoryLabel.value} in ${activeDateRangeLabel.value}.`
+      title: 'Drill Level Total',
+      summary: `This is the total for ${selectedDrillLabel.value} in ${activeDateRangeLabel.value}.`
     };
   }
 

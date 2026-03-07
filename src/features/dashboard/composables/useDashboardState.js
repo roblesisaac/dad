@@ -45,7 +45,7 @@ const state = reactive({
       }
     }),
     tab: computed(() => state.selected.tabsForGroup.find(tab => tab.isSelected)),
-    category: false,
+    drillPath: [],
     transaction: false
   }
 

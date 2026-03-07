@@ -3,7 +3,7 @@ import { parseISO, isValid, startOfMonth, startOfYear } from 'date-fns';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { useTabRules } from '@/features/tabs/composables/useTabRules.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
-import { evaluateTabData } from '@/features/tabs/utils/tabEvaluator.js';
+import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 
 /**
  * Convert a date value to a Date object.
@@ -24,7 +24,7 @@ function convertToDate(dateValue) {
 
 export function useTabProcessing() {
   const { state } = useDashboardState();
-  const { ruleMethods, combinedRulesForTab } = useTabRules();
+  const { ruleMethods } = useTabRules();
   const { getDayOfWeekPST } = useUtils();
   const months = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 
@@ -33,16 +33,22 @@ export function useTabProcessing() {
     const data = state.selected.allGroupTransactions;
     if (!data || !tab) return null;
 
-    const tabRules = combinedRulesForTab(tab._id);
-
-    return evaluateTabData({
+    const drillState = resolveDrillState({
       tab,
       transactions: data,
-      tabRules,
+      allRules: state.allUserRules,
+      drillPath: [],
       ruleMethods,
       getDayOfWeekPST,
       months
     });
+
+    return {
+      tabTotal: drillState.tabTotal,
+      categorizedItems: drillState.groups.map(group => [group.label, group.items, group.total]),
+      hiddenItems: drillState.hiddenItems,
+      groupByMode: drillState.groupByMode
+    };
   }
 
   function groupByDate(a, b) {

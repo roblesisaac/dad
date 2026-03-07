@@ -46,7 +46,8 @@ describe('tabs controller', () => {
         sort: 5,
         sortScopeId: 'group-2',
         tabName: 'Updated name'
-      }
+      },
+      user: { _id: 'user-1' }
     };
     const res = createRes();
 
@@ -69,7 +70,8 @@ describe('tabs controller', () => {
       body: {
         sort: 'not-a-number',
         sortScopeId: 'group-2'
-      }
+      },
+      user: { _id: 'user-1' }
     };
     const res = createRes();
 
@@ -88,7 +90,8 @@ describe('tabs controller', () => {
       params: { _tabId: 'tab-1' },
       body: {
         sort: 9
-      }
+      },
+      user: { _id: 'user-1' }
     };
     const res = createRes();
 

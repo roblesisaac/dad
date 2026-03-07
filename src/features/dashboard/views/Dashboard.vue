@@ -24,9 +24,13 @@
         <DashboardHeader
           :view="dashboardView"
           :is-rearrange-active="isRearrangeModeActive"
+          :drill-breadcrumbs="drillState.breadcrumbs"
+          :drill-tab-total="drillState.tabTotal"
+          :is-drill-leaf="drillState.isLeaf"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
-          @navigate-category="openCategoryView"
+          @navigate-category="openDrillRoot"
+          @navigate-drill-depth="handleNavigateDrillDepth"
           @toggle-rearrange="toggleRearrangeMode"
           @edit-tab="openTabEditor"
         />
@@ -81,14 +85,14 @@
         </Transition>
 
         <Transition name="fade">
-          <div v-if="!state.isLoading && !state.isOnboarding && isCategoryView" class="w-full">
-            <CategoriesWrapper @category-selected="handleCategorySelected" />
-          </div>
-        </Transition>
-
-        <Transition name="fade">
-          <div v-if="!state.isLoading && !state.isOnboarding && isCategoryDetailView" class="w-full">
-            <CategoryTransactionsView />
+          <div v-if="!state.isLoading && !state.isOnboarding && isDrillView" class="w-full">
+            <DrillExplorer
+              :groups="drillState.groups"
+              :transactions="drillState.transactions"
+              :hidden-items="drillState.hiddenItems"
+              :is-leaf="drillState.isLeaf"
+              @group-selected="handleDrillGroupSelected"
+            />
           </div>
         </Transition>
 
@@ -208,15 +212,15 @@ import { useInit } from '../composables/useInit.js';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup.js';
 import { useTabs } from '@/features/tabs/composables/useTabs.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
-import { NO_GROUPING_RULE_VALUE } from '@/features/tabs/utils/tabEvaluator.js';
+import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
+import { decodeDrillPath, encodeDrillPath, sameDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
-import { ChevronDown, ChevronRight, Loader2 } from 'lucide-vue-next';
+import { ChevronDown, Loader2 } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
-import CategoriesWrapper from '../components/CategoriesWrapper.vue';
-import CategoryTransactionsView from '../components/CategoryTransactionsView.vue';
+import DrillExplorer from '../components/DrillExplorer.vue';
 import TransactionSearchView from '../components/TransactionSearchView.vue';
 import DashboardHeader from '../components/DashboardHeader.vue';
 import SelectGroup from '@/features/select-group/views/SelectGroup.vue';
@@ -238,25 +242,30 @@ const isRearrangeModeActive = ref(false);
 const dashboardView = ref('group');
 const isGroupSelectorView = computed(() => dashboardView.value === 'group');
 const isTabSelectorView = computed(() => dashboardView.value === 'tab');
-const isCategoryView = computed(() => dashboardView.value === 'category');
-const isCategoryDetailView = computed(() => dashboardView.value === 'category-detail');
+const isDrillView = computed(() => dashboardView.value === 'drill');
 const isTransactionSearchView = computed(() => dashboardView.value === 'transaction-search');
 const showSelectorView = computed(() => isGroupSelectorView.value || isTabSelectorView.value);
 const shouldShowFooter = computed(() => (
   state.isOnboarding ||
   isGroupSelectorView.value ||
   isTabSelectorView.value ||
-  isCategoryView.value ||
-  isCategoryDetailView.value ||
+  isDrillView.value ||
   isTransactionSearchView.value
 ));
 
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DASHBOARD_VIEW_QUERY_KEY = 'dashboardView';
-const DASHBOARD_VIEWS = ['group', 'tab', 'category', 'category-detail', 'transaction-search'];
+const DRILL_PATH_QUERY_KEY = 'drillPath';
+const DASHBOARD_VIEWS = ['group', 'tab', 'drill', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
+const drillState = computed(() => resolveDrillState({
+  tab: state.selected.tab,
+  transactions: state.selected.allGroupTransactions,
+  allRules: state.allUserRules,
+  drillPath: state.selected.drillPath
+}));
 
 const {
   isRefreshing: isPullRefreshing,
@@ -276,8 +285,8 @@ async function handleOnboardingComplete() {
   await init({ prioritizeFirstPaint: true, runPlaidSync: false });
 }
 
-function resetCategorySelection() {
-  state.selected.category = false;
+function resetDrillSelection() {
+  state.selected.drillPath = [];
   state.selected.transaction = false;
 }
 
@@ -290,13 +299,13 @@ function normalizeDashboardView(view) {
   return DASHBOARD_VIEW_SET.has(view) ? view : '';
 }
 
+function queryDrillPath() {
+  return decodeDrillPath(queryValue(DRILL_PATH_QUERY_KEY));
+}
+
 function defaultDashboardView() {
   if (state.selected.tab) {
-    if (isNoGroupingTab(state.selected.tab)) {
-      return 'category-detail';
-    }
-
-    return state.selected.category ? 'category-detail' : 'category';
+    return 'drill';
   }
 
   return 'group';
@@ -307,31 +316,18 @@ function resolveDashboardViewForState(view) {
     return state.selected.group ? 'tab' : 'group';
   }
 
-  if (view === 'category') {
+  if (view === 'drill') {
     if (!state.selected.tab) {
       return state.selected.group ? 'tab' : 'group';
     }
-
-    return isNoGroupingTab(state.selected.tab) ? 'category-detail' : 'category';
-  }
-
-  if (view === 'category-detail') {
-    if (!state.selected.tab) {
-      return state.selected.group ? 'tab' : 'group';
-    }
-
-    if (isNoGroupingTab(state.selected.tab)) {
-      return 'category-detail';
-    }
-
-    return state.selected.category ? 'category-detail' : 'category';
+    return 'drill';
   }
 
   return view;
 }
 
-function shouldResetCategoryForView(view) {
-  return view === 'group' || view === 'tab' || view === 'category' || view === 'transaction-search';
+function shouldResetDrillPathForView(view) {
+  return view === 'group' || view === 'tab' || view === 'transaction-search';
 }
 
 function dashboardQueryForView(view) {
@@ -339,8 +335,20 @@ function dashboardQueryForView(view) {
 
   if (view === 'group') {
     delete nextQuery[DASHBOARD_VIEW_QUERY_KEY];
+    delete nextQuery[DRILL_PATH_QUERY_KEY];
   } else {
     nextQuery[DASHBOARD_VIEW_QUERY_KEY] = view;
+  }
+
+  if (view === 'drill') {
+    const encodedPath = encodeDrillPath(state.selected.drillPath);
+    if (encodedPath) {
+      nextQuery[DRILL_PATH_QUERY_KEY] = encodedPath;
+    } else {
+      delete nextQuery[DRILL_PATH_QUERY_KEY];
+    }
+  } else {
+    delete nextQuery[DRILL_PATH_QUERY_KEY];
   }
 
   return Object.keys(nextQuery).length ? nextQuery : undefined;
@@ -348,7 +356,10 @@ function dashboardQueryForView(view) {
 
 async function syncDashboardViewQuery(view, historyMode = 'push') {
   const normalizedQueryValue = view === 'group' ? '' : view;
-  if (queryValue(DASHBOARD_VIEW_QUERY_KEY) === normalizedQueryValue) {
+  const encodedDrillPath = view === 'drill' ? encodeDrillPath(state.selected.drillPath) : '';
+  const currentDrillPath = queryValue(DRILL_PATH_QUERY_KEY);
+  const currentView = queryValue(DASHBOARD_VIEW_QUERY_KEY);
+  if (currentView === normalizedQueryValue && currentDrillPath === encodedDrillPath) {
     return;
   }
 
@@ -379,8 +390,8 @@ function setDashboardView(view, options = {}) {
   const normalized = normalizeDashboardView(view) || 'group';
   const resolvedView = resolveDashboardViewForState(normalized);
 
-  if (shouldResetCategoryForView(resolvedView)) {
-    resetCategorySelection();
+  if (shouldResetDrillPathForView(resolvedView)) {
+    resetDrillSelection();
   }
 
   dashboardView.value = resolvedView;
@@ -483,7 +494,7 @@ async function applyReportRowContextFromQuery(context) {
     const targetTab = state.selected.tabsForGroup.find(tab => tab._id === context.tabId);
     if (targetTab) {
       await selectTab(targetTab);
-      setDashboardView('category');
+      setDashboardView('drill');
     }
   }
 
@@ -519,19 +530,14 @@ function openTabSelector() {
   setDashboardView('tab', { syncRoute: true });
 }
 
-function openCategoryView() {
+function openDrillRoot() {
   if (!state.selected.tab) {
     openTabSelector();
     return;
   }
 
-  if (isNoGroupingTab(state.selected.tab)) {
-    resetCategorySelection();
-    setDashboardView('category-detail', { syncRoute: true });
-    return;
-  }
-
-  setDashboardView('category', { syncRoute: true });
+  resetDrillSelection();
+  setDashboardView('drill', { syncRoute: true });
 }
 
 function toggleRearrangeMode() {
@@ -547,7 +553,7 @@ function openTabEditor() {
     return;
   }
 
-  const canEditFromCurrentView = isCategoryView.value || isCategoryDetailView.value;
+  const canEditFromCurrentView = isDrillView.value;
   if (!canEditFromCurrentView) {
     return;
   }
@@ -562,15 +568,14 @@ function handleRuleManagerClose() {
     return;
   }
 
-  if (!isNoGroupingTab(state.selected.tab)) {
-    return;
+  const resolvedPath = drillState.value.validPath || [];
+  if (!sameDrillPath(resolvedPath, state.selected.drillPath || [])) {
+    state.selected.drillPath = resolvedPath;
+    setDashboardView('drill', {
+      syncRoute: true,
+      historyMode: 'replace'
+    });
   }
-
-  resetCategorySelection();
-  setDashboardView('category-detail', {
-    syncRoute: true,
-    historyMode: 'replace'
-  });
 }
 
 function openTransactionSearch() {
@@ -581,31 +586,32 @@ function handleGroupSelected() {
   setDashboardView('tab', { syncRoute: true });
 }
 
-function isNoGroupingTab(tab = state.selected.tab) {
-  return tab?.groupByMode === NO_GROUPING_RULE_VALUE;
-}
-
 function openSelectedTabView() {
-  if (isNoGroupingTab(state.selected.tab)) {
-    resetCategorySelection();
-    setDashboardView('category-detail', { syncRoute: true });
-    return;
-  }
-
-  resetCategorySelection();
-  setDashboardView('category', { syncRoute: true });
+  resetDrillSelection();
+  setDashboardView('drill', { syncRoute: true });
 }
 
 function handleTabSelected() {
   openSelectedTabView();
 }
 
-function handleCategorySelected(categoryName) {
-  if (!categoryName) return;
+function handleDrillGroupSelected(group) {
+  const nextKey = String(group?.key || '').trim();
+  if (!nextKey) return;
 
-  state.selected.category = categoryName;
+  state.selected.drillPath = [...state.selected.drillPath, nextKey];
   state.selected.transaction = false;
-  setDashboardView('category-detail', { syncRoute: true });
+  setDashboardView('drill', { syncRoute: true });
+}
+
+function handleNavigateDrillDepth(depth = 0) {
+  const safeDepth = Number.isFinite(Number(depth)) && Number(depth) >= 0
+    ? Number(depth)
+    : 0;
+
+  state.selected.drillPath = state.selected.drillPath.slice(0, safeDepth);
+  state.selected.transaction = false;
+  setDashboardView('drill', { syncRoute: true });
 }
 
 watch(
@@ -632,8 +638,8 @@ watch(
   () => state.selected.tab?._id,
   (selectedTabId, previousTabId) => {
     if (!selectedTabId) {
-      resetCategorySelection();
-      if (isCategoryView.value || isCategoryDetailView.value) {
+      resetDrillSelection();
+      if (isDrillView.value) {
         setDashboardView(state.selected.group ? 'tab' : 'group', {
           syncRoute: true,
           historyMode: 'replace'
@@ -643,19 +649,12 @@ watch(
     }
 
     if (selectedTabId !== previousTabId && previousTabId) {
-      resetCategorySelection();
-      if (isCategoryDetailView.value) {
-        if (isNoGroupingTab(state.selected.tab)) {
-          setDashboardView('category-detail', {
-            syncRoute: true,
-            historyMode: 'replace'
-          });
-        } else {
-          setDashboardView('category', {
-            syncRoute: true,
-            historyMode: 'replace'
-          });
-        }
+      resetDrillSelection();
+      if (isDrillView.value) {
+        setDashboardView('drill', {
+          syncRoute: true,
+          historyMode: 'replace'
+        });
       }
     }
   }
@@ -665,7 +664,7 @@ watch(
   () => state.selected.group?._id,
   (selectedGroupId, previousGroupId) => {
     if (selectedGroupId !== previousGroupId) {
-      resetCategorySelection();
+      resetDrillSelection();
     }
 
     if (!selectedGroupId && !state.isLoading) {
@@ -678,42 +677,28 @@ watch(
 );
 
 watch(
-  [() => dashboardView.value, () => state.selected.category, () => state.selected.tab?.categorizedItems],
-  ([view, selectedCategory]) => {
-    if (view !== 'category-detail') {
+  () => drillState.value.validPath,
+  (nextValidPath) => {
+    const safePath = Array.isArray(nextValidPath) ? nextValidPath : [];
+    const currentPath = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+
+    if (sameDrillPath(safePath, currentPath)) {
       return;
     }
 
-    if (isNoGroupingTab(state.selected.tab)) {
-      return;
-    }
-
-    if (!selectedCategory) {
-      setDashboardView('category', {
-        syncRoute: true,
-        historyMode: 'replace'
-      });
-      return;
-    }
-
-    const categoryExists = Boolean(
-      state.selected.tab?.categorizedItems?.find(([categoryName]) => categoryName === selectedCategory)
-    );
-
-    if (!categoryExists) {
-      resetCategorySelection();
-      setDashboardView('category', {
+    state.selected.drillPath = safePath;
+    if (isDrillView.value) {
+      setDashboardView('drill', {
         syncRoute: true,
         historyMode: 'replace'
       });
     }
-  },
-  { deep: true }
+  }
 );
 
 watch(
-  () => queryValue(DASHBOARD_VIEW_QUERY_KEY),
-  (routeViewRaw) => {
+  [() => queryValue(DASHBOARD_VIEW_QUERY_KEY), () => queryValue(DRILL_PATH_QUERY_KEY)],
+  ([routeViewRaw]) => {
     if (isSyncingDashboardRouteQuery.value) {
       return;
     }
@@ -730,9 +715,24 @@ watch(
       return;
     }
 
+    if (normalizedRouteView === 'drill') {
+      state.selected.drillPath = queryDrillPath();
+    } else if (state.selected.drillPath.length) {
+      resetDrillSelection();
+    }
+
     const resolvedRouteView = setDashboardView(normalizedRouteView);
     if (resolvedRouteView !== normalizedRouteView) {
       void syncDashboardViewQuery(resolvedRouteView, 'replace');
+      return;
+    }
+
+    if (resolvedRouteView === 'drill') {
+      const routePath = queryDrillPath();
+      const resolvedPath = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+      if (!sameDrillPath(routePath, resolvedPath)) {
+        void syncDashboardViewQuery('drill', 'replace');
+      }
     }
   }
 );
@@ -763,6 +763,9 @@ async function applyRemoteDashboardSyncRefresh(options = {}) {
 
     const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
     if (routeView) {
+      if (routeView === 'drill') {
+        state.selected.drillPath = queryDrillPath();
+      }
       const resolvedRouteView = setDashboardView(routeView);
       if (resolvedRouteView !== routeView) {
         await syncDashboardViewQuery(resolvedRouteView, 'replace');
@@ -802,6 +805,9 @@ onMounted(async () => {
 
   const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
   if (routeView) {
+    if (routeView === 'drill') {
+      state.selected.drillPath = queryDrillPath();
+    }
     const resolvedRouteView = setDashboardView(routeView);
     if (resolvedRouteView !== routeView) {
       await syncDashboardViewQuery(resolvedRouteView, 'replace');
