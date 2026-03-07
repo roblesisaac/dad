@@ -58,7 +58,7 @@
     </div>
 
     <!-- Disabled Tabs Section -->
-    <div :class="isDashboardVariant ? '' : 'py-4'">
+    <div v-if="disabledTabs.length > 0" :class="isDashboardVariant ? '' : 'py-4'">
       <button 
         @click="toggleDisabledSection" 
         :class="isDashboardVariant
@@ -75,7 +75,7 @@
         </div>
       </button>
       
-      <div v-if="disabledTabs.length > 0 && showDisabledTabs">
+      <div v-if="showDisabledTabs">
         <AllTabRow 
           v-for="tab in disabledTabs"
           :key="tab._id"
