@@ -1,5 +1,5 @@
 <template>
-  <div class="flex flex-col bg-white min-h-screen">
+  <div class="flex flex-col bg-white min-h-screen" data-no-pull-refresh>
     <div class="max-w-3xl mx-auto w-full flex flex-col min-h-screen">
       <!-- Header Area -->
       <div class="px-6 py-0 border-b-2 border-gray-100 flex justify-between items-center bg-white sticky top-0 z-20 backdrop-blur-sm bg-white/90">
@@ -24,6 +24,13 @@
                 >
                   <Edit class="w-4 h-4" />
                   Edit Name
+                </button>
+                <button
+                  @click="copyCurrentTabSchema"
+                  class="w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest text-gray-600 hover:text-black hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <Copy class="w-4 h-4" />
+                  Copy Schema
                 </button>
               </div>
             </div>
@@ -356,15 +363,17 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick } from 'vue';
+import { ref, computed, nextTick, watch } from 'vue';
 import {
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
-import { useRuleManager } from '../composables/useRuleManager';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
 import { useRulesAPI } from '../composables/useRulesAPI';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
+import { useTabs } from '@/features/tabs/composables/useTabs';
+import { ensureDrillLevel, normalizeDrillSchema } from '@/features/tabs/utils/drillSchema.js';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import draggable from 'vuedraggable';
 
 import RuleCard from '../components/RuleCard.vue';
@@ -376,12 +385,9 @@ const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
 const rulesAPI = useRulesAPI();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 const {
-  createRule,
-  updateRule,
-  deleteRuleById,
-  toggleRuleContext,
-  updateRuleOrder
-} = useRuleManager();
+  updateTabDrillSchemaAtDepth,
+  copyTabSchemaToGroup
+} = useTabs();
 
 const emit = defineEmits(['close']);
 
@@ -413,7 +419,71 @@ const standardRuleTypes = [
   { id: 'filter', name: 'Filter Rules', icon: Filter }
 ];
 
-// UI State
+const LOCAL_RULE_TYPES = ['groupBy', 'sort', 'categorize', 'filter'];
+
+function safeOrder(value, fallback = 0) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function cloneRule(rule) {
+  return JSON.parse(JSON.stringify(rule || {}));
+}
+
+function createLocalRule(typeId, ruleArray = [], options = {}) {
+  const tabId = state.selected.tab?._id;
+  const {
+    filterJoinOperator = 'and',
+    _isImportant = false,
+    orderOfExecution = 0,
+    _id = `${typeId}-${Math.random().toString(36).slice(2, 10)}`
+  } = options;
+
+  return {
+    _id,
+    rule: Array.isArray(ruleArray)
+      ? ruleArray.map(value => String(value ?? ''))
+      : [typeId, '', '', '', ''],
+    applyForTabs: tabId ? [tabId] : [],
+    filterJoinOperator: String(filterJoinOperator || '').toLowerCase() === 'or' ? 'or' : 'and',
+    _isImportant: Boolean(_isImportant),
+    orderOfExecution: safeOrder(orderOfExecution),
+    _isLocal: true
+  };
+}
+
+function sanitizeRuleType(typeId = '') {
+  return LOCAL_RULE_TYPES.includes(typeId) ? typeId : 'categorize';
+}
+
+function normalizeLocalRule(typeId, rule) {
+  const normalizedType = sanitizeRuleType(typeId || rule?.rule?.[0]);
+  return createLocalRule(normalizedType, rule?.rule, {
+    _id: String(rule?._id || `${normalizedType}-${Math.random().toString(36).slice(2, 10)}`),
+    filterJoinOperator: rule?.filterJoinOperator,
+    _isImportant: rule?._isImportant,
+    orderOfExecution: rule?.orderOfExecution
+  });
+}
+
+function normalizeLocalRuleList(typeId, rules = []) {
+  return (Array.isArray(rules) ? rules : [])
+    .map(rule => normalizeLocalRule(typeId, rule))
+    .sort((a, b) => safeOrder(a.orderOfExecution) - safeOrder(b.orderOfExecution));
+}
+
+function stripEditorFields(rule) {
+  return {
+    _id: String(rule?._id || ''),
+    rule: Array.isArray(rule?.rule)
+      ? rule.rule.map(value => String(value ?? ''))
+      : [],
+    filterJoinOperator: String(rule?.filterJoinOperator || '').toLowerCase() === 'or' ? 'or' : 'and',
+    _isImportant: Boolean(rule?._isImportant),
+    orderOfExecution: safeOrder(rule?.orderOfExecution)
+  };
+}
+
 const showRuleEditModal = ref(false);
 const showDeleteModal = ref(false);
 const currentRule = ref(null);
@@ -424,7 +494,6 @@ const showAdvancedGroupBy = ref(false);
 const isSavingGroupBy = ref(false);
 const isSavingSort = ref(false);
 
-// Tab name editing state
 const isEditingTabName = ref(false);
 const editedTabName = ref('');
 const tabNameInput = ref(null);
@@ -432,6 +501,18 @@ const isSavingTabName = ref(false);
 const isDeletingTab = ref(false);
 const showTabActionsMenu = ref(false);
 const reorderingSectionId = ref(null);
+
+const currentDepth = computed(() => {
+  const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+  return path.length;
+});
+
+const localRulesByType = ref({
+  groupBy: [],
+  sort: [],
+  categorize: [],
+  filter: []
+});
 
 const canSaveTabName = computed(() => {
   if (!state.selected.tab) return false;
@@ -443,31 +524,43 @@ const canSaveTabName = computed(() => {
   return nextTabName !== currentTabName;
 });
 
-const enabledRules = computed(() => {
-  const tabId = state.selected.tab?._id;
-  if (!tabId) return [];
+function getEnabledRulesByType(typeId) {
+  const normalizedType = sanitizeRuleType(typeId);
+  return [...(localRulesByType.value[normalizedType] || [])]
+    .sort((a, b) => safeOrder(a.orderOfExecution) - safeOrder(b.orderOfExecution));
+}
 
-  return state.allUserRules.filter(rule =>
-    rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId)
-  );
-});
+function getDisabledRulesByType() {
+  return [];
+}
 
-const disabledRules = computed(() => {
-  const tabId = state.selected.tab?._id;
-  if (!tabId) return [];
+function getRuleCountByType(typeId, enabledOnly = false) {
+  if (enabledOnly) {
+    return getEnabledRulesByType(typeId).length;
+  }
 
-  return state.allUserRules.filter(rule =>
-    !rule.applyForTabs.includes('_GLOBAL') && !rule.applyForTabs.includes(tabId)
-  );
-});
+  return getEnabledRulesByType(typeId).length;
+}
 
+const enabledRules = computed(() => [
+  ...getEnabledRulesByType('groupBy'),
+  ...getEnabledRulesByType('sort'),
+  ...getEnabledRulesByType('categorize'),
+  ...getEnabledRulesByType('filter')
+]);
+
+const disabledRules = computed(() => []);
 const groupByRules = computed(() => getEnabledRulesByType('groupBy'));
 const sortRules = computed(() => getEnabledRulesByType('sort'));
+
+function getPrimaryRuleForCurrentTab(rules = []) {
+  return rules[0] || null;
+}
 
 const selectedGroupByOption = computed(() => {
   const primaryGroupByRule = getPrimaryRuleForCurrentTab(groupByRules.value);
   if (!primaryGroupByRule) {
-    return 'category';
+    return 'none';
   }
 
   return normalizeGroupByOptionForUi(primaryGroupByRule.rule?.[1]);
@@ -503,10 +596,65 @@ const enabledRulesByTypeComputed = computed({
     });
     return result;
   },
-  set: () => {
-    // This setter is needed for draggable but reordering is handled in onDragEnd
-  }
+  set: () => {}
 });
+
+function syncLocalRulesFromCurrentDepth() {
+  if (!state.selected.tab) {
+    localRulesByType.value = {
+      groupBy: [],
+      sort: [],
+      categorize: [],
+      filter: []
+    };
+    return;
+  }
+
+  const schema = ensureDrillLevel(state.selected.tab.drillSchema, currentDepth.value);
+  const level = schema.levels[currentDepth.value] || {};
+
+  localRulesByType.value = {
+    groupBy: normalizeLocalRuleList('groupBy', level.groupByRules),
+    sort: normalizeLocalRuleList('sort', level.sortRules),
+    categorize: normalizeLocalRuleList('categorize', level.categorizeRules),
+    filter: normalizeLocalRuleList('filter', level.filterRules)
+  };
+}
+
+watch(
+  [() => state.selected.tab?._id, () => currentDepth.value],
+  () => {
+    syncLocalRulesFromCurrentDepth();
+    showTabActionsMenu.value = false;
+  },
+  { immediate: true }
+);
+
+function buildDepthReplacementPayload() {
+  return {
+    sortRules: getEnabledRulesByType('sort').map(stripEditorFields),
+    categorizeRules: getEnabledRulesByType('categorize').map(stripEditorFields),
+    filterRules: getEnabledRulesByType('filter').map(stripEditorFields),
+    groupByRules: getEnabledRulesByType('groupBy').slice(0, 1).map(stripEditorFields)
+  };
+}
+
+async function persistDepthRules() {
+  const tabId = state.selected.tab?._id;
+  if (!tabId) {
+    return;
+  }
+
+  await updateTabDrillSchemaAtDepth(tabId, currentDepth.value, buildDepthReplacementPayload());
+  syncLocalRulesFromCurrentDepth();
+}
+
+function withRenumberedOrder(rules = []) {
+  return rules.map((rule, index) => ({
+    ...rule,
+    orderOfExecution: index
+  }));
+}
 
 function toggleReorderMode(sectionId) {
   if (reorderingSectionId.value === sectionId) {
@@ -574,6 +722,55 @@ function toggleTabActionsMenu() {
   showTabActionsMenu.value = !showTabActionsMenu.value;
 }
 
+async function copyCurrentTabSchema() {
+  const sourceTab = state.selected.tab;
+  if (!sourceTab?._id) {
+    return;
+  }
+
+  const candidateGroups = state.allUserGroups.filter(group => {
+    const groupId = String(group?._id || '');
+    return groupId && groupId !== String(state.selected.group?._id || '');
+  });
+
+  if (!candidateGroups.length) {
+    alert('No other account groups are available for copying.');
+    return;
+  }
+
+  const menu = candidateGroups
+    .map((group, index) => `${index + 1}. ${group.name || group._id}`)
+    .join('\n');
+  const response = prompt(`Copy schema to which account group?\n${menu}`, '1');
+
+  if (!response) {
+    return;
+  }
+
+  const byIndex = Number(response);
+  let targetGroup = null;
+  if (Number.isFinite(byIndex) && byIndex >= 1 && byIndex <= candidateGroups.length) {
+    targetGroup = candidateGroups[byIndex - 1];
+  } else {
+    targetGroup = candidateGroups.find(group =>
+      String(group.name || '').toLowerCase() === String(response || '').trim().toLowerCase()
+      || String(group._id || '') === String(response || '').trim()
+    ) || null;
+  }
+
+  if (!targetGroup?._id) {
+    alert('Could not find that group.');
+    return;
+  }
+
+  showTabActionsMenu.value = false;
+  const copiedTab = await copyTabSchemaToGroup(sourceTab._id, targetGroup._id || ALL_ACCOUNTS_GROUP_ID);
+  if (copiedTab?._id) {
+    state.blueBar.message = `Copied schema to ${targetGroup.name || 'target group'}.`;
+    state.blueBar.loading = false;
+  }
+}
+
 async function cleanupRulesAfterTabDelete(tabId) {
   const rulesToUpdate = state.allUserRules.filter(rule =>
     Array.isArray(rule.applyForTabs) && rule.applyForTabs.includes(tabId)
@@ -615,7 +812,6 @@ async function deleteCurrentTab() {
   try {
     await deleteTabById(tabToDelete._id);
     state.allUserTabs = state.allUserTabs.filter(tab => tab._id !== tabToDelete._id);
-
     await cleanupRulesAfterTabDelete(tabToDelete._id);
 
     if (state.selected.tabsForGroup.length > 0) {
@@ -632,35 +828,6 @@ async function deleteCurrentTab() {
     state.blueBar.message = '';
     isDeletingTab.value = false;
   }
-}
-
-function getEnabledRulesByType(typeId) {
-  return enabledRules.value
-    .filter(rule => rule.rule[0] === typeId)
-    .sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0));
-}
-
-function getDisabledRulesByType(typeId) {
-  return disabledRules.value.filter(rule => rule.rule[0] === typeId);
-}
-
-function getRuleCountByType(typeId, enabledOnly = false) {
-  if (enabledOnly) {
-    return getEnabledRulesByType(typeId).length;
-  }
-
-  return state.allUserRules.filter(rule => rule.rule[0] === typeId).length;
-}
-
-function getPrimaryRuleForCurrentTab(rules = []) {
-  const tabId = state.selected.tab?._id;
-  if (!tabId || !rules.length) {
-    return rules[0] || null;
-  }
-
-  return rules.find(rule => Array.isArray(rule.applyForTabs) && rule.applyForTabs.includes(tabId))
-    || rules[0]
-    || null;
 }
 
 function normalizeSortPropertyName(rawSortPropertyName) {
@@ -736,7 +903,7 @@ function normalizeGroupByOptionForUi(rawGroupByOption) {
   ]);
 
   if (!allowedGroupByOptions.has(normalizedGroupByOption)) {
-    return 'category';
+    return 'none';
   }
 
   return normalizedGroupByOption;
@@ -760,123 +927,24 @@ function getGroupByButtonStyle(groupByOption) {
   };
 }
 
-function isRuleExclusiveToCurrentTab(rule, tabId) {
-  const applyForTabs = Array.isArray(rule?.applyForTabs) ? rule.applyForTabs : [];
-  if (applyForTabs.includes('_GLOBAL')) {
-    return false;
-  }
-
-  return applyForTabs.length === 1 && applyForTabs[0] === tabId;
-}
-
-async function removeRuleFromCurrentTab(rule) {
-  const tabId = state.selected.tab?._id;
-  if (!tabId || !rule?._id) return;
-
-  const applyForTabs = Array.isArray(rule.applyForTabs)
-    ? [...new Set(rule.applyForTabs)]
-    : [];
-
-  if (applyForTabs.includes('_GLOBAL')) {
-    const otherTabIds = state.allUserTabs
-      .map(tab => tab?._id)
-      .filter(tabRuleId => tabRuleId && tabRuleId !== tabId);
-
-    const nextApplyForTabs = [...new Set([
-      ...applyForTabs.filter(tabRuleId => tabRuleId !== '_GLOBAL' && tabRuleId !== tabId),
-      ...otherTabIds
-    ])];
-
-    if (!nextApplyForTabs.length) {
-      await deleteRuleById(rule._id);
-      return;
-    }
-
-    await updateRule({
-      ...rule,
-      applyForTabs: nextApplyForTabs
-    });
-    return;
-  }
-
-  const nextApplyForTabs = applyForTabs.filter(tabRuleId => tabRuleId !== tabId);
-
-  if (!nextApplyForTabs.length) {
-    await deleteRuleById(rule._id);
-    return;
-  }
-
-  await updateRule({
-    ...rule,
-    applyForTabs: nextApplyForTabs
-  });
-}
-
-async function clearRulesForCurrentTabByType(typeId) {
-  const rulesToClear = getEnabledRulesByType(typeId);
-
-  for (const rule of rulesToClear) {
-    await removeRuleFromCurrentTab(rule);
-  }
-}
-
-function buildTabScopedRulePayload(ruleArray, orderOfExecution = 0) {
-  const tabId = state.selected.tab?._id;
-
-  return {
-    applyForTabs: tabId ? [tabId] : [],
-    rule: ruleArray,
-    filterJoinOperator: 'and',
-    _isImportant: false,
-    orderOfExecution
-  };
-}
-
-async function upsertSingleTabScopedRule(typeId, ruleArray, orderOfExecution = 0) {
-  const tabId = state.selected.tab?._id;
-  if (!tabId) return;
-
-  const rulesByType = getEnabledRulesByType(typeId);
-  const tabExclusiveRule = rulesByType.find(rule => isRuleExclusiveToCurrentTab(rule, tabId));
-
-  if (tabExclusiveRule) {
-    await updateRule({
-      ...tabExclusiveRule,
-      ...buildTabScopedRulePayload(ruleArray, orderOfExecution)
-    });
-
-    for (const rule of rulesByType) {
-      if (rule._id !== tabExclusiveRule._id) {
-        await removeRuleFromCurrentTab(rule);
-      }
-    }
-
-    return;
-  }
-
-  for (const rule of rulesByType) {
-    await removeRuleFromCurrentTab(rule);
-  }
-
-  await createRule(buildTabScopedRulePayload(ruleArray, orderOfExecution));
+async function upsertSingleLocalRule(typeId, ruleArray, options = {}) {
+  const normalizedType = sanitizeRuleType(typeId);
+  const nextRule = createLocalRule(normalizedType, ruleArray, options);
+  localRulesByType.value[normalizedType] = withRenumberedOrder([nextRule]);
+  await persistDepthRules();
 }
 
 async function selectGroupByOption(groupByOption) {
   const normalizedGroupByOption = normalizeGroupByOptionForUi(groupByOption);
-
   if (isSavingGroupBy.value) {
     return;
   }
 
   isSavingGroupBy.value = true;
-
   try {
-    if (normalizedGroupByOption === 'category') {
-      await clearRulesForCurrentTabByType('groupBy');
-      return;
-    }
-
-    await upsertSingleTabScopedRule('groupBy', ['groupBy', normalizedGroupByOption, '', '', '']);
+    await upsertSingleLocalRule('groupBy', ['groupBy', normalizedGroupByOption, '', '', ''], {
+      orderOfExecution: 0
+    });
   } catch (error) {
     console.error('Error updating group-by rule:', error);
   } finally {
@@ -896,9 +964,8 @@ async function onSortPropertyChange(sortPropertyName) {
     : sortDirectionOptions[0]?.value || 'desc';
 
   isSavingSort.value = true;
-
   try {
-    await upsertSingleTabScopedRule('sort', [
+    await upsertSingleLocalRule('sort', [
       'sort',
       normalizedSortPropertyName,
       resolvedSortDirection,
@@ -919,9 +986,8 @@ async function onSortDirectionChange(sortDirection) {
   }
 
   isSavingSort.value = true;
-
   try {
-    await upsertSingleTabScopedRule('sort', [
+    await upsertSingleLocalRule('sort', [
       'sort',
       selectedSortProperty.value,
       normalizedSortDirection,
@@ -945,38 +1011,31 @@ async function updateFilterJoinOperator(rule, joinOperator) {
   if (!rule?._id) return;
 
   const normalizedJoinOperator = joinOperator === 'or' ? 'or' : 'and';
-  const currentJoinOperator = getFilterJoinOperator(rule);
-
-  if (normalizedJoinOperator === currentJoinOperator) {
+  const currentRules = getEnabledRulesByType('filter').map(cloneRule);
+  const ruleIndex = currentRules.findIndex(item => item._id === rule._id);
+  if (ruleIndex === -1) {
     return;
   }
 
-  try {
-    await updateRule({
-      ...rule,
-      filterJoinOperator: normalizedJoinOperator
-    });
-  } catch (error) {
-    console.error('Error updating filter join operator:', error);
+  if (getFilterJoinOperator(currentRules[ruleIndex]) === normalizedJoinOperator) {
+    return;
   }
+
+  currentRules[ruleIndex].filterJoinOperator = normalizedJoinOperator;
+  localRulesByType.value.filter = withRenumberedOrder(currentRules);
+  await persistDepthRules();
 }
 
 async function onDragEnd(event) {
   const { newIndex, oldIndex, from } = event;
   if (newIndex === oldIndex) return;
 
-  const ruleTypeId = from.getAttribute('data-rule-type');
-  if (!ruleTypeId) return;
-
-  const rules = getEnabledRulesByType(ruleTypeId);
+  const ruleTypeId = sanitizeRuleType(from.getAttribute('data-rule-type'));
+  const rules = getEnabledRulesByType(ruleTypeId).map(cloneRule);
   const [removed] = rules.splice(oldIndex, 1);
   rules.splice(newIndex, 0, removed);
-
-  for (let i = 0; i < rules.length; i++) {
-    if (rules[i].orderOfExecution !== i) {
-      await updateRuleOrder(rules[i]._id, i);
-    }
-  }
+  localRulesByType.value[ruleTypeId] = withRenumberedOrder(rules);
+  await persistDepthRules();
 }
 
 function createNewRule() {
@@ -988,21 +1047,21 @@ function createNewRule() {
 }
 
 function createNewRuleWithType(typeId) {
+  const normalizedType = sanitizeRuleType(typeId);
   const tabId = state.selected.tab?._id;
 
   currentRule.value = {
-    rule: [typeId, '', '', '', ''],
-    applyForTabs: tabId ? [tabId] : [],
-    filterJoinOperator: 'and',
-    _isImportant: false,
-    orderOfExecution: getEnabledRulesByType(typeId).length
+    ...createLocalRule(normalizedType, [normalizedType, '', '', '', ''], {
+      orderOfExecution: getEnabledRulesByType(normalizedType).length
+    }),
+    applyForTabs: tabId ? [tabId] : []
   };
   isNewRule.value = true;
   showRuleEditModal.value = true;
 }
 
 function editRule(rule) {
-  currentRule.value = JSON.parse(JSON.stringify(rule));
+  currentRule.value = cloneRule(rule);
   isNewRule.value = false;
   showRuleEditModal.value = true;
 }
@@ -1013,36 +1072,28 @@ function closeRuleEditModal() {
 }
 
 async function saveRule(rule) {
-  const tabId = state.selected.tab?._id;
-  if (!tabId) return;
+  const normalizedType = sanitizeRuleType(rule?.rule?.[0]);
+  const existingRules = getEnabledRulesByType(normalizedType).map(cloneRule);
+  const normalizedRule = normalizeLocalRule(normalizedType, rule);
 
-  const tabScopedRule = {
-    ...rule,
-    applyForTabs: [tabId],
-    _isImportant: false
-  };
-
-  try {
-    if (isNewRule.value) {
-      await createRule(tabScopedRule);
+  if (isNewRule.value) {
+    existingRules.push(normalizedRule);
+  } else {
+    const existingIndex = existingRules.findIndex(existingRule => existingRule._id === normalizedRule._id);
+    if (existingIndex === -1) {
+      existingRules.push(normalizedRule);
     } else {
-      await updateRule(tabScopedRule);
+      existingRules[existingIndex] = normalizedRule;
     }
-    closeRuleEditModal();
-  } catch (error) {
-    console.error('Error saving rule:', error);
   }
+
+  localRulesByType.value[normalizedType] = withRenumberedOrder(existingRules);
+  await persistDepthRules();
+  closeRuleEditModal();
 }
 
-async function toggleRuleContextStatus(rule) {
-  try {
-    const tabId = state.selected.tab?._id;
-    const isEnabledForCurrentTab = rule.applyForTabs.includes('_GLOBAL') || rule.applyForTabs.includes(tabId);
-
-    await toggleRuleContext(rule, !isEnabledForCurrentTab);
-  } catch (error) {
-    console.error('Error toggling rule status:', error);
-  }
+function toggleRuleContextStatus() {
+  // Local depth rules are always active in this editor.
 }
 
 function confirmDeleteRule(rule) {
@@ -1051,14 +1102,31 @@ function confirmDeleteRule(rule) {
 }
 
 async function deleteRule() {
-  try {
-    if (ruleToDelete.value?._id) {
-      await deleteRuleById(ruleToDelete.value._id);
-      showDeleteModal.value = false;
-      ruleToDelete.value = null;
-    }
-  } catch (error) {
-    console.error('Error deleting rule:', error);
+  const targetRule = ruleToDelete.value;
+  if (!targetRule?._id) {
+    return;
   }
+
+  const typeId = sanitizeRuleType(targetRule.rule?.[0]);
+  const remainingRules = getEnabledRulesByType(typeId)
+    .filter(rule => rule._id !== targetRule._id)
+    .map(cloneRule);
+
+  localRulesByType.value[typeId] = withRenumberedOrder(remainingRules);
+  await persistDepthRules();
+  showDeleteModal.value = false;
+  ruleToDelete.value = null;
 }
+
+watch(
+  () => state.selected.tab?.drillSchema,
+  (schema) => {
+    if (!state.selected.tab) {
+      return;
+    }
+
+    state.selected.tab.drillSchema = normalizeDrillSchema(schema);
+  },
+  { deep: true }
+);
 </script>

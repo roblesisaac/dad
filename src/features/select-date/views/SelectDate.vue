@@ -24,7 +24,7 @@
   >
     <template #content>
       <!-- Scrollable content area -->
-      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto bg-inherit">
+      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto bg-inherit" data-no-pull-refresh>
         <!-- Quick Action Buttons -->
         <div class="mb-12">
           <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-6 px-2 opacity-50">Quick Select</div>
@@ -34,6 +34,7 @@
               v-for="option in quickSelectOptions"
               :key="option.id"
               @click="onQuickSelect(option.id)" 
+              data-no-pull-refresh
               class="w-full flex items-center justify-between py-6 transition-all group"
             >
               <span class="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[var(--theme-text)] group-hover:translate-x-1 transition-transform duration-300">

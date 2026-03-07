@@ -11,12 +11,66 @@ function defaultCanStart() {
   return true;
 }
 
-function readScrollTop() {
+function readScrollTop(scrollContainer = null) {
   if (typeof window === 'undefined') {
     return 0;
   }
 
+  const rootScrollContainer = document.scrollingElement || document.documentElement;
+  if (
+    !scrollContainer
+    || scrollContainer === rootScrollContainer
+    || scrollContainer === document.documentElement
+    || scrollContainer === document.body
+  ) {
+    return window.scrollY || document.documentElement.scrollTop || 0;
+  }
+
+  if (typeof scrollContainer.scrollTop === 'number') {
+    return scrollContainer.scrollTop;
+  }
+
   return window.scrollY || document.documentElement.scrollTop || 0;
+}
+
+function toElement(target) {
+  if (target instanceof Element) {
+    return target;
+  }
+
+  if (target instanceof Node) {
+    return target.parentElement;
+  }
+
+  return null;
+}
+
+function hasScrollableOverflow(element) {
+  if (!(element instanceof HTMLElement) || typeof window === 'undefined') {
+    return false;
+  }
+
+  const style = window.getComputedStyle(element);
+  const overflowY = style.overflowY;
+  const canScroll = overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay';
+  return canScroll && element.scrollHeight > element.clientHeight + 1;
+}
+
+function findNearestScrollContainer(target) {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  let current = toElement(target);
+  while (current && current !== document.body && current !== document.documentElement) {
+    if (hasScrollableOverflow(current)) {
+      return current;
+    }
+
+    current = current.parentElement;
+  }
+
+  return document.scrollingElement || document.documentElement;
 }
 
 function shouldIgnoreTarget(target) {
@@ -87,9 +141,11 @@ export function usePullToRefresh(options = {}) {
   let pullStartY = 0;
   let pullStartX = 0;
   let hasVerticalIntent = false;
+  let touchScrollContainer = null;
   let wheelEndTimeoutId = null;
   let isWheelGestureActive = false;
   let wheelGestureStartedAtTop = false;
+  let wheelScrollContainer = null;
 
   function clearWheelEndTimer() {
     if (wheelEndTimeoutId) {
@@ -101,15 +157,17 @@ export function usePullToRefresh(options = {}) {
   function resetWheelGestureState() {
     isWheelGestureActive = false;
     wheelGestureStartedAtTop = false;
+    wheelScrollContainer = null;
   }
 
-  function startWheelGestureIfNeeded() {
+  function startWheelGestureIfNeeded(target) {
     if (isWheelGestureActive) {
       return;
     }
 
     isWheelGestureActive = true;
-    wheelGestureStartedAtTop = readScrollTop() <= 0;
+    wheelScrollContainer = findNearestScrollContainer(target);
+    wheelGestureStartedAtTop = readScrollTop(wheelScrollContainer) <= 0;
   }
 
   function settlePullGestureFromWheel() {
@@ -144,6 +202,7 @@ export function usePullToRefresh(options = {}) {
     pullStartY = 0;
     pullStartX = 0;
     hasVerticalIntent = false;
+    touchScrollContainer = null;
   }
 
   async function triggerRefresh() {
@@ -178,7 +237,8 @@ export function usePullToRefresh(options = {}) {
       return;
     }
 
-    if (readScrollTop() > 0) {
+    const scrollContainer = findNearestScrollContainer(event.target);
+    if (readScrollTop(scrollContainer) > 0) {
       return;
     }
 
@@ -192,6 +252,7 @@ export function usePullToRefresh(options = {}) {
     }
 
     isTrackingPull = true;
+    touchScrollContainer = scrollContainer;
     pullStartY = touch.clientY;
     pullStartX = touch.clientX;
     hasVerticalIntent = false;
@@ -225,7 +286,7 @@ export function usePullToRefresh(options = {}) {
       return;
     }
 
-    if (deltaY <= 0 || readScrollTop() > 0) {
+    if (deltaY <= 0 || readScrollTop(touchScrollContainer) > 0) {
       resetPullState();
       return;
     }
@@ -273,8 +334,8 @@ export function usePullToRefresh(options = {}) {
       return;
     }
 
-    startWheelGestureIfNeeded();
-    const scrollTop = readScrollTop();
+    startWheelGestureIfNeeded(event.target);
+    const scrollTop = readScrollTop(wheelScrollContainer);
 
     if (!wheelGestureStartedAtTop) {
       if (isPulling.value) {
