@@ -113,4 +113,54 @@ describe('useTransactions batching', () => {
       totalBatches: 3
     });
   });
+
+  test('fetches account transactions when group account ids use accountId fallback', async () => {
+    apiGetMock.mockResolvedValue([]);
+
+    const { fetchTransactionsForGroup } = useTransactions();
+    await fetchTransactionsForGroup(
+      {
+        accounts: [
+          { accountId: 'acc-legacy-1' },
+          { account_id: 'acc-modern-2' }
+        ]
+      },
+      {
+        start: '2025-03-01',
+        end: '2025-03-31'
+      }
+    );
+
+    const requestedAccountIds = apiGetMock.mock.calls
+      .map(([url]) => new URLSearchParams(url.split('?')[1] || '').get('account_id'))
+      .sort();
+
+    expect(requestedAccountIds).toEqual(['acc-legacy-1', 'acc-modern-2']);
+  });
+
+  test('fetches virtual all-accounts group by date range without per-account ids', async () => {
+    apiGetMock.mockResolvedValue([
+      { transaction_id: 'all-1' }
+    ]);
+
+    const { fetchTransactionsForGroup } = useTransactions();
+    const transactions = await fetchTransactionsForGroup(
+      {
+        _id: '_ALL_ACCOUNTS',
+        isVirtualAllAccounts: true,
+        accounts: []
+      },
+      {
+        start: '2025-03-01',
+        end: '2025-03-31'
+      }
+    );
+
+    expect(transactions.map(item => item.transaction_id)).toEqual(['all-1']);
+    expect(apiGetMock).toHaveBeenCalledTimes(1);
+    const [requestUrl] = apiGetMock.mock.calls[0];
+    const queryParams = new URLSearchParams(requestUrl.split('?')[1] || '');
+    expect(queryParams.get('date')).toBe('2025-03-01_2025-03-31');
+    expect(queryParams.get('account_id')).toBe('');
+  });
 });

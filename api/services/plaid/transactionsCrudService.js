@@ -222,12 +222,42 @@ class TransactionQueryService extends PlaidBaseService {
     });
   }
 
+  async _fetchTransactionsForDatePrefix(userId, monthPrefix) {
+    return await plaidTransactions.findAll({
+      userId,
+      date: `${monthPrefix}*`
+    }, {
+      limit: this._pageLimit
+    });
+  }
+
   async _fetchTransactionsByMonthRange(userId, accountId, startDate, endDate) {
     const monthPrefixes = this._buildMonthPrefixes(startDate, endDate);
     const deduped = new Map();
 
     for (const monthPrefix of monthPrefixes) {
       const monthTransactions = await this._fetchTransactionsForMonthPrefix(userId, accountId, monthPrefix);
+
+      for (const transaction of monthTransactions) {
+        if (!transaction) {
+          continue;
+        }
+
+        deduped.set(this._buildDedupeKey(transaction), transaction);
+      }
+    }
+
+    return [...deduped.values()].filter(transaction =>
+      this._isTransactionInRange(transaction, startDate, endDate)
+    );
+  }
+
+  async _fetchTransactionsByUserMonthRange(userId, startDate, endDate) {
+    const monthPrefixes = this._buildMonthPrefixes(startDate, endDate);
+    const deduped = new Map();
+
+    for (const monthPrefix of monthPrefixes) {
+      const monthTransactions = await this._fetchTransactionsForDatePrefix(userId, monthPrefix);
 
       for (const transaction of monthTransactions) {
         if (!transaction) {
@@ -371,10 +401,18 @@ class TransactionQueryService extends PlaidBaseService {
 
       // Primary strategy for bounded ranges: query month prefixes (YYYY-MM*)
       // to avoid large single-range lookups and edge-case range parsing failures.
-      if (accountId && parsedDateRange?.startDate && parsedDateRange?.endDate) {
-        return await this._fetchTransactionsByMonthRange(
+      if (parsedDateRange?.startDate && parsedDateRange?.endDate) {
+        if (accountId) {
+          return await this._fetchTransactionsByMonthRange(
+            userId,
+            accountId,
+            parsedDateRange.startDate,
+            parsedDateRange.endDate
+          );
+        }
+
+        return await this._fetchTransactionsByUserMonthRange(
           userId,
-          accountId,
           parsedDateRange.startDate,
           parsedDateRange.endDate
         );

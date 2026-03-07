@@ -16,60 +16,71 @@
               <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </button>
 
-            <!-- Account segment -->
-            <template v-if="!isGroupSelectorView && !isTransactionSearchView">
+            <!-- Expanded Breadcrumbs (<= 2 items) -->
+            <template v-if="breadcrumbSegments.length <= 2">
+              <template
+                v-for="segment in breadcrumbSegments"
+                :key="segment.id"
+              >
+                <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+                
+                <span
+                  v-if="segment.type === 'current'"
+                  class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+                >
+                  {{ segment.label }}
+                </span>
+                <button
+                  v-else
+                  @click="segment.action"
+                  class="clickable-underline text-left font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
+                  type="button"
+                >
+                  {{ segment.label }}
+                </button>
+              </template>
+            </template>
+
+            <!-- Collapsed Breadcrumbs (> 2 items) -->
+            <template v-else>
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              
+              <!-- Dropdown trigger -->
+              <div class="relative breadcrumb-dropdown-container">
+                <button
+                  @click="toggleBreadcrumbDropdown"
+                  class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center hover:opacity-70 transition-opacity focus:outline-none min-w-[20px]"
+                  type="button"
+                  aria-label="More path levels"
+                >
+                  ...
+                </button>
+                
+                <!-- Dropdown menu -->
+                <div v-if="isBreadcrumbDropdownOpen">
+                  <div class="fixed inset-0 z-40" @click="closeBreadcrumbDropdown"></div>
+                  <div
+                    class="absolute top-full left-0 mt-3 py-1.5 min-w-[200px] rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 flex flex-col overflow-hidden"
+                  >
+                    <button
+                      v-for="segment in breadcrumbSegments.slice(0, -1)"
+                      :key="segment.id"
+                      @click="handleDropdownNavigation(segment.action)"
+                      class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors truncate"
+                      type="button"
+                    >
+                      {{ segment.label }}
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
+              
               <span
-                v-if="isTabSelectorView"
                 class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
               >
-                {{ selectedGroupLabel }}
-              </span>
-              <button
-                v-else
-                @click="handleGroupSegmentNavigation"
-                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
-                type="button"
-              >
-                {{ selectedGroupLabel }}
-              </button>
-            </template>
-
-            <!-- Tab segment -->
-            <template v-if="isDrillView && !shouldCondenseSingleTabBreadcrumb">
-              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-              <button
-                @click="emit('navigate-category')"
-                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
-                type="button"
-              >
-                {{ selectedTabLabel }}
-              </button>
-            </template>
-
-            <!-- Drill path segments -->
-            <template
-              v-for="(segment, index) in drillBreadcrumbs"
-              :key="`drill-segment-${index}-${segment.key}`"
-            >
-              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-              <button
-                v-if="index < drillBreadcrumbs.length - 1"
-                class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
-                type="button"
-                @click="emit('navigate-drill-depth', index + 1)"
-              >
-                {{ segment.label }}
-              </button>
-              <span v-else class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
-                {{ segment.label }}
-              </span>
-            </template>
-
-            <template v-if="isTransactionSearchView">
-              <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
-              <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
-                Transactions
+                {{ breadcrumbSegments[breadcrumbSegments.length - 1].label }}
               </span>
             </template>
           </nav>
@@ -271,6 +282,21 @@ const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select 
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
 
+const isBreadcrumbDropdownOpen = ref(false);
+
+function toggleBreadcrumbDropdown() {
+  isBreadcrumbDropdownOpen.value = !isBreadcrumbDropdownOpen.value;
+}
+
+function closeBreadcrumbDropdown() {
+  isBreadcrumbDropdownOpen.value = false;
+}
+
+function handleDropdownNavigation(action) {
+  if (action) action();
+  closeBreadcrumbDropdown();
+}
+
 function handleGroupSegmentNavigation() {
   if (isDrillView.value && shouldCondenseSingleTabBreadcrumb.value) {
     emit('navigate-category');
@@ -279,6 +305,47 @@ function handleGroupSegmentNavigation() {
 
   emit('navigate-tab');
 }
+
+const breadcrumbSegments = computed(() => {
+  const segments = [];
+
+  if (!isGroupSelectorView.value && !isTransactionSearchView.value) {
+    segments.push({
+      id: 'account',
+      type: isTabSelectorView.value ? 'current' : 'link',
+      label: selectedGroupLabel.value,
+      action: () => handleGroupSegmentNavigation()
+    });
+  }
+
+  if (isDrillView.value && !shouldCondenseSingleTabBreadcrumb.value) {
+    segments.push({
+      id: 'tab',
+      type: 'link',
+      label: selectedTabLabel.value,
+      action: () => emit('navigate-category')
+    });
+  }
+
+  drillBreadcrumbs.value.forEach((segment, index) => {
+    segments.push({
+      id: `drill-${index}-${segment.key}`,
+      type: index === drillBreadcrumbs.value.length - 1 ? 'current' : 'link',
+      label: segment.label,
+      action: () => emit('navigate-drill-depth', index + 1)
+    });
+  });
+
+  if (isTransactionSearchView.value) {
+    segments.push({
+      id: 'transaction-search',
+      type: 'current',
+      label: 'Transactions'
+    });
+  }
+
+  return segments;
+});
 
 function numberOrZero(value) {
   const parsed = Number(value);

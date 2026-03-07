@@ -23,6 +23,7 @@ export function getTransactionKey(transaction) {
 
   return String(
     transaction.transaction_id
+      || transaction._id
       || `${transaction.account_id || ''}-${transaction.authorized_date || transaction.date || ''}-${transaction.amount || ''}-${transaction.name || ''}`
   );
 }

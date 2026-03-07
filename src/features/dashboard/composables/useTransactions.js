@@ -1,5 +1,6 @@
 import { useUtils } from '../../../shared/composables/useUtils.js';
 import { useApi } from '@/shared/composables/useApi.js';
+import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 
 const ACCOUNT_DATE_IN_FLIGHT_REQUESTS = new Map();
 const ACCOUNT_DATE_RESPONSE_CACHE = new Map();
@@ -106,12 +107,25 @@ export function useTransactions() {
       }
 
       const key = transaction.transaction_id
+        || transaction._id
         || `${transaction.account_id || ''}-${transaction.authorized_date || transaction.date || ''}-${transaction.amount || ''}-${transaction.name || ''}`;
 
       deduped.set(key, transaction);
     });
 
     return [...deduped.values()];
+  }
+
+  function resolveAccountId(account) {
+    if (!account) {
+      return '';
+    }
+
+    if (typeof account === 'string') {
+      return account.trim();
+    }
+
+    return String(account.account_id || account.accountId || account.id || '').trim();
   }
 
   async function fetchTransactionsForDateRange(account_id, dateRange, options = {}) {
@@ -158,7 +172,7 @@ export function useTransactions() {
    * Fetch transactions for a specific account and date range
    */
   async function fetchTransactions(account_id, dateRange, options = {}) {
-    if(!account_id || !dateRange) {
+    if(!dateRange) {
       return [];
     }
 
@@ -188,7 +202,8 @@ export function useTransactions() {
       try {
         result = await fetchTransactionsForDateRange(account_id, batchRange, options);
       } catch (error) {
-        throw new Error(`Failed to load account ${account_id} for range ${batchRange}: ${error.message}`);
+        const accountLabel = account_id ? `account ${account_id}` : 'all accounts';
+        throw new Error(`Failed to load ${accountLabel} for range ${batchRange}: ${error.message}`);
       }
 
       if (Array.isArray(result) && result.length) {
@@ -213,19 +228,74 @@ export function useTransactions() {
    */
   async function fetchTransactionsForGroup(group, dateRangeState, options = {}) {
     if (!group || !group.accounts || !group.accounts.length) {
-      return [];
+      const isVirtualAllAccounts = Boolean(group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID);
+      if (!isVirtualAllAccounts) {
+        return [];
+      }
     }
 
     const { onProgress, onBatchComplete } = options;
     const dateRange = extractDateRange(dateRangeState);
     const batchedDateRanges = getBatchedDateRanges(dateRange);
     const batchesPerAccount = batchedDateRanges.length || 1;
+    const isVirtualAllAccounts = Boolean(group?.isVirtualAllAccounts || group?._id === ALL_ACCOUNTS_GROUP_ID);
 
     let completedFetches = 0;
 
+    if (isVirtualAllAccounts) {
+      const totalFetches = batchesPerAccount;
+
+      if (typeof onProgress === 'function') {
+        onProgress({
+          accountId: ALL_ACCOUNTS_GROUP_ID,
+          accountIndex: 0,
+          totalAccounts: 1,
+          batchIndex: 0,
+          totalBatches: batchesPerAccount,
+          range: null,
+          completedFetches: 0,
+          totalFetches,
+          percentage: totalFetches > 0 ? 0 : 100
+        });
+      }
+
+      return await fetchTransactions('', dateRange, {
+        ...options,
+        onBatchComplete: (batchProgress) => {
+          const batchNumber = Number(batchProgress?.batchIndex);
+          if (Number.isFinite(batchNumber) && batchNumber > completedFetches) {
+            completedFetches = batchNumber;
+          } else {
+            completedFetches += 1;
+          }
+
+          const percentage = totalFetches > 0
+            ? Math.round((completedFetches / totalFetches) * 100)
+            : 100;
+          const progress = {
+            ...batchProgress,
+            accountId: ALL_ACCOUNTS_GROUP_ID,
+            accountIndex: 1,
+            totalAccounts: 1,
+            completedFetches,
+            totalFetches,
+            percentage
+          };
+
+          if (typeof onBatchComplete === 'function') {
+            onBatchComplete(progress);
+          }
+
+          if (typeof onProgress === 'function') {
+            onProgress(progress);
+          }
+        }
+      });
+    }
+
     const uniqueAccountIds = [...new Set(
       group.accounts
-        .map(account => account?.account_id)
+        .map(resolveAccountId)
         .filter(Boolean)
     )];
 

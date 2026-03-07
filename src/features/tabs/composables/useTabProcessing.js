@@ -502,6 +502,7 @@ export function useTabProcessing() {
     if (!transaction) return null;
 
     return transaction.transaction_id
+      || transaction._id
       || `${transaction.account_id || ''}-${transaction.authorized_date || transaction.date || ''}-${transaction.amount || ''}-${transaction.name || ''}`;
   }
 

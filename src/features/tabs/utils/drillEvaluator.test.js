@@ -356,6 +356,58 @@ describe('drillEvaluator', () => {
     expect(result.overriddenRecategorizeCount).toBe(1);
   });
 
+  test('preserves drill transactions without transaction_id by matching on _id fallback', () => {
+    const tab = createTab([
+      {
+        id: 'level-1',
+        sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [
+          createRule('local-money-in', ['categorize', 'amount', '>', '0', 'money in'], {
+            orderOfExecution: 0
+          }),
+          createRule('local-money-out', ['categorize', 'amount', '<', '0', 'money out'], {
+            orderOfExecution: 1
+          })
+        ],
+        filterRules: [],
+        groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+      },
+      {
+        id: 'level-2',
+        sortRules: [createRule('sort-1', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-1', ['groupBy', 'none', '', '', ''])]
+      }
+    ]);
+
+    const transactions = [
+      createTransaction('legacy-a', {
+        _id: 'legacy-1',
+        transaction_id: undefined,
+        amount: 45,
+        name: 'stater bros #1'
+      }),
+      createTransaction('legacy-b', {
+        _id: 'legacy-2',
+        transaction_id: undefined,
+        amount: 23,
+        name: 'stater bros #2'
+      })
+    ];
+
+    const result = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: ['money out']
+    });
+
+    expect(result.validPath).toEqual(['money out']);
+    expect(result.isLeaf).toBe(true);
+    expect(result.transactions.map(item => item._id).sort()).toEqual(['legacy-1', 'legacy-2']);
+  });
+
   test('missing depth config defaults to leaf view', () => {
     const tab = createTab([
       {
