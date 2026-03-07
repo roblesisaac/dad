@@ -322,6 +322,40 @@ describe('drillEvaluator', () => {
     expect(groupKeys).toEqual(['money in', 'money out']);
   });
 
+  test('reports recategorizeAs overrides when tab-level categorization wins', () => {
+    const tab = createTab([
+      {
+        id: 'level-1',
+        sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [
+          createRule('local-money-in', ['categorize', 'amount', '>', '0', 'money in'], {
+            orderOfExecution: 0
+          })
+        ],
+        filterRules: [],
+        groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+      }
+    ]);
+
+    const transactions = [
+      createTransaction('t1', {
+        amount: -25,
+        recategorizeAs: 'special income',
+        personal_finance_category: { primary: 'MISC' }
+      })
+    ];
+
+    const result = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: []
+    });
+
+    expect(result.groups.map(group => group.key)).toEqual(['money in']);
+    expect(result.overriddenRecategorizeCount).toBe(1);
+  });
+
   test('missing depth config defaults to leaf view', () => {
     const tab = createTab([
       {

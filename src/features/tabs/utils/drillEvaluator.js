@@ -126,6 +126,9 @@ function evaluateLevel({
     tabTotal: Number.isFinite(Number(evaluation.tabTotal)) ? Number(evaluation.tabTotal) : 0,
     groupByMode: String(evaluation.groupByMode || 'category'),
     hiddenItems: Array.isArray(evaluation.hiddenItems) ? evaluation.hiddenItems : [],
+    overriddenRecategorizeCount: Number.isFinite(Number(evaluation.overriddenRecategorizeCount))
+      ? Number(evaluation.overriddenRecategorizeCount)
+      : 0,
     groups,
     transactions: groups.flatMap((group) => group.items)
   };
@@ -159,7 +162,8 @@ export function resolveDrillState({
       transactions: [],
       hiddenItems: [],
       groupByMode: NO_GROUPING_RULE_VALUE,
-      isLeaf: true
+      isLeaf: true,
+      overriddenRecategorizeCount: 0
     };
   }
 
@@ -203,7 +207,8 @@ export function resolveDrillState({
           transactions: levelResult.transactions,
           hiddenItems: levelResult.hiddenItems,
           groupByMode: levelResult.groupByMode,
-          isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE
+          isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
+          overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount
         };
       }
 
@@ -228,7 +233,8 @@ export function resolveDrillState({
       transactions: levelResult.transactions,
       hiddenItems: levelResult.hiddenItems,
       groupByMode: levelResult.groupByMode,
-      isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE
+      isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
+      overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount
     };
   }
 
@@ -253,6 +259,7 @@ export function resolveDrillState({
     transactions: fallbackResult.transactions,
     hiddenItems: fallbackResult.hiddenItems,
     groupByMode: fallbackResult.groupByMode,
-    isLeaf: fallbackResult.groupByMode === NO_GROUPING_RULE_VALUE
+    isLeaf: fallbackResult.groupByMode === NO_GROUPING_RULE_VALUE,
+    overriddenRecategorizeCount: fallbackResult.overriddenRecategorizeCount
   };
 }

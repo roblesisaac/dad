@@ -74,7 +74,7 @@
             </template>
           </nav>
 
-          <div class="flex-shrink-0">
+          <div class="flex-shrink-0 flex items-center gap-2">
             <button
               v-if="showRearrangeAction"
               type="button"
@@ -91,6 +91,16 @@
               @click="emit('edit-tab')"
             >
               Edit Tab
+            </button>
+
+            <button
+              v-if="showRecategorizeOverrideWarning"
+              type="button"
+              class="header-action-button inline-flex items-center justify-center p-2 rounded-full text-[#b45309] hover:opacity-70 transition-opacity focus:outline-none"
+              :title="recategorizeOverrideWarningLabel"
+              @click="emit('edit-tab')"
+            >
+              <AlertTriangle class="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -177,7 +187,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { Home, Info, X } from 'lucide-vue-next';
+import { AlertTriangle, Home, Info, X } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 
 const props = defineProps({
@@ -199,6 +209,14 @@ const props = defineProps({
     default: 0
   },
   isDrillLeaf: {
+    type: Boolean,
+    default: false
+  },
+  overriddenRecategorizeCount: {
+    type: Number,
+    default: 0
+  },
+  isHonoringRecategorizeAs: {
     type: Boolean,
     default: false
   }
@@ -232,6 +250,17 @@ const showEditTabAction = computed(() => (
   isDrillView.value
   && Boolean(state.selected.tab)
 ));
+const showRecategorizeOverrideWarning = computed(() => (
+  showEditTabAction.value
+  && !props.isHonoringRecategorizeAs
+  && Number(props.overriddenRecategorizeCount) > 0
+));
+const recategorizeOverrideWarningLabel = computed(() => {
+  const count = Number(props.overriddenRecategorizeCount);
+  const safeCount = Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
+  const noun = safeCount === 1 ? 'transaction' : 'transactions';
+  return `${safeCount} recategorized ${noun} were overridden by tab categorize rules`;
+});
 
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');

@@ -645,48 +645,68 @@ function createEvaluationItem(item) {
   };
 }
 
-function buildCategorizeMethod(categorizers) {
-  return (item) => {
-    if (item.recategorizeAs) {
-      item.personal_finance_category.primary = String(item.recategorizeAs).trim().toLowerCase();
-      return item.personal_finance_category.primary;
+function applyCategorizerScope(item, categorizers = []) {
+  if (!Array.isArray(categorizers) || !categorizers.length) {
+    return item.personal_finance_category.primary;
+  }
+
+  let importantCategory = null;
+
+  for (const categorizeConfig of categorizers) {
+    if (!categorizeConfig?.method) {
+      continue;
     }
 
+    const conditionMet = categorizeConfig.method(item);
+    if (!conditionMet) {
+      continue;
+    }
+
+    const categoryName = String(categorizeConfig.categorizeAs || 'misc').toLowerCase();
+    if (categorizeConfig._isImportant) {
+      importantCategory = categoryName;
+    }
+
+    item.rulesApplied = item.rulesApplied || new Set();
+    if (!item.rulesApplied.has(categorizeConfig._id)) {
+      item.rulesApplied.add(categorizeConfig._id);
+    }
+
+    item.personal_finance_category.primary = importantCategory || categoryName;
+  }
+
+  return item.personal_finance_category.primary;
+}
+
+function buildCategorizeMethod(categorizers, options = {}) {
+  const honorRecategorizeAs = Boolean(options.honorRecategorizeAs);
+  const globalCategorizers = categorizers.filter(categorizeConfig => Boolean(categorizeConfig?._isGlobalCategorizeRule));
+  const localCategorizers = categorizers.filter(categorizeConfig => !categorizeConfig?._isGlobalCategorizeRule);
+
+  return (item) => {
     formatPersonalFinanceCategory(item);
 
-    if (!categorizers.length) {
-      return item.personal_finance_category.primary;
+    // 1) Apply global categorization rules first.
+    applyCategorizerScope(item, globalCategorizers);
+
+    // 2) Apply recategorizeAs next.
+    const recategorizeAs = String(item?.recategorizeAs || '').trim().toLowerCase();
+    const hasRecategorizeAs = Boolean(recategorizeAs);
+    if (hasRecategorizeAs) {
+      item.personal_finance_category.primary = recategorizeAs;
+      if (honorRecategorizeAs) {
+        return item.personal_finance_category.primary;
+      }
     }
 
-    let importantCategory = null;
-    let activeScope = null;
+    // 3) Apply local/tab categorizers last so they can override recategorizeAs.
+    const categoryBeforeLocalRules = String(item.personal_finance_category.primary || '').trim().toLowerCase();
+    applyCategorizerScope(item, localCategorizers);
 
-    for (const categorizeConfig of categorizers) {
-      if (!categorizeConfig.method) continue;
-
-      const nextScope = categorizeConfig._isGlobalCategorizeRule
-        ? 'global'
-        : 'local';
-      if (nextScope !== activeScope) {
-        activeScope = nextScope;
-        importantCategory = null;
-      }
-
-      const conditionMet = categorizeConfig.method(item);
-
-      if (conditionMet) {
-        const categoryName = String(categorizeConfig.categorizeAs || 'misc').toLowerCase();
-
-        if (categorizeConfig._isImportant) {
-          importantCategory = categoryName;
-        }
-
-        item.rulesApplied = item.rulesApplied || new Set();
-        if (!item.rulesApplied.has(categorizeConfig._id)) {
-          item.rulesApplied.add(categorizeConfig._id);
-        }
-
-        item.personal_finance_category.primary = importantCategory || categoryName;
+    if (hasRecategorizeAs && categoryBeforeLocalRules === recategorizeAs) {
+      const categoryAfterLocalRules = String(item.personal_finance_category.primary || '').trim().toLowerCase();
+      if (categoryAfterLocalRules && categoryAfterLocalRules !== recategorizeAs) {
+        item._tabRuleOverrodeRecategorizeAs = true;
       }
     }
 
@@ -777,7 +797,9 @@ function buildRuleMethods(tabRules, options) {
 
   return {
     sort: buildSortMethod(sorters),
-    categorize: buildCategorizeMethod(categorizers),
+    categorize: buildCategorizeMethod(categorizers, {
+      honorRecategorizeAs: options.honorRecategorizeAs
+    }),
     filter: buildFilterMethod(filters),
     groupBy: buildGroupByMethod(propToGroupBy, options.months, options.getDayOfWeekPST),
     propToGroupBy: propToGroupBy[0] || 'category',
@@ -798,25 +820,31 @@ export function evaluateTabData({
       tabTotal: 0,
       categorizedItems: [],
       hiddenItems: [],
-      groupByMode: 'category'
+      groupByMode: 'category',
+      overriddenRecategorizeCount: 0
     };
   }
 
   const { filter, sort, categorize, groupBy, propToGroupBy, sorters } = buildRuleMethods(tabRules, {
     ruleMethods,
     getDayOfWeekPST,
-    months
+    months,
+    honorRecategorizeAs: Boolean(tab?.honorRecategorizeAs)
   });
 
   const dataCopy = sort(transactions);
   const categorizedItems = [];
   const hiddenItems = [];
   let tabTotal = 0;
+  let overriddenRecategorizeCount = 0;
 
   for (const sourceItem of dataCopy) {
     const item = createEvaluationItem(sourceItem);
 
     categorize(item);
+    if (item._tabRuleOverrodeRecategorizeAs) {
+      overriddenRecategorizeCount += 1;
+    }
 
     const typeToGroupBy = groupBy(item);
 
@@ -883,6 +911,7 @@ export function evaluateTabData({
     tabTotal,
     categorizedItems,
     hiddenItems,
-    groupByMode: propToGroupBy || 'category'
+    groupByMode: propToGroupBy || 'category',
+    overriddenRecategorizeCount
   };
 }

@@ -197,6 +197,36 @@
             </div>
           </div>
 
+          <!-- Recategorize Preference -->
+          <div class="space-y-4">
+            <div class="flex items-center gap-3">
+              <div class="p-2 rounded-lg bg-gray-50 text-gray-400">
+                <AlertTriangle class="w-5 h-5" />
+              </div>
+              <h3 class="text-sm font-black uppercase tracking-[0.2em] text-gray-400">
+                Recategorize Behavior
+              </h3>
+            </div>
+
+            <div class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-3">
+              <label class="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="isHonoringRecategorizeAs"
+                  :disabled="isSavingRecategorizePreference"
+                  class="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
+                  @change="onHonorRecategorizeAsChange($event.target.checked)"
+                />
+                <span class="text-sm text-black leading-relaxed">
+                  Honor transaction <span class="font-black">Recategorized As</span> values over tab categorize rules.
+                </span>
+              </label>
+              <p class="text-xs text-gray-500 leading-relaxed">
+                When unchecked, tab-level categorize rules run last and can override custom transaction recategories.
+              </p>
+            </div>
+          </div>
+
           <!-- Categorize + Filter Rule Sections -->
           <div v-for="ruleType in standardRuleTypes" :key="ruleType.id" class="space-y-4">
             <div class="flex items-center gap-3">
@@ -365,7 +395,7 @@
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import {
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
+  AlertTriangle, Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
@@ -381,7 +411,7 @@ import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
 
 const { state } = useDashboardState();
-const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
+const { updateTabName, deleteTab: deleteTabById, updateTab } = useTabsAPI();
 const rulesAPI = useRulesAPI();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 const {
@@ -501,6 +531,7 @@ const isSavingTabName = ref(false);
 const isDeletingTab = ref(false);
 const showTabActionsMenu = ref(false);
 const reorderingSectionId = ref(null);
+const isSavingRecategorizePreference = ref(false);
 
 const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
@@ -587,6 +618,8 @@ const selectedSortDirection = computed(() => {
     ? normalizedSortDirection
     : sortDirectionOptions[0]?.value || 'desc';
 });
+
+const isHonoringRecategorizeAs = computed(() => Boolean(state.selected.tab?.honorRecategorizeAs));
 
 const enabledRulesByTypeComputed = computed({
   get: () => {
@@ -720,6 +753,35 @@ function cancelTabNameEdit() {
 
 function toggleTabActionsMenu() {
   showTabActionsMenu.value = !showTabActionsMenu.value;
+}
+
+async function onHonorRecategorizeAsChange(nextValue) {
+  if (!state.selected.tab || isSavingRecategorizePreference.value) {
+    return;
+  }
+
+  const selectedTab = state.selected.tab;
+  const previousValue = Boolean(selectedTab.honorRecategorizeAs);
+  const nextPreference = Boolean(nextValue);
+
+  if (previousValue === nextPreference) {
+    return;
+  }
+
+  isSavingRecategorizePreference.value = true;
+  selectedTab.honorRecategorizeAs = nextPreference;
+
+  try {
+    await updateTab(selectedTab._id, {
+      honorRecategorizeAs: nextPreference
+    });
+    await processAllTabsForSelectedGroup({ showLoading: false });
+  } catch (error) {
+    selectedTab.honorRecategorizeAs = previousValue;
+    console.error('Error updating recategorize preference:', error);
+  } finally {
+    isSavingRecategorizePreference.value = false;
+  }
 }
 
 async function copyCurrentTabSchema() {

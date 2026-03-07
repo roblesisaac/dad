@@ -27,6 +27,8 @@
           :drill-breadcrumbs="drillState.breadcrumbs"
           :drill-tab-total="drillState.tabTotal"
           :is-drill-leaf="drillState.isLeaf"
+          :overridden-recategorize-count="drillState.overriddenRecategorizeCount"
+          :is-honoring-recategorize-as="Boolean(state.selected.tab?.honorRecategorizeAs)"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
           @navigate-category="openDrillRoot"

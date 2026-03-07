@@ -348,6 +348,84 @@ describe('tabEvaluator', () => {
     expect(leisureIds).toEqual(['entertainment-expense', 'travel-expense']);
   });
 
+  test('tab-level categorizers run after recategorizeAs by default', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'salary-1',
+          amount: -100,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Salary Deposit',
+          recategorizeAs: 'custom salary',
+          personal_finance_category: { primary: 'MISC' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'global-salary',
+          orderOfExecution: 0,
+          _isGlobalCategorizeRule: true,
+          rule: ['categorize', 'name', 'includes', 'salary', 'payroll']
+        },
+        {
+          _id: 'local-money-in',
+          orderOfExecution: 1,
+          rule: ['categorize', 'amount', '>', '0', 'money in']
+        },
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        }
+      ]
+    });
+
+    const groupNames = result.categorizedItems.map(([groupName]) => groupName);
+    expect(groupNames).toEqual(['money in']);
+    expect(result.overriddenRecategorizeCount).toBe(1);
+  });
+
+  test('honorRecategorizeAs setting keeps custom categories over local tab categorizers', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true, honorRecategorizeAs: true },
+      transactions: [
+        {
+          transaction_id: 'salary-1',
+          amount: -100,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Salary Deposit',
+          recategorizeAs: 'custom salary',
+          personal_finance_category: { primary: 'MISC' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'global-salary',
+          orderOfExecution: 0,
+          _isGlobalCategorizeRule: true,
+          rule: ['categorize', 'name', 'includes', 'salary', 'payroll']
+        },
+        {
+          _id: 'local-money-in',
+          orderOfExecution: 1,
+          rule: ['categorize', 'amount', '>', '0', 'money in']
+        },
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        }
+      ]
+    });
+
+    const groupNames = result.categorizedItems.map(([groupName]) => groupName);
+    expect(groupNames).toEqual(['custom salary']);
+    expect(result.overriddenRecategorizeCount).toBe(0);
+  });
+
   test('sort rules support explicit asc/desc directions', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
