@@ -29,6 +29,7 @@
           :is-drill-leaf="drillState.isLeaf"
           :overridden-recategorize-count="drillState.overriddenRecategorizeCount"
           :is-honoring-recategorize-as="Boolean(state.selected.tab?.honorRecategorizeAs)"
+          :has-recategorize-behavior-decision="hasRecategorizeBehaviorDecision(state.selected.tab)"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
           @navigate-category="openDrillRoot"
@@ -372,6 +373,15 @@ function defaultDashboardView() {
   }
 
   return 'group';
+}
+
+function hasRecategorizeBehaviorDecision(tab) {
+  const explicitDecision = String(tab?.recategorizeBehaviorDecision || '').trim().toLowerCase();
+  if (explicitDecision === 'honor' || explicitDecision === 'override') {
+    return true;
+  }
+
+  return tab?.honorRecategorizeAs === true;
 }
 
 function resolveDashboardViewForState(view) {

@@ -197,36 +197,6 @@
             </div>
           </div>
 
-          <!-- Recategorize Preference -->
-          <div class="space-y-4">
-            <div class="flex items-center gap-3">
-              <div class="p-2 rounded-lg bg-gray-50 text-gray-400">
-                <AlertTriangle class="w-5 h-5" />
-              </div>
-              <h3 class="text-sm font-black uppercase tracking-[0.2em] text-gray-400">
-                Recategorize Behavior
-              </h3>
-            </div>
-
-            <div class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-3">
-              <label class="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  :checked="isHonoringRecategorizeAs"
-                  :disabled="isSavingRecategorizePreference"
-                  class="mt-1 h-4 w-4 rounded border-gray-300 text-black focus:ring-black disabled:opacity-50 disabled:cursor-not-allowed"
-                  @change="onHonorRecategorizeAsChange($event.target.checked)"
-                />
-                <span class="text-sm text-black leading-relaxed">
-                  Honor transaction <span class="font-black">Recategorized As</span> values over tab categorize rules.
-                </span>
-              </label>
-              <p class="text-xs text-gray-500 leading-relaxed">
-                When unchecked, tab-level categorize rules run last and can override custom transaction recategories.
-              </p>
-            </div>
-          </div>
-
           <!-- Categorize + Filter Rule Sections -->
           <div v-for="ruleType in standardRuleTypes" :key="ruleType.id" class="space-y-4">
             <div class="flex items-center gap-3">
@@ -339,38 +309,80 @@
             </div>
           </div>
 
-          <div
-            v-if="state.selected.tab"
-            class="pt-8 mt-4 border-t border-red-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
-          >
-            <div>
-              <p class="text-xs font-black uppercase tracking-[0.2em] text-red-500">Danger Zone</p>
-              <p class="text-xs text-gray-500 mt-1">Delete this tab and remove its tab-specific rule assignments.</p>
-            </div>
+          <div v-if="state.selected.tab" class="space-y-4">
             <button
-              @click="deleteCurrentTab"
-              :disabled="isDeletingTab"
-              class="px-4 py-2 rounded-xl border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+              type="button"
+              class="w-full flex items-center gap-3 py-1 group"
+              @click="toggleAdvancedSection"
             >
-              <Trash2 class="w-4 h-4" />
-              {{ isDeletingTab ? 'Deleting...' : 'Delete Tab' }}
+              <span class="h-px flex-1 bg-gray-200"></span>
+              <span class="text-[10px] font-black uppercase tracking-[0.24em] text-gray-400 group-hover:text-black transition-colors">
+                Advanced
+              </span>
+              <span
+                v-if="isRecategorizeWarningUnresolved"
+                class="px-2 py-0.5 rounded-full border border-amber-300 bg-amber-50 text-[9px] font-black uppercase tracking-[0.12em] text-amber-700"
+              >
+                Action
+              </span>
+              <ChevronDown
+                class="w-3.5 h-3.5 text-gray-400 group-hover:text-black transition-all"
+                :class="isAdvancedSectionOpen ? 'rotate-180' : ''"
+              />
+              <span class="h-px flex-1 bg-gray-200"></span>
             </button>
+
+            <div v-if="isAdvancedSectionOpen" class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-5">
+              <div class="space-y-2">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Should transaction-specific categories override these tab category rules?</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    :disabled="isSavingRecategorizePreference"
+                    class="px-3 py-3 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between gap-2"
+                    :class="recategorizeBehaviorDecision === 'honor'
+                      ? 'bg-white text-black border-black'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'"
+                    @click="onRecategorizeBehaviorDecisionChange('honor')"
+                  >
+                    <span>Yes, categories set on individual transactions take priority</span>
+                    <span v-if="recategorizeBehaviorDecision === 'honor'" class="inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.16em]">
+                      <Check class="w-3.5 h-3.5" />
+                      Selected
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="isSavingRecategorizePreference"
+                    class="px-3 py-3 rounded-xl border-2 text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between gap-2"
+                    :class="recategorizeBehaviorDecision === 'override'
+                      ? 'bg-white text-black border-black'
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'"
+                    @click="onRecategorizeBehaviorDecisionChange('override')"
+                  >
+                    <span>No, the category rules in this tab take priority</span>
+                    <span v-if="recategorizeBehaviorDecision === 'override'" class="inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.16em]">
+                      <Check class="w-3.5 h-3.5" />
+                      Selected
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-red-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-red-500">Delete Tab</p>
+                <button
+                  @click="deleteCurrentTab"
+                  :disabled="isDeletingTab"
+                  class="px-4 py-2 rounded-xl border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Trash2 class="w-4 h-4" />
+                  {{ isDeletingTab ? 'Deleting...' : 'Delete' }}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <!-- Action Footer -->
-      <div
-        v-if="!reorderingSectionId"
-        class="mt-auto px-6 py-8 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex justify-center z-20"
-      >
-        <button
-          @click="createNewRule"
-          class="w-full max-w-sm px-8 py-5 bg-black border-2 border-black rounded-2xl text-base font-black text-white hover:bg-gray-800 shadow-[6px_6px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex justify-center items-center gap-3"
-        >
-          <Plus class="w-6 h-6" />
-          Create New Rule
-        </button>
       </div>
     </div>
 
@@ -395,7 +407,7 @@
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import {
-  AlertTriangle, Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
+  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
@@ -532,6 +544,7 @@ const isDeletingTab = ref(false);
 const showTabActionsMenu = ref(false);
 const reorderingSectionId = ref(null);
 const isSavingRecategorizePreference = ref(false);
+const isAdvancedSectionOpen = ref(false);
 
 const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
@@ -619,7 +632,44 @@ const selectedSortDirection = computed(() => {
     : sortDirectionOptions[0]?.value || 'desc';
 });
 
-const isHonoringRecategorizeAs = computed(() => Boolean(state.selected.tab?.honorRecategorizeAs));
+function normalizeRecategorizeBehaviorDecision(value) {
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  if (normalizedValue === 'honor' || normalizedValue === 'override') {
+    return normalizedValue;
+  }
+
+  return '';
+}
+
+function resolveRecategorizeBehaviorDecision(tab) {
+  const explicitDecision = normalizeRecategorizeBehaviorDecision(tab?.recategorizeBehaviorDecision);
+  if (explicitDecision) {
+    return explicitDecision;
+  }
+
+  if (tab?.honorRecategorizeAs === true) {
+    return 'honor';
+  }
+
+  return '';
+}
+
+const recategorizeBehaviorDecision = computed(() => resolveRecategorizeBehaviorDecision(state.selected.tab));
+const hasRecategorizeBehaviorDecision = computed(() => Boolean(recategorizeBehaviorDecision.value));
+const isHonoringRecategorizeAs = computed(() => recategorizeBehaviorDecision.value === 'honor');
+const overriddenRecategorizeCount = computed(() => {
+  const count = Number(state.selected.tab?.overriddenRecategorizeCount || 0);
+  return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
+});
+const hasRecategorizeOverrideWarning = computed(() => overriddenRecategorizeCount.value > 0);
+const isRecategorizeWarningUnresolved = computed(() => (
+  hasRecategorizeOverrideWarning.value && !hasRecategorizeBehaviorDecision.value
+));
+const recategorizeOverrideSummary = computed(() => {
+  const count = overriddenRecategorizeCount.value;
+  const noun = count === 1 ? 'item' : 'items';
+  return `${count} recategorized ${noun} currently overridden by tab rules.`;
+});
 
 const enabledRulesByTypeComputed = computed({
   get: () => {
@@ -659,6 +709,7 @@ watch(
   () => {
     syncLocalRulesFromCurrentDepth();
     showTabActionsMenu.value = false;
+    isAdvancedSectionOpen.value = isRecategorizeWarningUnresolved.value;
   },
   { immediate: true }
 );
@@ -755,29 +806,50 @@ function toggleTabActionsMenu() {
   showTabActionsMenu.value = !showTabActionsMenu.value;
 }
 
-async function onHonorRecategorizeAsChange(nextValue) {
+function toggleAdvancedSection() {
+  isAdvancedSectionOpen.value = !isAdvancedSectionOpen.value;
+}
+
+async function onRecategorizeBehaviorDecisionChange(nextDecision) {
   if (!state.selected.tab || isSavingRecategorizePreference.value) {
     return;
   }
 
-  const selectedTab = state.selected.tab;
-  const previousValue = Boolean(selectedTab.honorRecategorizeAs);
-  const nextPreference = Boolean(nextValue);
+  const normalizedDecision = normalizeRecategorizeBehaviorDecision(nextDecision);
+  if (!normalizedDecision) {
+    return;
+  }
 
-  if (previousValue === nextPreference) {
+  const selectedTab = state.selected.tab;
+  const previousHonorPreference = Boolean(selectedTab.honorRecategorizeAs);
+  const previousDecision = normalizeRecategorizeBehaviorDecision(selectedTab.recategorizeBehaviorDecision);
+  const nextHonorPreference = normalizedDecision === 'honor';
+  const hasMeaningfulUpdate = previousDecision !== normalizedDecision
+    || previousHonorPreference !== nextHonorPreference;
+
+  if (!hasMeaningfulUpdate) {
+    isAdvancedSectionOpen.value = false;
     return;
   }
 
   isSavingRecategorizePreference.value = true;
-  selectedTab.honorRecategorizeAs = nextPreference;
+  selectedTab.honorRecategorizeAs = nextHonorPreference;
+  selectedTab.recategorizeBehaviorDecision = normalizedDecision;
 
   try {
     await updateTab(selectedTab._id, {
-      honorRecategorizeAs: nextPreference
+      honorRecategorizeAs: nextHonorPreference,
+      recategorizeBehaviorDecision: normalizedDecision
     });
     await processAllTabsForSelectedGroup({ showLoading: false });
+    isAdvancedSectionOpen.value = false;
   } catch (error) {
-    selectedTab.honorRecategorizeAs = previousValue;
+    selectedTab.honorRecategorizeAs = previousHonorPreference;
+    if (previousDecision) {
+      selectedTab.recategorizeBehaviorDecision = previousDecision;
+    } else {
+      delete selectedTab.recategorizeBehaviorDecision;
+    }
     console.error('Error updating recategorize preference:', error);
   } finally {
     isSavingRecategorizePreference.value = false;
@@ -1098,14 +1170,6 @@ async function onDragEnd(event) {
   rules.splice(newIndex, 0, removed);
   localRulesByType.value[ruleTypeId] = withRenumberedOrder(rules);
   await persistDepthRules();
-}
-
-function createNewRule() {
-  const defaultRuleType = standardRuleTypes.find(type =>
-    getRuleCountByType(type.id, true) > 0
-  )?.id || 'categorize';
-
-  createNewRuleWithType(defaultRuleType);
 }
 
 function createNewRuleWithType(typeId) {

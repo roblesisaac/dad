@@ -219,6 +219,10 @@ const props = defineProps({
   isHonoringRecategorizeAs: {
     type: Boolean,
     default: false
+  },
+  hasRecategorizeBehaviorDecision: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -252,6 +256,7 @@ const showEditTabAction = computed(() => (
 ));
 const showRecategorizeOverrideWarning = computed(() => (
   showEditTabAction.value
+  && !props.hasRecategorizeBehaviorDecision
   && !props.isHonoringRecategorizeAs
   && Number(props.overriddenRecategorizeCount) > 0
 ));

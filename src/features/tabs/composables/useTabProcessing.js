@@ -47,7 +47,8 @@ export function useTabProcessing() {
       tabTotal: drillState.tabTotal,
       categorizedItems: drillState.groups.map(group => [group.label, group.items, group.total]),
       hiddenItems: drillState.hiddenItems,
-      groupByMode: drillState.groupByMode
+      groupByMode: drillState.groupByMode,
+      overriddenRecategorizeCount: Number(drillState.overriddenRecategorizeCount || 0)
     };
   }
 
@@ -478,6 +479,7 @@ export function useTabProcessing() {
 
       for (const { tab, processed } of processedTabData) {
         if (!processed) {
+          tab.overriddenRecategorizeCount = 0;
           continue;
         }
 
@@ -485,6 +487,7 @@ export function useTabProcessing() {
         tab.categorizedItems = processed.categorizedItems;
         tab.hiddenItems = Array.isArray(processed.hiddenItems) ? processed.hiddenItems : [];
         tab.groupByMode = processed.groupByMode || 'category';
+        tab.overriddenRecategorizeCount = Number(processed.overriddenRecategorizeCount || 0);
       }
 
       await nextTick();
