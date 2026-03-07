@@ -6,7 +6,6 @@
         :key="item._id"
         class="relative group bg-[var(--theme-browser-chrome)] hover:bg-gray-50/50 transition-all duration-300"
       >
-        <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
         <button
           @click="selectTransaction(item)"

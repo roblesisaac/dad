@@ -48,7 +48,6 @@
           :key="hiddenItemKey(item)"
           class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300 opacity-80 hover:opacity-95"
         >
-          <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
           <button
             :class="[
@@ -96,10 +95,6 @@
           :key="group.key"
         >
           <div class="relative group bg-[var(--theme-browser-chrome)] hover:bg-gray-50/50 transition-all duration-300 opacity-85 hover:opacity-95">
-            <div
-              v-if="isGroupExpanded(group.key)"
-              class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"
-            ></div>
 
             <button
               :class="[
@@ -140,7 +135,6 @@
               :key="hiddenItemKey(item)"
               class="relative group bg-gray-50/30 hover:bg-gray-50 transition-all duration-300 opacity-80 hover:opacity-95"
             >
-              <div v-if="itemIsSelected(item._id)" class="absolute left-0 top-0 bottom-0 w-1 bg-black z-20"></div>
 
               <button
                 :class="[
