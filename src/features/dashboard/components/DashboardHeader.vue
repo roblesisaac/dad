@@ -465,14 +465,10 @@ onBeforeUnmount(() => {
 }
 
 .header-action-button {
-  color: #000;
+  color: var(--theme-text);
 }
 
 [data-theme]:not([data-theme='light']) .header-info-trigger {
   background-color: var(--theme-browser-chrome);
-}
-
-[data-theme]:not([data-theme='light']) .header-action-button {
-  color: #fff;
 }
 </style>

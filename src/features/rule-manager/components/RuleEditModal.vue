@@ -280,42 +280,6 @@
                 />
               </div>
 
-              <!-- Settings (Scope & Importance) -->
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div class="p-6 rounded-2xl border-2 border-gray-50 bg-white">
-                  <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">Apply To</label>
-                  <div class="space-y-4">
-                    <label class="flex items-center gap-4 cursor-pointer group">
-                      <input 
-                        v-model="isGlobalRule" 
-                        type="radio" 
-                        :value="true"
-                        class="w-5 h-5 text-black focus:ring-black border-2 border-gray-200 rounded-full bg-gray-50 transition-all"
-                      />
-                      <span class="text-sm font-bold text-gray-500 group-hover:text-black">All tabs (Global)</span>
-                    </label>
-                    <label class="flex items-center gap-4 cursor-pointer group">
-                      <input 
-                        v-model="isGlobalRule" 
-                        type="radio" 
-                        :value="false"
-                        class="w-5 h-5 text-black focus:ring-black border-2 border-gray-200 rounded-full bg-gray-50 transition-all"
-                      />
-                      <span class="text-sm font-bold text-gray-500 group-hover:text-black">
-                        Only "{{ state.selected.tab?.tabName || 'Current Tab' }}"
-                      </span>
-                    </label>
-                  </div>
-                </div>
-
-                <div class="p-6 rounded-2xl border-2 border-gray-50 bg-white flex flex-col justify-center">
-                  <ToggleSwitch 
-                    v-model="ruleData._isImportant"
-                    label="High Priority"
-                    description="Run this rule before others"
-                  />
-                </div>
-              </div>
             </form>
           </div>
           
@@ -345,7 +309,6 @@
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
 import { X, Plus } from 'lucide-vue-next';
-import ToggleSwitch from '@/shared/components/ToggleSwitch.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
@@ -356,7 +319,7 @@ const props = defineProps({
     type: Object,
     default: () => ({
       rule: ['categorize', '', '', '', ''],
-      applyForTabs: ['_GLOBAL'],
+      applyForTabs: [],
       _isImportant: false,
       orderOfExecution: 0
     })
@@ -445,24 +408,11 @@ watch(() => ruleData.value.rule[3], () => {
   });
 });
 
-// Track whether this is a global or tab-specific rule
-const isGlobalRule = computed({
-  get: () => ruleData.value.applyForTabs.includes('_GLOBAL'),
-  set: (value) => {
-    if (value) {
-      if (!ruleData.value.applyForTabs.includes('_GLOBAL')) {
-        ruleData.value.applyForTabs.push('_GLOBAL');
-      }
-    } else {
-      ruleData.value.applyForTabs = ruleData.value.applyForTabs.filter(id => id !== '_GLOBAL');
-      
-      const tabId = state.selected.tab?._id;
-      if (tabId && !ruleData.value.applyForTabs.includes(tabId)) {
-        ruleData.value.applyForTabs.push(tabId);
-      }
-    }
-  }
-});
+function normalizeRuleScopeForTab() {
+  const tabId = state.selected.tab?._id;
+  ruleData.value.applyForTabs = tabId ? [tabId] : [];
+  ruleData.value._isImportant = false;
+}
 
 const supportsAndCondition = computed(() =>
   ['filter', 'categorize'].includes(ruleData.value.rule[0])
@@ -748,6 +698,7 @@ watch(
 
 normalizeMethodsForRuleType();
 normalizeSortRuleForUi();
+normalizeRuleScopeForTab();
 
 function saveRule() {
   if (!validateRule()) {
@@ -766,13 +717,8 @@ function saveRule() {
   }
 
   normalizeAndCondition();
-  
-  if (!isGlobalRule.value) {
-    const tabId = state.selected.tab?._id;
-    if (tabId && !ruleData.value.applyForTabs.includes(tabId)) {
-      ruleData.value.applyForTabs.push(tabId);
-    }
-  }
+
+  normalizeRuleScopeForTab();
   
   emit('save', ruleData.value);
 }
