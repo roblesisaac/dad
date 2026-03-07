@@ -4,6 +4,26 @@ import { getClientId } from '@/shared/utils/clientIdentity.js';
 
 const DEFAULT_INTERVAL_MS = 15000;
 
+function isBrowserOffline() {
+  return typeof navigator !== 'undefined' && navigator.onLine === false;
+}
+
+function isExpectedNetworkError(error) {
+  if (isBrowserOffline()) {
+    return true;
+  }
+
+  if (!error || error.name !== 'TypeError') {
+    return false;
+  }
+
+  const message = String(error?.message || '').toLowerCase();
+  return message.includes('failed to fetch')
+    || message.includes('networkerror')
+    || message.includes('network request failed')
+    || message.includes('load failed');
+}
+
 function normalizeSyncPayload(payload = {}) {
   const safeMutations = payload?.mutations && typeof payload.mutations === 'object'
     ? payload.mutations
@@ -107,6 +127,10 @@ export function useRemoteSync(options = {}) {
       return;
     }
 
+    if (isBrowserOffline()) {
+      return;
+    }
+
     isInFlight = true;
 
     try {
@@ -138,6 +162,9 @@ export function useRemoteSync(options = {}) {
 
       lastPayload = currentPayload;
     } catch (error) {
+      if (isExpectedNetworkError(error)) {
+        return;
+      }
       console.error('Remote sync polling failed', error);
     } finally {
       isInFlight = false;
@@ -150,6 +177,10 @@ export function useRemoteSync(options = {}) {
     }
   }
 
+  function handleOnline() {
+    void checkNow({ force: true });
+  }
+
   function start() {
     if (isStarted) {
       return;
@@ -159,6 +190,10 @@ export function useRemoteSync(options = {}) {
 
     if (typeof document !== 'undefined') {
       document.addEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', handleOnline);
     }
 
     intervalId = window.setInterval(() => {
@@ -182,6 +217,10 @@ export function useRemoteSync(options = {}) {
 
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
+
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', handleOnline);
     }
   }
 
