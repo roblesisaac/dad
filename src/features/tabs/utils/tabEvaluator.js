@@ -1,6 +1,7 @@
 const DEFAULT_MONTHS = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 export const NO_GROUPING_RULE_VALUE = 'none';
 export const NO_GROUPING_CATEGORY_NAME = 'all transactions';
+const WEEKDAY_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 function defaultGetDayOfWeekPST(dateString) {
   const date = new Date(`${dateString}T00:00:00`);
@@ -214,20 +215,145 @@ function formatPersonalFinanceCategory(item) {
   item.personal_finance_category.primary = lower.split('_').join(' ');
 }
 
-function groupByDate(a, b) {
-  const months = {
-    jan: 0, feb: 1, mar: 2, march: 2, apr: 3, april: 3, may: 4, jun: 5, june: 5,
-    jul: 6, july: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+function parseMonthIndex(rawMonthValue) {
+  const monthValue = String(rawMonthValue || '').toLowerCase().trim().replace(',', '');
+  const monthMap = {
+    jan: 0,
+    january: 0,
+    feb: 1,
+    february: 1,
+    mar: 2,
+    march: 2,
+    apr: 3,
+    april: 3,
+    may: 4,
+    jun: 5,
+    june: 5,
+    jul: 6,
+    july: 6,
+    aug: 7,
+    august: 7,
+    sep: 8,
+    sept: 8,
+    september: 8,
+    oct: 9,
+    october: 9,
+    nov: 10,
+    november: 10,
+    dec: 11,
+    december: 11
   };
 
-  const [yearA, monthA] = String(a?.[0] || '').split(' ');
-  const [yearB, monthB] = String(b?.[0] || '').split(' ');
+  return Number.isFinite(monthMap[monthValue])
+    ? monthMap[monthValue]
+    : null;
+}
 
-  if (yearA !== yearB) {
-    return yearB - yearA;
+function compareGroupLabelsByDateMode(labelA, labelB, groupByMode) {
+  if (groupByMode === 'year') {
+    const yearA = Number(String(labelA || '').trim());
+    const yearB = Number(String(labelB || '').trim());
+
+    if (Number.isFinite(yearA) && Number.isFinite(yearB)) {
+      return yearA - yearB;
+    }
+
+    return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
   }
 
-  return (months[monthB] || 0) - (months[monthA] || 0);
+  if (groupByMode === 'month') {
+    const monthA = parseMonthIndex(labelA);
+    const monthB = parseMonthIndex(labelB);
+
+    if (monthA !== null && monthB !== null) {
+      return monthA - monthB;
+    }
+
+    return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
+  }
+
+  if (groupByMode === 'year_month') {
+    const [yearA, monthNameA] = String(labelA || '').trim().split(/\s+/);
+    const [yearB, monthNameB] = String(labelB || '').trim().split(/\s+/);
+    const parsedYearA = Number(yearA);
+    const parsedYearB = Number(yearB);
+
+    if (Number.isFinite(parsedYearA) && Number.isFinite(parsedYearB) && parsedYearA !== parsedYearB) {
+      return parsedYearA - parsedYearB;
+    }
+
+    const monthA = parseMonthIndex(monthNameA);
+    const monthB = parseMonthIndex(monthNameB);
+    if (monthA !== null && monthB !== null) {
+      return monthA - monthB;
+    }
+
+    return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
+  }
+
+  if (groupByMode === 'date' || groupByMode === 'day') {
+    const [monthNameA, dayRawA] = String(labelA || '').split(',');
+    const [monthNameB, dayRawB] = String(labelB || '').split(',');
+    const monthA = parseMonthIndex(monthNameA);
+    const monthB = parseMonthIndex(monthNameB);
+    const dayA = Number(String(dayRawA || '').trim());
+    const dayB = Number(String(dayRawB || '').trim());
+
+    if (monthA !== null && monthB !== null && monthA !== monthB) {
+      return monthA - monthB;
+    }
+
+    if (Number.isFinite(dayA) && Number.isFinite(dayB)) {
+      return dayA - dayB;
+    }
+
+    return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
+  }
+
+  if (groupByMode === 'weekday') {
+    const weekdayA = String(labelA || '').toLowerCase().trim();
+    const weekdayB = String(labelB || '').toLowerCase().trim();
+    const weekdayIndexA = WEEKDAY_ORDER.indexOf(weekdayA);
+    const weekdayIndexB = WEEKDAY_ORDER.indexOf(weekdayB);
+
+    if (weekdayIndexA !== -1 && weekdayIndexB !== -1) {
+      return weekdayIndexA - weekdayIndexB;
+    }
+
+    return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
+  }
+
+  return String(labelA || '').localeCompare(String(labelB || ''), undefined, { sensitivity: 'base' });
+}
+
+function resolvePrimarySort(sorters) {
+  const [primarySorter] = Array.isArray(sorters) ? sorters : [];
+  const sortKey = String(primarySorter?.itemPropName || '').trim();
+
+  if (!sortKey) {
+    return { propName: 'date', direction: 'desc' };
+  }
+
+  const direction = sortKey.startsWith('-') ? 'desc' : 'asc';
+  const propName = normalizeSortPropertyName(sortKey) || 'date';
+
+  return { propName, direction };
+}
+
+function shouldSortGroupsBySelectedSort(groupByMode, sortPropName) {
+  if (!groupByMode || groupByMode === NO_GROUPING_RULE_VALUE) {
+    return false;
+  }
+
+  if (groupByMode === 'category') {
+    return sortPropName === 'category';
+  }
+
+  if (['year', 'month', 'year_month', 'day', 'date', 'weekday'].includes(groupByMode)) {
+    return sortPropName === 'date';
+  }
+
+  return false;
 }
 
 function extractRuleConditions(rule) {
@@ -410,12 +536,11 @@ function compareSortValues(valueA, valueB) {
 function buildSortMethod(sorters) {
   return (arrayToSort) => {
     const arrayCopy = arrayToSort.map(item => JSON.parse(JSON.stringify(item)));
+    const sortersToApply = sorters.length
+      ? sorters
+      : [{ itemPropName: '-date' }];
 
-    if (!sorters.length) {
-      sorters.push({ itemPropName: '-date' });
-    }
-
-    for (const { itemPropName } of sorters) {
+    for (const { itemPropName } of sortersToApply) {
       if (!itemPropName) {
         continue;
       }
@@ -562,7 +687,8 @@ function buildRuleMethods(tabRules, options) {
     categorize: buildCategorizeMethod(categorizers),
     filter: buildFilterMethod(filters),
     groupBy: buildGroupByMethod(propToGroupBy, options.months, options.getDayOfWeekPST),
-    propToGroupBy: propToGroupBy[0] || 'category'
+    propToGroupBy: propToGroupBy[0] || 'category',
+    sorters
   };
 }
 
@@ -583,7 +709,7 @@ export function evaluateTabData({
     };
   }
 
-  const { filter, sort, categorize, groupBy, propToGroupBy } = buildRuleMethods(tabRules, {
+  const { filter, sort, categorize, groupBy, propToGroupBy, sorters } = buildRuleMethods(tabRules, {
     ruleMethods,
     getDayOfWeekPST,
     months
@@ -627,14 +753,23 @@ export function evaluateTabData({
     }
   }
 
-  if (!['year', 'month', 'day', 'year_month'].includes(propToGroupBy)) {
+  const primarySort = resolvePrimarySort(sorters);
+
+  if (shouldSortGroupsBySelectedSort(propToGroupBy, primarySort.propName)) {
+    categorizedItems.sort((a, b) => {
+      const labelSortResult = compareGroupLabelsByDateMode(a?.[0], b?.[0], propToGroupBy);
+      return primarySort.direction === 'desc'
+        ? -labelSortResult
+        : labelSortResult;
+    });
+  } else if (['year', 'month', 'day', 'date', 'year_month'].includes(propToGroupBy)) {
+    categorizedItems.sort((a, b) => compareGroupLabelsByDateMode(a?.[0], b?.[0], propToGroupBy) * -1);
+  } else {
     if (tabTotal > 0) {
       categorizedItems.sort((a, b) => b[2] - a[2]);
     } else {
       categorizedItems.sort((a, b) => a[2] - b[2]);
     }
-  } else {
-    categorizedItems.sort(groupByDate);
   }
 
   return {

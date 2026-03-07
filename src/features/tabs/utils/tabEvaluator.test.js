@@ -433,6 +433,171 @@ describe('tabEvaluator', () => {
     expect(sortedTransactionIds).toEqual(['newest', 'middle', 'oldest']);
   });
 
+  test('groupBy category respects sort category ascending for group row order', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'zeta-1',
+          amount: 200,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Zeta One',
+          personal_finance_category: { primary: 'ZETA' }
+        },
+        {
+          transaction_id: 'alpha-1',
+          amount: 10,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Alpha One',
+          personal_finance_category: { primary: 'ALPHA' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        },
+        {
+          _id: 's-category-asc',
+          orderOfExecution: 0,
+          rule: ['sort', 'category', 'asc', '', '']
+        }
+      ]
+    });
+
+    expect(result.categorizedItems.map(([groupName]) => groupName)).toEqual(['alpha', 'zeta']);
+  });
+
+  test('groupBy category respects sort category descending for group row order', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'zeta-1',
+          amount: 200,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Zeta One',
+          personal_finance_category: { primary: 'ZETA' }
+        },
+        {
+          transaction_id: 'alpha-1',
+          amount: 10,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Alpha One',
+          personal_finance_category: { primary: 'ALPHA' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        },
+        {
+          _id: 's-category-desc',
+          orderOfExecution: 0,
+          rule: ['sort', 'category', 'desc', '', '']
+        }
+      ]
+    });
+
+    expect(result.categorizedItems.map(([groupName]) => groupName)).toEqual(['zeta', 'alpha']);
+  });
+
+  test('groupBy date respects sort date direction for group row order', () => {
+    const ascendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'tx-feb',
+          amount: 200,
+          authorized_date: '2026-02-01',
+          date: '2026-02-01',
+          name: 'Feb One',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'tx-jan-ten',
+          amount: 20,
+          authorized_date: '2026-01-10',
+          date: '2026-01-10',
+          name: 'Jan Ten',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'tx-jan-two',
+          amount: 10,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Jan Two',
+          personal_finance_category: { primary: 'TRAVEL' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-date',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'date', '', '', '']
+        },
+        {
+          _id: 's-date-asc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'asc', '', '']
+        }
+      ]
+    });
+
+    const descendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'tx-feb',
+          amount: 200,
+          authorized_date: '2026-02-01',
+          date: '2026-02-01',
+          name: 'Feb One',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'tx-jan-ten',
+          amount: 20,
+          authorized_date: '2026-01-10',
+          date: '2026-01-10',
+          name: 'Jan Ten',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'tx-jan-two',
+          amount: 10,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Jan Two',
+          personal_finance_category: { primary: 'TRAVEL' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-date',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'date', '', '', '']
+        },
+        {
+          _id: 's-date-desc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'desc', '', '']
+        }
+      ]
+    });
+
+    expect(ascendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['jan, 02', 'jan, 10', 'feb, 01']);
+    expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['feb, 01', 'jan, 10', 'jan, 02']);
+  });
+
   test('legacy contains rules continue to behave like includes', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
