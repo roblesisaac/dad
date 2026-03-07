@@ -95,14 +95,13 @@ function evaluateLevel({
   ];
   const sourceTransactions = Array.isArray(transactions) ? transactions : [];
   const originalLookup = buildOriginalLookup(sourceTransactions);
-  const evaluationInput = sourceTransactions.map((transaction) => JSON.parse(JSON.stringify(transaction)));
 
   const evaluation = evaluateTabData({
     tab: {
       ...tab,
       isSelected: true
     },
-    transactions: evaluationInput,
+    transactions: sourceTransactions,
     tabRules: combinedRules,
     ruleMethods,
     getDayOfWeekPST,
