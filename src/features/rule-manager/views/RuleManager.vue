@@ -334,7 +334,7 @@
 
             <div v-if="isAdvancedSectionOpen" class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-5">
               <div class="space-y-2">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Should transaction-specific categories override these tab category rules?</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Should transaction-level categories override categories set in this tab?</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -345,7 +345,7 @@
                       : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'"
                     @click="onRecategorizeBehaviorDecisionChange('honor')"
                   >
-                    <span>Yes, categories set on individual transactions take priority</span>
+                    <span>Yes, transactions categories take priority</span>
                     <span v-if="recategorizeBehaviorDecision === 'honor'" class="inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.16em]">
                       <Check class="w-3.5 h-3.5" />
                       Selected
@@ -360,7 +360,7 @@
                       : 'bg-white text-gray-600 border-gray-200 hover:border-black hover:text-black'"
                     @click="onRecategorizeBehaviorDecisionChange('override')"
                   >
-                    <span>No, the category rules in this tab take priority</span>
+                    <span>No, categories set in this tab take priority</span>
                     <span v-if="recategorizeBehaviorDecision === 'override'" class="inline-flex items-center gap-1 text-[9px] uppercase tracking-[0.16em]">
                       <Check class="w-3.5 h-3.5" />
                       Selected
