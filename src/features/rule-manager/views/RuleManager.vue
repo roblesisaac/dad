@@ -334,7 +334,7 @@
 
             <div v-if="isAdvancedSectionOpen" class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-5">
               <div class="space-y-2">
-                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Should transaction-level categories override categories set in this tab?</p>
+                <p class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Should transaction-level categories override categories set at this level?</p>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -414,7 +414,8 @@ import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
 import { useRulesAPI } from '../composables/useRulesAPI';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 import { useTabs } from '@/features/tabs/composables/useTabs';
-import { levelRulesForDepth } from '@/features/tabs/utils/drillSchema.js';
+import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
+import { levelRulesForDepth, normalizeDrillPath } from '@/features/tabs/utils/drillSchema.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import draggable from 'vuedraggable';
 
@@ -423,7 +424,7 @@ import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
 
 const { state } = useDashboardState();
-const { updateTabName, deleteTab: deleteTabById, updateTab } = useTabsAPI();
+const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
 const rulesAPI = useRulesAPI();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 const {
@@ -550,6 +551,7 @@ const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
   return path.length;
 });
+const currentPathKey = computed(() => normalizeDrillPath(state.selected.drillPath).join('>'));
 
 const localRulesByType = ref({
   groupBy: [],
@@ -642,9 +644,26 @@ function normalizeRecategorizeBehaviorDecision(value) {
 }
 
 function resolveRecategorizeBehaviorDecision(tab) {
-  const explicitDecision = normalizeRecategorizeBehaviorDecision(tab?.recategorizeBehaviorDecision);
-  if (explicitDecision) {
-    return explicitDecision;
+  return normalizeRecategorizeBehaviorDecision(tab?.recategorizeBehaviorDecision);
+}
+
+function resolveRecategorizeBehaviorDecisionForLevel(level, tab, depth = 0) {
+  const explicitLevelDecision = resolveRecategorizeBehaviorDecision(level);
+  if (explicitLevelDecision) {
+    return explicitLevelDecision;
+  }
+
+  if (level?.honorRecategorizeAs === true) {
+    return 'honor';
+  }
+
+  if (Number(depth) !== 0) {
+    return '';
+  }
+
+  const explicitTabDecision = resolveRecategorizeBehaviorDecision(tab);
+  if (explicitTabDecision) {
+    return explicitTabDecision;
   }
 
   if (tab?.honorRecategorizeAs === true) {
@@ -654,22 +673,36 @@ function resolveRecategorizeBehaviorDecision(tab) {
   return '';
 }
 
-const recategorizeBehaviorDecision = computed(() => resolveRecategorizeBehaviorDecision(state.selected.tab));
+const activeDrillLevel = computed(() => {
+  if (!state.selected.tab) {
+    return null;
+  }
+
+  const activePath = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+  const { level } = levelRulesForDepth(state.selected.tab.drillSchema, currentDepth.value, activePath);
+  return level || null;
+});
+
+const recategorizeBehaviorDecision = computed(() => resolveRecategorizeBehaviorDecisionForLevel(
+  activeDrillLevel.value,
+  state.selected.tab,
+  currentDepth.value
+));
 const hasRecategorizeBehaviorDecision = computed(() => Boolean(recategorizeBehaviorDecision.value));
-const isHonoringRecategorizeAs = computed(() => recategorizeBehaviorDecision.value === 'honor');
+const currentDrillState = computed(() => resolveDrillState({
+  tab: state.selected.tab,
+  transactions: state.selected.allGroupTransactions,
+  allRules: state.allUserRules,
+  drillPath: state.selected.drillPath
+}));
 const overriddenRecategorizeCount = computed(() => {
-  const count = Number(state.selected.tab?.overriddenRecategorizeCount || 0);
+  const count = Number(currentDrillState.value?.overriddenRecategorizeCount || 0);
   return Number.isFinite(count) && count > 0 ? Math.round(count) : 0;
 });
 const hasRecategorizeOverrideWarning = computed(() => overriddenRecategorizeCount.value > 0);
 const isRecategorizeWarningUnresolved = computed(() => (
   hasRecategorizeOverrideWarning.value && !hasRecategorizeBehaviorDecision.value
 ));
-const recategorizeOverrideSummary = computed(() => {
-  const count = overriddenRecategorizeCount.value;
-  const noun = count === 1 ? 'item' : 'items';
-  return `${count} recategorized ${noun} currently overridden by tab rules.`;
-});
 
 const enabledRulesByTypeComputed = computed({
   get: () => {
@@ -705,7 +738,7 @@ function syncLocalRulesFromCurrentDepth() {
 }
 
 watch(
-  [() => state.selected.tab?._id, () => currentDepth.value],
+  [() => state.selected.tab?._id, () => currentPathKey.value],
   () => {
     syncLocalRulesFromCurrentDepth();
     showTabActionsMenu.value = false;
@@ -811,7 +844,8 @@ function toggleAdvancedSection() {
 }
 
 async function onRecategorizeBehaviorDecisionChange(nextDecision) {
-  if (!state.selected.tab || isSavingRecategorizePreference.value) {
+  const selectedTab = state.selected.tab;
+  if (!selectedTab || isSavingRecategorizePreference.value) {
     return;
   }
 
@@ -820,12 +854,8 @@ async function onRecategorizeBehaviorDecisionChange(nextDecision) {
     return;
   }
 
-  const selectedTab = state.selected.tab;
-  const previousHonorPreference = Boolean(selectedTab.honorRecategorizeAs);
-  const previousDecision = normalizeRecategorizeBehaviorDecision(selectedTab.recategorizeBehaviorDecision);
   const nextHonorPreference = normalizedDecision === 'honor';
-  const hasMeaningfulUpdate = previousDecision !== normalizedDecision
-    || previousHonorPreference !== nextHonorPreference;
+  const hasMeaningfulUpdate = recategorizeBehaviorDecision.value !== normalizedDecision;
 
   if (!hasMeaningfulUpdate) {
     isAdvancedSectionOpen.value = false;
@@ -833,23 +863,14 @@ async function onRecategorizeBehaviorDecisionChange(nextDecision) {
   }
 
   isSavingRecategorizePreference.value = true;
-  selectedTab.honorRecategorizeAs = nextHonorPreference;
-  selectedTab.recategorizeBehaviorDecision = normalizedDecision;
 
   try {
-    await updateTab(selectedTab._id, {
+    await updateTabDrillSchemaAtPath(selectedTab._id, state.selected.drillPath, {
       honorRecategorizeAs: nextHonorPreference,
       recategorizeBehaviorDecision: normalizedDecision
     });
-    await processAllTabsForSelectedGroup({ showLoading: false });
     isAdvancedSectionOpen.value = false;
   } catch (error) {
-    selectedTab.honorRecategorizeAs = previousHonorPreference;
-    if (previousDecision) {
-      selectedTab.recategorizeBehaviorDecision = previousDecision;
-    } else {
-      delete selectedTab.recategorizeBehaviorDecision;
-    }
     console.error('Error updating recategorize preference:', error);
   } finally {
     isSavingRecategorizePreference.value = false;

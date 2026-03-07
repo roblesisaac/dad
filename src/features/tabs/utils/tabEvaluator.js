@@ -812,6 +812,7 @@ export function evaluateTabData({
   transactions,
   tabRules = [],
   ruleMethods = buildDefaultRuleMethods(),
+  honorRecategorizeAs,
   getDayOfWeekPST = defaultGetDayOfWeekPST,
   months = DEFAULT_MONTHS
 }) {
@@ -829,7 +830,9 @@ export function evaluateTabData({
     ruleMethods,
     getDayOfWeekPST,
     months,
-    honorRecategorizeAs: Boolean(tab?.honorRecategorizeAs)
+    honorRecategorizeAs: typeof honorRecategorizeAs === 'boolean'
+      ? honorRecategorizeAs
+      : Boolean(tab?.honorRecategorizeAs)
   });
 
   const dataCopy = sort(transactions);

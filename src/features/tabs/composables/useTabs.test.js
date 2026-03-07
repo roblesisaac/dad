@@ -448,6 +448,11 @@ describe('useTabs copyTabSchemaToGroup', () => {
       sortByGroup: { 'group-2': 5 },
       drillSchema: {
         ...sourceDrillSchema,
+        levels: sourceDrillSchema.levels.map((level) => ({
+          ...level,
+          honorRecategorizeAs: false,
+          recategorizeBehaviorDecision: ''
+        })),
         pathLevels: []
       }
     });

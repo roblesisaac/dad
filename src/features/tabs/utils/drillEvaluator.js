@@ -16,6 +16,65 @@ function defaultGetDayOfWeekPST(dateString) {
 const DEFAULT_MONTHS = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const NO_GROUPING_RULE_VALUE = 'none';
 
+function normalizeRecategorizeBehaviorDecision(value) {
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  if (normalizedValue === 'honor' || normalizedValue === 'override') {
+    return normalizedValue;
+  }
+
+  return '';
+}
+
+function resolveRecategorizeBehaviorState({ tab, level, depth = 0 } = {}) {
+  const levelDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision);
+  if (levelDecision) {
+    return {
+      decision: levelDecision,
+      hasDecision: true,
+      honorRecategorizeAs: levelDecision === 'honor'
+    };
+  }
+
+  if (level?.honorRecategorizeAs === true) {
+    return {
+      decision: 'honor',
+      hasDecision: true,
+      honorRecategorizeAs: true
+    };
+  }
+
+  if (Number(depth) !== 0) {
+    return {
+      decision: '',
+      hasDecision: false,
+      honorRecategorizeAs: false
+    };
+  }
+
+  const tabDecision = normalizeRecategorizeBehaviorDecision(tab?.recategorizeBehaviorDecision);
+  if (tabDecision) {
+    return {
+      decision: tabDecision,
+      hasDecision: true,
+      honorRecategorizeAs: tabDecision === 'honor'
+    };
+  }
+
+  if (tab?.honorRecategorizeAs === true) {
+    return {
+      decision: 'honor',
+      hasDecision: true,
+      honorRecategorizeAs: true
+    };
+  }
+
+  return {
+    decision: '',
+    hasDecision: false,
+    honorRecategorizeAs: false
+  };
+}
+
 export function getTransactionKey(transaction) {
   if (!transaction) {
     return '';
@@ -80,6 +139,7 @@ function evaluateLevel({
   tab,
   transactions,
   levelRuleConfigs,
+  honorRecategorizeAs,
   sharedGlobalCategorizeRules,
   ruleMethods,
   getDayOfWeekPST,
@@ -104,6 +164,7 @@ function evaluateLevel({
     },
     transactions: sourceTransactions,
     tabRules: combinedRules,
+    honorRecategorizeAs: Boolean(honorRecategorizeAs),
     ruleMethods,
     getDayOfWeekPST,
     months
@@ -164,7 +225,10 @@ export function resolveDrillState({
       hiddenItems: [],
       groupByMode: NO_GROUPING_RULE_VALUE,
       isLeaf: true,
-      overriddenRecategorizeCount: 0
+      overriddenRecategorizeCount: 0,
+      honorRecategorizeAs: false,
+      hasRecategorizeBehaviorDecision: false,
+      recategorizeBehaviorDecision: ''
     };
   }
 
@@ -178,12 +242,18 @@ export function resolveDrillState({
   const breadcrumbs = [];
 
   for (let depth = 0; depth <= normalizedPath.length; depth += 1) {
-    const { ruleConfigs } = levelRulesForDepth(normalizedTab.drillSchema, depth, validPath);
+    const { level, ruleConfigs } = levelRulesForDepth(normalizedTab.drillSchema, depth, validPath);
+    const recategorizeBehaviorState = resolveRecategorizeBehaviorState({
+      tab: normalizedTab,
+      level,
+      depth
+    });
 
     const levelResult = evaluateLevel({
       tab: normalizedTab,
       transactions: currentSubset,
       levelRuleConfigs: ruleConfigs,
+      honorRecategorizeAs: recategorizeBehaviorState.honorRecategorizeAs,
       sharedGlobalCategorizeRules,
       ruleMethods,
       getDayOfWeekPST,
@@ -209,7 +279,10 @@ export function resolveDrillState({
           hiddenItems: levelResult.hiddenItems,
           groupByMode: levelResult.groupByMode,
           isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
-          overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount
+          overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount,
+          honorRecategorizeAs: recategorizeBehaviorState.honorRecategorizeAs,
+          hasRecategorizeBehaviorDecision: recategorizeBehaviorState.hasDecision,
+          recategorizeBehaviorDecision: recategorizeBehaviorState.decision
         };
       }
 
@@ -235,16 +308,25 @@ export function resolveDrillState({
       hiddenItems: levelResult.hiddenItems,
       groupByMode: levelResult.groupByMode,
       isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
-      overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount
+      overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount,
+      honorRecategorizeAs: recategorizeBehaviorState.honorRecategorizeAs,
+      hasRecategorizeBehaviorDecision: recategorizeBehaviorState.hasDecision,
+      recategorizeBehaviorDecision: recategorizeBehaviorState.decision
     };
   }
 
   const fallbackDepth = validPath.length;
-  const { ruleConfigs } = levelRulesForDepth(normalizedTab.drillSchema, fallbackDepth, validPath);
+  const { level: fallbackLevel, ruleConfigs } = levelRulesForDepth(normalizedTab.drillSchema, fallbackDepth, validPath);
+  const fallbackRecategorizeBehaviorState = resolveRecategorizeBehaviorState({
+    tab: normalizedTab,
+    level: fallbackLevel,
+    depth: fallbackDepth
+  });
   const fallbackResult = evaluateLevel({
     tab: normalizedTab,
     transactions: currentSubset,
     levelRuleConfigs: ruleConfigs,
+    honorRecategorizeAs: fallbackRecategorizeBehaviorState.honorRecategorizeAs,
     sharedGlobalCategorizeRules,
     ruleMethods,
     getDayOfWeekPST,
@@ -261,6 +343,9 @@ export function resolveDrillState({
     hiddenItems: fallbackResult.hiddenItems,
     groupByMode: fallbackResult.groupByMode,
     isLeaf: fallbackResult.groupByMode === NO_GROUPING_RULE_VALUE,
-    overriddenRecategorizeCount: fallbackResult.overriddenRecategorizeCount
+    overriddenRecategorizeCount: fallbackResult.overriddenRecategorizeCount,
+    honorRecategorizeAs: fallbackRecategorizeBehaviorState.honorRecategorizeAs,
+    hasRecategorizeBehaviorDecision: fallbackRecategorizeBehaviorState.hasDecision,
+    recategorizeBehaviorDecision: fallbackRecategorizeBehaviorState.decision
   };
 }

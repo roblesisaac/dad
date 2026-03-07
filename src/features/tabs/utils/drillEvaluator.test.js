@@ -13,11 +13,12 @@ function createRule(id, rule, options = {}) {
   };
 }
 
-function createTab(levels, pathLevels = []) {
+function createTab(levels, pathLevels = [], overrides = {}) {
   return {
     _id: 'tab-1',
     tabName: 'Test Tab',
     isSelected: true,
+    ...overrides,
     drillSchema: {
       version: 1,
       levels,
@@ -354,6 +355,139 @@ describe('drillEvaluator', () => {
 
     expect(result.groups.map(group => group.key)).toEqual(['money in']);
     expect(result.overriddenRecategorizeCount).toBe(1);
+  });
+
+  test('applies honor/override recategorize behavior per level path', () => {
+    const tab = createTab(
+      [
+        {
+          id: 'level-1',
+          sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+          categorizeRules: [
+            createRule('local-money-in', ['categorize', 'amount', '>', '0', 'money in'], {
+              orderOfExecution: 0
+            }),
+            createRule('local-money-out', ['categorize', 'amount', '<', '0', 'money out'], {
+              orderOfExecution: 1
+            })
+          ],
+          filterRules: [],
+          groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+        },
+        {
+          id: 'level-2',
+          sortRules: [createRule('sort-1', ['sort', 'date', 'desc', '', ''])],
+          categorizeRules: [],
+          filterRules: [],
+          groupByRules: [createRule('group-1', ['groupBy', 'category', '', '', ''])]
+        }
+      ],
+      [{
+        id: 'path-money-out',
+        path: ['money out'],
+        sortRules: [createRule('sort-path-money-out', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-path-money-out', ['groupBy', 'category', '', '', ''])],
+        honorRecategorizeAs: true,
+        recategorizeBehaviorDecision: 'honor'
+      }]
+    );
+
+    const transactions = [
+      createTransaction('t-out', {
+        amount: 32,
+        recategorizeAs: 'gift to nana',
+        personal_finance_category: { primary: 'TRANSFER' }
+      }),
+      createTransaction('t-in', {
+        amount: -25,
+        recategorizeAs: 'refund',
+        personal_finance_category: { primary: 'MISC' }
+      })
+    ];
+
+    const root = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: []
+    });
+    expect(root.groups.map(group => group.key).sort()).toEqual(['money in', 'money out']);
+    expect(root.hasRecategorizeBehaviorDecision).toBe(false);
+    expect(root.honorRecategorizeAs).toBe(false);
+
+    const moneyOutLevel = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: ['money out']
+    });
+    expect(moneyOutLevel.validPath).toEqual(['money out']);
+    expect(moneyOutLevel.groups.map(group => group.key)).toEqual(['gift to nana']);
+    expect(moneyOutLevel.hasRecategorizeBehaviorDecision).toBe(true);
+    expect(moneyOutLevel.honorRecategorizeAs).toBe(true);
+  });
+
+  test('treats legacy tab-level recategorize preference as depth-zero only', () => {
+    const tab = createTab(
+      [
+        {
+          id: 'level-1',
+          sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+          categorizeRules: [
+            createRule('local-money-out', ['categorize', 'amount', '<', '0', 'money out'], {
+              orderOfExecution: 0
+            })
+          ],
+          filterRules: [],
+          groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+        },
+        {
+          id: 'level-2',
+          sortRules: [createRule('sort-1', ['sort', 'date', 'desc', '', ''])],
+          categorizeRules: [
+            createRule('local-family', ['categorize', 'name', 'includes', 'nana', 'family'])
+          ],
+          filterRules: [],
+          groupByRules: [createRule('group-1', ['groupBy', 'category', '', '', ''])]
+        }
+      ],
+      [],
+      {
+        honorRecategorizeAs: true
+      }
+    );
+
+    const transactions = [
+      createTransaction('legacy-depth-pref', {
+        amount: 32,
+        name: 'zelle nana',
+        recategorizeAs: 'gift to nana',
+        personal_finance_category: { primary: 'TRANSFER' }
+      })
+    ];
+
+    const root = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: []
+    });
+    expect(root.groups.map(group => group.key)).toEqual(['gift to nana']);
+    expect(root.honorRecategorizeAs).toBe(true);
+    expect(root.hasRecategorizeBehaviorDecision).toBe(true);
+
+    const depthOne = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: ['gift to nana']
+    });
+    expect(depthOne.validPath).toEqual(['gift to nana']);
+    expect(depthOne.groups.map(group => group.key)).toEqual(['family']);
+    expect(depthOne.honorRecategorizeAs).toBe(false);
+    expect(depthOne.hasRecategorizeBehaviorDecision).toBe(false);
   });
 
   test('preserves drill transactions without transaction_id by matching on _id fallback', () => {
