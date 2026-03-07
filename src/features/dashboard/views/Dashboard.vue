@@ -26,6 +26,7 @@
           :is-rearrange-active="isRearrangeModeActive"
           :drill-breadcrumbs="drillState.breadcrumbs"
           :drill-tab-total="drillState.tabTotal"
+          :drill-level-total="drillState.currentLevelTotal"
           :is-drill-leaf="drillState.isLeaf"
           :overridden-recategorize-count="drillState.overriddenRecategorizeCount"
           :is-honoring-recategorize-as="drillState.honorRecategorizeAs"

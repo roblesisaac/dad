@@ -217,6 +217,7 @@ export function resolveDrillState({
   if (!tab) {
     return {
       tabTotal: 0,
+      currentLevelTotal: 0,
       depth: 0,
       validPath: [],
       breadcrumbs: [],
@@ -271,6 +272,7 @@ export function resolveDrillState({
       if (!matchedGroup) {
         return {
           tabTotal: rootTabTotal,
+          currentLevelTotal: levelResult.tabTotal,
           depth,
           validPath,
           breadcrumbs,
@@ -300,6 +302,7 @@ export function resolveDrillState({
 
     return {
       tabTotal: rootTabTotal,
+      currentLevelTotal: levelResult.tabTotal,
       depth,
       validPath,
       breadcrumbs,
@@ -335,6 +338,7 @@ export function resolveDrillState({
 
   return {
     tabTotal: rootTabTotal,
+    currentLevelTotal: fallbackResult.tabTotal,
     depth: fallbackDepth,
     validPath,
     breadcrumbs,

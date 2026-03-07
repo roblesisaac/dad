@@ -219,6 +219,10 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  drillLevelTotal: {
+    type: Number,
+    default: 0
+  },
   isDrillLeaf: {
     type: Boolean,
     default: false
@@ -405,13 +409,9 @@ const totalNetBalance = computed(() => {
 });
 
 const selectedDrillTotal = computed(() => {
-  if (!props.isDrillLeaf) {
-    return Number(props.drillTabTotal || 0);
-  }
-
-  const selectedCrumbTotal = Number(drillBreadcrumbs.value[drillBreadcrumbs.value.length - 1]?.total);
-  if (Number.isFinite(selectedCrumbTotal)) {
-    return selectedCrumbTotal;
+  const levelTotal = Number(props.drillLevelTotal);
+  if (Number.isFinite(levelTotal)) {
+    return levelTotal;
   }
 
   return Number(props.drillTabTotal || 0);

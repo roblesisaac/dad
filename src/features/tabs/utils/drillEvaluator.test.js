@@ -86,6 +86,7 @@ describe('drillEvaluator', () => {
 
     const root = resolveDrillState({ tab, transactions, allRules: [], drillPath: [] });
     expect(root.isLeaf).toBe(false);
+    expect(root.currentLevelTotal).toBe(root.tabTotal);
     expect(root.groups.map(group => group.key)).toEqual(expect.arrayContaining(['food and drink', 'transportation']));
 
     const depthOne = resolveDrillState({
@@ -96,6 +97,7 @@ describe('drillEvaluator', () => {
     });
     expect(depthOne.validPath).toEqual(['food and drink']);
     expect(depthOne.isLeaf).toBe(false);
+    expect(depthOne.currentLevelTotal).not.toBe(root.tabTotal);
     expect(depthOne.groups.map(group => group.key)).toEqual(expect.arrayContaining(['2026 jan', '2026 feb']));
 
     const depthTwoLeaf = resolveDrillState({
