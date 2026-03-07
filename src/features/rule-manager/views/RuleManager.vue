@@ -100,32 +100,11 @@
               </span>
             </div>
             <div class="space-y-4 pt-2">
-              <div class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 space-y-4">
+              <div class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4">
                 <div class="flex flex-wrap gap-2">
                   <button
-                    v-for="groupOption in GROUP_BY_PRIMARY_OPTIONS"
-                    :key="`group-by-primary-${groupOption.value}`"
-                    @click="selectGroupByOption(groupOption.value)"
-                    :disabled="isSavingGroupBy"
-                    class="px-3 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-widest transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
-                    :style="getGroupByButtonStyle(groupOption.value)"
-                  >
-                    {{ groupOption.label }}
-                  </button>
-                </div>
-
-                <button
-                  @click="showAdvancedGroupBy = !showAdvancedGroupBy"
-                  class="w-full flex items-center justify-between px-3 py-2 rounded-xl border-2 border-gray-100 bg-white text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-black hover:border-black transition-colors"
-                >
-                  <span>Advanced</span>
-                  <ChevronDown :class="['w-4 h-4 transition-transform', showAdvancedGroupBy ? 'rotate-180' : '']" />
-                </button>
-
-                <div v-if="showAdvancedGroupBy" class="flex flex-wrap gap-2">
-                  <button
-                    v-for="groupOption in GROUP_BY_ADVANCED_OPTIONS"
-                    :key="`group-by-advanced-${groupOption.value}`"
+                    v-for="groupOption in GROUP_BY_OPTIONS"
+                    :key="`group-by-${groupOption.value}`"
                     @click="selectGroupByOption(groupOption.value)"
                     :disabled="isSavingGroupBy"
                     class="px-3 py-2 rounded-xl border-2 text-xs font-black uppercase tracking-widest transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -434,13 +413,11 @@ const {
 
 const emit = defineEmits(['close']);
 
-const GROUP_BY_PRIMARY_OPTIONS = [
+const GROUP_BY_OPTIONS = [
   { value: 'none', label: 'No Grouping' },
   { value: 'category', label: 'Category' },
-  { value: 'date', label: 'Date' }
-];
-
-const GROUP_BY_ADVANCED_OPTIONS = [
+  { value: 'name', label: 'Name' },
+  { value: 'date', label: 'Day' },
   { value: 'year_month', label: 'Month' },
   { value: 'weekday', label: 'Weekday' }
 ];
@@ -534,7 +511,6 @@ const currentRule = ref(null);
 const isNewRule = ref(false);
 const ruleToDelete = ref(null);
 const disabledSectionCollapsed = ref(true);
-const showAdvancedGroupBy = ref(false);
 const isSavingGroupBy = ref(false);
 const isSavingSort = ref(false);
 
@@ -1097,6 +1073,7 @@ function normalizeGroupByOptionForUi(rawGroupByOption) {
   const allowedGroupByOptions = new Set([
     'none',
     'category',
+    'name',
     'date',
     'year_month',
     'weekday'
