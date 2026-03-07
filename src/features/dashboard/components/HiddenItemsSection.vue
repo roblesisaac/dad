@@ -109,15 +109,15 @@
               type="button"
               @click="toggleGroupExpanded(group.key)"
             >
-              <div class="flex items-center gap-4 flex-1 min-w-0">
-                <span
-                  v-if="isGroupExpanded(group.key)"
-                  class="px-2 py-1 text-[10px] font-black hidden-tone-soft bg-gray-50 rounded-lg uppercase tracking-widest transition-colors shrink-0"
-                >
-                  {{ group.items.length }}
-                </span>
+              <div class="flex items-center gap-2 flex-1 min-w-0">
                 <span class="text-base font-black hidden-tone-main uppercase tracking-tight truncate transition-colors">
                   {{ group.label }}
+                </span>
+                <span
+                  v-if="isGroupExpanded(group.key)"
+                  class="text-[10px] font-black hidden-tone-soft uppercase tracking-widest shrink-0"
+                >
+                  ({{ group.items.length }})
                 </span>
               </div>
 
@@ -131,7 +131,10 @@
             </button>
           </div>
 
-          <div v-if="isGroupExpanded(group.key)">
+          <div
+            v-if="isGroupExpanded(group.key)"
+            :class="nestedRowsIndentClass"
+          >
             <div
               v-for="item in group.items"
               :key="hiddenItemKey(item)"
@@ -220,6 +223,7 @@ const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 const rowPaddingClass = computed(() => (props.withHorizontalPadding ? 'px-6' : ''));
+const nestedRowsIndentClass = computed(() => (props.withHorizontalPadding ? 'pl-4' : 'pl-3'));
 const sourceHiddenItems = computed(() => (Array.isArray(props.items) ? props.items : []));
 const hiddenAmountFilter = computed(() => {
   const selectedTabId = state.selected.tab?._id;
