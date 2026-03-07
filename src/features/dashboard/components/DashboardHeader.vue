@@ -119,7 +119,7 @@
           v-if="!isGroupSelectorView"
           class="clickable-date-selector"
         />
-        <span v-else>NET WORTH</span>
+        <span v-else>Available</span>
       </div>
     </div>
 
@@ -315,8 +315,8 @@ const headerTotal = computed(() => {
 const headerInfo = computed(() => {
   if (isGroupSelectorView.value) {
     return {
-      title: 'Net Worth',
-      summary: 'This is your total net worth across all connected accounts.',
+      title: 'Available',
+      summary: 'This is your total available money across all connected accounts.',
       details: [
         'Non-credit accounts use available balances.',
         'Credit accounts use current balances and are subtracted.'
