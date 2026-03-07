@@ -35,9 +35,9 @@
               <!-- Rule Action -->
               <div class="space-y-4">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Rule Action</label>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
                   <button
-                    v-for="t in ['categorize', 'sort', 'filter', 'groupBy']"
+                    v-for="t in RULE_ACTION_OPTIONS"
                     :key="t"
                     type="button"
                     @click="ruleData.rule[0] = t; updateRuleType()"
@@ -46,7 +46,7 @@
                       ? 'rule-action-button-active'
                       : 'rule-action-button-inactive'"
                   >
-                    {{ t === 'groupBy' ? 'Group By' : capitalizeFirstLetter(t) }}
+                    {{ capitalizeFirstLetter(t) }}
                   </button>
                 </div>
               </div>
@@ -331,6 +331,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'save']);
+const RULE_ACTION_OPTIONS = ['categorize', 'filter'];
 
 const METHOD_OPTIONS = {
   numeric: [
@@ -381,6 +382,9 @@ const GROUP_BY_OPTIONS = [
 
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
+if (!RULE_ACTION_OPTIONS.includes(ruleData.value.rule[0])) {
+  ruleData.value.rule = ['categorize', '', '', '', ''];
+}
 
 const criterionInput = ref(null);
 
