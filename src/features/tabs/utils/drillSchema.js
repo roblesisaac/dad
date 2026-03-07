@@ -1,5 +1,6 @@
 const DRILL_SCHEMA_VERSION = 1;
 const DEFAULT_LEVEL_GROUP_BY_RULE = ['groupBy', 'none', '', '', ''];
+const RECAT_BEHAVIOR_RULE_MARKER_PREFIX = '__recat_behavior:';
 
 export function normalizeDrillPath(path = []) {
   return (Array.isArray(path) ? path : [])
@@ -56,6 +57,21 @@ function normalizeRecategorizeBehaviorDecision(value) {
   return '';
 }
 
+function recategorizeDecisionFromRuleMarker(ruleValue) {
+  const normalizedRuleValue = String(ruleValue || '').trim().toLowerCase();
+  if (!normalizedRuleValue) {
+    return '';
+  }
+
+  if (normalizedRuleValue.startsWith(RECAT_BEHAVIOR_RULE_MARKER_PREFIX)) {
+    return normalizeRecategorizeBehaviorDecision(
+      normalizedRuleValue.slice(RECAT_BEHAVIOR_RULE_MARKER_PREFIX.length)
+    );
+  }
+
+  return normalizeRecategorizeBehaviorDecision(normalizedRuleValue);
+}
+
 function firstRuleForType(rules = [], ruleType) {
   const normalized = normalizeRuleList(rules, ruleType)
     .filter((ruleConfig) => ruleConfig.rule?.[0] === ruleType);
@@ -68,7 +84,9 @@ function normalizeDrillLevel(level = {}, fallbackIndex = 0) {
   const normalizedCategorizeRules = normalizeRuleList(level?.categorizeRules, 'categorize');
   const normalizedFilterRules = normalizeRuleList(level?.filterRules, 'filter');
   const groupByRule = firstRuleForType(level?.groupByRules, 'groupBy');
-  const explicitRecategorizeBehaviorDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision);
+  const recategorizeBehaviorDecisionFromRule = recategorizeDecisionFromRuleMarker(groupByRule?.rule?.[4]);
+  const explicitRecategorizeBehaviorDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision)
+    || recategorizeBehaviorDecisionFromRule;
   const fallbackHonorRecategorizeAs = Boolean(level?.honorRecategorizeAs);
   const honorRecategorizeAs = explicitRecategorizeBehaviorDecision
     ? explicitRecategorizeBehaviorDecision === 'honor'

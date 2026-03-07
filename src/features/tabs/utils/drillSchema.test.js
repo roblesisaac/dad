@@ -239,4 +239,27 @@ describe('drillSchema', () => {
     expect(normalized.drillSchema.levels[0].groupByRules[0].rule[1]).toBe('year_month');
     expect(Array.isArray(normalized.drillSchema.pathLevels)).toBe(true);
   });
+
+  test('reads recategorize behavior from group-by rule marker fallback', () => {
+    const schema = {
+      version: 1,
+      levels: [{
+        id: 'level-1',
+        sortRules: [],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [{
+          _id: 'group-0',
+          rule: ['groupBy', 'category', '', '', '__recat_behavior:honor'],
+          filterJoinOperator: 'and',
+          _isImportant: false,
+          orderOfExecution: 0
+        }]
+      }]
+    };
+
+    const rootLevel = levelRulesForDepth(schema, 0, []).level;
+    expect(rootLevel.recategorizeBehaviorDecision).toBe('honor');
+    expect(rootLevel.honorRecategorizeAs).toBe(true);
+  });
 });

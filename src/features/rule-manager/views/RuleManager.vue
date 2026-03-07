@@ -456,6 +456,7 @@ const SORT_DIRECTION_OPTIONS = [
   { value: 'asc' },
   { value: 'desc' }
 ];
+const RECAT_BEHAVIOR_RULE_MARKER_PREFIX = '__recat_behavior:';
 
 const standardRuleTypes = [
   { id: 'categorize', name: 'Categorize Rules', icon: FolderCheck },
@@ -643,6 +644,30 @@ function normalizeRecategorizeBehaviorDecision(value) {
   return '';
 }
 
+function recategorizeBehaviorRuleMarker(decision) {
+  const normalizedDecision = normalizeRecategorizeBehaviorDecision(decision);
+  return normalizedDecision
+    ? `${RECAT_BEHAVIOR_RULE_MARKER_PREFIX}${normalizedDecision}`
+    : '';
+}
+
+function applyRecategorizeMarkerToGroupByRule(ruleConfig, decision) {
+  const normalizedRule = Array.isArray(ruleConfig?.rule)
+    ? ruleConfig.rule.map(value => String(value ?? ''))
+    : ['groupBy', 'none', '', '', ''];
+
+  while (normalizedRule.length < 5) {
+    normalizedRule.push('');
+  }
+
+  normalizedRule[4] = recategorizeBehaviorRuleMarker(decision);
+
+  return {
+    ...ruleConfig,
+    rule: normalizedRule
+  };
+}
+
 function resolveRecategorizeBehaviorDecision(tab) {
   return normalizeRecategorizeBehaviorDecision(tab?.recategorizeBehaviorDecision);
 }
@@ -752,8 +777,26 @@ function buildDepthReplacementPayload() {
     sortRules: getEnabledRulesByType('sort').map(stripEditorFields),
     categorizeRules: getEnabledRulesByType('categorize').map(stripEditorFields),
     filterRules: getEnabledRulesByType('filter').map(stripEditorFields),
-    groupByRules: getEnabledRulesByType('groupBy').slice(0, 1).map(stripEditorFields)
+    groupByRules: buildGroupByRulesPayload(recategorizeBehaviorDecision.value)
   };
+}
+
+function buildGroupByRulesPayload(decision) {
+  const groupByRulesToPersist = getEnabledRulesByType('groupBy')
+    .slice(0, 1)
+    .map(stripEditorFields);
+
+  const safeGroupByRules = groupByRulesToPersist.length
+    ? groupByRulesToPersist
+    : [{
+        _id: `groupBy-${currentDepth.value + 1}`,
+        rule: ['groupBy', selectedGroupByOption.value || 'none', '', '', ''],
+        filterJoinOperator: 'and',
+        _isImportant: false,
+        orderOfExecution: 0
+      }];
+
+  return safeGroupByRules.map(ruleConfig => applyRecategorizeMarkerToGroupByRule(ruleConfig, decision));
 }
 
 async function persistDepthRules() {
@@ -867,8 +910,10 @@ async function onRecategorizeBehaviorDecisionChange(nextDecision) {
   try {
     await updateTabDrillSchemaAtPath(selectedTab._id, state.selected.drillPath, {
       honorRecategorizeAs: nextHonorPreference,
-      recategorizeBehaviorDecision: normalizedDecision
+      recategorizeBehaviorDecision: normalizedDecision,
+      groupByRules: buildGroupByRulesPayload(normalizedDecision)
     });
+    syncLocalRulesFromCurrentDepth();
     isAdvancedSectionOpen.value = false;
   } catch (error) {
     console.error('Error updating recategorize preference:', error);
@@ -1084,7 +1129,13 @@ function getGroupByButtonStyle(groupByOption) {
 
 async function upsertSingleLocalRule(typeId, ruleArray, options = {}) {
   const normalizedType = sanitizeRuleType(typeId);
-  const nextRule = createLocalRule(normalizedType, ruleArray, options);
+  const nextRule = createLocalRule(
+    normalizedType,
+    normalizedType === 'groupBy'
+      ? applyRecategorizeMarkerToGroupByRule({ rule: ruleArray }, recategorizeBehaviorDecision.value).rule
+      : ruleArray,
+    options
+  );
   localRulesByType.value[normalizedType] = withRenumberedOrder([nextRule]);
   await persistDepthRules();
 }

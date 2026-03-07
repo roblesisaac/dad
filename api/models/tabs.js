@@ -19,6 +19,7 @@ function normalizeSortByGroup(value) {
 }
 
 const DEFAULT_GROUP_BY_RULE = ['groupBy', 'none', '', '', ''];
+const RECAT_BEHAVIOR_RULE_MARKER_PREFIX = '__recat_behavior:';
 
 function normalizeDrillPath(path = []) {
   return (Array.isArray(path) ? path : [])
@@ -73,13 +74,30 @@ function normalizeRecategorizeBehaviorDecision(value) {
   return '';
 }
 
+function recategorizeDecisionFromRuleMarker(ruleValue) {
+  const normalizedRuleValue = String(ruleValue || '').trim().toLowerCase();
+  if (!normalizedRuleValue) {
+    return '';
+  }
+
+  if (normalizedRuleValue.startsWith(RECAT_BEHAVIOR_RULE_MARKER_PREFIX)) {
+    return normalizeRecategorizeBehaviorDecision(
+      normalizedRuleValue.slice(RECAT_BEHAVIOR_RULE_MARKER_PREFIX.length)
+    );
+  }
+
+  return normalizeRecategorizeBehaviorDecision(normalizedRuleValue);
+}
+
 function normalizeLevel(level = {}, fallbackIndex = 0) {
   const sortRules = normalizeRuleList(level?.sortRules, 'sort');
   const categorizeRules = normalizeRuleList(level?.categorizeRules, 'categorize');
   const filterRules = normalizeRuleList(level?.filterRules, 'filter');
   const groupByRule = normalizeRuleList(level?.groupByRules, 'groupBy')
     .find(ruleConfig => ruleConfig.rule?.[0] === 'groupBy');
-  const explicitRecategorizeBehaviorDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision);
+  const recategorizeBehaviorDecisionFromRule = recategorizeDecisionFromRuleMarker(groupByRule?.rule?.[4]);
+  const explicitRecategorizeBehaviorDecision = normalizeRecategorizeBehaviorDecision(level?.recategorizeBehaviorDecision)
+    || recategorizeBehaviorDecisionFromRule;
   const fallbackHonorRecategorizeAs = Boolean(level?.honorRecategorizeAs);
   const honorRecategorizeAs = explicitRecategorizeBehaviorDecision
     ? explicitRecategorizeBehaviorDecision === 'honor'

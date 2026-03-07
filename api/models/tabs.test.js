@@ -72,4 +72,25 @@ describe('tabs model drill schema normalization', () => {
     expect(normalized.levels[0].honorRecategorizeAs).toBe(false);
     expect(normalized.levels[0].recategorizeBehaviorDecision).toBe('');
   });
+
+  test('falls back to group-by rule marker when explicit fields are absent', async () => {
+    const { default: tabSchema } = await import('./tabs');
+    const normalizeDrillSchema = tabSchema.drillSchema;
+
+    const normalized = normalizeDrillSchema({
+      levels: [{
+        id: 'level-1',
+        sortRules: [],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [{
+          _id: 'groupBy-1',
+          rule: ['groupBy', 'category', '', '', '__recat_behavior:override']
+        }]
+      }]
+    }, { item: { drillSchema: true } });
+
+    expect(normalized.levels[0].honorRecategorizeAs).toBe(false);
+    expect(normalized.levels[0].recategorizeBehaviorDecision).toBe('override');
+  });
 });
