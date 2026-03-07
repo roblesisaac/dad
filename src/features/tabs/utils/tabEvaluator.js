@@ -556,7 +556,7 @@ function compareSortValues(valueA, valueB) {
 
 function buildSortMethod(sorters) {
   return (arrayToSort) => {
-    const arrayCopy = arrayToSort.map(item => JSON.parse(JSON.stringify(item)));
+    const arrayCopy = Array.isArray(arrayToSort) ? [...arrayToSort] : [];
     const sortersToApply = sorters.length
       ? sorters
       : [{ itemPropName: '-date' }];
@@ -582,6 +582,22 @@ function buildSortMethod(sorters) {
   };
 }
 
+function createEvaluationItem(item) {
+  const numericAmount = Number(item?.amount);
+  const normalizedAmount = Number.isFinite(numericAmount)
+    ? numericAmount * -1
+    : 0;
+  const personalFinanceCategory = item?.personal_finance_category;
+
+  return {
+    ...item,
+    amount: normalizedAmount,
+    personal_finance_category: personalFinanceCategory && typeof personalFinanceCategory === 'object'
+      ? { ...personalFinanceCategory }
+      : personalFinanceCategory
+  };
+}
+
 function buildCategorizeMethod(categorizers) {
   return (item) => {
     if (item.recategorizeAs) {
@@ -596,9 +612,18 @@ function buildCategorizeMethod(categorizers) {
     }
 
     let importantCategory = null;
+    let activeScope = null;
 
     for (const categorizeConfig of categorizers) {
       if (!categorizeConfig.method) continue;
+
+      const nextScope = categorizeConfig._isGlobalCategorizeRule
+        ? 'global'
+        : 'local';
+      if (nextScope !== activeScope) {
+        activeScope = nextScope;
+        importantCategory = null;
+      }
 
       const conditionMet = categorizeConfig.method(item);
 
@@ -741,8 +766,8 @@ export function evaluateTabData({
   const hiddenItems = [];
   let tabTotal = 0;
 
-  for (const item of dataCopy) {
-    item.amount *= -1;
+  for (const sourceItem of dataCopy) {
+    const item = createEvaluationItem(sourceItem);
 
     categorize(item);
 

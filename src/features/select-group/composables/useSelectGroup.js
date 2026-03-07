@@ -247,6 +247,28 @@ export function useSelectGroup() {
     return selectedGroup;
   }
 
+  async function persistSelectedGroupSelection(selectedGroupId) {
+    const normalizedSelectedGroupId = String(selectedGroupId || '').trim();
+    if (!normalizedSelectedGroupId) {
+      return;
+    }
+
+    const selectionUpdates = state.allUserGroups
+      .map(group => String(group?._id || '').trim())
+      .filter(Boolean)
+      .map((groupId) => (
+        groupId === normalizedSelectedGroupId
+          ? groupsAPI.updateGroupSelection(groupId, true)
+          : groupsAPI.deselectGroup(groupId)
+      ));
+
+    if (!selectionUpdates.length) {
+      return;
+    }
+
+    await Promise.allSettled(selectionUpdates);
+  }
+
   /**
    * Select a group and deselect others
    */
@@ -259,6 +281,7 @@ export function useSelectGroup() {
       return null;
     }
 
+    void persistSelectedGroupSelection(selectedGroup._id);
     await handleGroupChange();
 
     return selectedGroup;
