@@ -61,7 +61,8 @@ export function useInit() {
     const {
       preferredGroupId = '',
       prioritizeFirstPaint = true,
-      runPlaidSync = true
+      runPlaidSync = true,
+      preserveSelectedTab = false
     } = options;
     try {
       state.isInitialized = false;
@@ -102,7 +103,10 @@ export function useInit() {
 
           void (async () => {
             await fetchTabsAndRules();
-            await handleGroupChange({ showLoading: false });
+            await handleGroupChange({
+              showLoading: false,
+              preserveSelectedTab
+            });
             if (runPlaidSync) {
               await syncLatestTransactionsForAllBanks();
             }
@@ -111,7 +115,7 @@ export function useInit() {
           });
         } else {
           await fetchTabsAndRules();
-          await handleGroupChange();
+          await handleGroupChange({ preserveSelectedTab });
           state.isInitialized = true;
 
           if (runPlaidSync) {

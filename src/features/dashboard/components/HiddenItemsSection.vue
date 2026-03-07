@@ -19,10 +19,9 @@
       @touchend="handleHeaderTouchEnd"
       @touchcancel="clearLongPressTimer"
     >
-      <div class="flex items-center gap-2">
-        <h2 class="text-[10px] font-black uppercase tracking-widest hidden-tone-soft">Hidden Items</h2>
-        <span class="text-[10px] font-black hidden-tone-soft">{{ hiddenItems.length }}</span>
-      </div>
+      <h2 class="text-[10px] font-black uppercase tracking-widest hidden-tone-soft">
+        {{ hiddenItems.length }} hidden items totaling {{ formatPrice(hiddenItemsTotal, { toFixed: 0 }) }}
+      </h2>
 
       <div class="flex items-center gap-2">
         <button
@@ -238,6 +237,9 @@ const hiddenItems = computed(() => {
     const amount = Number(item?.amount);
     return Number.isFinite(amount) && amountFilter.predicate(amount);
   });
+});
+const hiddenItemsTotal = computed(() => {
+  return hiddenItems.value.reduce((total, item) => total + toSafeAmount(item?.amount), 0);
 });
 const hiddenItemsByName = computed(() => {
   return [...hiddenItems.value].sort((itemA, itemB) => {

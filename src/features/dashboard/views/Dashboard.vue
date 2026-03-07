@@ -739,7 +739,8 @@ watch(
 
 async function applyRemoteDashboardSyncRefresh(options = {}) {
   const {
-    runPlaidSync = true
+    runPlaidSync = true,
+    preserveSelectedTab = true
   } = options;
 
   if (isApplyingRemoteDashboardSync.value) {
@@ -756,7 +757,8 @@ async function applyRemoteDashboardSyncRefresh(options = {}) {
     await init({
       preferredGroupId,
       prioritizeFirstPaint: true,
-      runPlaidSync
+      runPlaidSync,
+      preserveSelectedTab
     });
 
     const routeView = normalizeDashboardView(queryValue(DASHBOARD_VIEW_QUERY_KEY));
