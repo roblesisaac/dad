@@ -19,7 +19,7 @@
       @touchend="handleHeaderTouchEnd"
       @touchcancel="clearLongPressTimer"
     >
-      <h2 class="text-[10px] font-black uppercase tracking-widest hidden-tone-soft">
+      <h2 class="text-[12px] font-black uppercase tracking-widest hidden-tone-soft">
         {{ hiddenItems.length }} hidden items totaling {{ formatPrice(hiddenItemsTotal, { toFixed: 0 }) }}
       </h2>
 
