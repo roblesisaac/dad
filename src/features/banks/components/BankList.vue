@@ -35,7 +35,7 @@
       <div 
         v-for="bank in banks" 
         :key="bank.itemId" 
-        class="relative bg-[var(--theme-browser-chrome)] transition-colors duration-150 w-full group shrink-0 select-none cursor-pointer hover:bg-[var(--theme-bg-soft)] block border-b border-[var(--theme-border)] last:border-0"
+        class="relative bg-[var(--theme-browser-chrome)] transition-colors duration-150 w-full group shrink-0 select-none cursor-pointer block border-b border-[var(--theme-border)] last:border-0"
         @click="$emit('select-bank', bank)"
       >
         <div class="flex items-center justify-between py-5 px-6 w-full relative">
@@ -67,7 +67,7 @@
           <div class="flex items-center gap-3 ml-4 shrink-0">
             <button 
               @click.stop="$emit('edit-bank-name', bank)"
-              class="p-2 rounded-xl text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] hover:bg-[var(--theme-bg-soft)] transition-colors focus:outline-none"
+              class="p-2 rounded-xl text-[var(--theme-text-soft)] hover:text-[var(--theme-text)] transition-colors focus:outline-none"
               title="Edit bank settings"
             >
               <Settings size="16" />

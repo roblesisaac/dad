@@ -13,7 +13,7 @@
   @touchcancel="clearLongPressTimer"
   :class="[
     !isEnabled ? 'opacity-60 grayscale' : '',
-    !isEditMode && isEnabled ? 'cursor-pointer hover:bg-[var(--theme-bg-soft)]' : '',
+    !isEditMode && isEnabled ? 'cursor-pointer' : '',
     isEditMode && isEnabled ? 'cursor-move' : '',
     isActiveTab && !isEditMode ? 'bg-[var(--theme-bg-soft)] active-z-index' : ''
   ]"

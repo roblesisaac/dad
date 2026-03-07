@@ -184,7 +184,7 @@ const displayName = computed(() => {
 const containerClasses = computed(() => {
   if (isDashboardVariant.value) {
     return [
-      'relative group dashboard-row-bg hover:bg-[var(--theme-bg-soft)] transition-all duration-300 w-full',
+      'relative group dashboard-row-bg transition-all duration-300 w-full',
       props.editMode ? 'cursor-move' : 'cursor-pointer',
       isSelected.value && !props.editMode ? 'bg-[var(--theme-bg-subtle)]' : ''
     ];

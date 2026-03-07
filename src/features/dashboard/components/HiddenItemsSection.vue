@@ -190,6 +190,8 @@ import { format, isValid, parseISO } from 'date-fns';
 import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
+import { buildTabRulesForId } from '@/features/tabs/utils/tabEvaluator.js';
+import { resolveAmountZeroHiddenFilter } from '@/features/tabs/utils/amountZeroFilter.js';
 import TransactionDetails from './TransactionDetails.vue';
 
 const props = defineProps({
@@ -218,7 +220,27 @@ const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
 const rowPaddingClass = computed(() => (props.withHorizontalPadding ? 'px-6' : ''));
-const hiddenItems = computed(() => (Array.isArray(props.items) ? props.items : []));
+const sourceHiddenItems = computed(() => (Array.isArray(props.items) ? props.items : []));
+const hiddenAmountFilter = computed(() => {
+  const selectedTabId = state.selected.tab?._id;
+  if (!selectedTabId) {
+    return null;
+  }
+
+  const tabRules = buildTabRulesForId(state.allUserRules, selectedTabId);
+  return resolveAmountZeroHiddenFilter(tabRules);
+});
+const hiddenItems = computed(() => {
+  const amountFilter = hiddenAmountFilter.value;
+  if (!amountFilter?.predicate) {
+    return sourceHiddenItems.value;
+  }
+
+  return sourceHiddenItems.value.filter((item) => {
+    const amount = Number(item?.amount);
+    return Number.isFinite(amount) && amountFilter.predicate(amount);
+  });
+});
 const hiddenItemsByName = computed(() => {
   return [...hiddenItems.value].sort((itemA, itemB) => {
     const nameSort = String(itemA?.name || '').localeCompare(String(itemB?.name || ''));

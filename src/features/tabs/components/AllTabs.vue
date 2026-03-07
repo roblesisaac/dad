@@ -62,7 +62,7 @@
       <button 
         @click="toggleDisabledSection" 
         :class="isDashboardVariant
-          ? 'flex items-center justify-between w-full py-6 hover:bg-[var(--theme-bg-soft)] transition-colors group focus:outline-none'
+          ? 'flex items-center justify-between w-full py-6 transition-colors group focus:outline-none'
           : 'flex items-center justify-between w-full mb-4 group focus:outline-none'"
       >
         <div class="flex items-center gap-2">
@@ -100,7 +100,7 @@
       <button 
         @click="handleCreateNew" 
         :class="isDashboardVariant
-          ? 'w-full py-6 flex items-center justify-between text-left hover:bg-[var(--theme-bg-soft)] transition-colors group focus:outline-none'
+          ? 'w-full py-6 flex items-center justify-between text-left transition-colors group focus:outline-none'
           : 'w-full py-4 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all border-2 border-[var(--theme-border)] shadow-[4px_4px_0px_0px_var(--theme-border)] hover:shadow-[6px_6px_0px_0px_var(--theme-border)] flex items-center justify-center gap-2 active:shadow-none active:translate-y-0.5'"
       >
         <template v-if="isDashboardVariant">
