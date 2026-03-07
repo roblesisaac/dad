@@ -57,7 +57,7 @@
               @group-selected="handleGroupSelected"
             />
 
-            <button
+            <!-- <button
               @click="router.push('/reports')"
               class="w-full text-left py-6 flex items-center justify-between transition-colors"
               type="button"
@@ -66,7 +66,7 @@
                 Reports
               </span>
               <ChevronRight class="w-4 h-4 text-[var(--theme-text-soft)]" />
-            </button>
+            </button> -->
           </div>
         </Transition>
 
@@ -103,19 +103,33 @@
         v-if="!state.isLoading && shouldShowFooter"
         class="fixed bottom-0 py-2 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
       >
-        <div class="max-w-5xl mx-auto w-full px-6 py-2 flex items-center">
-          <button
-            class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
-            type="button"
-            aria-label="Search transactions"
-            @click="openTransactionSearch"
-          >
-            <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
-              Search Transactions
-            </span>
-          </button>
+        <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-3 items-center">
+          <div class="flex justify-start">
+            <button
+              class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+              type="button"
+              aria-label="Transactions"
+              @click="openTransactionSearch"
+            >
+              <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+                Transactions
+              </span>
+            </button>
+          </div>
 
-          <div class="ml-auto flex items-center gap-6">
+          <!-- Route to /reports -->
+          <div class="flex justify-center">
+            <button @click="router.push('/reports')"
+              class="group focus:outline-none inline-flex items-center gap-1.5 hover:opacity-70 transition-opacity"
+              type="button"
+            >
+              <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
+                Reports
+              </span>
+            </button>
+          </div>
+
+          <div class="flex justify-end items-center gap-6">
             <button
               @click="isAccountModalOpen = true"
               class="group focus:outline-none flex items-center gap-1.5 hover:opacity-70 transition-opacity"
@@ -124,7 +138,6 @@
               <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em]">
                 Account
               </span>
-              <ChevronRight class="w-3.5 h-3.5 text-black group-hover:text-black transition-colors" />
             </button>
           </div>
         </div>

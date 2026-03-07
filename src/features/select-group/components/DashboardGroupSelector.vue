@@ -202,25 +202,6 @@
     </section>
 
     <div class="selector-divider">
-      <button
-        @click="handleSyncBankData"
-        class="utility-row"
-        type="button"
-        :disabled="isSyncingBankData"
-      >
-        <span class="text-base font-black uppercase tracking-tight selector-text">{{ syncBankDataLabel }}</span>
-        <RefreshCw class="w-4 h-4 selector-muted" :class="{ 'animate-spin': isSyncingBankData }" />
-      </button>
-
-      <button
-        @click="showBanksModal = true"
-        class="utility-row"
-        type="button"
-      >
-        <span class="text-base font-black uppercase tracking-tight selector-text">Manage Banks</span>
-        <Building class="w-4 h-4 selector-muted" />
-      </button>
-
     </div>
 
     <BaseModal
@@ -477,30 +458,20 @@
         </div>
       </template>
     </BaseModal>
-
-    <BanksModal
-      v-if="showBanksModal"
-      :is-open="showBanksModal"
-      @close="showBanksModal = false"
-      @connect-bank-complete="handleBankConnected"
-      @banks-data-changed="handleBanksDataChanged"
-    />
   </div>
 </template>
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { Check, Building, ChevronDown, ChevronRight, EllipsisVertical, GripVertical, RefreshCw, X } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronRight, EllipsisVertical, GripVertical, X } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI';
 import { useUtils } from '@/shared/composables/useUtils';
 import { useDraggable } from '@/shared/composables/useDraggable';
-import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import BaseModal from '@/shared/components/BaseModal.vue';
-import BanksModal from '@/features/banks/components/BanksModal.vue';
 import Switch from '@/shared/components/Switch.vue';
 
 const emit = defineEmits(['group-selected']);
@@ -516,7 +487,6 @@ const { state } = useDashboardState();
 const groupsAPI = useGroupsAPI();
 const { formatPrice } = useUtils();
 const { Draggable, dragOptions } = useDraggable();
-const { isSyncing: isSyncingBankData, syncLatestTransactionsForAllBanks } = usePlaidSync();
 const {
   labelGroups,
   selectGroup,
@@ -560,7 +530,7 @@ const isSavingAddLabel = ref(false);
 const isInlineCreatingLabel = ref(false);
 const newLabelInput = ref('');
 
-const showBanksModal = ref(false);
+// const showBanksModal = ref(false);
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
 
@@ -582,9 +552,6 @@ const allAccountsNetBalance = computed(() => {
   return (state.allUserAccounts || []).reduce((sum, account) => sum + accountNetBalance(account), 0);
 });
 const isExternalReorderActive = computed(() => props.rearrangeActive);
-const syncBankDataLabel = computed(() => (
-  isSyncingBankData.value ? 'Syncing Bank Data' : 'Sync Bank Data'
-));
 
 const activeLabelGroup = computed(() => {
   if (!activeLabelMenuId.value) {
@@ -1607,7 +1574,6 @@ async function saveViewLabelAccounts() {
   closeViewLabelAccountsModal();
   await refreshSelectedGroupIfNeeded([targetLabelId]);
 }
-
 async function refreshSelectedGroupIfNeeded(changedGroupIds = []) {
   const selectedGroupId = state.selected.group?._id;
   if (!selectedGroupId || !changedGroupIds.includes(selectedGroupId)) {
@@ -1617,38 +1583,7 @@ async function refreshSelectedGroupIfNeeded(changedGroupIds = []) {
   await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
 }
 
-async function handleSyncBankData() {
-  if (isSyncingBankData.value) {
-    return;
-  }
 
-  await syncLatestTransactionsForAllBanks();
-  await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
-}
-
-async function handleBankConnected() {
-  showBanksModal.value = false;
-}
-
-async function handleBanksDataChanged() {
-  try {
-    const { groups, accounts, itemsNeedingReauth } = await fetchGroupsAndAccounts();
-
-    state.itemsNeedingReauth = itemsNeedingReauth || [];
-    state.allUserGroups = (groups || []).sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
-    state.allUserAccounts = accounts || [];
-
-    if (!state.allUserGroups.length || !state.allUserAccounts.length) {
-      showBanksModal.value = false;
-      state.isOnboarding = true;
-      return;
-    }
-
-    await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
-  } catch (error) {
-    console.error('Error refreshing groups and accounts after bank data change', error);
-  }
-}
 </script>
 
 <style scoped>

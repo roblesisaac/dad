@@ -77,6 +77,31 @@
               </p>
             </div>
 
+            <div class="mb-4 space-y-3">
+              <button
+                type="button"
+                class="account-action-button w-full rounded-2xl px-6 py-4 flex items-center justify-between transition-all"
+                :disabled="isSyncingBankData"
+                @click="handleSyncBankData"
+              >
+                <span class="text-[10px] font-black uppercase tracking-[0.2em]">
+                  {{ syncBankDataLabel }}
+                </span>
+                <RefreshCw class="h-4 w-4" :class="{ 'animate-spin': isSyncingBankData }" />
+              </button>
+
+              <button
+                type="button"
+                class="account-action-button w-full rounded-2xl px-6 py-4 flex items-center justify-between transition-all"
+                @click="showBanksModal = true"
+              >
+                <span class="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Manage Banks
+                </span>
+                <Building class="h-4 w-4" />
+              </button>
+            </div>
+
             <button
               type="button"
               class="account-logout-button w-full rounded-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-all"
@@ -85,6 +110,14 @@
               Sign Out
             </button>
           </div>
+
+          <BanksModal
+            v-if="showBanksModal"
+            :is-open="showBanksModal"
+            @close="showBanksModal = false"
+            @connect-bank-complete="handleBankConnected"
+            @banks-data-changed="handleBanksDataChanged"
+          />
         </div>
       </div>
     </Transition>
@@ -93,10 +126,14 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { X } from 'lucide-vue-next';
+import { X, Building, RefreshCw } from 'lucide-vue-next';
 import { useTheme } from '@/theme/useTheme.js';
 import { useAuth } from '@/shared/composables/useAuth.js';
 import { usePwaUpdate } from '@/shared/composables/usePwaUpdate.js';
+import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
+import BanksModal from '@/features/banks/components/BanksModal.vue';
 
 defineProps({
   isOpen: {
@@ -109,8 +146,55 @@ const emit = defineEmits(['close']);
 const { themePreference, setTheme, resolvedTheme } = useTheme();
 const { logoutUser } = useAuth();
 const { needRefresh, reload, checkForUpdates } = usePwaUpdate();
+const { isSyncing: isSyncingBankData, syncLatestTransactionsForAllBanks } = usePlaidSync();
+const { state } = useDashboardState();
+const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
+
 const isCheckingUpdates = ref(false);
 const updateStatusMessage = ref('');
+const showBanksModal = ref(false);
+
+const syncBankDataLabel = computed(() => (
+  isSyncingBankData.value ? 'Syncing Bank Data' : 'Sync Bank Data'
+));
+
+async function handleSyncBankData() {
+  if (isSyncingBankData.value) {
+    return;
+  }
+
+  try {
+    await syncLatestTransactionsForAllBanks();
+    await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
+  } catch (error) {
+    console.error('Failed to sync bank data:', error);
+  }
+}
+
+async function handleBankConnected() {
+  showBanksModal.value = false;
+  await fetchGroupsAndAccounts();
+}
+
+async function handleBanksDataChanged() {
+  try {
+    const { groups, accounts, itemsNeedingReauth } = await fetchGroupsAndAccounts();
+
+    state.itemsNeedingReauth = itemsNeedingReauth || [];
+    state.allUserGroups = (groups || []).sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+    state.allUserAccounts = accounts || [];
+
+    if (!state.allUserGroups.length || !state.allUserAccounts.length) {
+      showBanksModal.value = false;
+      state.isOnboarding = true;
+      return;
+    }
+
+    await handleGroupChange({ forceRefresh: true, preserveSelectedTab: true });
+  } catch (error) {
+    console.error('Error refreshing groups and accounts after bank data change', error);
+  }
+}
 
 const accountThemeOptions = [
   { value: 'system', label: 'System', style: { background: 'linear-gradient(135deg, #f3f3ee 50%, #000000 50%)' } },
@@ -249,6 +333,21 @@ function handleLogout() {
   background: transparent;
   color: var(--theme-btn-secondary-text);
   border: 1px solid var(--theme-btn-secondary-border);
+}
+
+.account-action-button {
+  background: var(--theme-bg-soft);
+  color: var(--theme-text);
+  border: 1px solid var(--theme-border);
+}
+
+.account-action-button:hover:not(:disabled) {
+  background: var(--theme-bg-subtle);
+}
+
+.account-action-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 
 .account-update-button:hover:not(:disabled) {
