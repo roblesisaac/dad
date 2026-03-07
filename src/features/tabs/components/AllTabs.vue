@@ -75,7 +75,7 @@
         </div>
       </button>
       
-      <div v-if="showDisabledTabs">
+      <div v-if="disabledTabs.length > 0 && showDisabledTabs">
         <AllTabRow 
           v-for="tab in disabledTabs"
           :key="tab._id"
