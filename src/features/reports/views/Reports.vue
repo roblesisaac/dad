@@ -433,7 +433,15 @@
                           </div>
                         </div>
                       </div>
-                      <p class="text-sm text-gray-500 mt-1">
+                      <template v-if="row.type === 'tab'">
+                        <p class="text-sm text-gray-500 mt-1">
+                          {{ tabRowScopeLine(row) }}
+                        </p>
+                        <p class="text-xs text-gray-400 mt-0.5">
+                          {{ tabRowDateLine(row) }}
+                        </p>
+                      </template>
+                      <p v-else class="text-sm text-gray-500 mt-1">
                         {{ rowSubtitle(row) }}
                       </p>
                       <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-red-600 mt-1">
@@ -1055,6 +1063,7 @@ import { encodeDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
 import {
   normalizeManualAmountDisplayType,
   normalizeReportDrillPath,
+  normalizeReportDrillPathLabels,
   useReportsState
 } from '@/features/reports/composables/useReportsState.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
@@ -1400,9 +1409,17 @@ async function loadTabRowCategoryGuide() {
   }
 
   const normalizedDraftPath = normalizeReportDrillPath(rowEditorDraft.value.drillPath);
-  if (!sameDrillPath(normalizedDraftPath, tabRowCategoryGuideState.value.validPath)) {
-    rowEditorDraft.value.drillPath = [...tabRowCategoryGuideState.value.validPath];
+  const normalizedGuidePath = normalizeReportDrillPath(tabRowCategoryGuideState.value.validPath);
+  const normalizedGuideLabels = normalizeReportDrillPathLabels(
+    tabRowCategoryGuideState.value.validPathLabels,
+    normalizedGuidePath
+  );
+
+  if (!sameDrillPath(normalizedDraftPath, normalizedGuidePath)) {
+    rowEditorDraft.value.drillPath = [...normalizedGuidePath];
   }
+
+  rowEditorDraft.value.drillPathLabels = [...normalizedGuideLabels];
 }
 
 function onTabRowCategoryDepthChange(depth, value) {
@@ -1412,13 +1429,19 @@ function onTabRowCategoryDepthChange(depth, value) {
 
   const safeDepth = Number.isInteger(depth) && depth >= 0 ? depth : 0;
   const basePath = normalizeReportDrillPath(rowEditorDraft.value.drillPath).slice(0, safeDepth);
+  const baseLabels = normalizeReportDrillPathLabels(
+    rowEditorDraft.value.drillPathLabels,
+    rowEditorDraft.value.drillPath
+  ).slice(0, safeDepth);
   const nextValue = String(value || '').trim().toLowerCase();
 
   if (nextValue) {
     basePath.push(nextValue);
+    baseLabels.push(normalizeReportDrillPathLabels([], [nextValue])[0] || nextValue);
   }
 
   rowEditorDraft.value.drillPath = basePath;
+  rowEditorDraft.value.drillPathLabels = baseLabels;
 }
 
 function syncRowEditorTabSelectionForScope() {
@@ -2258,6 +2281,23 @@ function groupName(groupId) {
   return groupAccountLabelById.value.get(groupId) || 'Group / account not found';
 }
 
+function tabRowPathLabels(row) {
+  return normalizeReportDrillPathLabels(row?.drillPathLabels, row?.drillPath);
+}
+
+function tabRowScopeLine(row) {
+  const pathLabels = tabRowPathLabels(row);
+  const scopePath = pathLabels.length > 1 ? pathLabels.slice(0, -1) : [];
+
+  return [groupName(row?.groupId), ...scopePath]
+    .filter(Boolean)
+    .join(' / ');
+}
+
+function tabRowDateLine(row) {
+  return `${row?.dateStart || '—'} to ${row?.dateEnd || '—'}`;
+}
+
 function rowTitle(row) {
   if (row.type === 'manual') {
     return row.title || 'Untitled manual row';
@@ -2266,6 +2306,11 @@ function rowTitle(row) {
   if (row.type === 'report') {
     const linkedReport = state.reports.find(report => report._id === row.reportId);
     return linkedReport?.name || row.reportName || 'Report not found';
+  }
+
+  const pathLabels = tabRowPathLabels(row);
+  if (pathLabels.length) {
+    return pathLabels[pathLabels.length - 1];
   }
 
   return tabName(row.tabId);
@@ -2280,12 +2325,7 @@ function rowSubtitle(row) {
     return 'Existing report row';
   }
 
-  const drillPath = normalizeReportDrillPath(row?.drillPath);
-  const drillPathLabel = drillPath.length
-    ? ` · ${drillPath.join(' / ')}`
-    : '';
-
-  return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}${drillPathLabel}`;
+  return `${tabRowScopeLine(row)} · ${tabRowDateLine(row)}`;
 }
 
 function existingRowTypeLabel(row) {
@@ -2355,6 +2395,7 @@ function buildRowCopyPayload(row) {
       dateStart: row.dateStart || '',
       dateEnd: row.dateEnd || '',
       drillPath: normalizeReportDrillPath(row.drillPath),
+      drillPathLabels: normalizeReportDrillPathLabels(row.drillPathLabels, row.drillPath),
       savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0
     };
   }
@@ -2394,6 +2435,7 @@ function buildRowEditorDraft(row) {
 
   if (nextDraft.type === 'tab') {
     nextDraft.drillPath = normalizeReportDrillPath(nextDraft.drillPath);
+    nextDraft.drillPathLabels = normalizeReportDrillPathLabels(nextDraft.drillPathLabels, nextDraft.drillPath);
   }
 
   if (nextDraft.type === 'manual') {

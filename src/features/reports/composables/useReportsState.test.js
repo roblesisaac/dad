@@ -8,6 +8,7 @@ let resolveReportRowAmounts;
 let buildTransactionsCacheKey;
 let buildRowStateKey;
 let normalizeReportDrillPath;
+let normalizeReportDrillPathLabels;
 
 beforeAll(async () => {
   global.window = {
@@ -25,6 +26,7 @@ beforeAll(async () => {
   buildTransactionsCacheKey = helpers.buildTransactionsCacheKey;
   buildRowStateKey = helpers.buildRowStateKey;
   normalizeReportDrillPath = helpers.normalizeReportDrillPath;
+  normalizeReportDrillPathLabels = helpers.normalizeReportDrillPathLabels;
 });
 
 describe('useReportsState helpers', () => {
@@ -65,6 +67,7 @@ describe('useReportsState helpers', () => {
       rowId: 't1',
       type: 'tab',
       drillPath: ['money out', 'dine out'],
+      drillPathLabels: ['Money Out', 'Dine Out'],
       savedTotal: 99.9,
       sort: 0
     });
@@ -104,6 +107,14 @@ describe('useReportsState helpers', () => {
   test('normalizes tab drill path values', () => {
     expect(normalizeReportDrillPath([' Money Out ', 'Dine Out', '', null])).toEqual(['money out', 'dine out']);
     expect(normalizeReportDrillPath('not-an-array')).toEqual([]);
+  });
+
+  test('normalizes tab drill path labels with fallback from path keys', () => {
+    expect(normalizeReportDrillPathLabels([' Money Out ', '', 'Dine Out'], ['money out', 'dine out'])).toEqual([
+      'Money Out',
+      'Dine Out'
+    ]);
+    expect(normalizeReportDrillPathLabels([], ['fast food', 'late night'])).toEqual(['Fast Food', 'Late Night']);
   });
 
   test('normalizes report list sort order', () => {

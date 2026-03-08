@@ -41,6 +41,24 @@ export function normalizeReportDrillPath(path = []) {
     .filter(Boolean);
 }
 
+export function normalizeReportDrillPathLabels(labels = [], drillPath = []) {
+  const normalizedLabels = (Array.isArray(labels) ? labels : [])
+    .map((label) => String(label || '').trim())
+    .filter(Boolean);
+
+  if (normalizedLabels.length) {
+    return normalizedLabels;
+  }
+
+  return normalizeReportDrillPath(drillPath).map((segment) => (
+    segment
+      .split(/\s+/)
+      .filter(Boolean)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  ));
+}
+
 function sameReportDrillPath(pathA = [], pathB = []) {
   const normalizedA = normalizeReportDrillPath(pathA);
   const normalizedB = normalizeReportDrillPath(pathB);
@@ -92,6 +110,7 @@ export function normalizeRowsForLocal(rows = []) {
         dateStart: typeof row.dateStart === 'string' ? row.dateStart : '',
         dateEnd: typeof row.dateEnd === 'string' ? row.dateEnd : '',
         drillPath: normalizeReportDrillPath(row.drillPath),
+        drillPathLabels: normalizeReportDrillPathLabels(row.drillPathLabels, row.drillPath),
         savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0,
         sort: Number.isFinite(row.sort) ? row.sort : index
       };
@@ -701,6 +720,7 @@ export function useReportsState() {
       dateStart: toYyyyMmDd(startOfMonth(new Date())),
       dateEnd: toYyyyMmDd(new Date()),
       drillPath: [],
+      drillPathLabels: [],
       savedTotal: 0,
       sort
     };
@@ -1458,6 +1478,9 @@ export function useReportsState() {
           drillPath: updates.drillPath !== undefined
             ? normalizeReportDrillPath(updates.drillPath)
             : normalizeReportDrillPath(row.drillPath),
+          drillPathLabels: updates.drillPathLabels !== undefined
+            ? normalizeReportDrillPathLabels(updates.drillPathLabels, updates.drillPath)
+            : normalizeReportDrillPathLabels(row.drillPathLabels, row.drillPath),
           savedTotal: Number.isFinite(Number(updates.savedTotal)) ? Number(updates.savedTotal) : row.savedTotal
         };
       }
