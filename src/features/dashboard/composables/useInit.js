@@ -1,5 +1,4 @@
 import { useDashboardState } from './useDashboardState.js';
-import { useRouter } from 'vue-router';
 import { useApi } from '@/shared/composables/useApi.js';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI.js';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
@@ -15,16 +14,78 @@ import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js'
  * Manages the state of the dashboard and delegates operations to specialized composables
  */
 export function useInit() {
-  // Initialize API and router
+  // Initialize API
   const api = useApi();
-  const router = useRouter();
   const { state } = useDashboardState();
   const { syncLatestTransactionsForAllBanks } = usePlaidSync();
+  let pendingPostInitWorkflow = null;
 
   // Initialize API composables
   const tabsAPI = useTabsAPI(api);
   const rulesAPI = useRulesAPI(api);
   const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
+
+  function mergeRuntimeTabStateWithFetchedTabs(fetchedTabs = []) {
+    const existingTabsById = new Map(
+      (Array.isArray(state.allUserTabs) ? state.allUserTabs : [])
+        .map((tab) => [String(tab?._id || ''), tab])
+        .filter(([tabId]) => Boolean(tabId))
+    );
+
+    return fetchedTabs.map((tab) => {
+      const tabId = String(tab?._id || '');
+      const existingTab = existingTabsById.get(tabId);
+      if (!existingTab) {
+        return tab;
+      }
+
+      const existingTotal = Number(existingTab?.total);
+      const fetchedTotal = Number(tab?.total);
+      const existingOverriddenCount = Number(existingTab?.overriddenRecategorizeCount);
+      const fetchedOverriddenCount = Number(tab?.overriddenRecategorizeCount);
+
+      return {
+        ...tab,
+        isSelected: Boolean(existingTab?.isSelected),
+        categorizedItems: Array.isArray(existingTab?.categorizedItems)
+          ? existingTab.categorizedItems
+          : (Array.isArray(tab?.categorizedItems) ? tab.categorizedItems : []),
+        hiddenItems: Array.isArray(existingTab?.hiddenItems)
+          ? existingTab.hiddenItems
+          : (Array.isArray(tab?.hiddenItems) ? tab.hiddenItems : []),
+        groupByMode: String(existingTab?.groupByMode || tab?.groupByMode || 'category'),
+        total: Number.isFinite(existingTotal)
+          ? existingTotal
+          : (Number.isFinite(fetchedTotal) ? fetchedTotal : 0),
+        overriddenRecategorizeCount: Number.isFinite(existingOverriddenCount)
+          ? existingOverriddenCount
+          : (Number.isFinite(fetchedOverriddenCount) ? fetchedOverriddenCount : 0)
+      };
+    });
+  }
+
+  async function waitForPendingPostInitWorkflow() {
+    if (!pendingPostInitWorkflow) {
+      return;
+    }
+
+    try {
+      await pendingPostInitWorkflow;
+    } catch (_error) {
+      // Ignore previous post-init errors so a new refresh can proceed.
+    }
+  }
+
+  function setPendingPostInitWorkflow(workflowPromise) {
+    const trackedWorkflow = workflowPromise.finally(() => {
+      if (pendingPostInitWorkflow === trackedWorkflow) {
+        pendingPostInitWorkflow = null;
+      }
+    });
+
+    pendingPostInitWorkflow = trackedWorkflow;
+    return trackedWorkflow;
+  }
 
   async function fetchTabsAndRules() {
     try {
@@ -63,7 +124,7 @@ export function useInit() {
         await Promise.allSettled(pendingMigrationUpdates);
       }
 
-      state.allUserTabs = normalizedTabs;
+      state.allUserTabs = mergeRuntimeTabStateWithFetchedTabs(normalizedTabs);
       state.allUserRules = safeRules;
     } catch (error) {
       console.error('Error fetching tabs/rules:', error);
@@ -110,6 +171,7 @@ export function useInit() {
     const {
       preferredGroupId = '',
       prioritizeFirstPaint = true,
+      awaitPostInitWorkflow = false,
       runPlaidSync = true,
       preserveSelectedTab = false
     } = options;
@@ -150,7 +212,9 @@ export function useInit() {
           state.isInitialized = true;
           state.isLoading = false;
 
-          void (async () => {
+          await waitForPendingPostInitWorkflow();
+
+          const postInitWorkflow = (async () => {
             await fetchTabsAndRules();
             await handleGroupChange({
               showLoading: false,
@@ -159,10 +223,19 @@ export function useInit() {
             if (runPlaidSync) {
               await syncLatestTransactionsForAllBanks();
             }
-          })().catch((backgroundError) => {
-            console.error('Background init workflow error:', backgroundError);
           });
+
+          const trackedWorkflow = setPendingPostInitWorkflow(postInitWorkflow);
+
+          if (awaitPostInitWorkflow) {
+            await trackedWorkflow;
+          } else {
+            void trackedWorkflow.catch((backgroundError) => {
+              console.error('Background init workflow error:', backgroundError);
+            });
+          }
         } else {
+          await waitForPendingPostInitWorkflow();
           await fetchTabsAndRules();
           await handleGroupChange({ preserveSelectedTab });
           state.isInitialized = true;

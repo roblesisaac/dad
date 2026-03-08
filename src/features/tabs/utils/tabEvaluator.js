@@ -837,6 +837,7 @@ export function evaluateTabData({
 
   const dataCopy = sort(transactions);
   const categorizedItems = [];
+  const categorizedItemsByGroup = new Map();
   const hiddenItems = [];
   let tabTotal = 0;
   let overriddenRecategorizeCount = 0;
@@ -865,15 +866,15 @@ export function evaluateTabData({
 
     if (!tab.isSelected) continue;
 
-    const storedCategory = categorizedItems.find(([storedGroupByName]) =>
-      storedGroupByName === typeToGroupBy
-    );
+    const storedCategory = categorizedItemsByGroup.get(typeToGroupBy);
 
     if (storedCategory) {
       storedCategory[1].push(item);
       storedCategory[2] = storedCategory[2] + safeAmount;
     } else {
-      categorizedItems.push([typeToGroupBy, [item], safeAmount]);
+      const nextCategory = [typeToGroupBy, [item], safeAmount];
+      categorizedItems.push(nextCategory);
+      categorizedItemsByGroup.set(typeToGroupBy, nextCategory);
     }
   }
 

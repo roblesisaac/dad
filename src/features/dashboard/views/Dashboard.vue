@@ -272,12 +272,37 @@ const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
 const pendingSingleTabSelection = ref(null);
 const tabEditorSnapshot = ref({ tabId: '', fingerprint: '' });
-const drillState = computed(() => resolveDrillState({
-  tab: state.selected.tab,
-  transactions: state.selected.allGroupTransactions,
-  allRules: state.allUserRules,
-  drillPath: state.selected.drillPath
-}));
+const EMPTY_DRILL_STATE = Object.freeze({
+  tabTotal: 0,
+  currentLevelTotal: 0,
+  depth: 0,
+  validPath: [],
+  breadcrumbs: [],
+  groups: [],
+  transactions: [],
+  hiddenItems: [],
+  groupByMode: 'none',
+  isLeaf: true,
+  overriddenRecategorizeCount: 0,
+  honorRecategorizeAs: false,
+  hasRecategorizeBehaviorDecision: false,
+  recategorizeBehaviorDecision: ''
+});
+const shouldComputeDrillState = computed(() => (
+  Boolean(state.selected.tab) && (isDrillView.value || showRuleManagerModal.value)
+));
+const drillState = computed(() => {
+  if (!shouldComputeDrillState.value) {
+    return EMPTY_DRILL_STATE;
+  }
+
+  return resolveDrillState({
+    tab: state.selected.tab,
+    transactions: state.selected.allGroupTransactions,
+    allRules: state.allUserRules,
+    drillPath: state.selected.drillPath
+  });
+});
 
 const {
   isRefreshing: isPullRefreshing,
@@ -904,7 +929,7 @@ watch(
 
 async function applyRemoteDashboardSyncRefresh(options = {}) {
   const {
-    runPlaidSync = true,
+    runPlaidSync = false,
     preserveSelectedTab = true
   } = options;
 
@@ -920,6 +945,7 @@ async function applyRemoteDashboardSyncRefresh(options = {}) {
     await init({
       preferredGroupId,
       prioritizeFirstPaint: true,
+      awaitPostInitWorkflow: true,
       runPlaidSync,
       preserveSelectedTab
     });

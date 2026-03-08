@@ -345,19 +345,26 @@ export function useTabs() {
 
     if(prevSelectedTab) {
       prevSelectedTab.isSelected = false;
-      prevSelectedTab.categorizedItems = [];
-      prevSelectedTab.hiddenItems = [];
     }
 
     tabToSelect.isSelected = true;
-    tabToSelect.categorizedItems = [];
-    tabToSelect.hiddenItems = [];
-    tabToSelect.groupByMode = 'category';
-    const processed = processTabData(tabToSelect);
-    if(processed) {
-      tabToSelect.categorizedItems = processed.categorizedItems;
-      tabToSelect.hiddenItems = Array.isArray(processed.hiddenItems) ? processed.hiddenItems : [];
-      tabToSelect.groupByMode = processed.groupByMode || 'category';
+    tabToSelect.categorizedItems = Array.isArray(tabToSelect.categorizedItems) ? tabToSelect.categorizedItems : [];
+    tabToSelect.hiddenItems = Array.isArray(tabToSelect.hiddenItems) ? tabToSelect.hiddenItems : [];
+    tabToSelect.groupByMode = String(tabToSelect.groupByMode || 'category');
+
+    const missingProcessedState = (
+      !tabToSelect.categorizedItems.length
+      && !tabToSelect.hiddenItems.length
+      && !Number.isFinite(Number(tabToSelect.total))
+    );
+
+    if (missingProcessedState) {
+      const processed = processTabData(tabToSelect);
+      if(processed) {
+        tabToSelect.categorizedItems = processed.categorizedItems;
+        tabToSelect.hiddenItems = Array.isArray(processed.hiddenItems) ? processed.hiddenItems : [];
+        tabToSelect.groupByMode = processed.groupByMode || 'category';
+      }
     }
   }
 
