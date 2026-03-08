@@ -273,8 +273,37 @@
 
               <!-- Result (Categorize specific) -->
               <div v-if="ruleData.rule[0] === 'categorize'" class="space-y-4">
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Assign to Category</label>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  {{ props.scope === 'global' ? 'Set' : 'Assign to Category' }}
+                </label>
+
+                <div
+                  v-if="props.scope === 'global'"
+                  class="grid grid-cols-1 sm:grid-cols-[220px_minmax(0,1fr)] gap-4"
+                >
+                  <select
+                    v-model="ruleData.rule[4]"
+                    class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                  >
+                    <option
+                      v-for="categorizeSetTargetOption in CATEGORIZE_SET_TARGET_OPTIONS"
+                      :key="`categorize-set-target-option-${categorizeSetTargetOption.value}`"
+                      :value="categorizeSetTargetOption.value"
+                    >
+                      {{ categorizeSetTargetOption.label }}
+                    </option>
+                  </select>
+
+                  <input 
+                    v-model="ruleData.rule[5]" 
+                    type="text" 
+                    class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
+                    :placeholder="getCategorizeSetValuePlaceholder(ruleData.rule[4])"
+                  />
+                </div>
+
                 <input 
+                  v-else
                   v-model="ruleData.rule[4]" 
                   type="text" 
                   class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
@@ -421,6 +450,11 @@ const GROUP_BY_OPTIONS = [
   { value: 'weekday', label: 'Weekday' }
 ];
 
+const CATEGORIZE_SET_TARGET_OPTIONS = [
+  { value: 'category', label: 'Category' },
+  { value: 'name', label: 'Name' }
+];
+
 const criterionInput = ref(null);
 
 function adjustHeight(el) {
@@ -463,6 +497,7 @@ const supportsAndCondition = computed(() =>
 );
 
 const andConditions = ref(extractAndConditions(ruleData.value.rule));
+normalizeGlobalCategorizeRuleForEditor();
 
 const hasAndConditions = computed(() => andConditions.value.length > 0);
 
@@ -556,8 +591,60 @@ function updateRuleType() {
   }
   
   if (ruleData.value.rule[0] === 'categorize') {
-    ruleData.value.rule[4] = '';
+    if (props.scope === 'global') {
+      ruleData.value.rule[4] = 'category';
+      ruleData.value.rule[5] = '';
+    } else {
+      ruleData.value.rule[4] = '';
+    }
   }
+}
+
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name';
+}
+
+function normalizeCategorizeSetTarget(target) {
+  return String(target || '').trim().toLowerCase() === 'name'
+    ? 'name'
+    : 'category';
+}
+
+function isCategorizeRuleUsingSetTarget(rule = []) {
+  return Array.isArray(rule)
+    && rule[0] === 'categorize'
+    && rule.length >= 6
+    && (rule.length - 6) % 4 === 0
+    && isCategorizeSetTarget(rule[4]);
+}
+
+function getCategorizeConditionStartIndex(rule = []) {
+  return isCategorizeRuleUsingSetTarget(rule) ? 6 : 5;
+}
+
+function normalizeGlobalCategorizeRuleForEditor() {
+  if (props.scope !== 'global' || ruleData.value.rule[0] !== 'categorize') {
+    return;
+  }
+
+  const sourceRule = Array.isArray(ruleData.value.rule) ? ruleData.value.rule : [];
+  const usesSetTarget = isCategorizeRuleUsingSetTarget(sourceRule);
+
+  ruleData.value.rule = [
+    'categorize',
+    sourceRule[1] ?? '',
+    sourceRule[2] ?? '',
+    sourceRule[3] ?? '',
+    usesSetTarget ? normalizeCategorizeSetTarget(sourceRule[4]) : 'category',
+    usesSetTarget ? (sourceRule[5] ?? '') : (sourceRule[4] ?? '')
+  ];
+}
+
+function getCategorizeSetValuePlaceholder(setTarget) {
+  return normalizeCategorizeSetTarget(setTarget) === 'name'
+    ? 'e.g. Uber Eats'
+    : 'e.g. Groceries';
 }
 
 function getCriterionPlaceholder() {
@@ -757,6 +844,10 @@ function saveRule() {
     ruleData.value.rule[3] = '';
   }
 
+  if (ruleData.value.rule[0] === 'categorize' && props.scope === 'global') {
+    ruleData.value.rule[4] = normalizeCategorizeSetTarget(ruleData.value.rule[4]);
+  }
+
   normalizeAndCondition();
 
   normalizeRuleScope();
@@ -772,9 +863,21 @@ function validateRule() {
     return false;
   }
   
-  if (rule[0] === 'categorize' && !rule[4]) {
-    alert('Please provide a category name');
-    return false;
+  if (rule[0] === 'categorize') {
+    if (props.scope === 'global') {
+      if (!isCategorizeSetTarget(rule[4])) {
+        alert('Please select what to set');
+        return false;
+      }
+
+      if (!String(rule[5] || '').trim()) {
+        alert(`Please provide a ${normalizeCategorizeSetTarget(rule[4])} value`);
+        return false;
+      }
+    } else if (!String(rule[4] || '').trim()) {
+      alert('Please provide a category name');
+      return false;
+    }
   }
 
   if (rule[0] === 'groupBy' && !isGroupByOptionAllowed(rule[1])) {
@@ -816,7 +919,17 @@ function validateRule() {
 }
 
 function normalizeAndCondition() {
-  const normalizedRule = [...ruleData.value.rule.slice(0, 5)];
+  const baseRule = Array.isArray(ruleData.value.rule) ? ruleData.value.rule : [];
+  const normalizedRule = baseRule[0] === 'categorize' && props.scope === 'global'
+    ? [
+      'categorize',
+      baseRule[1] ?? '',
+      baseRule[2] ?? '',
+      baseRule[3] ?? '',
+      normalizeCategorizeSetTarget(baseRule[4]),
+      baseRule[5] ?? ''
+    ]
+    : [...baseRule.slice(0, 5)];
 
   if (supportsAndCondition.value) {
     for (const andCondition of andConditions.value) {
@@ -873,13 +986,14 @@ function getConditionGroupClass(index) {
 
 function extractAndConditions(rule) {
   const extractedAndConditions = [];
+  const conditionStartIndex = getCategorizeConditionStartIndex(rule);
 
-  for (let i = 5; i < rule.length; i += 4) {
+  for (let i = conditionStartIndex; i < rule.length; i += 4) {
     extractedAndConditions.push({
       combinator: normalizeConditionCombinator(rule[i]),
-      property: rule[i + 1] || '',
-      method: rule[i + 2] || '',
-      value: rule[i + 3] || ''
+      property: rule[i + 1] ?? '',
+      method: rule[i + 2] ?? '',
+      value: rule[i + 3] ?? ''
     });
   }
 

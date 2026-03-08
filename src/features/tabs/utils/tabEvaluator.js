@@ -370,6 +370,43 @@ function shouldSortCategoryGroupsByAmount(groupByMode, sortPropName) {
   return groupByMode === 'category' && sortPropName === 'amount';
 }
 
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name';
+}
+
+function normalizeCategorizeSetTarget(target) {
+  return String(target || '').trim().toLowerCase() === 'name'
+    ? 'name'
+    : 'category';
+}
+
+function usesCategorizeSetTargetFormat(rule = []) {
+  return Array.isArray(rule)
+    && rule[0] === 'categorize'
+    && rule.length >= 6
+    && (rule.length - 6) % 4 === 0
+    && isCategorizeSetTarget(rule[4]);
+}
+
+function getCategorizeConditionStartIndex(rule = []) {
+  return usesCategorizeSetTargetFormat(rule) ? 6 : 5;
+}
+
+function extractCategorizeAssignment(rule = []) {
+  if (usesCategorizeSetTargetFormat(rule)) {
+    return {
+      setTarget: normalizeCategorizeSetTarget(rule[4]),
+      setValue: rule[5] ?? ''
+    };
+  }
+
+  return {
+    setTarget: 'category',
+    setValue: rule[4] ?? ''
+  };
+}
+
 function extractRuleConditions(rule) {
   const conditions = [{
     combinator: 'and',
@@ -377,8 +414,9 @@ function extractRuleConditions(rule) {
     ruleMethodName: rule[2],
     criterion: rule[3]
   }];
+  const conditionStartIndex = getCategorizeConditionStartIndex(rule);
 
-  for (let i = 5; i < rule.length; i += 4) {
+  for (let i = conditionStartIndex; i < rule.length; i += 4) {
     const combinator = normalizeConditionCombinator(rule[i]);
     const itemPropName = rule[i + 1];
     const ruleMethodName = rule[i + 2];
@@ -480,7 +518,8 @@ function extractRules(tabRules, ruleMethods) {
 
   for (const ruleConfig of tabRules) {
     const rule = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
-    const [ruleType, itemPropName, ruleMethodName, , categorizeAs] = rule;
+    const [ruleType, itemPropName, ruleMethodName] = rule;
+    const categorizeAssignment = extractCategorizeAssignment(rule);
 
     const ruleConditions = extractRuleConditions(rule);
     const ruleMethod = buildRuleMethod(ruleConditions, ruleMethods);
@@ -502,7 +541,9 @@ function extractRules(tabRules, ruleMethods) {
       categorizers.push({
         _id: ruleConfig?._id,
         method: ruleMethod,
-        categorizeAs,
+        categorizeAs: categorizeAssignment.setValue,
+        setTarget: categorizeAssignment.setTarget,
+        setValue: categorizeAssignment.setValue,
         orderOfExecution,
         _isImportant,
         _isGlobalCategorizeRule: Boolean(ruleConfig?._isGlobalCategorizeRule)
@@ -662,14 +703,25 @@ function applyCategorizerScope(item, categorizers = []) {
       continue;
     }
 
-    const categoryName = String(categorizeConfig.categorizeAs || 'misc').toLowerCase();
-    if (categorizeConfig._isImportant) {
-      importantCategory = categoryName;
-    }
-
     item.rulesApplied = item.rulesApplied || new Set();
     if (!item.rulesApplied.has(categorizeConfig._id)) {
       item.rulesApplied.add(categorizeConfig._id);
+    }
+
+    const setTarget = normalizeCategorizeSetTarget(categorizeConfig?.setTarget);
+    const setValue = categorizeConfig?.setValue ?? categorizeConfig?.categorizeAs ?? '';
+
+    if (setTarget === 'name') {
+      const nextName = String(setValue || '').trim();
+      if (nextName) {
+        item.name = nextName;
+      }
+      continue;
+    }
+
+    const categoryName = String(setValue || 'misc').toLowerCase();
+    if (categorizeConfig._isImportant) {
+      importantCategory = categoryName;
     }
 
     item.personal_finance_category.primary = importantCategory || categoryName;

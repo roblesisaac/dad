@@ -29,8 +29,10 @@
     
     <!-- Categorize Rules -->
     <template v-else-if="rule.rule[0] === 'categorize'">
-      <span class="font-medium mr-1">Categorize as</span>
-      <span class="rule-part mr-1">{{ rule.rule[4] || '(not set)' }}</span>
+      <span class="font-medium mr-1">Set</span>
+      <span class="rule-part mr-1">{{ getCategorizeAssignmentTarget(rule) }}</span>
+      <span class="font-medium mr-1">to</span>
+      <span class="rule-part mr-1">{{ getCategorizeAssignmentValue(rule) || '(not set)' }}</span>
       <span class="font-medium mr-1">if</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
@@ -161,8 +163,9 @@ function formatSortDirectionLabel(sortPropertyName, sortDirection) {
 function getAdditionalConditions(rule) {
   const conditions = [];
   const ruleValues = rule.rule || [];
+  const conditionStartIndex = getAdditionalConditionsStartIndex(ruleValues);
 
-  for (let i = 5; i < ruleValues.length; i += 4) {
+  for (let i = conditionStartIndex; i < ruleValues.length; i += 4) {
     conditions.push({
       combinator: normalizeCombinator(ruleValues[i]),
       property: ruleValues[i + 1] || '',
@@ -182,6 +185,45 @@ function normalizeCombinator(combinator) {
 
 function formatCombinator(combinator) {
   return normalizeCombinator(combinator).toUpperCase();
+}
+
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name';
+}
+
+function normalizeCategorizeSetTarget(target) {
+  return String(target || '').trim().toLowerCase() === 'name'
+    ? 'name'
+    : 'category';
+}
+
+function usesCategorizeSetTargetFormat(ruleValues = []) {
+  return Array.isArray(ruleValues)
+    && ruleValues[0] === 'categorize'
+    && ruleValues.length >= 6
+    && (ruleValues.length - 6) % 4 === 0
+    && isCategorizeSetTarget(ruleValues[4]);
+}
+
+function getCategorizeAssignmentTarget(ruleConfig = {}) {
+  const ruleValues = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
+
+  return usesCategorizeSetTargetFormat(ruleValues)
+    ? normalizeCategorizeSetTarget(ruleValues[4])
+    : 'category';
+}
+
+function getCategorizeAssignmentValue(ruleConfig = {}) {
+  const ruleValues = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
+
+  return usesCategorizeSetTargetFormat(ruleValues)
+    ? String(ruleValues[5] ?? '')
+    : String(ruleValues[4] ?? '');
+}
+
+function getAdditionalConditionsStartIndex(ruleValues = []) {
+  return usesCategorizeSetTargetFormat(ruleValues) ? 6 : 5;
 }
 </script>
 

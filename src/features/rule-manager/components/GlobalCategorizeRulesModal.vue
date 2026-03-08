@@ -93,7 +93,7 @@ const { processAllTabsForSelectedGroup } = useTabProcessing();
 const showRuleEditor = ref(false);
 const isCreatingRule = ref(false);
 const activeRule = ref({
-  rule: ['categorize', '', '', '', ''],
+  rule: ['categorize', '', '', '', 'category', ''],
   applyForTabs: ['_GLOBAL'],
   filterJoinOperator: 'and',
   _isImportant: false,
@@ -121,7 +121,7 @@ function closeRuleEditor() {
 function openCreateRule() {
   isCreatingRule.value = true;
   activeRule.value = {
-    rule: ['categorize', '', '', '', ''],
+    rule: ['categorize', '', '', '', 'category', ''],
     applyForTabs: ['_GLOBAL'],
     filterJoinOperator: 'and',
     _isImportant: false,

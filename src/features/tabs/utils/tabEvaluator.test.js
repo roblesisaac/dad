@@ -348,6 +348,51 @@ describe('tabEvaluator', () => {
     expect(leisureIds).toEqual(['entertainment-expense', 'travel-expense']);
   });
 
+  test('supports set-target categorize rules that update transaction names', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'uber-trip',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Uber Trip 1234',
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'lyft-trip',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Lyft Trip 4321',
+          personal_finance_category: { primary: 'TRAVEL' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'global-rename',
+          orderOfExecution: 0,
+          _isGlobalCategorizeRule: true,
+          rule: ['categorize', 'name', 'includes', 'uber', 'name', 'Ride Share']
+        },
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        }
+      ]
+    });
+
+    const allItems = result.categorizedItems.flatMap(([, items]) => items);
+    const uberTransaction = allItems.find(item => item.transaction_id === 'uber-trip');
+    const lyftTransaction = allItems.find(item => item.transaction_id === 'lyft-trip');
+
+    expect(uberTransaction?.name).toBe('Ride Share');
+    expect(lyftTransaction?.name).toBe('Lyft Trip 4321');
+    expect(uberTransaction?.personal_finance_category?.primary).toBe('travel');
+  });
+
   test('tab-level categorizers run after recategorizeAs by default', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

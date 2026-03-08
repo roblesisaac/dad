@@ -223,6 +223,7 @@ import {
 } from '@/features/dashboard/constants/groups.js';
 import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 import { decodeDrillPath, encodeDrillPath, sameDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
+import { resolveSingleTabAutoSelectTarget } from '@/features/dashboard/utils/singleTabAutoSelect.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
 import { ChevronDown, Loader2 } from 'lucide-vue-next';
@@ -814,6 +815,35 @@ watch(
       historyMode: 'replace'
     });
     pendingSingleTabSelection.value = null;
+  }
+);
+
+watch(
+  [
+    () => dashboardView.value,
+    () => normalizeSelectionGroupId(state.selected.group),
+    () => state.selected.tab?._id || '',
+    () => state.selected.tabsForGroup.map(tab => tab?._id).filter(Boolean).join(',')
+  ],
+  ([currentView, selectedGroupId, selectedTabId]) => {
+    const autoSelectedTab = resolveSingleTabAutoSelectTarget({
+      dashboardView: currentView,
+      selectedGroupId,
+      selectedTabId,
+      tabsForGroup: state.selected.tabsForGroup
+    });
+
+    if (!autoSelectedTab) {
+      return;
+    }
+
+    selectTab(autoSelectedTab);
+    pendingSingleTabSelection.value = null;
+    resetDrillSelection();
+    setDashboardView('drill', {
+      syncRoute: true,
+      historyMode: 'replace'
+    });
   }
 );
 

@@ -179,8 +179,10 @@ const ruleSummaryParts = computed(() => {
   } 
   
   else if (type === 'categorize') {
-    parts.push({ text: 'categorize as' });
-    parts.push({ text: r[4] || 'category', highlight: true });
+    parts.push({ text: 'set' });
+    parts.push({ text: getCategorizeAssignmentTarget(r), highlight: true });
+    parts.push({ text: 'to' });
+    parts.push({ text: getCategorizeAssignmentValue(r) || 'value', highlight: true });
     parts.push({ text: 'if' });
     parts.push({ text: r[1] || 'field', highlight: true });
     parts.push({ text: getOperatorDisplay(r[2]), highlight: true });
@@ -199,7 +201,9 @@ const ruleSummaryParts = computed(() => {
 const additionalConditions = computed(() => {
   const conditions = [];
   const ruleValues = props.rule.rule || [];
-  for (let i = 5; i < ruleValues.length; i += 4) {
+  const conditionStartIndex = getAdditionalConditionsStartIndex(ruleValues);
+
+  for (let i = conditionStartIndex; i < ruleValues.length; i += 4) {
     conditions.push({
       combinator: normalizeCombinator(ruleValues[i]),
       property: ruleValues[i + 1] || '',
@@ -288,6 +292,41 @@ function getSortDirectionLabel(sortPropertyName, sortDirection) {
 
 function formatCombinator(combinator) {
   return normalizeCombinator(combinator).toUpperCase();
+}
+
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name';
+}
+
+function normalizeCategorizeSetTarget(target) {
+  return String(target || '').trim().toLowerCase() === 'name'
+    ? 'name'
+    : 'category';
+}
+
+function usesCategorizeSetTargetFormat(ruleValues = []) {
+  return Array.isArray(ruleValues)
+    && ruleValues[0] === 'categorize'
+    && ruleValues.length >= 6
+    && (ruleValues.length - 6) % 4 === 0
+    && isCategorizeSetTarget(ruleValues[4]);
+}
+
+function getCategorizeAssignmentTarget(ruleValues = []) {
+  return usesCategorizeSetTargetFormat(ruleValues)
+    ? normalizeCategorizeSetTarget(ruleValues[4])
+    : 'category';
+}
+
+function getCategorizeAssignmentValue(ruleValues = []) {
+  return usesCategorizeSetTargetFormat(ruleValues)
+    ? String(ruleValues[5] ?? '')
+    : String(ruleValues[4] ?? '');
+}
+
+function getAdditionalConditionsStartIndex(ruleValues = []) {
+  return usesCategorizeSetTargetFormat(ruleValues) ? 6 : 5;
 }
 </script>
 
