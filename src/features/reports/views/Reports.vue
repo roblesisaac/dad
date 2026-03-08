@@ -783,14 +783,6 @@
 
           <div class="mt-4 space-y-4">
             <template v-if="rowEditorDraft.type === 'tab'">
-              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Tab
-                <select v-model="rowEditorDraft.tabId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="">Select tab</option>
-                  <option v-for="tab in sortedTabs" :key="tab._id" :value="tab._id">{{ tab.tabName }}</option>
-                </select>
-              </label>
-
               <div class="rounded-xl border border-gray-200 p-3 space-y-3">
                 <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 1 · Select Account</div>
 
@@ -872,19 +864,44 @@
                 </div>
               </div>
 
+              <div
+                v-if="shouldShowTabSelectionStep"
+                class="rounded-xl border border-gray-200 p-3 space-y-3"
+              >
+                <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 3 · Select Tab</div>
+
+                <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                  Tab
+                  <select v-model="rowEditorDraft.tabId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select tab</option>
+                    <option v-for="tab in rowEditorTabOptions" :key="tab._id" :value="tab._id">{{ tab.tabName }}</option>
+                  </select>
+                </label>
+              </div>
+
               <div class="rounded-xl border border-gray-200 p-3 space-y-3">
                 <div class="flex items-center justify-between gap-2">
-                  <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 3 · Select Categories</div>
+                  <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">{{ tabCategoryStepLabel }}</div>
                   <div class="text-[10px] font-black uppercase tracking-wider text-gray-500 truncate">
                     {{ tabRowSelectedPathLabel }}
                   </div>
                 </div>
 
+                <p v-if="rowEditorSelectedTabLabel" class="text-xs text-gray-500">
+                  Tab: {{ rowEditorSelectedTabLabel }}
+                </p>
+
                 <p
-                  v-if="!rowEditorDraft.tabId || !rowEditorDraft.groupId || !rowEditorDraft.dateStart || !rowEditorDraft.dateEnd || rowEditorDraft.dateStart > rowEditorDraft.dateEnd"
+                  v-if="!rowEditorDraft.groupId || !isTabRowDateRangeValid"
                   class="text-xs text-gray-500"
                 >
                   Select account and date first.
+                </p>
+                <p v-else-if="!rowEditorTabOptions.length" class="text-xs text-gray-500">
+                  No tabs are enabled for this account/group.
+                </p>
+                <p v-else-if="!rowEditorDraft.tabId" class="text-xs text-gray-500">
+                  Select a tab first.
                 </p>
                 <p v-else-if="tabRowCategoryGuideState.isLoading" class="text-xs text-gray-500">
                   Loading categories...
@@ -1030,7 +1047,10 @@ import LoadingDots from '@/shared/components/LoadingDots.vue';
 import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
-import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
+import {
+  ALL_ACCOUNTS_GROUP_ID,
+  ALL_ACCOUNTS_HIDDEN_GROUP_ID
+} from '@/features/dashboard/constants/groups.js';
 import { encodeDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
 import {
   normalizeManualAmountDisplayType,
@@ -1225,6 +1245,71 @@ const isRowEditorManualFormula = computed(() =>
   && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
 );
 
+const isTabRowDateRangeValid = computed(() => {
+  if (rowEditorDraft.value?.type !== 'tab') {
+    return false;
+  }
+
+  const dateStart = String(rowEditorDraft.value?.dateStart || '');
+  const dateEnd = String(rowEditorDraft.value?.dateEnd || '');
+  if (!dateStart || !dateEnd) {
+    return false;
+  }
+
+  return dateStart <= dateEnd;
+});
+
+const canResolveTabOptionsForRow = computed(() => (
+  rowEditorDraft.value?.type === 'tab'
+  && Boolean(String(rowEditorDraft.value?.groupId || '').trim())
+  && isTabRowDateRangeValid.value
+));
+
+const rowEditorTabOptions = computed(() => {
+  if (rowEditorDraft.value?.type !== 'tab') {
+    return [];
+  }
+
+  const groupId = String(rowEditorDraft.value?.groupId || '').trim();
+  if (!groupId) {
+    return [];
+  }
+
+  return sortedTabs.value.filter((tab) => {
+    const showForGroup = Array.isArray(tab?.showForGroup) ? tab.showForGroup : [];
+    if (groupId === ALL_ACCOUNTS_GROUP_ID) {
+      return !showForGroup.includes(ALL_ACCOUNTS_HIDDEN_GROUP_ID);
+    }
+
+    return showForGroup.includes(groupId) || showForGroup.includes('_GLOBAL');
+  });
+});
+
+const shouldShowTabSelectionStep = computed(() => (
+  canResolveTabOptionsForRow.value
+  && rowEditorTabOptions.value.length > 1
+));
+
+const tabCategoryStepLabel = computed(() => (
+  shouldShowTabSelectionStep.value
+    ? 'Step 4 · Select Categories'
+    : 'Step 3 · Select Categories'
+));
+
+const rowEditorSelectedTabLabel = computed(() => {
+  if (rowEditorDraft.value?.type !== 'tab') {
+    return '';
+  }
+
+  const selectedTabId = String(rowEditorDraft.value?.tabId || '').trim();
+  if (!selectedTabId) {
+    return '';
+  }
+
+  return rowEditorTabOptions.value.find(tab => tab._id === selectedTabId)?.tabName
+    || tabName(selectedTabId);
+});
+
 const tabRowSelectedPathLabel = computed(() => {
   const labels = Array.isArray(tabRowCategoryGuideState.value.validPathLabels)
     ? tabRowCategoryGuideState.value.validPathLabels
@@ -1334,6 +1419,40 @@ function onTabRowCategoryDepthChange(depth, value) {
   }
 
   rowEditorDraft.value.drillPath = basePath;
+}
+
+function syncRowEditorTabSelectionForScope() {
+  const draft = rowEditorDraft.value;
+  if (!isRowEditorOpen.value || draft?.type !== 'tab') {
+    return;
+  }
+
+  if (!canResolveTabOptionsForRow.value) {
+    return;
+  }
+
+  const availableTabs = rowEditorTabOptions.value;
+  const selectedTabId = String(draft.tabId || '').trim();
+
+  if (!availableTabs.length) {
+    if (selectedTabId) {
+      draft.tabId = '';
+    }
+    return;
+  }
+
+  if (availableTabs.length === 1) {
+    const onlyTabId = String(availableTabs[0]?._id || '').trim();
+    if (onlyTabId && selectedTabId !== onlyTabId) {
+      draft.tabId = onlyTabId;
+    }
+    return;
+  }
+
+  const selectedExists = availableTabs.some(tab => String(tab?._id || '') === selectedTabId);
+  if (!selectedExists && selectedTabId) {
+    draft.tabId = '';
+  }
 }
 
 function sanitizeLabelText(value) {
@@ -1682,6 +1801,32 @@ watch(
       setSelectedReportId('', { syncRoute: true, historyMode: 'replace' });
     }
   }
+);
+
+watch(
+  () => {
+    if (!isRowEditorOpen.value || rowEditorDraft.value?.type !== 'tab') {
+      return '';
+    }
+
+    const draft = rowEditorDraft.value;
+    const availableTabIds = rowEditorTabOptions.value
+      .map(tab => String(tab?._id || ''))
+      .filter(Boolean)
+      .join('|');
+
+    return [
+      draft.groupId || '',
+      draft.dateStart || '',
+      draft.dateEnd || '',
+      draft.tabId || '',
+      availableTabIds
+    ].join('::');
+  },
+  () => {
+    syncRowEditorTabSelectionForScope();
+  },
+  { immediate: true }
 );
 
 watch(
