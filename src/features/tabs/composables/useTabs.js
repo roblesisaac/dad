@@ -18,10 +18,54 @@ import {
   replaceRulesAtPath
 } from '@/features/tabs/utils/drillSchema.js';
 
-const DEFAULT_TABS_FOR_EMPTY_STATE = [
-  { tabName: 'money in', filterMethod: '>' },
-  { tabName: 'money out', filterMethod: '<' }
-];
+function buildDefaultTabForEmptyState() {
+  return {
+    tabName: 'my money',
+    sort: 0,
+    sortByGroup: {
+      [ALL_ACCOUNTS_GROUP_ID]: 0
+    },
+    drillSchema: normalizeDrillSchema({
+      version: 1,
+      levels: [{
+        id: 'level-1',
+        sortRules: [createLocalRuleConfig(
+          ['sort', 'date', 'desc', '', ''],
+          {
+            idPrefix: 'sort',
+            orderOfExecution: 0
+          }
+        )],
+        categorizeRules: [
+          createLocalRuleConfig(
+            ['categorize', 'amount', '>', '0', 'money in'],
+            {
+              idPrefix: 'categorize',
+              filterJoinOperator: 'and',
+              orderOfExecution: 0
+            }
+          ),
+          createLocalRuleConfig(
+            ['categorize', 'amount', '<', '0', 'money out'],
+            {
+              idPrefix: 'categorize',
+              filterJoinOperator: 'and',
+              orderOfExecution: 1
+            }
+          )
+        ],
+        filterRules: [],
+        groupByRules: [createLocalRuleConfig(
+          ['groupBy', 'category', '', '', ''],
+          {
+            idPrefix: 'group-by',
+            orderOfExecution: 0
+          }
+        )]
+      }]
+    })
+  };
+}
 
 const DEFAULT_ORGANIZE_SETTINGS = Object.freeze({
   sortKey: 'date',
@@ -567,53 +611,17 @@ export function useTabs() {
           return [];
         }
 
+        const defaultTabConfig = buildDefaultTabForEmptyState();
         const createdTabs = [];
+        const createdTab = await tabsAPI.createTab({
+          tabName: defaultTabConfig.tabName,
+          showForGroup: ['_GLOBAL'],
+          sort: defaultTabConfig.sort,
+          sortByGroup: defaultTabConfig.sortByGroup,
+          drillSchema: defaultTabConfig.drillSchema
+        });
 
-        for (const [sort, defaultTab] of DEFAULT_TABS_FOR_EMPTY_STATE.entries()) {
-          const defaultFilterRule = createLocalRuleConfig(
-            ['filter', 'amount', defaultTab.filterMethod, '0', ''],
-            {
-              idPrefix: 'filter',
-              filterJoinOperator: 'and',
-              orderOfExecution: 0
-            }
-          );
-
-          const createdTab = await tabsAPI.createTab({
-            tabName: defaultTab.tabName,
-            showForGroup: ['_GLOBAL'],
-            sort,
-            sortByGroup: {
-              [ALL_ACCOUNTS_GROUP_ID]: sort
-            },
-            drillSchema: normalizeDrillSchema({
-              version: 1,
-              levels: [{
-                id: 'level-1',
-                sortRules: [createLocalRuleConfig(
-                  ['sort', 'date', 'desc', '', ''],
-                  {
-                    idPrefix: 'sort',
-                    orderOfExecution: 0
-                  }
-                )],
-                categorizeRules: [],
-                filterRules: [defaultFilterRule],
-                groupByRules: [createLocalRuleConfig(
-                  ['groupBy', 'none', '', '', ''],
-                  {
-                    idPrefix: 'group-by',
-                    orderOfExecution: 0
-                  }
-                )]
-              }]
-            })
-          });
-
-          if (!createdTab) {
-            continue;
-          }
-
+        if (createdTab) {
           createdTab.isSelected = false;
           state.allUserTabs.push(createdTab);
           createdTabs.push(createdTab);

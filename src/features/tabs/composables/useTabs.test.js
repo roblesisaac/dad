@@ -88,18 +88,17 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
     expect(processAllTabsForSelectedGroupMock).not.toHaveBeenCalled();
   });
 
-  test('creates money in/out tabs and amount filters when no tabs exist', async () => {
+  test('creates one my money tab with amount categorizers when no tabs exist', async () => {
     tabsApiMock.fetchUserTabs.mockResolvedValue([]);
-    tabsApiMock.createTab
-      .mockResolvedValueOnce({ _id: 'tab-money-in', tabName: 'money in' })
-      .mockResolvedValueOnce({ _id: 'tab-money-out', tabName: 'money out' });
+    tabsApiMock.createTab.mockResolvedValueOnce({ _id: 'tab-my-money', tabName: 'my money' });
 
     const { ensureDefaultTabsForTabView } = useTabs();
     const createdTabs = await ensureDefaultTabsForTabView();
 
-    expect(createdTabs.map(tab => tab._id)).toEqual(['tab-money-in', 'tab-money-out']);
-    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(1, expect.objectContaining({
-      tabName: 'money in',
+    expect(createdTabs.map(tab => tab._id)).toEqual(['tab-my-money']);
+    expect(tabsApiMock.createTab).toHaveBeenCalledTimes(1);
+    expect(tabsApiMock.createTab).toHaveBeenCalledWith(expect.objectContaining({
+      tabName: 'my money',
       showForGroup: ['_GLOBAL'],
       sort: 0,
       sortByGroup: {
@@ -107,30 +106,26 @@ describe('useTabs ensureDefaultTabsForTabView', () => {
       },
       drillSchema: expect.objectContaining({ version: 1 })
     }));
-    expect(tabsApiMock.createTab).toHaveBeenNthCalledWith(2, expect.objectContaining({
-      tabName: 'money out',
-      showForGroup: ['_GLOBAL'],
-      sort: 1,
-      sortByGroup: {
-        _ALL_ACCOUNTS: 1
-      },
-      drillSchema: expect.objectContaining({ version: 1 })
-    }));
 
-    const moneyInLevel = levelZeroFor(tabsApiMock.createTab.mock.calls[0][0]);
-    const moneyOutLevel = levelZeroFor(tabsApiMock.createTab.mock.calls[1][0]);
-    expect(moneyInLevel.filterRules[0]).toEqual(expect.objectContaining({
-      rule: ['filter', 'amount', '>', '0', ''],
+    const levelZero = levelZeroFor(tabsApiMock.createTab.mock.calls[0][0]);
+    expect(levelZero.groupByRules[0]).toEqual(expect.objectContaining({
+      rule: ['groupBy', 'category', '', '', ''],
+      orderOfExecution: 0
+    }));
+    expect(levelZero.filterRules).toEqual([]);
+    expect(levelZero.categorizeRules).toHaveLength(2);
+    expect(levelZero.categorizeRules[0]).toEqual(expect.objectContaining({
+      rule: ['categorize', 'amount', '>', '0', 'money in'],
       filterJoinOperator: 'and',
       orderOfExecution: 0
     }));
-    expect(moneyOutLevel.filterRules[0]).toEqual(expect.objectContaining({
-      rule: ['filter', 'amount', '<', '0', ''],
+    expect(levelZero.categorizeRules[1]).toEqual(expect.objectContaining({
+      rule: ['categorize', 'amount', '<', '0', 'money out'],
       filterJoinOperator: 'and',
-      orderOfExecution: 0
+      orderOfExecution: 1
     }));
 
-    expect(state.allUserTabs.map(tab => tab._id)).toEqual(['tab-money-in', 'tab-money-out']);
+    expect(state.allUserTabs.map(tab => tab._id)).toEqual(['tab-my-money']);
     expect(processAllTabsForSelectedGroupMock).toHaveBeenCalledWith({ showLoading: false });
   });
 });
