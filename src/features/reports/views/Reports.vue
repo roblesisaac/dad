@@ -791,77 +791,137 @@
                 </select>
               </label>
 
-              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                Group / Account
-                <select v-model="rowEditorDraft.groupId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
-                  <option value="">Select group / account</option>
-                  <option
-                    v-for="option in groupAccountOptions"
-                    :key="option.id"
-                    :value="option.id"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
+              <div class="rounded-xl border border-gray-200 p-3 space-y-3">
+                <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 1 · Select Account</div>
 
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                  Start
-                  <input type="date" v-model="rowEditorDraft.dateStart" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
-                </label>
-                <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
-                  End
-                  <input type="date" v-model="rowEditorDraft.dateEnd" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  Group / Account
+                  <select v-model="rowEditorDraft.groupId" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm">
+                    <option value="">Select group / account</option>
+                    <option
+                      v-for="option in groupAccountOptions"
+                      :key="option.id"
+                      :value="option.id"
+                    >
+                      {{ option.label }}
+                    </option>
+                  </select>
                 </label>
               </div>
 
-              <div class="mt-4">
-                <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase mb-3 px-2">Quick Select</div>
-                <div class="grid grid-cols-2 gap-2">
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('today')"
-                  >
-                    Today
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('prevMonth')"
-                  >
-                    Prev Month
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('nextMonth')"
-                  >
-                    Next Month
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('prevYear')"
-                  >
-                    Prev Year
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('nextYear')"
-                  >
-                    Next Year
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('last30Days')"
-                  >
-                    Last 30
-                  </button>
-                  <button 
-                    class="px-6 py-4 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent" 
-                    @click="applyQuickSelect('last90Days')"
-                  >
-                    Last 90
-                  </button>
+              <div class="rounded-xl border border-gray-200 p-3 space-y-3">
+                <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 2 · Select Date</div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    Start
+                    <input type="date" v-model="rowEditorDraft.dateStart" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </label>
+                  <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    End
+                    <input type="date" v-model="rowEditorDraft.dateEnd" class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm" />
+                  </label>
                 </div>
+
+                <div class="space-y-2">
+                  <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">Quick Select</div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('today')"
+                    >
+                      Today
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('prevMonth')"
+                    >
+                      Prev Month
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('nextMonth')"
+                    >
+                      Next Month
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('prevYear')"
+                    >
+                      Prev Year
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('nextYear')"
+                    >
+                      Next Year
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('last30Days')"
+                    >
+                      Last 30
+                    </button>
+                    <button
+                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
+                      @click="applyQuickSelect('last90Days')"
+                    >
+                      Last 90
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="rounded-xl border border-gray-200 p-3 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                  <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 3 · Select Categories</div>
+                  <div class="text-[10px] font-black uppercase tracking-wider text-gray-500 truncate">
+                    {{ tabRowSelectedPathLabel }}
+                  </div>
+                </div>
+
+                <p
+                  v-if="!rowEditorDraft.tabId || !rowEditorDraft.groupId || !rowEditorDraft.dateStart || !rowEditorDraft.dateEnd || rowEditorDraft.dateStart > rowEditorDraft.dateEnd"
+                  class="text-xs text-gray-500"
+                >
+                  Select account and date first.
+                </p>
+                <p v-else-if="tabRowCategoryGuideState.isLoading" class="text-xs text-gray-500">
+                  Loading categories...
+                </p>
+                <p v-else-if="tabRowCategoryGuideState.issue" class="text-xs text-red-600">
+                  {{ tabRowCategoryGuideState.issue }}
+                </p>
+                <p v-else-if="!tabRowCategoryGuideState.selectors.length" class="text-xs text-gray-500">
+                  This tab level has no category grouping. The row will use the full tab total.
+                </p>
+                <div v-else class="space-y-3">
+                  <label
+                    v-for="selector in tabRowCategoryGuideState.selectors"
+                    :key="`tab-row-category-depth-${selector.depth}`"
+                    class="block text-xs font-black uppercase tracking-wider text-gray-500"
+                  >
+                    Level {{ selector.depth + 1 }}
+                    <select
+                      :value="selector.selectedKey"
+                      class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      @change="onTabRowCategoryDepthChange(selector.depth, $event.target.value)"
+                    >
+                      <option value="">All level {{ selector.depth + 1 }} categories</option>
+                      <option
+                        v-for="option in selector.options"
+                        :key="option.key"
+                        :value="option.key"
+                      >
+                        {{ option.label }}
+                      </option>
+                    </select>
+                  </label>
+                </div>
+
+                <p class="text-xs text-gray-500">
+                  Preview total: {{ formatPrice(rowEditorDraft.drillPath?.length ? tabRowCategoryGuideState.selectedTotal : tabRowCategoryGuideState.tabTotal) }}
+                </p>
               </div>
             </template>
 
@@ -971,7 +1031,12 @@ import ThemeCycleButton from '@/shared/components/ThemeCycleButton.vue';
 import AccountModal from '@/shared/components/AccountModal.vue';
 import ReportsEmptyState from '@/features/reports/components/ReportsEmptyState.vue';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
-import { normalizeManualAmountDisplayType, useReportsState } from '@/features/reports/composables/useReportsState.js';
+import { encodeDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
+import {
+  normalizeManualAmountDisplayType,
+  normalizeReportDrillPath,
+  useReportsState
+} from '@/features/reports/composables/useReportsState.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
@@ -1006,6 +1071,7 @@ const {
   reorderReports,
   saveReportLayout,
   saveReportsOrder,
+  resolveTabRowCategorySelectors,
   refreshRowTotal,
   getRowAmount,
   getRowIssue,
@@ -1039,6 +1105,16 @@ const rowEditorDraft = ref(null);
 const editingRowId = ref('');
 const editingRowWasNew = ref(false);
 const isSavingRow = ref(false);
+const tabRowCategoryGuideState = ref({
+  isLoading: false,
+  issue: '',
+  selectors: [],
+  validPath: [],
+  validPathLabels: [],
+  tabTotal: 0,
+  selectedTotal: 0,
+  isLeaf: true
+});
 const isCreateReportModalOpen = ref(false);
 const createReportNameDraft = ref('');
 const isCreatingReport = ref(false);
@@ -1066,6 +1142,7 @@ const isApplyingRemoteReportsSync = ref(false);
 
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+let tabRowCategoryGuideRequestId = 0;
 
 function queryValue(key) {
   const value = route.query[key];
@@ -1147,6 +1224,117 @@ const isRowEditorManualFormula = computed(() =>
   rowEditorDraft.value?.type === 'manual'
   && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
 );
+
+const tabRowSelectedPathLabel = computed(() => {
+  const labels = Array.isArray(tabRowCategoryGuideState.value.validPathLabels)
+    ? tabRowCategoryGuideState.value.validPathLabels
+    : [];
+
+  if (!labels.length) {
+    return 'All categories';
+  }
+
+  return labels.join(' / ');
+});
+
+function sameDrillPath(pathA = [], pathB = []) {
+  const normalizedA = normalizeReportDrillPath(pathA);
+  const normalizedB = normalizeReportDrillPath(pathB);
+
+  if (normalizedA.length !== normalizedB.length) {
+    return false;
+  }
+
+  return normalizedA.every((segment, index) => segment === normalizedB[index]);
+}
+
+function resetTabRowCategoryGuideState() {
+  tabRowCategoryGuideState.value = {
+    isLoading: false,
+    issue: '',
+    selectors: [],
+    validPath: [],
+    validPathLabels: [],
+    tabTotal: 0,
+    selectedTotal: 0,
+    isLeaf: true
+  };
+}
+
+function shouldLoadTabRowCategories(draft) {
+  if (!draft || draft.type !== 'tab') {
+    return false;
+  }
+
+  if (!draft.tabId || !draft.groupId || !draft.dateStart || !draft.dateEnd) {
+    return false;
+  }
+
+  return draft.dateStart <= draft.dateEnd;
+}
+
+async function loadTabRowCategoryGuide() {
+  const draft = rowEditorDraft.value;
+  if (!isRowEditorOpen.value || !shouldLoadTabRowCategories(draft)) {
+    resetTabRowCategoryGuideState();
+    return;
+  }
+
+  const requestId = ++tabRowCategoryGuideRequestId;
+  tabRowCategoryGuideState.value = {
+    ...tabRowCategoryGuideState.value,
+    isLoading: true,
+    issue: ''
+  };
+
+  const result = await resolveTabRowCategorySelectors({
+    tabId: draft.tabId,
+    groupId: draft.groupId,
+    dateStart: draft.dateStart,
+    dateEnd: draft.dateEnd,
+    drillPath: draft.drillPath
+  });
+
+  if (requestId !== tabRowCategoryGuideRequestId) {
+    return;
+  }
+
+  tabRowCategoryGuideState.value = {
+    isLoading: false,
+    issue: String(result?.issue || ''),
+    selectors: Array.isArray(result?.selectors) ? result.selectors : [],
+    validPath: normalizeReportDrillPath(result?.validPath),
+    validPathLabels: Array.isArray(result?.validPathLabels) ? result.validPathLabels : [],
+    tabTotal: Number.isFinite(Number(result?.tabTotal)) ? Number(result.tabTotal) : 0,
+    selectedTotal: Number.isFinite(Number(result?.selectedTotal)) ? Number(result.selectedTotal) : 0,
+    isLeaf: Boolean(result?.isLeaf)
+  };
+
+  if (rowEditorDraft.value?.type !== 'tab') {
+    return;
+  }
+
+  const normalizedDraftPath = normalizeReportDrillPath(rowEditorDraft.value.drillPath);
+  if (!sameDrillPath(normalizedDraftPath, tabRowCategoryGuideState.value.validPath)) {
+    rowEditorDraft.value.drillPath = [...tabRowCategoryGuideState.value.validPath];
+  }
+}
+
+function onTabRowCategoryDepthChange(depth, value) {
+  if (!rowEditorDraft.value || rowEditorDraft.value.type !== 'tab') {
+    return;
+  }
+
+  const safeDepth = Number.isInteger(depth) && depth >= 0 ? depth : 0;
+  const basePath = normalizeReportDrillPath(rowEditorDraft.value.drillPath).slice(0, safeDepth);
+  const nextValue = String(value || '').trim().toLowerCase();
+
+  if (nextValue) {
+    basePath.push(nextValue);
+  }
+
+  rowEditorDraft.value.drillPath = basePath;
+}
 
 function sanitizeLabelText(value) {
   if (typeof value !== 'string') {
@@ -1493,6 +1681,34 @@ watch(
     if (!reportExists) {
       setSelectedReportId('', { syncRoute: true, historyMode: 'replace' });
     }
+  }
+);
+
+watch(
+  () => {
+    if (!isRowEditorOpen.value || rowEditorDraft.value?.type !== 'tab') {
+      return '';
+    }
+
+    const draft = rowEditorDraft.value;
+    const pathKey = normalizeReportDrillPath(draft.drillPath).join('|');
+    return `${draft.tabId || ''}::${draft.groupId || ''}::${draft.dateStart || ''}::${draft.dateEnd || ''}::${pathKey}`;
+  },
+  () => {
+    void loadTabRowCategoryGuide();
+  },
+  { immediate: true }
+);
+
+watch(
+  () => isRowEditorOpen.value,
+  (isOpen) => {
+    if (isOpen) {
+      return;
+    }
+
+    tabRowCategoryGuideRequestId += 1;
+    resetTabRowCategoryGuideState();
   }
 );
 
@@ -1919,7 +2135,12 @@ function rowSubtitle(row) {
     return 'Existing report row';
   }
 
-  return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}`;
+  const drillPath = normalizeReportDrillPath(row?.drillPath);
+  const drillPathLabel = drillPath.length
+    ? ` · ${drillPath.join(' / ')}`
+    : '';
+
+  return `${groupName(row.groupId)} · ${row.dateStart || '—'} to ${row.dateEnd || '—'}${drillPathLabel}`;
 }
 
 function existingRowTypeLabel(row) {
@@ -1988,6 +2209,7 @@ function buildRowCopyPayload(row) {
       groupId: row.groupId || '',
       dateStart: row.dateStart || '',
       dateEnd: row.dateEnd || '',
+      drillPath: normalizeReportDrillPath(row.drillPath),
       savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0
     };
   }
@@ -2024,6 +2246,10 @@ function buildManualAmountInput(row) {
 
 function buildRowEditorDraft(row) {
   const nextDraft = { ...row };
+
+  if (nextDraft.type === 'tab') {
+    nextDraft.drillPath = normalizeReportDrillPath(nextDraft.drillPath);
+  }
 
   if (nextDraft.type === 'manual') {
     nextDraft.amountInput = buildManualAmountInput(nextDraft);
@@ -2124,10 +2350,14 @@ function openDashboardFromRow(row) {
   }
 
   const rowTotal = Number(getRowAmount(selectedReport.value?._id, row.rowId));
+  const drillPath = normalizeReportDrillPath(row?.drillPath);
+  const encodedDrillPath = encodeDrillPath(drillPath);
 
   router.push({
     name: 'dashboard',
     query: {
+      dashboardView: 'drill',
+      ...(encodedDrillPath ? { drillPath: encodedDrillPath } : {}),
       reportGroupId: row.groupId,
       reportTabId: row.tabId,
       reportDateStart: row.dateStart,

@@ -8,7 +8,7 @@
     @close="closeModal"
   >
     <template #content>
-      <RuleManager @close="closeModal" />
+      <RuleManager :section="initialSection" @close="closeModal" />
     </template>
   </BaseModal>
 </template>
@@ -25,6 +25,10 @@ const props = defineProps({
   isOpen: {
     type: Boolean,
     default: false
+  },
+  initialSection: {
+    type: String,
+    default: null
   }
 });
 

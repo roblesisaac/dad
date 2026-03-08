@@ -6,11 +6,8 @@ import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js'
 import { useGroupsAPI } from '@/features/select-group/composables/useGroupsAPI.js';
 import { ALL_ACCOUNTS_GROUP_ID } from '@/features/dashboard/constants/groups.js';
 import { useTransactions } from '@/features/dashboard/composables/useTransactions.js';
-import {
-  buildDefaultRuleMethods,
-  buildTabRulesForId,
-  evaluateTabData
-} from '@/features/tabs/utils/tabEvaluator.js';
+import { buildDefaultRuleMethods } from '@/features/tabs/utils/tabEvaluator.js';
+import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 
 export function toYyyyMmDd(dateValue = new Date()) {
   return format(dateValue, 'yyyy-MM-dd');
@@ -36,6 +33,23 @@ export function normalizeManualAmountDisplayType(value) {
   }
 
   return 'dollar';
+}
+
+export function normalizeReportDrillPath(path = []) {
+  return (Array.isArray(path) ? path : [])
+    .map((segment) => String(segment || '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function sameReportDrillPath(pathA = [], pathB = []) {
+  const normalizedA = normalizeReportDrillPath(pathA);
+  const normalizedB = normalizeReportDrillPath(pathB);
+
+  if (normalizedA.length !== normalizedB.length) {
+    return false;
+  }
+
+  return normalizedA.every((segment, index) => segment === normalizedB[index]);
 }
 
 function normalizeManualFormulaValue(value) {
@@ -77,6 +91,7 @@ export function normalizeRowsForLocal(rows = []) {
         groupId: typeof row.groupId === 'string' ? row.groupId : '',
         dateStart: typeof row.dateStart === 'string' ? row.dateStart : '',
         dateEnd: typeof row.dateEnd === 'string' ? row.dateEnd : '',
+        drillPath: normalizeReportDrillPath(row.drillPath),
         savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0,
         sort: Number.isFinite(row.sort) ? row.sort : index
       };
@@ -685,6 +700,7 @@ export function useReportsState() {
       groupId: '',
       dateStart: toYyyyMmDd(startOfMonth(new Date())),
       dateEnd: toYyyyMmDd(new Date()),
+      drillPath: [],
       savedTotal: 0,
       sort
     };
@@ -793,6 +809,7 @@ export function useReportsState() {
   async function evaluateTabRow(row) {
     const tab = state.allUserTabs.find(item => item._id === row.tabId);
     const group = resolveGroupForRowContext(row.groupId);
+    const normalizedDrillPath = normalizeReportDrillPath(row?.drillPath);
 
     if (!tab) {
       return { amount: 0, issue: 'Tab not found' };
@@ -812,20 +829,153 @@ export function useReportsState() {
         row.dateStart,
         row.dateEnd
       );
-
-      const tabRules = buildTabRulesForId(state.allUserRules, tab._id);
-      const result = evaluateTabData({
-        tab: { ...tab, isSelected: true },
+      const drillResult = resolveDrillState({
+        tab,
         transactions,
-        tabRules,
+        allRules: state.allUserRules,
+        drillPath: normalizedDrillPath,
         ruleMethods
       });
 
-      const safeAmount = Number.isFinite(Number(result.tabTotal)) ? Number(result.tabTotal) : 0;
+      const hasSpecificSelection = normalizedDrillPath.length > 0;
+      const selectedPathMatches = sameReportDrillPath(normalizedDrillPath, drillResult.validPath);
+      const selectedTotal = Number.isFinite(Number(drillResult.currentLevelTotal))
+        ? Number(drillResult.currentLevelTotal)
+        : 0;
+      const tabTotal = Number.isFinite(Number(drillResult.tabTotal))
+        ? Number(drillResult.tabTotal)
+        : 0;
+      const safeAmount = hasSpecificSelection
+        ? (selectedPathMatches ? selectedTotal : 0)
+        : tabTotal;
+
       return { amount: safeAmount, issue: '' };
     } catch (error) {
       console.error(`Failed to evaluate report row '${row.rowId}'`, error);
       return { amount: 0, issue: 'Failed to load transactions' };
+    }
+  }
+
+  async function resolveTabRowCategorySelectors(row = {}) {
+    const emptyResult = {
+      issue: '',
+      selectors: [],
+      validPath: [],
+      validPathLabels: [],
+      tabTotal: 0,
+      selectedTotal: 0,
+      isLeaf: true
+    };
+
+    const tab = state.allUserTabs.find(item => item._id === row.tabId);
+    const group = resolveGroupForRowContext(row.groupId);
+    const dateStart = typeof row?.dateStart === 'string' ? row.dateStart : '';
+    const dateEnd = typeof row?.dateEnd === 'string' ? row.dateEnd : '';
+    const requestedPath = normalizeReportDrillPath(row?.drillPath);
+
+    if (!tab) {
+      return { ...emptyResult, issue: 'Select tab first' };
+    }
+
+    if (!group) {
+      return { ...emptyResult, issue: 'Select account/group first' };
+    }
+
+    if (!dateStart || !dateEnd || dateStart > dateEnd) {
+      return { ...emptyResult, issue: 'Select a valid date range first' };
+    }
+
+    try {
+      const transactions = await fetchTransactionsForRowContext(
+        row.groupId,
+        dateStart,
+        dateEnd
+      );
+      const selectors = [];
+      const validPath = [];
+      const validPathLabels = [];
+      let tabTotal = 0;
+      let selectedTotal = 0;
+      let isLeaf = true;
+      const maxDepth = Math.max(8, requestedPath.length + 2);
+
+      for (let depth = 0; depth < maxDepth; depth += 1) {
+        const drillResult = resolveDrillState({
+          tab,
+          transactions,
+          allRules: state.allUserRules,
+          drillPath: validPath,
+          ruleMethods
+        });
+
+        if (depth === 0) {
+          tabTotal = Number.isFinite(Number(drillResult.tabTotal))
+            ? Number(drillResult.tabTotal)
+            : 0;
+        }
+
+        selectedTotal = Number.isFinite(Number(drillResult.currentLevelTotal))
+          ? Number(drillResult.currentLevelTotal)
+          : 0;
+        isLeaf = Boolean(drillResult.isLeaf);
+
+        const options = (Array.isArray(drillResult.groups) ? drillResult.groups : []).map(groupItem => ({
+          key: String(groupItem?.key || '').trim().toLowerCase(),
+          label: String(groupItem?.label || 'Unnamed'),
+          total: Number.isFinite(Number(groupItem?.total)) ? Number(groupItem.total) : 0,
+          count: Number.isFinite(Number(groupItem?.count)) ? Number(groupItem.count) : 0
+        })).filter(option => option.key);
+
+        if (drillResult.groupByMode === 'none' || !options.length) {
+          break;
+        }
+
+        const requestedKey = requestedPath[depth] || '';
+        const matchedOption = requestedKey
+          ? (options.find(option => option.key === requestedKey) || null)
+          : null;
+
+        selectors.push({
+          depth,
+          options,
+          selectedKey: matchedOption?.key || ''
+        });
+
+        if (!matchedOption) {
+          break;
+        }
+
+        validPath.push(matchedOption.key);
+        validPathLabels.push(matchedOption.label);
+      }
+
+      if (validPath.length) {
+        const selectedPathDrillState = resolveDrillState({
+          tab,
+          transactions,
+          allRules: state.allUserRules,
+          drillPath: validPath,
+          ruleMethods
+        });
+
+        selectedTotal = Number.isFinite(Number(selectedPathDrillState.currentLevelTotal))
+          ? Number(selectedPathDrillState.currentLevelTotal)
+          : 0;
+        isLeaf = Boolean(selectedPathDrillState.isLeaf);
+      }
+
+      return {
+        issue: '',
+        selectors,
+        validPath,
+        validPathLabels,
+        tabTotal,
+        selectedTotal,
+        isLeaf
+      };
+    } catch (error) {
+      console.error('Failed to resolve tab row category selectors', error);
+      return { ...emptyResult, issue: 'Failed to load categories' };
     }
   }
 
@@ -1305,6 +1455,9 @@ export function useReportsState() {
           groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
           dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,
           dateEnd: typeof updates.dateEnd === 'string' ? updates.dateEnd : row.dateEnd,
+          drillPath: updates.drillPath !== undefined
+            ? normalizeReportDrillPath(updates.drillPath)
+            : normalizeReportDrillPath(row.drillPath),
           savedTotal: Number.isFinite(Number(updates.savedTotal)) ? Number(updates.savedTotal) : row.savedTotal
         };
       }
@@ -1598,6 +1751,7 @@ export function useReportsState() {
     reorderReports,
     saveReportLayout,
     saveReportsOrder,
+    resolveTabRowCategorySelectors,
     refreshRowTotal,
     getRowAmount,
     getRowIssue,

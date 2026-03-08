@@ -14,11 +14,13 @@
           <div class="px-6 py-8 border-b-2 border-gray-100 flex justify-between items-center bg-white">
             <div>
               <h3 class="text-2xl font-black text-gray-900 tracking-tight">
-                {{ isNew ? 'Create Automation Rule' : 'Edit Automation Rule' }}
+                <template v-if="fixedType">
+                  {{ isNew ? `Create ${displayRuleType} rule` : `Edit ${displayRuleType} rule` }}
+                </template>
+                <template v-else>
+                  {{ isNew ? 'Create Automation Rule' : 'Edit Automation Rule' }}
+                </template>
               </h3>
-              <p class="text-sm text-gray-400 mt-1 font-medium">
-                {{ isNew ? 'Set up a new rule' : 'Modify your existing rule' }} to automatically process transactions.
-              </p>
             </div>
             <button 
               @click="$emit('close')" 
@@ -33,7 +35,7 @@
             <form @submit.prevent="saveRule" class="space-y-10">
               
               <!-- Rule Action -->
-              <div class="space-y-4">
+              <div v-if="!fixedType" class="space-y-4">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Rule Action</label>
                 <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
                   <button
@@ -332,6 +334,10 @@ const props = defineProps({
     type: String,
     default: 'tab',
     validator: (value) => ['tab', 'global'].includes(value)
+  },
+  fixedType: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -341,6 +347,32 @@ const ruleActionOptions = computed(() => (
     ? ['categorize']
     : ['categorize', 'filter']
 ));
+
+const typeDisplayNames = {
+  categorize: 'Categorize',
+  filter: 'Filter',
+  groupBy: 'Group By',
+  sort: 'Sort'
+};
+
+function capitalizeFirstLetter(string) {
+  return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+// Create a deep copy of the rule to avoid mutating props directly
+const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
+
+if (!props.fixedType && !ruleActionOptions.value.includes(ruleData.value.rule[0])) {
+  ruleData.value.rule = ['categorize', '', '', '', ''];
+}
+if (props.scope === 'global') {
+  ruleData.value.rule[0] = 'categorize';
+}
+
+const displayRuleType = computed(() => {
+  const t = ruleData.value.rule[0] || '';
+  return typeDisplayNames[t] || capitalizeFirstLetter(t);
+});
 
 const METHOD_OPTIONS = {
   numeric: [
@@ -388,15 +420,6 @@ const GROUP_BY_OPTIONS = [
   { value: 'date', label: 'Date' },
   { value: 'weekday', label: 'Weekday' }
 ];
-
-// Create a deep copy of the rule to avoid mutating props directly
-const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
-if (!ruleActionOptions.value.includes(ruleData.value.rule[0])) {
-  ruleData.value.rule = ['categorize', '', '', '', ''];
-}
-if (props.scope === 'global') {
-  ruleData.value.rule[0] = 'categorize';
-}
 
 const criterionInput = ref(null);
 
@@ -451,9 +474,6 @@ const useNumberInputForPrimaryCondition = computed(() =>
   useNumberInputForCondition(ruleData.value.rule[1])
 );
 
-function capitalizeFirstLetter(string) {
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
 
 function normalizeSortPropertyName(rawSortPropertyName) {
   return String(rawSortPropertyName || '').trim().replace(/^-/, '');

@@ -83,7 +83,7 @@
             </template>
           </nav>
 
-          <div class="flex-shrink-0 flex items-center gap-2">
+          <div class="flex-shrink-0 flex items-center gap-2" ref="editTabDropdownRef">
             <button
               v-if="showRearrangeAction"
               type="button"
@@ -93,21 +93,38 @@
               {{ isRearrangeActive ? 'Done' : 'Rearrange' }}
             </button>
 
-            <button
-              v-else-if="showEditTabAction"
-              type="button"
-              class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none"
-              @click="emit('edit-tab')"
-            >
-              Edit Tab
-            </button>
+            <div v-else-if="showEditTabAction" class="relative">
+              <button
+                type="button"
+                class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none flex items-center gap-1"
+                @click="toggleEditTabDropdown"
+              >
+                Edit Tab
+                <ChevronDown class="w-3 h-3 transition-transform" :class="isEditTabDropdownOpen ? 'rotate-180' : ''" />
+              </button>
+              
+              <div
+                v-if="isEditTabDropdownOpen"
+                class="absolute top-full right-0 mt-3 py-1.5 min-w-[160px] rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 flex flex-col overflow-hidden"
+              >
+                <button
+                  v-for="option in editTabOptions"
+                  :key="option.id"
+                  @click="handleEditTabOption(option.id)"
+                  class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors truncate"
+                  type="button"
+                >
+                  {{ option.label }}
+                </button>
+              </div>
+            </div>
 
             <button
               v-if="showRecategorizeOverrideWarning"
               type="button"
               class="header-action-button inline-flex items-center justify-center p-2 rounded-full text-[#b45309] hover:opacity-70 transition-opacity focus:outline-none"
               :title="recategorizeOverrideWarningLabel"
-              @click="emit('edit-tab')"
+              @click="emit('edit-tab', 'advanced')"
             >
               <AlertTriangle class="w-4 h-4" />
             </button>
@@ -196,7 +213,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { AlertTriangle, Home, Info, X } from 'lucide-vue-next';
+import { AlertTriangle, Home, Info, X, ChevronDown } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 
 const props = defineProps({
@@ -286,6 +303,29 @@ const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.sta
 
 const isBreadcrumbDropdownOpen = ref(false);
 const breadcrumbDropdownRef = ref(null);
+
+const isEditTabDropdownOpen = ref(false);
+const editTabDropdownRef = ref(null);
+
+const editTabOptions = [
+  { id: 'groupBy', label: 'Group By' },
+  { id: 'sort', label: 'Sort' },
+  { id: 'categorize', label: 'Categorize' },
+  { id: 'filter', label: 'Filter' }
+];
+
+function toggleEditTabDropdown() {
+  isEditTabDropdownOpen.value = !isEditTabDropdownOpen.value;
+}
+
+function closeEditTabDropdown() {
+  isEditTabDropdownOpen.value = false;
+}
+
+function handleEditTabOption(sectionId) {
+  emit('edit-tab', sectionId);
+  closeEditTabDropdown();
+}
 
 function toggleBreadcrumbDropdown() {
   isBreadcrumbDropdownOpen.value = !isBreadcrumbDropdownOpen.value;
@@ -550,12 +590,18 @@ function onWindowKeydown(event) {
     if (isBreadcrumbDropdownOpen.value) {
       closeBreadcrumbDropdown();
     }
+    if (isEditTabDropdownOpen.value) {
+      closeEditTabDropdown();
+    }
   }
 }
 
 function onWindowClick(event) {
   if (isBreadcrumbDropdownOpen.value && breadcrumbDropdownRef.value && !breadcrumbDropdownRef.value.contains(event.target)) {
     closeBreadcrumbDropdown();
+  }
+  if (isEditTabDropdownOpen.value && editTabDropdownRef.value && !editTabDropdownRef.value.contains(event.target)) {
+    closeEditTabDropdown();
   }
 }
 

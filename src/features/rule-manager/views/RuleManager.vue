@@ -84,7 +84,7 @@
       <div class="p-6 pb-32">
         <div class="space-y-12">
           <!-- Group By Section -->
-          <div class="space-y-4">
+          <div v-show="!props.section || props.section === 'groupBy'" class="space-y-4">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-gray-50 text-gray-400">
                 <Group class="w-5 h-5" />
@@ -93,7 +93,7 @@
                 Group By
               </h3>
               <span
-                v-if="groupByRules.length > 0"
+                v-if="groupByRules.length > 1"
                 class="bg-gray-100 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest"
               >
                 {{ groupByRules.length }}
@@ -118,7 +118,7 @@
           </div>
 
           <!-- Sort Section -->
-          <div class="space-y-4">
+          <div v-show="!props.section || props.section === 'sort'" class="space-y-4">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-gray-50 text-gray-400">
                 <SortAsc class="w-5 h-5" />
@@ -127,7 +127,7 @@
                 Sort By
               </h3>
               <span
-                v-if="sortRules.length > 0"
+                v-if="sortRules.length > 1"
                 class="bg-gray-100 text-gray-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest"
               >
                 {{ sortRules.length }}
@@ -177,7 +177,7 @@
           </div>
 
           <!-- Categorize + Filter Rule Sections -->
-          <div v-for="ruleType in standardRuleTypes" :key="ruleType.id" class="space-y-4">
+          <div v-for="ruleType in standardRuleTypes" :key="ruleType.id" v-show="!props.section || props.section === ruleType.id" class="space-y-4">
             <div class="flex items-center gap-3">
               <div class="p-2 rounded-lg bg-gray-50 text-gray-400">
                 <component :is="ruleType.icon" class="w-5 h-5" />
@@ -197,6 +197,7 @@
               <div class="flex items-center justify-between px-1">
                 <button
                   @click="toggleReorderMode(ruleType.id)"
+                  v-if="getRuleCountByType(ruleType.id, true) > 0"
                   class="text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg transition-all"
                   :class="reorderingSectionId === ruleType.id ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 hover:text-black'"
                 >
@@ -288,7 +289,7 @@
             </div>
           </div>
 
-          <div v-if="state.selected.tab" class="space-y-4">
+          <div v-if="state.selected.tab" v-show="!props.section || props.section === 'advanced'" class="space-y-4">
             <button
               type="button"
               class="w-full flex items-center gap-3 py-1 group"
@@ -410,6 +411,13 @@ const {
   updateTabDrillSchemaAtPath,
   copyTabSchemaToGroup
 } = useTabs();
+
+const props = defineProps({
+  section: {
+    type: String,
+    default: null
+  }
+});
 
 const emit = defineEmits(['close']);
 

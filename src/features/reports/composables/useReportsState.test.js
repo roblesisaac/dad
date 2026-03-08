@@ -7,6 +7,7 @@ let calculateReportTotalWithFormula;
 let resolveReportRowAmounts;
 let buildTransactionsCacheKey;
 let buildRowStateKey;
+let normalizeReportDrillPath;
 
 beforeAll(async () => {
   global.window = {
@@ -23,6 +24,7 @@ beforeAll(async () => {
   resolveReportRowAmounts = helpers.resolveReportRowAmounts;
   buildTransactionsCacheKey = helpers.buildTransactionsCacheKey;
   buildRowStateKey = helpers.buildRowStateKey;
+  normalizeReportDrillPath = helpers.normalizeReportDrillPath;
 });
 
 describe('useReportsState helpers', () => {
@@ -51,6 +53,7 @@ describe('useReportsState helpers', () => {
         groupId: 'group-1',
         dateStart: '2026-01-01',
         dateEnd: '2026-01-31',
+        drillPath: ['Money Out', 'Dine Out'],
         savedTotal: '99.9',
         sort: 0,
         extra: 'x'
@@ -61,6 +64,7 @@ describe('useReportsState helpers', () => {
     expect(normalized[0]).toMatchObject({
       rowId: 't1',
       type: 'tab',
+      drillPath: ['money out', 'dine out'],
       savedTotal: 99.9,
       sort: 0
     });
@@ -95,6 +99,11 @@ describe('useReportsState helpers', () => {
   test('builds stable cache and row state keys', () => {
     expect(buildTransactionsCacheKey('g1', '2026-01-01', '2026-01-31')).toBe('g1|2026-01-01|2026-01-31');
     expect(buildRowStateKey('r1', 'row-1')).toBe('r1:row-1');
+  });
+
+  test('normalizes tab drill path values', () => {
+    expect(normalizeReportDrillPath([' Money Out ', 'Dine Out', '', null])).toEqual(['money out', 'dine out']);
+    expect(normalizeReportDrillPath('not-an-array')).toEqual([]);
   });
 
   test('normalizes report list sort order', () => {

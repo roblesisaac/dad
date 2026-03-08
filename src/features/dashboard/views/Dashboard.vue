@@ -153,6 +153,7 @@
 
       <RuleManagerModal
         :is-open="showRuleManagerModal"
+        :initial-section="targetTabEditorSection"
         @close="handleRuleManagerClose"
       />
 
@@ -246,6 +247,7 @@ const { selectTab, ensureDefaultTabsForTabView } = useTabs();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 
 const showRuleManagerModal = ref(false);
+const targetTabEditorSection = ref(null);
 const isAccountModalOpen = ref(false);
 const isRearrangeModeActive = ref(false);
 const dashboardView = ref('group');
@@ -643,7 +645,7 @@ function toggleRearrangeMode() {
   isRearrangeModeActive.value = !isRearrangeModeActive.value;
 }
 
-function openTabEditor() {
+function openTabEditor(sectionValue = null) {
   if (!state.selected.tab) {
     return;
   }
@@ -652,6 +654,8 @@ function openTabEditor() {
   if (!canEditFromCurrentView) {
     return;
   }
+
+  targetTabEditorSection.value = typeof sectionValue === 'string' ? sectionValue : null;
 
   tabEditorSnapshot.value = {
     tabId: String(state.selected.tab._id || ''),
