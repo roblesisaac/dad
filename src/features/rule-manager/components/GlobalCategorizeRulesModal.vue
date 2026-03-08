@@ -180,3 +180,13 @@ async function deleteRule(rule) {
   await processAllTabsForSelectedGroup({ showLoading: false });
 }
 </script>
+
+<style scoped>
+:deep(.rule-part) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+</style>
