@@ -313,9 +313,13 @@ const breadcrumbSegments = computed(() => {
   const segments = [];
 
   if (!isGroupSelectorView.value && !isTransactionSearchView.value) {
+    const isSingleTabDrillRoot = isDrillView.value
+      && shouldCondenseSingleTabBreadcrumb.value
+      && drillBreadcrumbs.value.length === 0;
+
     segments.push({
       id: 'account',
-      type: isTabSelectorView.value ? 'current' : 'link',
+      type: (isTabSelectorView.value || isSingleTabDrillRoot) ? 'current' : 'link',
       label: selectedGroupLabel.value,
       action: () => handleGroupSegmentNavigation()
     });
@@ -324,7 +328,7 @@ const breadcrumbSegments = computed(() => {
   if (isDrillView.value && !shouldCondenseSingleTabBreadcrumb.value) {
     segments.push({
       id: 'tab',
-      type: 'link',
+      type: drillBreadcrumbs.value.length === 0 ? 'current' : 'link',
       label: selectedTabLabel.value,
       action: () => emit('navigate-category')
     });
