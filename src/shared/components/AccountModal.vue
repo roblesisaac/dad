@@ -100,6 +100,17 @@
                 </span>
                 <Building class="h-4 w-4" />
               </button>
+
+              <button
+                type="button"
+                class="account-action-button w-full rounded-2xl px-6 py-4 flex items-center justify-between transition-all"
+                @click="showGlobalCategoriesModal = true"
+              >
+                <span class="text-[10px] font-black uppercase tracking-[0.2em]">
+                  Global Categories
+                </span>
+                <Tags class="h-4 w-4" />
+              </button>
             </div>
 
             <button
@@ -118,6 +129,10 @@
             @connect-bank-complete="handleBankConnected"
             @banks-data-changed="handleBanksDataChanged"
           />
+          <GlobalCategorizeRulesModal
+            :is-open="showGlobalCategoriesModal"
+            @close="showGlobalCategoriesModal = false"
+          />
         </div>
       </div>
     </Transition>
@@ -126,7 +141,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
-import { X, Building, RefreshCw } from 'lucide-vue-next';
+import { X, Building, RefreshCw, Tags } from 'lucide-vue-next';
 import { useTheme } from '@/theme/useTheme.js';
 import { useAuth } from '@/shared/composables/useAuth.js';
 import { usePwaUpdate } from '@/shared/composables/usePwaUpdate.js';
@@ -134,6 +149,7 @@ import { usePlaidSync } from '@/shared/composables/usePlaidSync.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useSelectGroup } from '@/features/select-group/composables/useSelectGroup';
 import BanksModal from '@/features/banks/components/BanksModal.vue';
+import GlobalCategorizeRulesModal from '@/features/rule-manager/components/GlobalCategorizeRulesModal.vue';
 
 defineProps({
   isOpen: {
@@ -153,6 +169,7 @@ const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
 const isCheckingUpdates = ref(false);
 const updateStatusMessage = ref('');
 const showBanksModal = ref(false);
+const showGlobalCategoriesModal = ref(false);
 
 const syncBankDataLabel = computed(() => (
   isSyncingBankData.value ? 'Syncing Bank Data' : 'Sync Bank Data'

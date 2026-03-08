@@ -37,7 +37,7 @@
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">Rule Action</label>
                 <div class="grid grid-cols-2 sm:grid-cols-2 gap-4">
                   <button
-                    v-for="t in RULE_ACTION_OPTIONS"
+                    v-for="t in ruleActionOptions"
                     :key="t"
                     type="button"
                     @click="ruleData.rule[0] = t; updateRuleType()"
@@ -327,11 +327,20 @@ const props = defineProps({
   isNew: {
     type: Boolean,
     default: false
+  },
+  scope: {
+    type: String,
+    default: 'tab',
+    validator: (value) => ['tab', 'global'].includes(value)
   }
 });
 
 const emit = defineEmits(['close', 'save']);
-const RULE_ACTION_OPTIONS = ['categorize', 'filter'];
+const ruleActionOptions = computed(() => (
+  props.scope === 'global'
+    ? ['categorize']
+    : ['categorize', 'filter']
+));
 
 const METHOD_OPTIONS = {
   numeric: [
@@ -382,8 +391,11 @@ const GROUP_BY_OPTIONS = [
 
 // Create a deep copy of the rule to avoid mutating props directly
 const ruleData = ref(JSON.parse(JSON.stringify(props.rule)));
-if (!RULE_ACTION_OPTIONS.includes(ruleData.value.rule[0])) {
+if (!ruleActionOptions.value.includes(ruleData.value.rule[0])) {
   ruleData.value.rule = ['categorize', '', '', '', ''];
+}
+if (props.scope === 'global') {
+  ruleData.value.rule[0] = 'categorize';
 }
 
 const criterionInput = ref(null);
@@ -412,7 +424,12 @@ watch(() => ruleData.value.rule[3], () => {
   });
 });
 
-function normalizeRuleScopeForTab() {
+function normalizeRuleScope() {
+  if (props.scope === 'global') {
+    ruleData.value.applyForTabs = ['_GLOBAL'];
+    return;
+  }
+
   const tabId = state.selected.tab?._id;
   ruleData.value.applyForTabs = tabId ? [tabId] : [];
   ruleData.value._isImportant = false;
@@ -702,7 +719,7 @@ watch(
 
 normalizeMethodsForRuleType();
 normalizeSortRuleForUi();
-normalizeRuleScopeForTab();
+normalizeRuleScope();
 
 function saveRule() {
   if (!validateRule()) {
@@ -722,7 +739,7 @@ function saveRule() {
 
   normalizeAndCondition();
 
-  normalizeRuleScopeForTab();
+  normalizeRuleScope();
   
   emit('save', ruleData.value);
 }

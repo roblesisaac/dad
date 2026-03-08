@@ -25,7 +25,39 @@ export function useInit() {
   const rulesAPI = useRulesAPI(api);
   const { fetchGroupsAndAccounts, handleGroupChange } = useSelectGroup();
 
-  function mergeRuntimeTabStateWithFetchedTabs(fetchedTabs = []) {
+  function drillSchemaFingerprint(tab) {
+    try {
+      return JSON.stringify(tab?.drillSchema || null);
+    } catch (_error) {
+      return '';
+    }
+  }
+
+  function normalizeRuleForFingerprint(rule = {}) {
+    return {
+      _id: String(rule?._id || ''),
+      applyForTabs: Array.isArray(rule?.applyForTabs)
+        ? [...rule.applyForTabs].map(tabId => String(tabId || '')).sort()
+        : [],
+      rule: Array.isArray(rule?.rule)
+        ? rule.rule.map(ruleValue => String(ruleValue ?? ''))
+        : [],
+      filterJoinOperator: String(rule?.filterJoinOperator || ''),
+      orderOfExecution: Number(rule?.orderOfExecution || 0),
+      _isImportant: Boolean(rule?._isImportant)
+    };
+  }
+
+  function buildRulesFingerprint(rules = []) {
+    const normalizedRules = (Array.isArray(rules) ? rules : [])
+      .map(normalizeRuleForFingerprint)
+      .sort((ruleA, ruleB) => String(ruleA._id || '').localeCompare(String(ruleB._id || '')));
+
+    return JSON.stringify(normalizedRules);
+  }
+
+  function mergeRuntimeTabStateWithFetchedTabs(fetchedTabs = [], options = {}) {
+    const { preserveProcessedState = true } = options;
     const existingTabsById = new Map(
       (Array.isArray(state.allUserTabs) ? state.allUserTabs : [])
         .map((tab) => [String(tab?._id || ''), tab])
@@ -43,21 +75,25 @@ export function useInit() {
       const fetchedTotal = Number(tab?.total);
       const existingOverriddenCount = Number(existingTab?.overriddenRecategorizeCount);
       const fetchedOverriddenCount = Number(tab?.overriddenRecategorizeCount);
+      const canPreserveProcessedState = Boolean(preserveProcessedState)
+        && drillSchemaFingerprint(existingTab) === drillSchemaFingerprint(tab);
 
       return {
         ...tab,
         isSelected: Boolean(existingTab?.isSelected),
-        categorizedItems: Array.isArray(existingTab?.categorizedItems)
+        categorizedItems: canPreserveProcessedState && Array.isArray(existingTab?.categorizedItems)
           ? existingTab.categorizedItems
           : (Array.isArray(tab?.categorizedItems) ? tab.categorizedItems : []),
-        hiddenItems: Array.isArray(existingTab?.hiddenItems)
+        hiddenItems: canPreserveProcessedState && Array.isArray(existingTab?.hiddenItems)
           ? existingTab.hiddenItems
           : (Array.isArray(tab?.hiddenItems) ? tab.hiddenItems : []),
-        groupByMode: String(existingTab?.groupByMode || tab?.groupByMode || 'category'),
-        total: Number.isFinite(existingTotal)
+        groupByMode: canPreserveProcessedState
+          ? String(existingTab?.groupByMode || tab?.groupByMode || 'category')
+          : String(tab?.groupByMode || 'category'),
+        total: canPreserveProcessedState && Number.isFinite(existingTotal)
           ? existingTotal
           : (Number.isFinite(fetchedTotal) ? fetchedTotal : 0),
-        overriddenRecategorizeCount: Number.isFinite(existingOverriddenCount)
+        overriddenRecategorizeCount: canPreserveProcessedState && Number.isFinite(existingOverriddenCount)
           ? existingOverriddenCount
           : (Number.isFinite(fetchedOverriddenCount) ? fetchedOverriddenCount : 0)
       };
@@ -124,7 +160,10 @@ export function useInit() {
         await Promise.allSettled(pendingMigrationUpdates);
       }
 
-      state.allUserTabs = mergeRuntimeTabStateWithFetchedTabs(normalizedTabs);
+      const preserveProcessedState = buildRulesFingerprint(state.allUserRules) === buildRulesFingerprint(safeRules);
+      state.allUserTabs = mergeRuntimeTabStateWithFetchedTabs(normalizedTabs, {
+        preserveProcessedState
+      });
       state.allUserRules = safeRules;
     } catch (error) {
       console.error('Error fetching tabs/rules:', error);
@@ -223,7 +262,7 @@ export function useInit() {
             if (runPlaidSync) {
               await syncLatestTransactionsForAllBanks();
             }
-          });
+          })();
 
           const trackedWorkflow = setPendingPostInitWorkflow(postInitWorkflow);
 

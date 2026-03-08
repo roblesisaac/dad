@@ -46,7 +46,7 @@
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               
               <!-- Dropdown trigger -->
-              <div class="relative breadcrumb-dropdown-container">
+              <div class="relative breadcrumb-dropdown-container" ref="breadcrumbDropdownRef">
                 <button
                   @click="toggleBreadcrumbDropdown"
                   class="clickable-underline font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] flex items-center justify-center hover:opacity-70 transition-opacity focus:outline-none min-w-[20px]"
@@ -57,21 +57,19 @@
                 </button>
                 
                 <!-- Dropdown menu -->
-                <div v-if="isBreadcrumbDropdownOpen">
-                  <div class="fixed inset-0 z-40" @click="closeBreadcrumbDropdown"></div>
-                  <div
-                    class="absolute top-full left-0 mt-3 py-1.5 min-w-[200px] rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 flex flex-col overflow-hidden"
+                <div
+                  v-if="isBreadcrumbDropdownOpen"
+                  class="absolute top-full left-0 mt-3 py-1.5 min-w-[200px] rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 flex flex-col overflow-hidden"
+                >
+                  <button
+                    v-for="segment in breadcrumbSegments.slice(0, -1)"
+                    :key="segment.id"
+                    @click="handleDropdownNavigation(segment.action)"
+                    class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors truncate"
+                    type="button"
                   >
-                    <button
-                      v-for="segment in breadcrumbSegments.slice(0, -1)"
-                      :key="segment.id"
-                      @click="handleDropdownNavigation(segment.action)"
-                      class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors truncate"
-                      type="button"
-                    >
-                      {{ segment.label }}
-                    </button>
-                  </div>
+                    {{ segment.label }}
+                  </button>
                 </div>
               </div>
               
@@ -287,6 +285,7 @@ const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select T
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
 
 const isBreadcrumbDropdownOpen = ref(false);
+const breadcrumbDropdownRef = ref(null);
 
 function toggleBreadcrumbDropdown() {
   isBreadcrumbDropdownOpen.value = !isBreadcrumbDropdownOpen.value;
@@ -539,18 +538,31 @@ function closeHeaderInfoModal() {
   isHeaderInfoModalOpen.value = false;
 }
 
-function onHeaderInfoEscape(event) {
-  if (event.key === 'Escape' && isHeaderInfoModalOpen.value) {
-    closeHeaderInfoModal();
+function onWindowKeydown(event) {
+  if (event.key === 'Escape') {
+    if (isHeaderInfoModalOpen.value) {
+      closeHeaderInfoModal();
+    }
+    if (isBreadcrumbDropdownOpen.value) {
+      closeBreadcrumbDropdown();
+    }
+  }
+}
+
+function onWindowClick(event) {
+  if (isBreadcrumbDropdownOpen.value && breadcrumbDropdownRef.value && !breadcrumbDropdownRef.value.contains(event.target)) {
+    closeBreadcrumbDropdown();
   }
 }
 
 onMounted(() => {
-  window.addEventListener('keydown', onHeaderInfoEscape);
+  window.addEventListener('keydown', onWindowKeydown);
+  window.addEventListener('click', onWindowClick, { capture: true });
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('keydown', onHeaderInfoEscape);
+  window.removeEventListener('keydown', onWindowKeydown);
+  window.removeEventListener('click', onWindowClick, { capture: true });
 });
 </script>
 
