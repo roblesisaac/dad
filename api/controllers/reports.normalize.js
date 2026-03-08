@@ -27,6 +27,17 @@ function optionalString(value, fallback = '') {
   return value.trim();
 }
 
+function optionalStringList(value, { lowercase = false } = {}) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .map(item => optionalString(item))
+    .filter(Boolean)
+    .map((item) => (lowercase ? item.toLowerCase() : item));
+}
+
 function normalizeTotalDisplayType(value) {
   return optionalString(value).toLowerCase() === 'percentage'
     ? 'percentage'
@@ -148,6 +159,9 @@ function parseOptionalSort(sort) {
 }
 
 function normalizeTabRow(row, fallbackSort) {
+  const drillPath = optionalStringList(row?.drillPath, { lowercase: true });
+  const drillPathLabels = optionalStringList(row?.drillPathLabels);
+
   const normalized = {
     rowId: normalizeRowId(row?.rowId),
     type: 'tab',
@@ -155,6 +169,8 @@ function normalizeTabRow(row, fallbackSort) {
     groupId: nonEmptyString(row?.groupId, 'tab row groupId'),
     dateStart: normalizeDate(row?.dateStart, 'tab row dateStart'),
     dateEnd: normalizeDate(row?.dateEnd, 'tab row dateEnd'),
+    drillPath,
+    drillPathLabels: drillPath.length ? drillPathLabels.slice(0, drillPath.length) : [],
     savedTotal: parseOptionalNumber(row?.savedTotal, 'tab row savedTotal', 0),
     sort: normalizeSort(row?.sort, fallbackSort)
   };

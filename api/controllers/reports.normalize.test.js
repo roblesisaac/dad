@@ -31,6 +31,8 @@ describe('reports normalize', () => {
           groupId: 'group-1',
           dateStart: '2026-01-01',
           dateEnd: '2026-01-31',
+          drillPath: [' Money Out ', 'Fast Food '],
+          drillPathLabels: ['Money Out', ' Fast Food '],
           savedTotal: '77.5',
           sort: 1,
           unknown: 'x'
@@ -58,6 +60,8 @@ describe('reports normalize', () => {
       groupId: 'group-1',
       dateStart: '2026-01-01',
       dateEnd: '2026-01-31',
+      drillPath: ['money out', 'fast food'],
+      drillPathLabels: ['Money Out', 'Fast Food'],
       savedTotal: 77.5,
       sort: 0
     });
@@ -173,6 +177,26 @@ describe('reports normalize', () => {
         ]
       })
     ).toThrow('tab row savedTotal must be a valid number');
+  });
+
+  test('normalizes optional tab drill fields with safe fallback', () => {
+    const normalized = normalizeReportPayload({
+      name: 'Monthly',
+      rows: [
+        {
+          type: 'tab',
+          tabId: 'tab-1',
+          groupId: 'group-1',
+          dateStart: '2026-01-01',
+          dateEnd: '2026-01-31',
+          drillPath: 'money out',
+          drillPathLabels: null
+        }
+      ]
+    });
+
+    expect(normalized.rows[0].drillPath).toEqual([]);
+    expect(normalized.rows[0].drillPathLabels).toEqual([]);
   });
 
   test('throws on invalid report row saved total', () => {

@@ -10,6 +10,8 @@ const rowSchema = {
   groupId: String,
   dateStart: String,
   dateEnd: String,
+  drillPath: [String],
+  drillPathLabels: [String],
   reportId: String,
   reportName: String,
   savedTotal: Number,
