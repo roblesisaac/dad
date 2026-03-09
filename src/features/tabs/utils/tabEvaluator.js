@@ -23,6 +23,50 @@ function parseTextMatchTerms(valueToCheck) {
     .filter(Boolean);
 }
 
+function isAccountProperty(propName) {
+  return String(propName || '').trim().toLowerCase() === 'account';
+}
+
+function normalizeAccountIdentifier(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function itemAccountIdentifiers(item) {
+  const candidates = [
+    item?.account_id,
+    item?.accountId,
+    item?.id,
+    item?._id
+  ];
+
+  if (item?.account && typeof item.account === 'object') {
+    candidates.push(
+      item.account?.account_id,
+      item.account?.accountId,
+      item.account?.id,
+      item.account?._id
+    );
+  } else {
+    candidates.push(item?.account);
+  }
+
+  return [...new Set(
+    candidates
+      .map(normalizeAccountIdentifier)
+      .filter(Boolean)
+  )];
+}
+
+function accountCriterionMatchesItem(item, criterion) {
+  const criterionTerms = parseTextMatchTerms(criterion).map(normalizeAccountIdentifier);
+  if (!criterionTerms.length) {
+    return false;
+  }
+
+  const criterionSet = new Set(criterionTerms);
+  return itemAccountIdentifiers(item).some(identifier => criterionSet.has(identifier));
+}
+
 function toFiniteNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -204,6 +248,10 @@ function getItemValue(item, propName) {
 
   if (propName === 'category') {
     return item.personal_finance_category?.primary;
+  }
+
+  if (isAccountProperty(propName)) {
+    return item?.account_id || item?.accountId || item?.account || '';
   }
 
   if (propName === 'date') {
@@ -458,6 +506,13 @@ function buildConditionMethod(itemPropName, ruleMethodName, criterion, ruleMetho
   }
 
   return (item) => {
+    if (isAccountProperty(itemPropName) && (ruleMethodName === '=' || ruleMethodName === 'is not')) {
+      const accountMatch = accountCriterionMatchesItem(item, criterion);
+      return ruleMethodName === '='
+        ? accountMatch
+        : !accountMatch;
+    }
+
     const itemValue = getItemValue(item, itemPropName);
     const method = ruleMethods[ruleMethodName];
 

@@ -246,12 +246,16 @@ function getAdditionalConditionsStartIndex(ruleValues = []) {
 
 <style scoped>
 .rule-part {
-  padding: 0.125rem 0.5rem;
-  border-radius: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
   background-color: var(--theme-rule-part-bg);
   color: var(--theme-rule-part-text);
-  border: 1px solid var(--theme-rule-part-border);
   font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.group:hover .rule-part {
+  color: var(--theme-text);
 }
 
 .rule-syntax.inline .rule-part {

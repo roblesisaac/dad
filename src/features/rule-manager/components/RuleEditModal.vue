@@ -146,8 +146,29 @@
                         </option>
                       </select>
                       
+                      <select
+                        v-if="useAccountSelectForPrimaryCondition"
+                        multiple
+                        size="6"
+                        class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors min-h-[150px]"
+                        :disabled="!accountConditionOptions.length"
+                        @change="updatePrimaryAccountCriterion"
+                      >
+                        <option
+                          v-for="accountOption in accountConditionOptions"
+                          :key="`primary-account-option-${accountOption.value}`"
+                          :value="accountOption.value"
+                          :selected="isAccountCriterionSelected(ruleData.rule[3], accountOption.value)"
+                        >
+                          {{ accountOption.label }}
+                        </option>
+                        <option v-if="!accountConditionOptions.length" disabled value="">
+                          No accounts available
+                        </option>
+                      </select>
+
                       <input
-                        v-if="useDateInputForPrimaryCondition"
+                        v-else-if="useDateInputForPrimaryCondition"
                         v-model="ruleData.rule[3]"
                         type="date"
                         class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
@@ -258,7 +279,29 @@
                             </option>
                           </select>
 
+                          <select
+                            v-if="useAccountSelectForCondition(condition.property)"
+                            multiple
+                            size="6"
+                            class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors min-h-[150px]"
+                            :disabled="!accountConditionOptions.length"
+                            @change="updateAndConditionAccountCriterion(index, $event)"
+                          >
+                            <option
+                              v-for="accountOption in accountConditionOptions"
+                              :key="`and-account-option-${index}-${accountOption.value}`"
+                              :value="accountOption.value"
+                              :selected="isAccountCriterionSelected(condition.value, accountOption.value)"
+                            >
+                              {{ accountOption.label }}
+                            </option>
+                            <option v-if="!accountConditionOptions.length" disabled value="">
+                              No accounts available
+                            </option>
+                          </select>
+
                           <input
+                            v-else
                             v-model="condition.value"
                             :type="getConditionValueInputType(condition.property)"
                             class="form-input w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 placeholder-gray-300 transition-colors"
@@ -496,6 +539,27 @@ const FILTER_ONLY_PROPERTY_OPTIONS = [
   { value: 'globalCategory', label: 'Global Rule' }
 ];
 
+const accountConditionOptions = computed(() => {
+  const allUserAccounts = Array.isArray(state.allUserAccounts) ? state.allUserAccounts : [];
+  const optionsByValue = new Map();
+
+  for (const account of allUserAccounts) {
+    const value = resolveAccountConditionValue(account);
+    if (!value || optionsByValue.has(value)) {
+      continue;
+    }
+
+    optionsByValue.set(value, {
+      value,
+      label: formatAccountConditionLabel(account)
+    });
+  }
+
+  return [...optionsByValue.values()].sort((a, b) =>
+    a.label.localeCompare(b.label, undefined, { sensitivity: 'base' })
+  );
+});
+
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
   { value: 'date', label: 'Date' },
@@ -587,6 +651,10 @@ const useDateInputForPrimaryCondition = computed(() =>
 
 const useNumberInputForPrimaryCondition = computed(() =>
   useNumberInputForCondition(ruleData.value.rule[1])
+);
+
+const useAccountSelectForPrimaryCondition = computed(() =>
+  useAccountSelectForCondition(ruleData.value.rule[1])
 );
 
 
@@ -753,6 +821,81 @@ function getCategorizeSetValuePlaceholder(setTarget) {
   return 'e.g. Groceries';
 }
 
+function resolveAccountConditionValue(account) {
+  return String(
+    account?.account_id
+      || account?.accountId
+      || account?.id
+      || account?._id
+      || ''
+  ).trim();
+}
+
+function formatAccountConditionLabel(account) {
+  const officialName = String(account?.official_name || account?.officialName || '').trim();
+  const accountName = String(account?.name || '').trim();
+  const mask = account?.mask !== undefined && account?.mask !== null
+    ? String(account.mask).trim()
+    : '';
+  const baseLabel = officialName || accountName || (mask ? `Account ${mask}` : 'Account');
+
+  if (mask && !baseLabel.toLowerCase().includes(mask.toLowerCase())) {
+    return `${baseLabel} (${mask})`;
+  }
+
+  return baseLabel;
+}
+
+function parseAccountCriterion(value) {
+  return String(value || '')
+    .split(/[\n,]/)
+    .map(entry => entry.trim())
+    .filter(Boolean);
+}
+
+function isAccountCriterionSelected(criterion, accountValue) {
+  const normalizedAccountValue = String(accountValue || '').trim();
+  if (!normalizedAccountValue) {
+    return false;
+  }
+
+  return parseAccountCriterion(criterion)
+    .includes(normalizedAccountValue);
+}
+
+function serializeAccountCriterion(values = []) {
+  const uniqueValues = [...new Set(
+    values
+      .map(value => String(value || '').trim())
+      .filter(Boolean)
+  )];
+
+  return uniqueValues.join(', ');
+}
+
+function normalizeAccountCriterionValue(value) {
+  return serializeAccountCriterion(parseAccountCriterion(value));
+}
+
+function readSelectedValues(event) {
+  return Array.from(event?.target?.selectedOptions || [])
+    .map(option => String(option.value || '').trim())
+    .filter(Boolean);
+}
+
+function updatePrimaryAccountCriterion(event) {
+  ruleData.value.rule[3] = serializeAccountCriterion(readSelectedValues(event));
+}
+
+function updateAndConditionAccountCriterion(index, event) {
+  const condition = andConditions.value[index];
+  if (!condition) {
+    return;
+  }
+
+  condition.value = serializeAccountCriterion(readSelectedValues(event));
+}
+
 function getCriterionPlaceholder() {
   const ruleType = ruleData.value.rule[0];
   
@@ -770,6 +913,8 @@ function getCriterionPlaceholderForProperty(propType) {
     return useDateInputForCondition(propType)
       ? 'Select a date'
       : 'YYYY-MM-DD or relative date';
+  } else if (isAccountProperty(propType)) {
+    return 'Select one or more accounts';
   } else {
     return 'Enter text value';
   }
@@ -788,7 +933,11 @@ function isNumericProperty(propName) {
 }
 
 function isTextProperty(propName) {
-  return propName === 'name' || propName === 'category' || propName === 'account' || isGlobalCategoryProperty(propName);
+  return propName === 'name' || propName === 'category' || isGlobalCategoryProperty(propName);
+}
+
+function isAccountProperty(propName) {
+  return String(propName || '').trim().toLowerCase() === 'account';
 }
 
 function isDateProperty(propName) {
@@ -812,6 +961,10 @@ function useNumberInputForCondition(propName) {
   return ['filter', 'categorize'].includes(ruleData.value.rule[0]) && isNumericProperty(propName);
 }
 
+function useAccountSelectForCondition(propName) {
+  return ['filter', 'categorize'].includes(ruleData.value.rule[0]) && isAccountProperty(propName);
+}
+
 function getConditionValueInputType(propName) {
   if (useDateInputForCondition(propName)) {
     return 'date';
@@ -827,6 +980,10 @@ function getConditionValueInputType(propName) {
 function getMethodOptions(ruleType, propName) {
   if (['filter', 'categorize'].includes(ruleType) && isDateProperty(propName)) {
     return METHOD_OPTIONS.dateCondition;
+  }
+
+  if (['filter', 'categorize'].includes(ruleType) && isAccountProperty(propName)) {
+    return METHOD_OPTIONS.common;
   }
 
   const options = [];
@@ -880,6 +1037,10 @@ function normalizeLegacyTextMethod(methodName) {
 function normalizeLegacyMethodForProperty(propName, methodName) {
   if (isDateProperty(propName)) {
     return normalizeLegacyDateMethod(methodName);
+  }
+
+  if (isAccountProperty(propName)) {
+    return methodName;
   }
 
   if (isTextProperty(propName)) {
@@ -971,6 +1132,10 @@ function saveRule() {
     ruleData.value.rule[4] = normalizeCategorizeSetTarget(ruleData.value.rule[4]);
   }
 
+  if (isAccountProperty(ruleData.value.rule[1])) {
+    ruleData.value.rule[3] = normalizeAccountCriterionValue(ruleData.value.rule[3]);
+  }
+
   normalizeAndCondition();
 
   normalizeRuleScope();
@@ -1046,24 +1211,37 @@ function validateRule() {
 
 function normalizeAndCondition() {
   const baseRule = Array.isArray(ruleData.value.rule) ? ruleData.value.rule : [];
+  const normalizedBaseCriterion = isAccountProperty(baseRule[1])
+    ? normalizeAccountCriterionValue(baseRule[3])
+    : (baseRule[3] ?? '');
   const normalizedRule = baseRule[0] === 'categorize' && useCategorizeSetTarget.value
     ? [
       'categorize',
       baseRule[1] ?? '',
       baseRule[2] ?? '',
-      baseRule[3] ?? '',
+      normalizedBaseCriterion,
       normalizeCategorizeSetTarget(baseRule[4]),
       baseRule[5] ?? ''
     ]
-    : [...baseRule.slice(0, 5)];
+    : [
+      baseRule[0] ?? '',
+      baseRule[1] ?? '',
+      baseRule[2] ?? '',
+      normalizedBaseCriterion,
+      baseRule[4] ?? ''
+    ];
 
   if (supportsAndCondition.value) {
     for (const andCondition of andConditions.value) {
+      const normalizedConditionValue = isAccountProperty(andCondition.property)
+        ? normalizeAccountCriterionValue(andCondition.value)
+        : (andCondition.value || '');
+
       normalizedRule.push(
         normalizeConditionCombinator(andCondition.combinator),
         andCondition.property || '',
         andCondition.method || '',
-        andCondition.value || ''
+        normalizedConditionValue
       );
     }
   }

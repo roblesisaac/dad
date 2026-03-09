@@ -175,6 +175,63 @@ describe('tabEvaluator', () => {
     expect(visibleTransactionIds).toEqual(['entertainment-income', 'travel-expense']);
   });
 
+  test('supports account filters with multi-select values for equals and is not', () => {
+    const transactions = [
+      {
+        transaction_id: 'account-1',
+        account_id: 'acc-1',
+        amount: 10,
+        authorized_date: '2026-01-01',
+        date: '2026-01-01',
+        personal_finance_category: { primary: 'TRAVEL' }
+      },
+      {
+        transaction_id: 'account-2',
+        account_id: 'acc-2',
+        amount: 8,
+        authorized_date: '2026-01-02',
+        date: '2026-01-02',
+        personal_finance_category: { primary: 'FOOD' }
+      },
+      {
+        transaction_id: 'account-3',
+        account_id: 'acc-3',
+        amount: 6,
+        authorized_date: '2026-01-03',
+        date: '2026-01-03',
+        personal_finance_category: { primary: 'GROCERIES' }
+      }
+    ];
+
+    const equalsResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        { _id: 'f-account-equals', orderOfExecution: 0, rule: ['filter', 'account', '=', 'acc-1, acc-3', ''] }
+      ]
+    });
+
+    const equalsVisibleIds = equalsResult.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(equalsVisibleIds).toEqual(['account-1', 'account-3']);
+
+    const isNotResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        { _id: 'f-account-is-not', orderOfExecution: 0, rule: ['filter', 'account', 'is not', 'acc-2', ''] }
+      ]
+    });
+
+    const isNotVisibleIds = isNotResult.categorizedItems
+      .flatMap(([, items]) => items.map(item => item.transaction_id))
+      .sort();
+
+    expect(isNotVisibleIds).toEqual(['account-1', 'account-3']);
+  });
+
   test('supports date-specific filter operators', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

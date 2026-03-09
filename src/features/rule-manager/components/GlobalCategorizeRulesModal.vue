@@ -45,7 +45,7 @@
           <div
             v-for="rule in filteredGlobalCategorizeRules"
             :key="rule._id"
-            class="rounded-2xl border border-gray-200 bg-white p-4"
+            class="group rounded-2xl border border-gray-200 bg-white p-4"
           >
             <RuleSyntaxDisplay :rule="rule" compact />
             <div class="mt-3 flex items-center justify-end gap-2">
