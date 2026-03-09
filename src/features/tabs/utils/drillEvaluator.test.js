@@ -174,7 +174,7 @@ describe('drillEvaluator', () => {
     expect(travel.groups.map(group => group.key)).toEqual(['travel']);
   });
 
-  test('applies global categorize at every depth but does not carry local categorize to child depth', () => {
+  test('applies global rules at every depth but does not carry local categorize to child depth', () => {
     const tab = createTab([
       {
         id: 'level-1',
@@ -228,7 +228,7 @@ describe('drillEvaluator', () => {
     expect(result.groups.map(group => group.key)).not.toContain('rides local');
   });
 
-  test('global categorize runs before local categorize even when global order is higher', () => {
+  test('global rules run before local categorize even when global order is higher', () => {
     const tab = createTab([
       {
         id: 'level-1',
@@ -272,7 +272,7 @@ describe('drillEvaluator', () => {
     expect(result.groups.map(group => group.key)).not.toContain('fdms okb');
   });
 
-  test('local categorize can override important global categorize rules', () => {
+  test('local categorize can override important global rules', () => {
     const tab = createTab([
       {
         id: 'level-1',

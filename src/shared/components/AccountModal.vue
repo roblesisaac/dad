@@ -107,7 +107,7 @@
                 @click="showGlobalCategoriesModal = true"
               >
                 <span class="text-[10px] font-black uppercase tracking-[0.2em]">
-                  Global Categories
+                  Global Rules
                 </span>
                 <Tags class="h-4 w-4" />
               </button>

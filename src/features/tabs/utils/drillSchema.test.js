@@ -78,7 +78,7 @@ describe('drillSchema', () => {
     expect(levelZero.categorizeRules.map(rule => rule._id)).toEqual(['tab-categorize']);
   });
 
-  test('returns only global categorize rules from the shared rule set', () => {
+  test('returns only global rules from the shared rule set', () => {
     const allRules = [
       createLegacyRule('g-cat', ['_GLOBAL'], ['categorize', 'name', 'includes', 'uber', 'rides']),
       createLegacyRule('g-filter', ['_GLOBAL'], ['filter', 'amount', '>', '0', '']),

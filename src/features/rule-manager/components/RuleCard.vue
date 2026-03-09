@@ -264,7 +264,7 @@ function formatPropertyLabel(propertyName) {
   }
 
   if (isGlobalCategoryProperty(normalizedPropertyName)) {
-    return 'global category';
+    return 'global rule';
   }
 
   return normalizedPropertyName;

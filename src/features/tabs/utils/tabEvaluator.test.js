@@ -438,7 +438,7 @@ describe('tabEvaluator', () => {
     expect(uberTransaction?.personal_finance_category?.primary).toBe('travel');
   });
 
-  test('prefers global categorize when the same rule id exists in both global and local scopes', () => {
+  test('prefers global rule when the same rule id exists in both global and local scopes', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
@@ -477,7 +477,7 @@ describe('tabEvaluator', () => {
     expect(uberTransaction?.name).toBe('Ride Share Global');
   });
 
-  test('filters can target global category when local tab categories override it', () => {
+  test('filters can target global rule output when local tab categories override it', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [

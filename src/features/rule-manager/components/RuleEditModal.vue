@@ -341,7 +341,7 @@
                   <div>
                     <p class="text-xs font-black uppercase tracking-[0.14em] text-gray-700">Make Global</p>
                     <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
-                      Also show in Account / Global Categories
+                      Also show in Account / Global Rules
                     </p>
                   </div>
                   <Switch
@@ -492,7 +492,7 @@ const CONDITION_PROPERTY_OPTIONS = [
 ];
 
 const FILTER_ONLY_PROPERTY_OPTIONS = [
-  { value: 'globalCategory', label: 'Global Category' }
+  { value: 'globalCategory', label: 'Global Rule' }
 ];
 
 const SORT_PROPERTY_OPTIONS = [

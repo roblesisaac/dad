@@ -516,8 +516,7 @@ const headerInfo = computed(() => {
 
   return {
     title: 'Tab Total',
-    summary: `This is the total for ${selectedTabLabel.value} in ${activeDateRangeLabel.value}.`,
-    details: ['Click the date selector below to change the range.']
+    summary: `This is the total for ${selectedTabLabel.value} in ${activeDateRangeLabel.value}.`
   };
 });
 

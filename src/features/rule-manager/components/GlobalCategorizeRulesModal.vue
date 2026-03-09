@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :is-open="isOpen"
-    title="Global Categories"
+    title="Global Rules"
     @close="closeModal"
   >
     <template #content>
@@ -9,7 +9,7 @@
         <div class="flex items-center justify-between gap-4">
           <div>
             <h3 class="text-lg font-black tracking-tight text-gray-900">
-              Global Category Rules
+              Global Rules
             </h3>
             <p class="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
               Applied before tab-level categorize rules
@@ -52,7 +52,7 @@
 
         <div v-else class="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
           <p class="text-xs font-black uppercase tracking-[0.14em] text-gray-500">
-            No global category rules yet
+            No global rules yet
           </p>
         </div>
       </div>
@@ -166,7 +166,7 @@ async function deleteRule(rule) {
     return;
   }
 
-  const shouldDelete = confirm('Delete this global category rule?');
+  const shouldDelete = confirm('Delete this global rule?');
   if (!shouldDelete) {
     return;
   }

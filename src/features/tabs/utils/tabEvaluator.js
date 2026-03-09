@@ -790,7 +790,7 @@ function buildCategorizeMethod(categorizers, options = {}) {
   return (item) => {
     formatPersonalFinanceCategory(item);
 
-    // 1) Apply global categorization rules first.
+    // 1) Apply global rules first.
     applyCategorizerScope(item, globalCategorizers);
     item._globalCategory = String(item.personal_finance_category?.primary || '').trim().toLowerCase();
 

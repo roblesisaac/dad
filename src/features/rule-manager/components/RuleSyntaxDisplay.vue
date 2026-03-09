@@ -88,7 +88,7 @@ function formatPropName(propName) {
   if (normalizedPropName === 'date') return 'date';
   if (normalizedPropName === 'name') return 'name';
   if (normalizedPropName === 'category') return 'category';
-  if (isGlobalCategoryProperty(normalizedPropName)) return 'global category';
+  if (isGlobalCategoryProperty(normalizedPropName)) return 'global rule';
   if (normalizedPropName === 'none') return 'no grouping';
   
   // General case: convert camelCase to words
