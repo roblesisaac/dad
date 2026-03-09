@@ -805,7 +805,7 @@ const headerInfo = computed(() => {
     if (hasDrillBreadcrumb) {
       return {
         title: 'Drill Level Total',
-        summary: `{{ total }} is the total for {{ selected-level }} in {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
+        summary: `{{ total }} is the total for {{ selected-level }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
       };
     }
 
