@@ -321,18 +321,18 @@
           </div>
           
           <!-- Sticky Footer -->
-          <div class="mt-auto px-6 py-6 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex flex-col sm:flex-row justify-end gap-4">
+          <div class="mt-auto px-6 py-6 bg-white/80 backdrop-blur-sm border-t-2 border-gray-50 sticky bottom-0 flex gap-4">
             <button 
               @click="$emit('close')" 
               type="button" 
-              class="px-8 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-bold text-gray-400 hover:border-black hover:text-black flex-1 sm:flex-none transition-all"
+              class="px-5 py-4 bg-white border-2 border-gray-100 rounded-2xl text-base font-bold text-gray-400 hover:border-black hover:text-black flex-1 transition-all"
             >
               Cancel
             </button>
             <button 
               @click="saveRule" 
               type="button" 
-              class="px-10 py-4 bg-black border-2 border-black rounded-2xl text-base font-bold text-white hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex-1 sm:flex-none"
+              class="px-5 py-4 bg-black border-2 border-black rounded-2xl text-base font-bold text-white hover:bg-gray-800 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] transition-all flex-1"
             >
               {{ isNew ? 'Create Rule' : 'Save Changes' }}
             </button>
