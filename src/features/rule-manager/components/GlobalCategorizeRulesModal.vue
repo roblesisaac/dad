@@ -45,16 +45,18 @@
         >
           <template #item="{ element: rule }">
             <div
-              class="group rounded-2xl border border-gray-200 bg-white p-4"
+              class="global-rule-row group rounded-2xl border border-gray-200 bg-white p-4 select-none"
               @touchstart.passive="handleRuleRowTouchStart($event, rule)"
               @touchmove="handleRuleRowTouchMove"
               @touchend="handleRuleRowTouchEnd"
               @touchcancel="handleRuleRowTouchEnd"
+              @mousedown="handleRuleRowMouseDown($event, rule)"
+              @mousemove="handleRuleRowMouseMove"
+              @mouseup="handleRuleRowMouseUp"
+              @mouseleave="handleRuleRowMouseUp"
             >
               <div class="flex items-start justify-between gap-3">
-                <RuleSyntaxDisplay :rule="rule" compact class="min-w-0" />
-
-                <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
+                <div class="flex min-w-0 flex-1 items-start gap-2">
                   <button
                     v-if="isReorderModeActive && canReorderVisibleList"
                     type="button"
@@ -64,6 +66,10 @@
                     <GripVertical class="h-4 w-4" />
                   </button>
 
+                  <RuleSyntaxDisplay :rule="rule" compact class="min-w-0" />
+                </div>
+
+                <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
                   <button
                     type="button"
                     class="rounded-xl p-2 text-gray-500 transition-all focus:outline-none opacity-0 pointer-events-none hover:bg-gray-100 hover:text-black group-hover:opacity-100 group-hover:pointer-events-auto"
@@ -329,30 +335,26 @@ function shouldIgnoreRuleLongPressTarget(event) {
   return Boolean(target.closest('button, input, select, textarea, a, label'));
 }
 
-function handleRuleRowTouchStart(event, rule) {
+function shouldSkipLongPressStart(event) {
   if (isReorderModeActive.value && canReorderVisibleList.value) {
-    return;
+    return true;
   }
 
   if (shouldIgnoreRuleLongPressTarget(event)) {
-    return;
+    return true;
   }
 
-  const touch = event.touches?.[0];
-  if (!touch) {
-    return;
-  }
+  return false;
+}
 
+function startRuleLongPress(rule, x, y) {
   const key = ruleKey(rule);
   if (!key) {
     return;
   }
 
   clearRuleLongPressTimer();
-  ruleLongPressStart.value = {
-    x: touch.clientX,
-    y: touch.clientY
-  };
+  ruleLongPressStart.value = { x, y };
 
   ruleLongPressTimeoutId.value = setTimeout(() => {
     activeRuleMenuId.value = '';
@@ -362,6 +364,31 @@ function handleRuleRowTouchStart(event, rule) {
     }
     ruleLongPressTimeoutId.value = null;
   }, LONG_PRESS_DURATION_MS);
+}
+
+function handleRuleRowTouchStart(event, rule) {
+  if (shouldSkipLongPressStart(event)) {
+    return;
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  startRuleLongPress(rule, touch.clientX, touch.clientY);
+}
+
+function handleRuleRowMouseDown(event, rule) {
+  if (event.button !== 0) {
+    return;
+  }
+
+  if (shouldSkipLongPressStart(event)) {
+    return;
+  }
+
+  startRuleLongPress(rule, event.clientX, event.clientY);
 }
 
 function handleRuleRowTouchMove(event) {
@@ -381,7 +408,23 @@ function handleRuleRowTouchMove(event) {
   }
 }
 
+function handleRuleRowMouseMove(event) {
+  if (!ruleLongPressTimeoutId.value) {
+    return;
+  }
+
+  const deltaX = Math.abs(event.clientX - ruleLongPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - ruleLongPressStart.value.y);
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearRuleLongPressTimer();
+  }
+}
+
 function handleRuleRowTouchEnd() {
+  clearRuleLongPressTimer();
+}
+
+function handleRuleRowMouseUp() {
   clearRuleLongPressTimer();
 }
 
@@ -529,6 +572,14 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.global-rule-row {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+}
+
 :deep(.rule-part) {
   max-width: 100%;
   overflow: hidden;
