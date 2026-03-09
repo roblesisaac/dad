@@ -316,7 +316,8 @@ function evaluateTemplateExpression(expression, tokenMap = {}) {
 
 export function renderTemplateWithTokens(template, tokenMap = {}, options = {}) {
   const {
-    formatExpressionResult = formatExpressionNumber
+    formatExpressionResult = formatExpressionNumber,
+    wrapInterpolated = false
   } = options;
   const safeTemplate = String(template ?? '');
   if (!safeTemplate.includes('{{')) {
@@ -325,16 +326,22 @@ export function renderTemplateWithTokens(template, tokenMap = {}, options = {}) 
 
   return safeTemplate.replace(TEMPLATE_TOKEN_PATTERN, (match, rawToken) => {
     const normalizedToken = normalizeTemplateToken(rawToken);
+    let value = match;
+
     if (!normalizedToken || !hasOwn(tokenMap, normalizedToken)) {
       const expressionResult = evaluateTemplateExpression(rawToken, tokenMap);
-      if (expressionResult === null) {
-        return match;
+      if (expressionResult !== null) {
+        value = String(formatExpressionResult(expressionResult) || '').trim();
       }
-
-      const formattedExpression = String(formatExpressionResult(expressionResult) || '').trim();
-      return formattedExpression || match;
+    } else {
+      value = String(tokenMap[normalizedToken]);
     }
 
-    return String(tokenMap[normalizedToken]);
+    if (wrapInterpolated && value !== match) {
+      return `<span class="rule-part">${value}</span>`;
+    }
+
+    return value;
   });
 }
+

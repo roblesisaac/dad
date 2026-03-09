@@ -251,9 +251,10 @@
                 <div class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
                   Preview
                 </div>
-                <div class="min-h-[52px] rounded-xl border border-[var(--theme-border)] bg-[var(--theme-overlay-5)] px-3 py-2 text-sm leading-relaxed text-[var(--theme-text)]" style="white-space: pre-wrap;">
-                  {{ renderedHelperBodyDraft || 'No helper text yet.' }}
-                </div>
+                <div 
+                  class="min-h-[52px] rounded-xl border border-[var(--theme-border)] bg-[var(--theme-overlay-5)] px-3 py-2 text-sm leading-relaxed text-[var(--theme-text)] markdown-content" 
+                  v-html="renderedHelperBodyDraft || 'No helper text yet.'"
+                />
               </div>
               <div class="flex items-center justify-end gap-2 pt-1">
                 <button
@@ -275,9 +276,10 @@
               </div>
             </template>
             <template v-else>
-              <p class="text-sm leading-relaxed text-[var(--theme-text)]">
-                {{ helperBodyDisplay }}
-              </p>
+              <div 
+                class="text-sm leading-relaxed text-[var(--theme-text)] markdown-content"
+                v-html="helperBodyDisplay"
+              />
               <ul v-if="!hasViewNote && headerInfo.details" class="space-y-1.5">
                 <li
                   v-for="detail in headerInfo.details"
@@ -302,6 +304,7 @@ import { useDashboardState } from '@/features/dashboard/composables/useDashboard
 import { useUtils } from '@/shared/composables/useUtils';
 import { AlertTriangle, Home, Info, X, ChevronDown, MoreVertical } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
+import { renderMarkdown } from '@/shared/utils/markdown';
 import {
   buildDynamicNoteTokens,
   renderTemplateWithTokens
@@ -495,18 +498,20 @@ const availableNoteTokenEntries = computed(() => {
   }));
 });
 
-function renderNoteTemplate(template) {
-  return renderTemplateWithTokens(template, noteTokens.value, {
-    formatExpressionResult: (value) => formatPrice(value, { toFixed: 0 })
+function renderNoteTemplate(template, wrap = false) {
+  const interpolated = renderTemplateWithTokens(template, noteTokens.value, {
+    formatExpressionResult: (value) => formatPrice(value, { toFixed: 0 }),
+    wrapInterpolated: wrap
   });
+  return renderMarkdown(interpolated);
 }
 
-const renderedViewNote = computed(() => renderNoteTemplate(viewNoteTemplate.value));
-const renderedHelperBodyDraft = computed(() => renderNoteTemplate(helperBodyDraft.value));
+const renderedViewNote = computed(() => renderNoteTemplate(viewNoteTemplate.value, true));
+const renderedHelperBodyDraft = computed(() => renderNoteTemplate(helperBodyDraft.value, true));
 const helperBodyDisplay = computed(() => (
   hasViewNote.value
     ? renderedViewNote.value
-    : headerInfo.value.summary
+    : renderMarkdown(headerInfo.value.summary)
 ));
 
 const isBreadcrumbDropdownOpen = ref(false);
@@ -799,7 +804,7 @@ const headerInfo = computed(() => {
     const hasDrillBreadcrumb = drillBreadcrumbs.value.length > 0;
     if (hasDrillBreadcrumb) {
       return {
-        title: 'Drill Level Total',
+        title: 'Tab Total',
         summary: `This is the total for ${selectedDrillLabel.value} in ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
       };
     }
@@ -986,5 +991,74 @@ onBeforeUnmount(() => {
 
 [data-theme]:not([data-theme='light']) .header-info-trigger {
   background-color: var(--theme-browser-chrome);
+}
+
+:deep(.rule-part) {
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.4rem;
+  background-color: var(--theme-rule-part-bg);
+  color: var(--theme-rule-part-text);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0.125rem;
+}
+
+.markdown-content :deep(p) {
+  margin-bottom: 0.75rem;
+}
+
+.markdown-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-content :deep(ul) {
+  margin-bottom: 0.75rem;
+  list-style-type: disc;
+  padding-left: 1.25rem;
+}
+
+.markdown-content :deep(strong) {
+  font-weight: 700;
+  color: var(--theme-text);
+}
+
+.markdown-content :deep(.markdown-h1) {
+  font-size: 1.25rem;
+  font-weight: 800;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--theme-text);
+}
+
+.markdown-content :deep(.markdown-h2) {
+  font-size: 1.1rem;
+  font-weight: 800;
+  margin-top: 0.875rem;
+  margin-bottom: 0.375rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--theme-text);
+}
+
+.markdown-content :deep(.markdown-h3) {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-top: 0.75rem;
+  margin-bottom: 0.25rem;
+  color: var(--theme-text);
+}
+
+.markdown-content :deep(.markdown-h4),
+.markdown-content :deep(.markdown-h5),
+.markdown-content :deep(.markdown-h6) {
+  font-size: 0.875rem;
+  font-weight: 700;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: var(--theme-text-muted);
 }
 </style>
