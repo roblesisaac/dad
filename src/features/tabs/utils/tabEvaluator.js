@@ -585,16 +585,36 @@ function extractRules(tabRules, ruleMethods) {
 
   return [
     sorters.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
-    categorizers.sort((a, b) => {
+    dedupeCategorizersById(categorizers.sort((a, b) => {
       if (a._isGlobalCategorizeRule !== b._isGlobalCategorizeRule) {
         return a._isGlobalCategorizeRule ? -1 : 1;
       }
 
       return (a.orderOfExecution || 0) - (b.orderOfExecution || 0);
-    }),
+    })),
     filters.sort((a, b) => (a.orderOfExecution || 0) - (b.orderOfExecution || 0)),
     propToGroupBy
   ];
+}
+
+function dedupeCategorizersById(categorizers = []) {
+  const deduped = [];
+  const seenRuleIds = new Set();
+
+  for (const categorizeConfig of Array.isArray(categorizers) ? categorizers : []) {
+    const ruleId = String(categorizeConfig?._id || '').trim();
+    if (ruleId && seenRuleIds.has(ruleId)) {
+      continue;
+    }
+
+    if (ruleId) {
+      seenRuleIds.add(ruleId);
+    }
+
+    deduped.push(categorizeConfig);
+  }
+
+  return deduped;
 }
 
 function normalizeFilterJoinOperator(filterJoinOperator) {

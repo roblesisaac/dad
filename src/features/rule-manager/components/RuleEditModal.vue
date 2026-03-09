@@ -61,7 +61,9 @@
                       ? 'Group Transactions By'
                       : ruleData.rule[0] === 'sort'
                         ? 'Sort Transactions By'
-                        : 'When Transaction Matches'
+                        : ruleData.rule[0] === 'filter'
+                          ? 'Show transactions if'
+                          : 'When Transaction Matches'
                   }}
                 </label>
                 
@@ -317,6 +319,38 @@
                 />
               </div>
 
+              <div v-if="showAdvancedGlobalSection" class="space-y-4">
+                <button
+                  type="button"
+                  class="w-full flex items-center gap-3 pt-1"
+                  @click="isAdvancedSectionOpen = !isAdvancedSectionOpen"
+                >
+                  <span class="h-px flex-1 bg-gray-200"></span>
+                  <span class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Advanced</span>
+                  <ChevronDown
+                    class="w-3.5 h-3.5 text-gray-500 transition-transform"
+                    :class="isAdvancedSectionOpen ? 'rotate-180' : ''"
+                  />
+                  <span class="h-px flex-1 bg-gray-200"></span>
+                </button>
+
+                <div
+                  v-if="isAdvancedSectionOpen"
+                  class="rounded-2xl border-2 border-gray-100 bg-gray-50/40 p-4 flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-[0.14em] text-gray-700">Make Global</p>
+                    <p class="mt-1 text-[10px] font-bold uppercase tracking-[0.12em] text-gray-400">
+                      Also show in Account / Global Categories
+                    </p>
+                  </div>
+                  <Switch
+                    :model-value="makeGlobal"
+                    @update:model-value="makeGlobal = $event"
+                  />
+                </div>
+              </div>
+
             </form>
           </div>
           
@@ -345,8 +379,9 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue';
-import { X, Plus } from 'lucide-vue-next';
+import { X, Plus, ChevronDown } from 'lucide-vue-next';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import Switch from '@/shared/components/Switch.vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 
 const { state } = useDashboardState();
@@ -375,6 +410,10 @@ const props = defineProps({
     default: true
   },
   showCategorizeSetTarget: {
+    type: Boolean,
+    default: false
+  },
+  initialMakeGlobal: {
     type: Boolean,
     default: false
   }
@@ -526,8 +565,15 @@ const supportsAndCondition = computed(() =>
   ['filter', 'categorize'].includes(ruleData.value.rule[0])
 );
 const useCategorizeSetTarget = computed(() => (
-  props.scope === 'global' || props.showCategorizeSetTarget
+  props.scope === 'global'
+  || props.showCategorizeSetTarget
+  || isCategorizeRuleUsingSetTarget(ruleData.value.rule)
 ));
+const showAdvancedGlobalSection = computed(() => (
+  props.scope === 'tab' && ruleData.value.rule[0] === 'categorize'
+));
+const isAdvancedSectionOpen = ref(false);
+const makeGlobal = ref(Boolean(props.initialMakeGlobal));
 
 const andConditions = ref(extractAndConditions(ruleData.value.rule));
 normalizeCategorizeSetTargetRuleForEditor();
@@ -928,7 +974,10 @@ function saveRule() {
 
   normalizeRuleScope();
   
-  emit('save', ruleData.value);
+  emit('save', {
+    ...ruleData.value,
+    _makeGlobal: showAdvancedGlobalSection.value ? makeGlobal.value : false
+  });
 }
 
 function validateRule() {

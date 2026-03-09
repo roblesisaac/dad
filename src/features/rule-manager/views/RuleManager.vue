@@ -374,6 +374,7 @@
       scope="tab"
       :fixed-type="true"
       :show-categorize-set-target="isCustomRuleEditorMode"
+      :initial-make-global="initialMakeGlobalForEditor"
       @close="closeRuleEditModal"
       @save="saveRule"
     />
@@ -540,6 +541,7 @@ const isSavingRecategorizePreference = ref(false);
 const isAdvancedSectionOpen = ref(false);
 const isCustomRuleEditorMode = ref(false);
 const hasConsumedCustomEditorRequest = ref(false);
+const initialMakeGlobalForEditor = ref(false);
 
 const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
@@ -568,6 +570,30 @@ function getEnabledRulesByType(typeId) {
   const normalizedType = sanitizeRuleType(typeId);
   return [...(localRulesByType.value[normalizedType] || [])]
     .sort((a, b) => safeOrder(a.orderOfExecution) - safeOrder(b.orderOfExecution));
+}
+
+function isGlobalCategorizeRule(rule) {
+  const applyForTabs = Array.isArray(rule?.applyForTabs) ? rule.applyForTabs : [];
+  return rule?.rule?.[0] === 'categorize' && applyForTabs.includes('_GLOBAL');
+}
+
+function findGlobalCategorizeRuleById(ruleId) {
+  if (!ruleId) {
+    return null;
+  }
+
+  return state.allUserRules.find((rule) =>
+    rule?._id === ruleId && isGlobalCategorizeRule(rule)
+  ) || null;
+}
+
+function nextGlobalCategorizeOrder() {
+  const globalCategorizeRules = state.allUserRules.filter(isGlobalCategorizeRule);
+  if (!globalCategorizeRules.length) {
+    return 0;
+  }
+
+  return Math.max(...globalCategorizeRules.map(rule => safeOrder(rule?.orderOfExecution, 0))) + 1;
 }
 
 function getDisabledRulesByType() {
@@ -1268,6 +1294,7 @@ function createNewRuleWithType(typeId) {
   };
   isNewRule.value = true;
   isCustomRuleEditorMode.value = false;
+  initialMakeGlobalForEditor.value = false;
   showRuleEditModal.value = true;
 }
 
@@ -1281,6 +1308,7 @@ function openCustomRuleEditorForm() {
   };
   isNewRule.value = true;
   isCustomRuleEditorMode.value = true;
+  initialMakeGlobalForEditor.value = false;
   showRuleEditModal.value = true;
 }
 
@@ -1288,6 +1316,9 @@ function editRule(rule) {
   currentRule.value = cloneRule(rule);
   isNewRule.value = false;
   isCustomRuleEditorMode.value = false;
+  initialMakeGlobalForEditor.value = Boolean(
+    rule?.rule?.[0] === 'categorize' && findGlobalCategorizeRuleById(rule?._id)
+  );
   showRuleEditModal.value = true;
 }
 
@@ -1295,12 +1326,67 @@ function closeRuleEditModal() {
   showRuleEditModal.value = false;
   currentRule.value = null;
   isCustomRuleEditorMode.value = false;
+  initialMakeGlobalForEditor.value = false;
+}
+
+async function syncGlobalCategorizeMirror(localCategorizeRule, shouldBeGlobal) {
+  if (localCategorizeRule?.rule?.[0] !== 'categorize' || !localCategorizeRule?._id) {
+    return false;
+  }
+
+  const existingGlobalRule = findGlobalCategorizeRuleById(localCategorizeRule._id);
+  const tabId = String(state.selected.tab?._id || '').trim();
+
+  if (!shouldBeGlobal) {
+    if (!existingGlobalRule?._id) {
+      return false;
+    }
+
+    const didDelete = await rulesAPI.deleteRule(existingGlobalRule._id);
+    if (!didDelete) {
+      return false;
+    }
+
+    state.allUserRules = state.allUserRules.filter(rule => rule._id !== existingGlobalRule._id);
+    return true;
+  }
+
+  const normalizedGlobalRule = {
+    _id: String(localCategorizeRule._id || ''),
+    rule: Array.isArray(localCategorizeRule.rule)
+      ? localCategorizeRule.rule.map(value => String(value ?? ''))
+      : ['categorize', '', '', '', ''],
+    applyForTabs: tabId ? ['_GLOBAL', tabId] : ['_GLOBAL'],
+    filterJoinOperator: String(localCategorizeRule.filterJoinOperator || 'and').toLowerCase() === 'or' ? 'or' : 'and',
+    _isImportant: Boolean(localCategorizeRule._isImportant),
+    orderOfExecution: existingGlobalRule
+      ? safeOrder(existingGlobalRule.orderOfExecution, 0)
+      : nextGlobalCategorizeOrder()
+  };
+
+  if (existingGlobalRule?._id) {
+    const updatedRule = await rulesAPI.updateRule(existingGlobalRule._id, normalizedGlobalRule);
+    const existingGlobalRuleIndex = state.allUserRules.findIndex(rule => rule._id === existingGlobalRule._id);
+    if (existingGlobalRuleIndex !== -1 && updatedRule) {
+      state.allUserRules[existingGlobalRuleIndex] = updatedRule;
+    }
+    return true;
+  }
+
+  const createdRule = await rulesAPI.createRule(normalizedGlobalRule);
+  if (createdRule?._id) {
+    state.allUserRules.push(createdRule);
+    return true;
+  }
+
+  return false;
 }
 
 async function saveRule(rule) {
   const normalizedType = sanitizeRuleType(rule?.rule?.[0]);
   const existingRules = getEnabledRulesByType(normalizedType).map(cloneRule);
   const normalizedRule = normalizeLocalRule(normalizedType, rule);
+  const shouldMakeGlobal = Boolean(rule?._makeGlobal);
 
   if (isNewRule.value) {
     existingRules.push(normalizedRule);
@@ -1315,6 +1401,10 @@ async function saveRule(rule) {
 
   localRulesByType.value[normalizedType] = withRenumberedOrder(existingRules);
   await persistDepthRules();
+  const didChangeGlobalMirror = await syncGlobalCategorizeMirror(normalizedRule, shouldMakeGlobal);
+  if (didChangeGlobalMirror) {
+    await processAllTabsForSelectedGroup({ showLoading: false });
+  }
   closeRuleEditModal();
 }
 
@@ -1334,12 +1424,19 @@ async function deleteRule() {
   }
 
   const typeId = sanitizeRuleType(targetRule.rule?.[0]);
+  const shouldSyncGlobalMirror = typeId === 'categorize';
   const remainingRules = getEnabledRulesByType(typeId)
     .filter(rule => rule._id !== targetRule._id)
     .map(cloneRule);
 
   localRulesByType.value[typeId] = withRenumberedOrder(remainingRules);
   await persistDepthRules();
+  if (shouldSyncGlobalMirror) {
+    const didChangeGlobalMirror = await syncGlobalCategorizeMirror(targetRule, false);
+    if (didChangeGlobalMirror) {
+      await processAllTabsForSelectedGroup({ showLoading: false });
+    }
+  }
   showDeleteModal.value = false;
   ruleToDelete.value = null;
 }
