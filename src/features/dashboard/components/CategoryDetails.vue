@@ -10,7 +10,7 @@
         <span class="text-base font-black text-gray-900 uppercase tracking-tight truncate group-hover:text-black transition-colors">
           {{ categoryName }}
         </span>
-        <span v-if="isSelected" class="px-2 py-1 text-[10px] font-black text-gray-400 bg-gray-50 rounded-lg uppercase tracking-widest border border-gray-100 group-hover:border-black group-hover:text-black transition-colors shrink-0">
+        <span v-if="isSelected" class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg uppercase tracking-widest transition-colors shrink-0">
           {{ categoryItems.length }}
         </span>
       </div>
@@ -50,3 +50,33 @@ function selectCategory() {
   emit('category-selected', categoryName);
 }
 </script>
+
+<style scoped>
+.group-count-badge {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  border: 1px solid #f3f4f6;
+}
+
+.group:hover .group-count-badge {
+  color: #000000;
+  border-color: #000000;
+}
+
+[data-theme='dark'] .group-count-badge {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-theme='dark'] .group:hover .group-count-badge {
+  color: #ffffff;
+  border-color: #ffffff;
+}
+
+[data-theme='bw'] .group-count-badge {
+  background-color: rgba(0, 0, 0, 0.05);
+  color: #000000;
+  border-color: #000000;
+}
+</style>

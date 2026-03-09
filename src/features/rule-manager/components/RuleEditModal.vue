@@ -488,7 +488,8 @@ const CONDITION_PROPERTY_OPTIONS = [
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'name', label: 'Name' },
-  { value: 'category', label: 'Category' }
+  { value: 'category', label: 'Category' },
+  { value: 'account', label: 'Account' }
 ];
 
 const FILTER_ONLY_PROPERTY_OPTIONS = [
@@ -787,7 +788,7 @@ function isNumericProperty(propName) {
 }
 
 function isTextProperty(propName) {
-  return propName === 'name' || propName === 'category' || isGlobalCategoryProperty(propName);
+  return propName === 'name' || propName === 'category' || propName === 'account' || isGlobalCategoryProperty(propName);
 }
 
 function isDateProperty(propName) {
