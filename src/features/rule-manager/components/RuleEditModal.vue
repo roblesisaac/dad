@@ -551,7 +551,8 @@ const accountConditionOptions = computed(() => {
 
     optionsByValue.set(value, {
       value,
-      label: formatAccountConditionLabel(account)
+      label: formatAccountConditionLabel(account),
+      identifiers: accountIdentifiers(account)
     });
   }
 
@@ -831,19 +832,81 @@ function resolveAccountConditionValue(account) {
   ).trim();
 }
 
+function accountIdentifiers(account) {
+  if (!account) {
+    return [];
+  }
+
+  if (typeof account === 'string') {
+    const identifier = String(account).trim();
+    return identifier ? [identifier] : [];
+  }
+
+  return [
+    account._id,
+    account.account_id,
+    account.accountId,
+    account.id
+  ]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function normalizeAccountText(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase();
+}
+
+function getAccountContextGroup(account) {
+  const idsToMatch = new Set(accountIdentifiers(account));
+  if (!idsToMatch.size) {
+    return null;
+  }
+
+  const allUserGroups = Array.isArray(state.allUserGroups) ? state.allUserGroups : [];
+
+  return allUserGroups.find((group) => {
+    if (group?.isLabel !== false) {
+      return false;
+    }
+
+    const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+    if (groupAccounts.length !== 1) {
+      return false;
+    }
+
+    return accountIdentifiers(groupAccounts[0])
+      .some(identifier => idsToMatch.has(identifier));
+  }) || null;
+}
+
 function formatAccountConditionLabel(account) {
   const officialName = String(account?.official_name || account?.officialName || '').trim();
   const accountName = String(account?.name || '').trim();
   const mask = account?.mask !== undefined && account?.mask !== null
     ? String(account.mask).trim()
     : '';
-  const baseLabel = officialName || accountName || (mask ? `Account ${mask}` : 'Account');
+  const defaultLabel = officialName || accountName || (mask ? `Account ${mask}` : 'Account');
+  const contextGroupName = String(getAccountContextGroup(account)?.name || '').trim();
 
-  if (mask && !baseLabel.toLowerCase().includes(mask.toLowerCase())) {
-    return `${baseLabel} (${mask})`;
+  if (contextGroupName) {
+    const defaultNameCandidates = new Set(
+      ['Account', officialName, accountName, mask]
+        .map(normalizeAccountText)
+        .filter(Boolean)
+    );
+
+    if (!defaultNameCandidates.has(normalizeAccountText(contextGroupName))) {
+      return contextGroupName;
+    }
   }
 
-  return baseLabel;
+  if (mask && !defaultLabel.toLowerCase().includes(mask.toLowerCase())) {
+    return `${defaultLabel} (${mask})`;
+  }
+
+  return defaultLabel;
 }
 
 function parseAccountCriterion(value) {
@@ -854,13 +917,23 @@ function parseAccountCriterion(value) {
 }
 
 function isAccountCriterionSelected(criterion, accountValue) {
-  const normalizedAccountValue = String(accountValue || '').trim();
-  if (!normalizedAccountValue) {
+  const selectedValues = new Set(
+    parseAccountCriterion(criterion)
+      .map(normalizeAccountText)
+      .filter(Boolean)
+  );
+
+  if (!selectedValues.size) {
     return false;
   }
 
-  return parseAccountCriterion(criterion)
-    .includes(normalizedAccountValue);
+  const matchingOption = accountConditionOptions.value
+    .find(option => option.value === accountValue);
+  const accountOptionIdentifiers = matchingOption?.identifiers || [accountValue];
+
+  return accountOptionIdentifiers
+    .map(normalizeAccountText)
+    .some(identifier => selectedValues.has(identifier));
 }
 
 function serializeAccountCriterion(values = []) {

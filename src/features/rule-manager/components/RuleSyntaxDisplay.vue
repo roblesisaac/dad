@@ -10,7 +10,7 @@
       <span class="font-medium mr-1">using</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
       <span v-if="rule.rule[3]" class="font-medium mr-1">with value</span>
-      <span v-if="rule.rule[3]" class="rule-part mr-1">{{ rule.rule[3] }}</span>
+      <span v-if="rule.rule[3]" class="rule-part mr-1">{{ formatConditionValue(rule.rule[3], rule.rule[1]) }}</span>
     </template>
     
     <!-- Filter Rules -->
@@ -18,12 +18,12 @@
       <span class="font-medium mr-1">Show if</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
-      <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
+      <span v-if="rule.rule[3]" class="rule-part">{{ formatConditionValue(rule.rule[3], rule.rule[1]) }}</span>
       <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`filter-condition-${index}`">
         <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
         <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
         <span class="rule-part mr-1">{{ formatMethodName(condition.method, condition.property) }}</span>
-        <span class="rule-part">{{ condition.value }}</span>
+        <span class="rule-part">{{ formatConditionValue(condition.value, condition.property) }}</span>
       </template>
     </template>
     
@@ -36,12 +36,12 @@
       <span class="font-medium mr-1">if</span>
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
-      <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
+      <span v-if="rule.rule[3]" class="rule-part">{{ formatConditionValue(rule.rule[3], rule.rule[1]) }}</span>
       <template v-for="(condition, index) in getAdditionalConditions(rule)" :key="`categorize-condition-${index}`">
         <span class="font-medium mx-1">{{ formatCombinator(condition.combinator) }}</span>
         <span class="rule-part mr-1">{{ formatPropName(condition.property) }}</span>
         <span class="rule-part mr-1">{{ formatMethodName(condition.method, condition.property) }}</span>
-        <span class="rule-part">{{ condition.value }}</span>
+        <span class="rule-part">{{ formatConditionValue(condition.value, condition.property) }}</span>
       </template>
     </template>
     
@@ -51,7 +51,7 @@
       <span class="rule-part mr-1">{{ formatPropName(rule.rule[1]) }}</span>
       <span v-if="rule.rule[2]" class="font-medium mr-1">where</span>
       <span v-if="rule.rule[2]" class="rule-part mr-1">{{ formatMethodName(rule.rule[2], rule.rule[1]) }}</span>
-      <span v-if="rule.rule[3]" class="rule-part">{{ rule.rule[3] }}</span>
+      <span v-if="rule.rule[3]" class="rule-part">{{ formatConditionValue(rule.rule[3], rule.rule[1]) }}</span>
     </template>
     
     <!-- Unknown Rule Type -->
@@ -66,6 +66,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
+
 const props = defineProps({
   rule: {
     type: Object,
@@ -76,6 +79,203 @@ const props = defineProps({
     default: false
   }
 });
+
+const { state } = useDashboardState();
+
+const accountLabelByIdentifier = computed(() => {
+  const map = new Map();
+  const allUserAccounts = Array.isArray(state.allUserAccounts) ? state.allUserAccounts : [];
+
+  for (const account of allUserAccounts) {
+    const accountLabel = accountDisplayLabel(account);
+    for (const identifier of accountIdentifiers(account)) {
+      map.set(normalizedAccountText(identifier), accountLabel);
+    }
+  }
+
+  const allUserGroups = Array.isArray(state.allUserGroups) ? state.allUserGroups : [];
+  for (const group of allUserGroups) {
+    if (group?.isLabel !== false) {
+      continue;
+    }
+
+    const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+    if (groupAccounts.length !== 1) {
+      continue;
+    }
+
+    const groupAccount = groupAccounts[0];
+    const groupName = sanitizeAccountText(group?.name || '');
+    const identifiers = accountIdentifiers(groupAccount);
+    if (!identifiers.length || !groupName) {
+      continue;
+    }
+
+    const allMappedToDefault = identifiers.every((identifier) => {
+      const normalizedIdentifier = normalizedAccountText(identifier);
+      const mappedLabel = map.get(normalizedIdentifier);
+      return !mappedLabel || mappedLabel === accountDefaultLabel(resolveAccount(groupAccount) || groupAccount);
+    });
+
+    if (!allMappedToDefault) {
+      continue;
+    }
+
+    for (const identifier of identifiers) {
+      map.set(normalizedAccountText(identifier), groupName);
+    }
+  }
+
+  return map;
+});
+
+function accountIdentifiers(account) {
+  if (!account) {
+    return [];
+  }
+
+  if (typeof account === 'string') {
+    const identifier = String(account).trim();
+    return identifier ? [identifier] : [];
+  }
+
+  return [
+    account._id,
+    account.account_id,
+    account.accountId,
+    account.id
+  ]
+    .map(value => String(value || '').trim())
+    .filter(Boolean);
+}
+
+function accountsMatch(accountA, accountB) {
+  const idsA = accountIdentifiers(accountA);
+  const idsB = new Set(accountIdentifiers(accountB));
+  return idsA.some(id => idsB.has(id));
+}
+
+function resolveAccount(account) {
+  if (!account) {
+    return null;
+  }
+
+  const allUserAccounts = Array.isArray(state.allUserAccounts) ? state.allUserAccounts : [];
+  return allUserAccounts.find((userAccount) => accountsMatch(userAccount, account)) || null;
+}
+
+function sanitizeAccountText(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/\uFFFD+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizedAccountText(value) {
+  return sanitizeAccountText(String(value || '')).toLowerCase();
+}
+
+function accountDefaultLabel(account) {
+  const resolved = resolveAccount(account) || account;
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+  const mask = resolved?.mask !== undefined && resolved?.mask !== null
+    ? sanitizeAccountText(String(resolved.mask))
+    : '';
+  const baseLabel = officialName || accountName || (mask ? `Account ${mask}` : 'Account');
+
+  if (mask && !baseLabel.toLowerCase().includes(mask.toLowerCase())) {
+    return `${baseLabel} (${mask})`;
+  }
+
+  return baseLabel;
+}
+
+function getAccountContextGroup(account) {
+  const allUserGroups = Array.isArray(state.allUserGroups) ? state.allUserGroups : [];
+  return allUserGroups.find((group) => {
+    if (group?.isLabel !== false) {
+      return false;
+    }
+
+    const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+    if (groupAccounts.length !== 1) {
+      return false;
+    }
+
+    return groupAccounts.some(groupAccount => accountsMatch(groupAccount, account));
+  }) || null;
+}
+
+function accountDisplayLabel(account) {
+  const defaultLabel = accountDefaultLabel(account);
+  const contextGroupName = sanitizeAccountText(getAccountContextGroup(account)?.name || '');
+
+  if (!contextGroupName) {
+    return defaultLabel;
+  }
+
+  const resolved = resolveAccount(account) || account;
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+  const mask = resolved?.mask !== undefined && resolved?.mask !== null
+    ? sanitizeAccountText(String(resolved.mask))
+    : '';
+
+  const defaultNameCandidates = new Set(
+    ['Account', officialName, accountName, mask]
+      .map(normalizedAccountText)
+      .filter(Boolean)
+  );
+
+  if (defaultNameCandidates.has(normalizedAccountText(contextGroupName))) {
+    return defaultLabel;
+  }
+
+  return contextGroupName;
+}
+
+function isAccountProperty(propName) {
+  return String(propName || '').trim().toLowerCase() === 'account';
+}
+
+function parseCriterionTerms(value) {
+  return String(value || '')
+    .split(/[\n,]/)
+    .map(term => term.trim())
+    .filter(Boolean);
+}
+
+function formatAccountCriterionValue(value) {
+  const criterionTerms = parseCriterionTerms(value);
+  if (!criterionTerms.length) {
+    return '';
+  }
+
+  return criterionTerms
+    .map((term) => {
+      const accountLabel = accountLabelByIdentifier.value.get(normalizedAccountText(term));
+      return accountLabel || term;
+    })
+    .join(', ');
+}
+
+function formatConditionValue(value, propName) {
+  if (!value) {
+    return '';
+  }
+
+  if (isAccountProperty(propName)) {
+    return formatAccountCriterionValue(value);
+  }
+
+  return String(value);
+}
 
 // Format property names for better readability
 function formatPropName(propName) {
@@ -88,6 +288,7 @@ function formatPropName(propName) {
   if (normalizedPropName === 'date') return 'date';
   if (normalizedPropName === 'name') return 'name';
   if (normalizedPropName === 'category') return 'category';
+  if (normalizedPropName === 'account') return 'account';
   if (isGlobalCategoryProperty(normalizedPropName)) return 'global rule';
   if (normalizedPropName === 'none') return 'no grouping';
   

@@ -2,19 +2,12 @@
   <BaseModal
     :is-open="isOpen"
     title="Global Rules"
+    caption="Applied before tab-level categorize rules"
     @close="closeModal"
   >
     <template #content>
       <div class="mx-auto w-full max-w-3xl px-6 py-8">
         <div class="flex items-center justify-between gap-4">
-          <div>
-            <h3 class="text-lg font-black tracking-tight text-gray-900">
-              Global Rules
-            </h3>
-            <p class="mt-1 text-xs font-semibold uppercase tracking-[0.14em] text-gray-500">
-              Applied before tab-level categorize rules
-            </p>
-          </div>
           <button
             type="button"
             class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-800 transition-colors hover:border-black hover:text-black"
@@ -41,31 +34,78 @@
           </div>
         </div>
 
-        <div v-if="filteredGlobalCategorizeRules.length" class="mt-6 space-y-3">
-          <div
-            v-for="rule in filteredGlobalCategorizeRules"
-            :key="rule._id"
-            class="group rounded-2xl border border-gray-200 bg-white p-4"
-          >
-            <RuleSyntaxDisplay :rule="rule" compact />
-            <div class="mt-3 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                class="rounded-lg border border-gray-300 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-gray-700 transition-colors hover:border-black hover:text-black"
-                @click="openEditRule(rule)"
-              >
-                Edit
-              </button>
-              <button
-                type="button"
-                class="rounded-lg border border-red-300 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-red-700 transition-colors hover:border-red-500 hover:text-red-800"
-                @click="deleteRule(rule)"
-              >
-                Delete
-              </button>
+        <draggable
+          v-if="displayedGlobalRules.length"
+          v-model="displayedGlobalRules"
+          item-key="_id"
+          handle=".global-rule-drag-handle"
+          class="mt-6 space-y-3"
+          :disabled="!isReorderModeActive || !canReorderVisibleList"
+          @end="onGlobalRulesDragEnd"
+        >
+          <template #item="{ element: rule }">
+            <div
+              class="group rounded-2xl border border-gray-200 bg-white p-4"
+              @touchstart.passive="handleRuleRowTouchStart($event, rule)"
+              @touchmove="handleRuleRowTouchMove"
+              @touchend="handleRuleRowTouchEnd"
+              @touchcancel="handleRuleRowTouchEnd"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <RuleSyntaxDisplay :rule="rule" compact />
+
+                <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
+                  <button
+                    v-if="isReorderModeActive && canReorderVisibleList"
+                    type="button"
+                    class="global-rule-drag-handle rounded-xl p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-black cursor-move"
+                    title="Drag to reorder"
+                  >
+                    <GripVertical class="h-4 w-4" />
+                  </button>
+
+                  <button
+                    type="button"
+                    class="rounded-xl p-2 text-gray-500 transition-all focus:outline-none opacity-0 pointer-events-none hover:bg-gray-100 hover:text-black group-hover:opacity-100 group-hover:pointer-events-auto"
+                    :class="shouldShowRuleMenuTrigger(rule) ? 'opacity-100 pointer-events-auto' : ''"
+                    data-rule-menu-surface
+                    @click.stop="toggleRuleActionsMenu(rule)"
+                  >
+                    <MoreVertical class="h-4 w-4" />
+                  </button>
+
+                  <div
+                    v-if="activeRuleMenuId === ruleKey(rule)"
+                    class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40"
+                    data-rule-menu-surface
+                  >
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
+                      @click.stop="handleRuleMenuAction('edit', rule)"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
+                      @click.stop="handleRuleMenuAction('copy', rule)"
+                    >
+                      Copy
+                    </button>
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-red-700 transition-colors hover:bg-red-50 hover:text-red-800"
+                      @click.stop="handleRuleMenuAction('delete', rule)"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+          </template>
+        </draggable>
 
         <div
           v-else-if="globalCategorizeRules.length"
@@ -96,14 +136,18 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
-import { Search } from 'lucide-vue-next';
+import { computed, ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { Search, MoreVertical, GripVertical } from 'lucide-vue-next';
+import draggable from 'vuedraggable';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import RuleEditModal from '@/features/rule-manager/components/RuleEditModal.vue';
 import RuleSyntaxDisplay from '@/features/rule-manager/components/RuleSyntaxDisplay.vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI.js';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing.js';
+
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 12;
 
 defineProps({
   isOpen: {
@@ -120,6 +164,12 @@ const { processAllTabsForSelectedGroup } = useTabProcessing();
 const showRuleEditor = ref(false);
 const isCreatingRule = ref(false);
 const searchQuery = ref('');
+const activeRuleMenuId = ref('');
+const longPressVisibleRuleId = ref('');
+const ruleLongPressTimeoutId = ref(null);
+const ruleLongPressStart = ref({ x: 0, y: 0 });
+const isReorderModeActive = ref(false);
+const displayedGlobalRules = ref([]);
 const activeRule = ref({
   rule: ['categorize', '', '', '', 'category', ''],
   applyForTabs: ['_GLOBAL'],
@@ -147,8 +197,18 @@ const filteredGlobalCategorizeRules = computed(() => {
 
   return globalCategorizeRules.value.filter((rule) => ruleSearchText(rule).includes(query));
 });
+const canReorderVisibleList = computed(() => !normalizedSearchQuery.value);
+
+watch(
+  filteredGlobalCategorizeRules,
+  (rules) => {
+    displayedGlobalRules.value = [...rules];
+  },
+  { immediate: true }
+);
 
 function closeModal() {
+  closeRuleActionsMenu();
   searchQuery.value = '';
   emit('close');
 }
@@ -158,6 +218,7 @@ function closeRuleEditor() {
 }
 
 function openCreateRule() {
+  closeRuleActionsMenu();
   isCreatingRule.value = true;
   activeRule.value = {
     rule: ['categorize', '', '', '', 'category', ''],
@@ -170,6 +231,7 @@ function openCreateRule() {
 }
 
 function openEditRule(rule) {
+  closeRuleActionsMenu();
   isCreatingRule.value = false;
   activeRule.value = JSON.parse(JSON.stringify(rule));
   showRuleEditor.value = true;
@@ -197,6 +259,7 @@ async function saveRule(rulePayload) {
   }
 
   await processAllTabsForSelectedGroup({ showLoading: false });
+  closeRuleActionsMenu();
   closeRuleEditor();
 }
 
@@ -217,6 +280,222 @@ async function deleteRule(rule) {
 
   state.allUserRules = state.allUserRules.filter(existingRule => existingRule._id !== rule._id);
   await processAllTabsForSelectedGroup({ showLoading: false });
+  closeRuleActionsMenu();
+}
+
+function ruleKey(rule) {
+  return String(rule?._id || '').trim();
+}
+
+function shouldShowRuleMenuTrigger(rule) {
+  const key = ruleKey(rule);
+  if (!key) {
+    return false;
+  }
+
+  return activeRuleMenuId.value === key || longPressVisibleRuleId.value === key;
+}
+
+function toggleRuleActionsMenu(rule) {
+  const key = ruleKey(rule);
+  if (!key) {
+    return;
+  }
+
+  longPressVisibleRuleId.value = key;
+  activeRuleMenuId.value = activeRuleMenuId.value === key ? '' : key;
+}
+
+function closeRuleActionsMenu() {
+  activeRuleMenuId.value = '';
+  longPressVisibleRuleId.value = '';
+  isReorderModeActive.value = false;
+  clearRuleLongPressTimer();
+}
+
+function clearRuleLongPressTimer() {
+  if (ruleLongPressTimeoutId.value) {
+    clearTimeout(ruleLongPressTimeoutId.value);
+    ruleLongPressTimeoutId.value = null;
+  }
+}
+
+function shouldIgnoreRuleLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) {
+    return false;
+  }
+
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function handleRuleRowTouchStart(event, rule) {
+  if (isReorderModeActive.value && canReorderVisibleList.value) {
+    return;
+  }
+
+  if (shouldIgnoreRuleLongPressTarget(event)) {
+    return;
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  const key = ruleKey(rule);
+  if (!key) {
+    return;
+  }
+
+  clearRuleLongPressTimer();
+  ruleLongPressStart.value = {
+    x: touch.clientX,
+    y: touch.clientY
+  };
+
+  ruleLongPressTimeoutId.value = setTimeout(() => {
+    activeRuleMenuId.value = '';
+    longPressVisibleRuleId.value = key;
+    if (canReorderVisibleList.value) {
+      isReorderModeActive.value = true;
+    }
+    ruleLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleRuleRowTouchMove(event) {
+  if (!ruleLongPressTimeoutId.value) {
+    return;
+  }
+
+  const touch = event.touches?.[0];
+  if (!touch) {
+    return;
+  }
+
+  const deltaX = Math.abs(touch.clientX - ruleLongPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - ruleLongPressStart.value.y);
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearRuleLongPressTimer();
+  }
+}
+
+function handleRuleRowTouchEnd() {
+  clearRuleLongPressTimer();
+}
+
+function closeMenusOnOutsideClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) {
+    return;
+  }
+
+  if (target.closest('[data-rule-menu-surface]')) {
+    return;
+  }
+
+  closeRuleActionsMenu();
+}
+
+async function handleRuleMenuAction(action, rule) {
+  if (action === 'edit') {
+    closeRuleActionsMenu();
+    openEditRule(rule);
+    return;
+  }
+
+  if (action === 'copy') {
+    closeRuleActionsMenu();
+    await copyRuleJson(rule);
+    return;
+  }
+
+  if (action === 'delete') {
+    closeRuleActionsMenu();
+    await deleteRule(rule);
+  }
+}
+
+async function onGlobalRulesDragEnd(event) {
+  if (!isReorderModeActive.value || !canReorderVisibleList.value) {
+    return;
+  }
+
+  if (!event || event.oldIndex === event.newIndex) {
+    return;
+  }
+
+  const reorderedRules = displayedGlobalRules.value
+    .map((rule, index) => ({ ruleId: ruleKey(rule), orderOfExecution: index }))
+    .filter(({ ruleId }) => Boolean(ruleId));
+
+  if (!reorderedRules.length) {
+    return;
+  }
+
+  try {
+    await Promise.all(
+      reorderedRules.map(({ ruleId, orderOfExecution }) => (
+        rulesAPI.updateRuleOrder(ruleId, orderOfExecution)
+      ))
+    );
+
+    reorderedRules.forEach(({ ruleId, orderOfExecution }) => {
+      const existingRule = state.allUserRules.find(rule => rule._id === ruleId);
+      if (existingRule) {
+        existingRule.orderOfExecution = orderOfExecution;
+      }
+    });
+
+    await processAllTabsForSelectedGroup({ showLoading: false });
+  } catch (error) {
+    console.error('Error reordering global rules:', error);
+    displayedGlobalRules.value = [...filteredGlobalCategorizeRules.value];
+  }
+}
+
+async function copyRuleJson(rule) {
+  const ruleJson = JSON.stringify(rule || {}, null, 2);
+  const didCopy = await copyToClipboard(ruleJson);
+  if (!didCopy) {
+    alert('Unable to copy rule JSON.');
+  }
+}
+
+async function copyToClipboard(text) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_error) {
+      // Fallback to execCommand below.
+    }
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (_error) {
+    copied = false;
+  }
+
+  document.body.removeChild(textarea);
+  return copied;
 }
 
 function normalizeSearchValue(value) {
@@ -238,6 +517,15 @@ function ruleSearchText(rule) {
     .join(' ')
     .toLowerCase();
 }
+
+onMounted(() => {
+  document.addEventListener('pointerdown', closeMenusOnOutsideClick);
+});
+
+onBeforeUnmount(() => {
+  clearRuleLongPressTimer();
+  document.removeEventListener('pointerdown', closeMenusOnOutsideClick);
+});
 </script>
 
 <style scoped>

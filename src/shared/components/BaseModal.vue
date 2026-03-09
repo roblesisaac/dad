@@ -6,9 +6,12 @@
     >
       <!-- Optional Header -->
       <div v-if="!hideHeader" class="flex items-center justify-between p-4 border-b bg-gray-50 shrink-0">
-        <slot name="header">
-          <h3 class="text-lg font-semibold">{{ title }}</h3>
-        </slot>
+        <div class="flex flex-col">
+          <slot name="header">
+            <h3 class="text-lg font-semibold text-gray-900">{{ title }}</h3>
+          </slot>
+          <p v-if="caption" class="text-xs text-gray-500 mt-0.5 leading-tight">{{ caption }}</p>
+        </div>
         <button 
           v-if="showCloseButton"
           @click="closeModal" 
@@ -62,6 +65,10 @@ const props = defineProps({
   title: {
     type: String,
     default: 'Modal'
+  },
+  caption: {
+    type: String,
+    default: ''
   },
   // Kept for compatibility but unused in full-screen mode
   size: {
