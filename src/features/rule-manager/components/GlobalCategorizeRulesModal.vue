@@ -24,9 +24,26 @@
           </button>
         </div>
 
-        <div v-if="globalCategorizeRules.length" class="mt-6 space-y-3">
+        <div class="mt-6">
+          <label for="global-rules-search" class="sr-only">
+            Search global rules
+          </label>
+          <div class="flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2">
+            <Search class="h-4 w-4 shrink-0 text-gray-400" />
+            <input
+              id="global-rules-search"
+              v-model="searchQuery"
+              type="text"
+              class="w-full bg-transparent text-sm font-semibold text-gray-900 placeholder:text-gray-400 focus:outline-none"
+              placeholder="Search global rules"
+              autocomplete="off"
+            />
+          </div>
+        </div>
+
+        <div v-if="filteredGlobalCategorizeRules.length" class="mt-6 space-y-3">
           <div
-            v-for="rule in globalCategorizeRules"
+            v-for="rule in filteredGlobalCategorizeRules"
             :key="rule._id"
             class="rounded-2xl border border-gray-200 bg-white p-4"
           >
@@ -50,6 +67,15 @@
           </div>
         </div>
 
+        <div
+          v-else-if="globalCategorizeRules.length"
+          class="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center"
+        >
+          <p class="text-xs font-black uppercase tracking-[0.14em] text-gray-500">
+            No global rules match your search
+          </p>
+        </div>
+
         <div v-else class="mt-6 rounded-2xl border border-dashed border-gray-300 bg-gray-50 px-5 py-6 text-center">
           <p class="text-xs font-black uppercase tracking-[0.14em] text-gray-500">
             No global rules yet
@@ -71,6 +97,7 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import { Search } from 'lucide-vue-next';
 import BaseModal from '@/shared/components/BaseModal.vue';
 import RuleEditModal from '@/features/rule-manager/components/RuleEditModal.vue';
 import RuleSyntaxDisplay from '@/features/rule-manager/components/RuleSyntaxDisplay.vue';
@@ -92,6 +119,7 @@ const { processAllTabsForSelectedGroup } = useTabProcessing();
 
 const showRuleEditor = ref(false);
 const isCreatingRule = ref(false);
+const searchQuery = ref('');
 const activeRule = ref({
   rule: ['categorize', '', '', '', 'category', ''],
   applyForTabs: ['_GLOBAL'],
@@ -110,7 +138,18 @@ const globalCategorizeRules = computed(() => {
     .sort((a, b) => Number(a?.orderOfExecution || 0) - Number(b?.orderOfExecution || 0));
 });
 
+const normalizedSearchQuery = computed(() => searchQuery.value.trim().toLowerCase());
+const filteredGlobalCategorizeRules = computed(() => {
+  const query = normalizedSearchQuery.value;
+  if (!query) {
+    return globalCategorizeRules.value;
+  }
+
+  return globalCategorizeRules.value.filter((rule) => ruleSearchText(rule).includes(query));
+});
+
 function closeModal() {
+  searchQuery.value = '';
   emit('close');
 }
 
@@ -178,6 +217,26 @@ async function deleteRule(rule) {
 
   state.allUserRules = state.allUserRules.filter(existingRule => existingRule._id !== rule._id);
   await processAllTabsForSelectedGroup({ showLoading: false });
+}
+
+function normalizeSearchValue(value) {
+  if (Array.isArray(value)) {
+    return value.map(normalizeSearchValue).join(' ');
+  }
+
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value);
+}
+
+function ruleSearchText(rule) {
+  const segments = Array.isArray(rule?.rule) ? rule.rule : [];
+  return segments
+    .map(segment => normalizeSearchValue(segment))
+    .join(' ')
+    .toLowerCase();
 }
 </script>
 
