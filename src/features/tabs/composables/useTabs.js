@@ -17,6 +17,7 @@ import {
   replaceRulesAtDepth,
   replaceRulesAtPath
 } from '@/features/tabs/utils/drillSchema.js';
+import { normalizeTabNotesByView } from '@/features/tabs/utils/tabNotes.js';
 
 function buildDefaultTabForEmptyState() {
   return {
@@ -375,6 +376,13 @@ export function useTabs() {
     }
 
     return updatedTab;
+  }
+
+  async function setTabNotesByView(tabId, tabNotesByView = {}) {
+    const normalizedTabNotesByView = normalizeTabNotesByView(tabNotesByView);
+    return await persistTabUpdate(tabId, {
+      tabNotesByView: normalizedTabNotesByView
+    });
   }
 
   /**
@@ -851,6 +859,7 @@ export function useTabs() {
     updateTabDrillSchemaAtPath,
     copyTabSchemaToGroup,
     setTabDrillSchema,
+    setTabNotesByView,
     toggleTabForGroup,
     updateTab
   };

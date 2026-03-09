@@ -93,4 +93,31 @@ describe('tabs model drill schema normalization', () => {
     expect(normalized.levels[0].honorRecategorizeAs).toBe(false);
     expect(normalized.levels[0].recategorizeBehaviorDecision).toBe('override');
   });
+
+  test('normalizes tab notes by view and drops invalid entries', async () => {
+    const { default: tabSchema } = await import('./tabs');
+    const normalizeTabNotesByView = tabSchema.tabNotesByView;
+
+    const normalized = normalizeTabNotesByView({
+      'group:group-1|path:root': {
+        template: 'You spent {{ money-out }}',
+        updatedAt: '2026-03-09T00:00:00.000Z'
+      },
+      'group:group-1|path:empty': {
+        template: '   '
+      },
+      invalid: 42
+    }, {
+      item: {
+        tabNotesByView: true
+      }
+    });
+
+    expect(normalized).toEqual({
+      'group:group-1|path:root': {
+        template: 'You spent {{ money-out }}',
+        updatedAt: '2026-03-09T00:00:00.000Z'
+      }
+    });
+  });
 });

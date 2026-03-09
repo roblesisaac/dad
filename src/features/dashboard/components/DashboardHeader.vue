@@ -179,28 +179,114 @@
             <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)]">
               {{ headerInfo.title }}
             </h3>
-            <button
-              type="button"
-              class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
-              aria-label="Close total info"
-              @click="closeHeaderInfoModal"
-            >
-              <X class="h-4 w-4" />
-            </button>
+            <div class="flex items-center gap-1">
+              <div v-if="showViewNoteActions" ref="headerInfoMenuRef" class="relative">
+                <button
+                  type="button"
+                  class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  aria-label="Helper options"
+                  @click="toggleHeaderInfoMenu"
+                >
+                  <MoreVertical class="h-4 w-4" />
+                </button>
+                <div
+                  v-if="isHeaderInfoMenuOpen"
+                  class="absolute right-0 top-full mt-2 min-w-[190px] overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+                >
+                  <button
+                    type="button"
+                    class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                    @click="startHelperBodyEdit"
+                  >
+                    {{ hasViewNote ? 'Edit Helper Text' : 'Customize Helper Text' }}
+                  </button>
+                  <button
+                    v-if="hasViewNote"
+                    type="button"
+                    class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[#b91c1c] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                    :disabled="isSavingViewNote"
+                    @click="removeHelperBodyText"
+                  >
+                    Use Default Helper
+                  </button>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                aria-label="Close total info"
+                @click="closeHeaderInfoModal"
+              >
+                <X class="h-4 w-4" />
+              </button>
+            </div>
           </div>
           <div class="space-y-3 px-4 py-4 text-left">
-            <p class="text-sm leading-relaxed text-[var(--theme-text)]">
-              {{ headerInfo.summary }}
-            </p>
-            <ul v-if="headerInfo.details" class="space-y-1.5">
-              <li
-                v-for="detail in headerInfo.details"
-                :key="detail"
-                class="text-xs leading-relaxed text-[var(--theme-text-soft)]"
-              >
-                {{ detail }}
-              </li>
-            </ul>
+            <template v-if="isEditingHelperBody">
+              <p class="text-xs leading-relaxed text-[var(--theme-text-soft)]">
+                Edit the helper text body for this specific tab view. Dynamic tokens and arithmetic are supported.
+              </p>
+              <textarea
+                v-model="helperBodyDraft"
+                rows="5"
+                class="w-full rounded-xl border border-[var(--theme-border)] bg-transparent px-3 py-2 text-sm leading-relaxed text-[var(--theme-text)] placeholder:text-[var(--theme-text-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                placeholder="Example: Shop subscriptions totaled {{ shop-subscriptions }} in {{ date }}."
+              />
+              <div class="space-y-1">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
+                  Available Tokens
+                </div>
+                <div class="flex max-h-28 flex-wrap gap-1.5 overflow-y-auto rounded-xl border border-[var(--theme-border)] bg-[var(--theme-overlay-5)] p-2">
+                  <div
+                    v-for="tokenEntry in availableNoteTokenEntries"
+                    :key="tokenEntry.token"
+                    class="rounded-lg border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] px-2 py-1 text-[10px] leading-relaxed text-[var(--theme-text)]"
+                  >
+                    {{ tokenEntry.token }} = {{ tokenEntry.value }}
+                  </div>
+                </div>
+              </div>
+              <div class="space-y-1">
+                <div class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
+                  Preview
+                </div>
+                <div class="min-h-[52px] rounded-xl border border-[var(--theme-border)] bg-[var(--theme-overlay-5)] px-3 py-2 text-sm leading-relaxed text-[var(--theme-text)]" style="white-space: pre-wrap;">
+                  {{ renderedHelperBodyDraft || 'No helper text yet.' }}
+                </div>
+              </div>
+              <div class="flex items-center justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  class="rounded-xl px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-opacity hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  :disabled="isSavingViewNote"
+                  @click="cancelHelperBodyEdit"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl bg-[var(--theme-text)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-bg)] transition-opacity hover:opacity-70 focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  :disabled="isSavingViewNote"
+                  @click="saveHelperBodyText"
+                >
+                  {{ isSavingViewNote ? 'Saving' : 'Save' }}
+                </button>
+              </div>
+            </template>
+            <template v-else>
+              <p class="text-sm leading-relaxed text-[var(--theme-text)]">
+                {{ helperBodyDisplay }}
+              </p>
+              <ul v-if="!hasViewNote && headerInfo.details" class="space-y-1.5">
+                <li
+                  v-for="detail in headerInfo.details"
+                  :key="detail"
+                  class="text-xs leading-relaxed text-[var(--theme-text-soft)]"
+                >
+                  {{ detail }}
+                </li>
+              </ul>
+            </template>
           </div>
         </div>
       </div>
@@ -209,12 +295,16 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { AlertTriangle, Home, Info, X, ChevronDown } from 'lucide-vue-next';
+import { AlertTriangle, Home, Info, X, ChevronDown, MoreVertical } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
+import {
+  buildDynamicNoteTokens,
+  renderTemplateWithTokens
+} from '@/features/dashboard/utils/noteTemplate.js';
 
 const props = defineProps({
   view: {
@@ -229,6 +319,18 @@ const props = defineProps({
   drillBreadcrumbs: {
     type: Array,
     default: () => []
+  },
+  drillGroups: {
+    type: Array,
+    default: () => []
+  },
+  viewNoteTemplate: {
+    type: String,
+    default: ''
+  },
+  isSavingViewNote: {
+    type: Boolean,
+    default: false
   },
   drillTabTotal: {
     type: Number,
@@ -262,7 +364,9 @@ const emit = defineEmits([
   'navigate-category',
   'navigate-drill-depth',
   'toggle-rearrange',
-  'edit-tab'
+  'edit-tab',
+  'save-view-note',
+  'remove-view-note'
 ]);
 const { state } = useDashboardState();
 const { formatPrice } = useUtils();
@@ -300,6 +404,59 @@ const recategorizeOverrideWarningLabel = computed(() => {
 const selectedGroupLabel = computed(() => state.selected.group?.name || 'Select Account');
 const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select Tab');
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
+const drillGroups = computed(() => (Array.isArray(props.drillGroups) ? props.drillGroups : []));
+const viewNoteTemplate = computed(() => String(props.viewNoteTemplate || ''));
+const isSavingViewNote = computed(() => props.isSavingViewNote);
+const showViewNoteActions = computed(() => (
+  isDrillView.value
+  && Boolean(state.selected.tab)
+));
+const hasViewNote = computed(() => Boolean(viewNoteTemplate.value.trim()));
+const isHeaderInfoMenuOpen = ref(false);
+const headerInfoMenuRef = ref(null);
+const isEditingHelperBody = ref(false);
+const helperBodyDraft = ref('');
+
+const noteTokens = computed(() => buildDynamicNoteTokens({
+  selectedTabLabel: selectedTabLabel.value,
+  selectedGroupLabel: selectedGroupLabel.value,
+  selectedDrillLabel: selectedDrillLabel.value,
+  dateLabel: activeDateRangeLabel.value,
+  totalLabel: formatPrice(headerTotal.value, { toFixed: 0 }),
+  drillGroups: drillGroups.value,
+  formatAmount: (amount) => formatPrice(amount, { toFixed: 0 })
+}));
+
+const availableNoteTokenEntries = computed(() => {
+  const orderedStaticTokens = ['selected-tab', 'selected-account', 'selected-level', 'date', 'total'];
+  const tokenKeys = Object.keys(noteTokens.value);
+  const dynamicKeys = tokenKeys
+    .filter(token => !orderedStaticTokens.includes(token))
+    .sort((a, b) => a.localeCompare(b));
+  const orderedKeys = [
+    ...orderedStaticTokens.filter(token => tokenKeys.includes(token)),
+    ...dynamicKeys
+  ];
+
+  return orderedKeys.map(token => ({
+    token: `{{ ${token} }}`,
+    value: noteTokens.value[token]
+  }));
+});
+
+function renderNoteTemplate(template) {
+  return renderTemplateWithTokens(template, noteTokens.value, {
+    formatExpressionResult: (value) => formatPrice(value, { toFixed: 0 })
+  });
+}
+
+const renderedViewNote = computed(() => renderNoteTemplate(viewNoteTemplate.value));
+const renderedHelperBodyDraft = computed(() => renderNoteTemplate(helperBodyDraft.value));
+const helperBodyDisplay = computed(() => (
+  hasViewNote.value
+    ? renderedViewNote.value
+    : headerInfo.value.summary
+));
 
 const isBreadcrumbDropdownOpen = ref(false);
 const breadcrumbDropdownRef = ref(null);
@@ -349,6 +506,86 @@ function handleGroupSegmentNavigation() {
 
   emit('navigate-tab');
 }
+
+function toggleHeaderInfoMenu() {
+  if (!showViewNoteActions.value) {
+    return;
+  }
+
+  isHeaderInfoMenuOpen.value = !isHeaderInfoMenuOpen.value;
+}
+
+function closeHeaderInfoMenu() {
+  isHeaderInfoMenuOpen.value = false;
+}
+
+function startHelperBodyEdit() {
+  helperBodyDraft.value = hasViewNote.value
+    ? viewNoteTemplate.value
+    : headerInfo.value.summary;
+  isEditingHelperBody.value = true;
+  closeHeaderInfoMenu();
+}
+
+function cancelHelperBodyEdit() {
+  isEditingHelperBody.value = false;
+  helperBodyDraft.value = viewNoteTemplate.value;
+}
+
+function saveHelperBodyText() {
+  if (isSavingViewNote.value) {
+    return;
+  }
+
+  emit('save-view-note', helperBodyDraft.value);
+  isEditingHelperBody.value = false;
+  closeHeaderInfoMenu();
+}
+
+function removeHelperBodyText() {
+  if (isSavingViewNote.value) {
+    return;
+  }
+
+  emit('remove-view-note');
+  isEditingHelperBody.value = false;
+  closeHeaderInfoMenu();
+}
+
+watch(
+  () => viewNoteTemplate.value,
+  (nextTemplate) => {
+    if (!isEditingHelperBody.value) {
+      helperBodyDraft.value = nextTemplate;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => showViewNoteActions.value,
+  (canShowNotes) => {
+    if (!canShowNotes) {
+      closeHeaderInfoMenu();
+      isEditingHelperBody.value = false;
+    }
+  }
+);
+
+watch(
+  () => isHeaderInfoModalOpen.value,
+  (isOpen) => {
+    if (isOpen) {
+      helperBodyDraft.value = hasViewNote.value
+        ? viewNoteTemplate.value
+        : headerInfo.value.summary;
+      return;
+    }
+
+    closeHeaderInfoMenu();
+    isEditingHelperBody.value = false;
+  }
+);
 
 const breadcrumbSegments = computed(() => {
   const segments = [];
@@ -507,16 +744,24 @@ const headerInfo = computed(() => {
     };
   }
 
-  if (isDrillView.value && props.isDrillLeaf) {
+  if (isDrillView.value) {
+    const hasDrillBreadcrumb = drillBreadcrumbs.value.length > 0;
+    if (hasDrillBreadcrumb) {
+      return {
+        title: 'Drill Level Total',
+        summary: `This is the total for ${selectedDrillLabel.value} in ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
+      };
+    }
+
     return {
-      title: 'Drill Level Total',
-      summary: `This is the total for ${selectedDrillLabel.value} in ${activeDateRangeLabel.value}.`
+      title: 'Tab Total',
+      summary: `This is the total for ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
     };
   }
 
   return {
     title: 'Tab Total',
-    summary: `This is the total for ${selectedTabLabel.value} in ${activeDateRangeLabel.value}.`
+    summary: `This is the total for ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
   };
 });
 
@@ -575,10 +820,14 @@ function formatActiveDateRange(startValue, endValue) {
 }
 
 function openHeaderInfoModal() {
+  isEditingHelperBody.value = false;
+  closeHeaderInfoMenu();
   isHeaderInfoModalOpen.value = true;
 }
 
 function closeHeaderInfoModal() {
+  closeHeaderInfoMenu();
+  isEditingHelperBody.value = false;
   isHeaderInfoModalOpen.value = false;
 }
 
@@ -593,6 +842,9 @@ function onWindowKeydown(event) {
     if (isEditTabDropdownOpen.value) {
       closeEditTabDropdown();
     }
+    if (isHeaderInfoMenuOpen.value) {
+      closeHeaderInfoMenu();
+    }
   }
 }
 
@@ -602,6 +854,9 @@ function onWindowClick(event) {
   }
   if (isEditTabDropdownOpen.value && editTabDropdownRef.value && !editTabDropdownRef.value.contains(event.target)) {
     closeEditTabDropdown();
+  }
+  if (isHeaderInfoMenuOpen.value && headerInfoMenuRef.value && !headerInfoMenuRef.value.contains(event.target)) {
+    closeHeaderInfoMenu();
   }
 }
 

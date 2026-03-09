@@ -18,6 +18,69 @@ function normalizeSortByGroup(value) {
   }, {});
 }
 
+const MAX_TAB_NOTE_SCOPE_KEY_LENGTH = 180;
+const MAX_TAB_NOTE_TEMPLATE_LENGTH = 4000;
+const MAX_TAB_NOTES_PER_VIEW = 250;
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+}
+
+function normalizeTabNoteScopeKey(scopeKey) {
+  return String(scopeKey || '').trim().slice(0, MAX_TAB_NOTE_SCOPE_KEY_LENGTH);
+}
+
+function normalizeTabNoteTemplate(template) {
+  const normalizedTemplate = String(template ?? '').slice(0, MAX_TAB_NOTE_TEMPLATE_LENGTH);
+  return normalizedTemplate.trim() ? normalizedTemplate : '';
+}
+
+function normalizeTabNotesByView(value, context = {}) {
+  const item = context?.item;
+  const hasFieldInPayload = item && Object.prototype.hasOwnProperty.call(item, 'tabNotesByView');
+  const missingValue = value === undefined || value === null;
+
+  if (!hasFieldInPayload && missingValue) {
+    return undefined;
+  }
+
+  if (!isPlainObject(value)) {
+    return {};
+  }
+
+  const normalizedEntries = {};
+  let count = 0;
+
+  for (const [rawScopeKey, rawEntry] of Object.entries(value)) {
+    if (count >= MAX_TAB_NOTES_PER_VIEW) {
+      break;
+    }
+
+    const scopeKey = normalizeTabNoteScopeKey(rawScopeKey);
+    if (!scopeKey) {
+      continue;
+    }
+
+    const rawTemplate = typeof rawEntry === 'string'
+      ? rawEntry
+      : (isPlainObject(rawEntry) ? rawEntry.template : '');
+    const template = normalizeTabNoteTemplate(rawTemplate);
+    if (!template) {
+      continue;
+    }
+
+    const rawUpdatedAt = isPlainObject(rawEntry) ? rawEntry.updatedAt : '';
+    const updatedAt = String(rawUpdatedAt || '').trim();
+
+    normalizedEntries[scopeKey] = updatedAt
+      ? { template, updatedAt }
+      : { template };
+    count += 1;
+  }
+
+  return normalizedEntries;
+}
+
 const DEFAULT_GROUP_BY_RULE = ['groupBy', 'none', '', '', ''];
 const RECAT_BEHAVIOR_RULE_MARKER_PREFIX = '__recat_behavior:';
 
@@ -199,6 +262,7 @@ const tabSchema = {
     default: 'sum',
     enum: ['sum', 'average', 'min', 'max', 'count']
   },
+  tabNotesByView: normalizeTabNotesByView,
   drillSchema: normalizeDrillSchema,
   label1: 'userId'
 };

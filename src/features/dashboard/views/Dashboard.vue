@@ -25,18 +25,23 @@
           :view="dashboardView"
           :is-rearrange-active="isRearrangeModeActive"
           :drill-breadcrumbs="drillState.breadcrumbs"
+          :drill-groups="drillState.groups"
           :drill-tab-total="drillState.tabTotal"
           :drill-level-total="drillState.currentLevelTotal"
           :is-drill-leaf="drillState.isLeaf"
           :overridden-recategorize-count="drillState.overriddenRecategorizeCount"
           :is-honoring-recategorize-as="drillState.honorRecategorizeAs"
           :has-recategorize-behavior-decision="drillState.hasRecategorizeBehaviorDecision"
+          :view-note-template="selectedTabViewNoteTemplate"
+          :is-saving-view-note="isSavingViewNote"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
           @navigate-category="openDrillRoot"
           @navigate-drill-depth="handleNavigateDrillDepth"
           @toggle-rearrange="toggleRearrangeMode"
           @edit-tab="openTabEditor"
+          @save-view-note="handleSaveViewNote"
+          @remove-view-note="handleRemoveViewNote"
         />
       </div>
 
@@ -225,6 +230,12 @@ import {
 import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 import { decodeDrillPath, encodeDrillPath, sameDrillPath } from '@/features/dashboard/utils/drillPathQuery.js';
 import { resolveSingleTabAutoSelectTarget } from '@/features/dashboard/utils/singleTabAutoSelect.js';
+import {
+  buildTabViewNoteScopeKey,
+  normalizeTabNotesByView,
+  normalizeTabViewNoteTemplate,
+  resolveTabViewNoteTemplate
+} from '@/features/tabs/utils/tabNotes.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
 import { ChevronDown, Loader2 } from 'lucide-vue-next';
@@ -245,7 +256,7 @@ const route = useRoute();
 const { state } = useDashboardState();
 const { init } = useInit();
 const { selectGroup, handleGroupChange } = useSelectGroup();
-const { selectTab, ensureDefaultTabsForTabView } = useTabs();
+const { selectTab, ensureDefaultTabsForTabView, setTabNotesByView } = useTabs();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 
 const showRuleManagerModal = ref(false);
@@ -277,6 +288,7 @@ const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
 const pendingSingleTabSelection = ref(null);
 const tabEditorSnapshot = ref({ tabId: '', fingerprint: '' });
+const isSavingViewNote = ref(false);
 const EMPTY_DRILL_STATE = Object.freeze({
   tabTotal: 0,
   currentLevelTotal: 0,
@@ -343,6 +355,28 @@ function normalizeSelectionGroupId(group) {
 
   return String(group?._id || '').trim();
 }
+
+const selectedTabViewNoteScopeKey = computed(() => {
+  const normalizedGroupId = normalizeSelectionGroupId(state.selected.group);
+  if (!normalizedGroupId) {
+    return '';
+  }
+
+  return buildTabViewNoteScopeKey({
+    groupId: normalizedGroupId,
+    drillPath: state.selected.drillPath
+  });
+});
+
+const selectedTabViewNoteTemplate = computed(() => {
+  const selectedTab = state.selected.tab;
+  const scopeKey = selectedTabViewNoteScopeKey.value;
+  if (!selectedTab || !scopeKey) {
+    return '';
+  }
+
+  return resolveTabViewNoteTemplate(selectedTab, scopeKey);
+});
 
 function readPreferredGroupIdFromStorage() {
   if (typeof window === 'undefined' || !window.localStorage) {
@@ -722,6 +756,48 @@ async function handleRuleManagerClose() {
 
 function openTransactionSearch() {
   setDashboardView('transaction-search', { syncRoute: true });
+}
+
+async function handleSaveViewNote(template = '') {
+  const selectedTab = state.selected.tab;
+  const scopeKey = selectedTabViewNoteScopeKey.value;
+  if (!selectedTab?._id || !scopeKey) {
+    return;
+  }
+
+  const normalizedTemplate = normalizeTabViewNoteTemplate(template);
+  const nextTabNotesByView = normalizeTabNotesByView(selectedTab.tabNotesByView);
+  const previousTemplate = String(nextTabNotesByView[scopeKey]?.template || '');
+
+  if (!normalizedTemplate) {
+    if (!previousTemplate) {
+      return;
+    }
+    delete nextTabNotesByView[scopeKey];
+  } else {
+    if (previousTemplate === normalizedTemplate) {
+      return;
+    }
+
+    nextTabNotesByView[scopeKey] = {
+      template: normalizedTemplate,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  isSavingViewNote.value = true;
+
+  try {
+    await setTabNotesByView(selectedTab._id, nextTabNotesByView);
+  } catch (error) {
+    console.error('Error saving tab view note:', error);
+  } finally {
+    isSavingViewNote.value = false;
+  }
+}
+
+async function handleRemoveViewNote() {
+  await handleSaveViewNote('');
 }
 
 function handleGroupSelected(group) {

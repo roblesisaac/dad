@@ -111,6 +111,66 @@ describe('drillEvaluator', () => {
     expect(depthTwoLeaf.transactions.map(item => item.transaction_id)).toEqual(['t2']);
   });
 
+  test('respects sort amount direction for grouped rows at deeper drill levels', () => {
+    const tab = createTab([
+      {
+        id: 'level-1',
+        sortRules: [createRule('sort-0', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-0', ['groupBy', 'category', '', '', ''])]
+      },
+      {
+        id: 'level-2',
+        sortRules: [createRule('sort-1', ['sort', 'date', 'desc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-1', ['groupBy', 'year_month', '', '', ''])]
+      },
+      {
+        id: 'level-3',
+        sortRules: [createRule('sort-2', ['sort', 'amount', 'desc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-2', ['groupBy', 'name', '', '', ''])]
+      }
+    ]);
+
+    const transactions = [
+      createTransaction('t1', {
+        authorized_date: '2026-01-02',
+        date: '2026-01-02',
+        amount: 100,
+        name: 'Alpha',
+        personal_finance_category: { primary: 'FOOD' }
+      }),
+      createTransaction('t2', {
+        authorized_date: '2026-01-03',
+        date: '2026-01-03',
+        amount: 20,
+        name: 'Bravo',
+        personal_finance_category: { primary: 'FOOD' }
+      }),
+      createTransaction('t3', {
+        authorized_date: '2026-01-04',
+        date: '2026-01-04',
+        amount: 5,
+        name: 'Bravo',
+        personal_finance_category: { primary: 'FOOD' }
+      })
+    ];
+
+    const result = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: ['food', '2026 jan']
+    });
+
+    expect(result.validPath).toEqual(['food', '2026 jan']);
+    expect(result.groups.map(group => group.key)).toEqual(['bravo', 'alpha']);
+  });
+
   test('applies branch-local rules only for the matching branch path', () => {
     const tab = createTab(
       [

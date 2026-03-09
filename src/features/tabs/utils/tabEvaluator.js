@@ -431,8 +431,10 @@ function shouldSortGroupsBySelectedSort(groupByMode, sortPropName) {
   return false;
 }
 
-function shouldSortCategoryGroupsByAmount(groupByMode, sortPropName) {
-  return groupByMode === 'category' && sortPropName === 'amount';
+function shouldSortGroupsByAmount(groupByMode, sortPropName) {
+  return Boolean(groupByMode)
+    && groupByMode !== NO_GROUPING_RULE_VALUE
+    && sortPropName === 'amount';
 }
 
 function isCategorizeSetTarget(target) {
@@ -1041,7 +1043,7 @@ export function evaluateTabData({
 
   const primarySort = resolvePrimarySort(sorters);
 
-  if (shouldSortCategoryGroupsByAmount(propToGroupBy, primarySort.propName)) {
+  if (shouldSortGroupsByAmount(propToGroupBy, primarySort.propName)) {
     categorizedItems.sort((a, b) => {
       const totalA = Number(a?.[2] || 0);
       const totalB = Number(b?.[2] || 0);
@@ -1053,7 +1055,7 @@ export function evaluateTabData({
           : amountSortResult;
       }
 
-      return compareGroupLabelsByDateMode(a?.[0], b?.[0], 'category');
+      return compareGroupLabelsByDateMode(a?.[0], b?.[0], propToGroupBy);
     });
   } else if (shouldSortGroupsBySelectedSort(propToGroupBy, primarySort.propName)) {
     categorizedItems.sort((a, b) => {
