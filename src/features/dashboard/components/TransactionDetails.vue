@@ -107,24 +107,85 @@
     
     <!-- Rules Applied -->
     <div v-if="rulesAppliedToItem && rulesAppliedToItem.length" class="mt-6 bg-white p-4 rounded-md shadow-sm">
-      <h3 class="text-sm font-semibold text-gray-700 mb-3">Applied Rules</h3>
-      <div v-for="rule in rulesAppliedToItem" :key="rule._id">
-        <RuleCard 
-          :rule="rule" 
-          :ruleType="getRuleType(rule)"
-        />
+      <h3 class="text-sm font-semibold text-gray-700 mb-3 text-xs uppercase tracking-widest font-black">Applied Rules</h3>
+      <div class="space-y-2">
+        <div 
+          v-for="rule in rulesAppliedToItem" 
+          :key="rule._id" 
+          class="group rounded-2xl border border-gray-50 bg-gray-50/30 p-3 select-none flex items-start justify-between gap-3 relative"
+          @touchstart.passive="handleRuleRowTouchStart($event, rule)"
+          @touchmove="handleRuleRowTouchMove"
+          @touchend="handleRuleRowTouchEnd"
+          @touchcancel="handleRuleRowTouchEnd"
+          @mousedown="handleRuleRowMouseDown($event, rule)"
+          @mousemove="handleRuleRowMouseMove"
+          @mouseup="handleRuleRowMouseUp"
+          @mouseleave="handleRuleRowMouseUp"
+        >
+          <div class="flex min-w-0 flex-1 items-start gap-2">
+            <RuleSyntaxDisplay :rule="rule" compact class="min-w-0" />
+          </div>
+
+          <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
+            <button
+              type="button"
+              class="rounded-xl p-1 text-gray-500 transition-all focus:outline-none opacity-0 pointer-events-none hover:bg-gray-100 hover:text-black group-hover:opacity-100 group-hover:pointer-events-auto"
+              :class="shouldShowRuleMenuTrigger(rule) ? 'opacity-100 pointer-events-auto' : ''"
+              data-rule-menu-surface
+              @click.stop="toggleRuleActionsMenu(rule)"
+            >
+              <MoreVertical class="h-4 w-4" />
+            </button>
+
+            <div
+              v-if="activeRuleMenuId === ruleKey(rule)"
+              class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border border-gray-200 bg-white shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40"
+              data-rule-menu-surface
+            >
+              <button
+                type="button"
+                class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
+                @click.stop="handleRuleMenuAction('edit', rule)"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-gray-700 transition-colors hover:bg-gray-50 hover:text-black"
+                @click.stop="handleRuleMenuAction('copy', rule)"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
+
+  <RuleEditModal
+    v-if="showRuleEditor"
+    :rule="activeRule"
+    :is-new="false"
+    :scope="activeRule?.applyForTabs?.includes('_GLOBAL') ? 'global' : 'tab'"
+    @close="closeRuleEditor"
+    @save="saveRule"
+  />
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
-import RuleCard from '@/features/rule-manager/components/RuleCard.vue';
+import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { MoreVertical } from 'lucide-vue-next';
+import RuleSyntaxDisplay from '@/features/rule-manager/components/RuleSyntaxDisplay.vue';
+import RuleEditModal from '@/features/rule-manager/components/RuleEditModal.vue';
 import { useApi } from '@/shared/composables/useApi';
+import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI';
+import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
 import { useUtils } from '@/shared/composables/useUtils';
 
 const api = useApi();
+const rulesAPI = useRulesAPI();
+const { processAllTabsForSelectedGroup } = useTabProcessing();
 const { waitUntilTypingStops, formatPrice } = useUtils();
 const { item, state } = defineProps({
   item: Object,
@@ -159,24 +220,6 @@ const rulesAppliedToItem = computed(() => {
   });
 });
 
-// Helper function to determine rule type based on rule structure
-function getRuleType(rule) {
-  // Default colors and descriptions for different rule types
-  const types = {
-    filter: { id: 'filter', name: 'Filter Rules', color: 'blue', description: 'Controls which items are visible' },
-    sort: { id: 'sort', name: 'Sort Rules', color: 'amber', description: 'Controls the order of items' },
-    categorize: { id: 'categorize', name: 'Categorize Rules', color: 'emerald', description: 'Assigns categories to items' },
-    groupBy: { id: 'groupBy', name: 'Group Rules', color: 'purple', description: 'Groups items by properties' }
-  };
-  
-  // Determine rule type based on rule structure
-  if (!rule.rule || !Array.isArray(rule.rule) || rule.rule.length < 1) {
-    return types.filter; // Default fallback
-  }
-  
-  const ruleType = rule.rule[0];
-  return types[ruleType] || types.filter;
-}
 
 async function updateTransaction() {
   await waitUntilTypingStops();
@@ -186,4 +229,199 @@ async function updateTransaction() {
 watch(() => item.recategorizeAs, updateTransaction);
 watch(() => item.notes, updateTransaction);
 
+const LONG_PRESS_DURATION_MS = 450;
+const LONG_PRESS_MOVE_THRESHOLD_PX = 12;
+
+const showRuleEditor = ref(false);
+const activeRule = ref(null);
+
+const activeRuleMenuId = ref('');
+const longPressVisibleRuleId = ref('');
+const ruleLongPressTimeoutId = ref(null);
+const ruleLongPressStart = ref({ x: 0, y: 0 });
+
+function ruleKey(rule) {
+  return String(rule?._id || '').trim();
+}
+
+function shouldShowRuleMenuTrigger(rule) {
+  const key = ruleKey(rule);
+  if (!key) return false;
+  return activeRuleMenuId.value === key || longPressVisibleRuleId.value === key;
+}
+
+function toggleRuleActionsMenu(rule) {
+  const key = ruleKey(rule);
+  if (!key) return;
+  longPressVisibleRuleId.value = key;
+  activeRuleMenuId.value = activeRuleMenuId.value === key ? '' : key;
+}
+
+function closeRuleMenu() {
+  activeRuleMenuId.value = '';
+  longPressVisibleRuleId.value = '';
+  clearRuleLongPressTimer();
+}
+
+function clearRuleLongPressTimer() {
+  if (ruleLongPressTimeoutId.value) {
+    clearTimeout(ruleLongPressTimeoutId.value);
+    ruleLongPressTimeoutId.value = null;
+  }
+}
+
+function shouldIgnoreRuleLongPressTarget(event) {
+  const target = event?.target;
+  if (!(target instanceof Element)) return false;
+  return Boolean(target.closest('button, input, select, textarea, a, label'));
+}
+
+function shouldSkipLongPressStart(event) {
+  if (shouldIgnoreRuleLongPressTarget(event)) return true;
+  return false;
+}
+
+function startRuleLongPress(rule, x, y) {
+  const key = ruleKey(rule);
+  if (!key) return;
+  clearRuleLongPressTimer();
+  ruleLongPressStart.value = { x, y };
+
+  ruleLongPressTimeoutId.value = setTimeout(() => {
+    activeRuleMenuId.value = '';
+    longPressVisibleRuleId.value = key;
+    ruleLongPressTimeoutId.value = null;
+  }, LONG_PRESS_DURATION_MS);
+}
+
+function handleRuleRowTouchStart(event, rule) {
+  if (shouldSkipLongPressStart(event)) return;
+  const touch = event.touches?.[0];
+  if (!touch) return;
+  startRuleLongPress(rule, touch.clientX, touch.clientY);
+}
+
+function handleRuleRowMouseDown(event, rule) {
+  if (event.button !== 0) return;
+  if (shouldSkipLongPressStart(event)) return;
+  startRuleLongPress(rule, event.clientX, event.clientY);
+}
+
+function handleRuleRowTouchMove(event) {
+  if (!ruleLongPressTimeoutId.value) return;
+  const touch = event.touches?.[0];
+  if (!touch) return;
+  const deltaX = Math.abs(touch.clientX - ruleLongPressStart.value.x);
+  const deltaY = Math.abs(touch.clientY - ruleLongPressStart.value.y);
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearRuleLongPressTimer();
+  }
+}
+
+function handleRuleRowMouseMove(event) {
+  if (!ruleLongPressTimeoutId.value) return;
+  const deltaX = Math.abs(event.clientX - ruleLongPressStart.value.x);
+  const deltaY = Math.abs(event.clientY - ruleLongPressStart.value.y);
+  if (deltaX > LONG_PRESS_MOVE_THRESHOLD_PX || deltaY > LONG_PRESS_MOVE_THRESHOLD_PX) {
+    clearRuleLongPressTimer();
+  }
+}
+
+function handleRuleRowTouchEnd() {
+  clearRuleLongPressTimer();
+}
+
+function handleRuleRowMouseUp() {
+  clearRuleLongPressTimer();
+}
+
+function closeMenusOnOutsideClick(event) {
+  const target = event.target;
+  if (!(target instanceof Element)) return;
+  if (target.closest('[data-rule-menu-surface]')) return;
+  closeRuleMenu();
+}
+
+async function handleRuleMenuAction(action, rule) {
+  if (action === 'edit') {
+    closeRuleMenu();
+    activeRule.value = JSON.parse(JSON.stringify(rule));
+    showRuleEditor.value = true;
+  } else if (action === 'copy') {
+    closeRuleMenu();
+    await copyRuleJson(rule);
+  }
+}
+
+function closeRuleEditor() {
+  showRuleEditor.value = false;
+  activeRule.value = null;
+}
+
+async function saveRule(rulePayload) {
+  const normalizedRule = {
+    ...rulePayload,
+    filterJoinOperator: String(rulePayload?.filterJoinOperator || 'and'),
+    orderOfExecution: Number(rulePayload?.orderOfExecution || 0)
+  };
+
+  const updatedRule = await rulesAPI.updateRule(normalizedRule._id, normalizedRule);
+  const existingRuleIndex = state.allUserRules.findIndex(rule => rule._id === normalizedRule._id);
+  
+  if (existingRuleIndex !== -1 && updatedRule) {
+    state.allUserRules[existingRuleIndex] = updatedRule;
+  }
+
+  await processAllTabsForSelectedGroup({ showLoading: false });
+  closeRuleEditor();
+}
+
+async function copyRuleJson(rule) {
+  const ruleJson = JSON.stringify(rule || {}, null, 2);
+  const didCopy = await copyToClipboard(ruleJson);
+  if (!didCopy) {
+    alert('Unable to copy rule JSON.');
+  }
+}
+
+async function copyToClipboard(text) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_error) {
+    }
+  }
+
+  if (typeof document === 'undefined') return false;
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (_error) {
+    copied = false;
+  }
+
+  document.body.removeChild(textarea);
+  return copied;
+}
+
+onMounted(() => {
+  document.addEventListener('pointerdown', closeMenusOnOutsideClick);
+});
+
+onBeforeUnmount(() => {
+  clearRuleLongPressTimer();
+  document.removeEventListener('pointerdown', closeMenusOnOutsideClick);
+});
 </script>
