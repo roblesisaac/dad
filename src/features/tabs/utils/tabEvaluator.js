@@ -198,6 +198,10 @@ export function buildTabRulesForId(allRules = [], tabId) {
 }
 
 function getItemValue(item, propName) {
+  if (isGlobalCategoryProperty(propName)) {
+    return item._globalCategory || item.personal_finance_category?.primary;
+  }
+
   if (propName === 'category') {
     return item.personal_finance_category?.primary;
   }
@@ -207,6 +211,15 @@ function getItemValue(item, propName) {
   }
 
   return item[propName];
+}
+
+function isGlobalCategoryProperty(propName) {
+  const normalizedPropName = String(propName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  return normalizedPropName === 'globalcategory';
 }
 
 function formatPersonalFinanceCategory(item) {
@@ -359,6 +372,10 @@ function shouldSortGroupsBySelectedSort(groupByMode, sortPropName) {
     return sortPropName === 'category';
   }
 
+  if (groupByMode === 'name') {
+    return sortPropName === 'name';
+  }
+
   if (['year', 'month', 'year_month', 'day', 'date', 'weekday'].includes(groupByMode)) {
     return sortPropName === 'date';
   }
@@ -372,13 +389,20 @@ function shouldSortCategoryGroupsByAmount(groupByMode, sortPropName) {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
 }
 
 function normalizeCategorizeSetTarget(target) {
-  return String(target || '').trim().toLowerCase() === 'name'
-    ? 'name'
-    : 'category';
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
 }
 
 function usesCategorizeSetTargetFormat(rule = []) {
@@ -719,6 +743,14 @@ function applyCategorizerScope(item, categorizers = []) {
       continue;
     }
 
+    if (setTarget === 'tag') {
+      const nextTag = String(setValue || '').trim();
+      if (nextTag) {
+        item.tags = [nextTag];
+      }
+      continue;
+    }
+
     const categoryName = String(setValue || 'misc').toLowerCase();
     if (categorizeConfig._isImportant) {
       importantCategory = categoryName;
@@ -740,6 +772,7 @@ function buildCategorizeMethod(categorizers, options = {}) {
 
     // 1) Apply global categorization rules first.
     applyCategorizerScope(item, globalCategorizers);
+    item._globalCategory = String(item.personal_finance_category?.primary || '').trim().toLowerCase();
 
     // 2) Apply recategorizeAs next.
     const recategorizeAs = String(item?.recategorizeAs || '').trim().toLowerCase();
@@ -811,6 +844,7 @@ function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {
   const groupByMethods = {
     [NO_GROUPING_RULE_VALUE]: () => NO_GROUPING_CATEGORY_NAME,
     category: (item) => item.personal_finance_category?.primary || 'misc',
+    name: (item) => String(item?.name || '').trim() || 'unnamed transaction',
     year: (item) => {
       const [year] = String(item.authorized_date || item.date || '').split('-');
       return year;

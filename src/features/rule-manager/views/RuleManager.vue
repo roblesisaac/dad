@@ -371,6 +371,9 @@
       v-if="showRuleEditModal"
       :rule="currentRule"
       :is-new="isNewRule"
+      scope="tab"
+      :fixed-type="true"
+      :show-categorize-set-target="isCustomRuleEditorMode"
       @close="closeRuleEditModal"
       @save="saveRule"
     />
@@ -416,6 +419,10 @@ const props = defineProps({
   section: {
     type: String,
     default: null
+  },
+  openCustomRuleEditor: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -531,6 +538,8 @@ const showTabActionsMenu = ref(false);
 const reorderingSectionId = ref(null);
 const isSavingRecategorizePreference = ref(false);
 const isAdvancedSectionOpen = ref(false);
+const isCustomRuleEditorMode = ref(false);
+const hasConsumedCustomEditorRequest = ref(false);
 
 const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
@@ -752,6 +761,24 @@ watch(
     syncLocalRulesFromCurrentDepth();
     showTabActionsMenu.value = false;
     isAdvancedSectionOpen.value = isRecategorizeWarningUnresolved.value;
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.openCustomRuleEditor,
+  (shouldOpenCustomRuleEditor) => {
+    if (!shouldOpenCustomRuleEditor) {
+      hasConsumedCustomEditorRequest.value = false;
+      return;
+    }
+
+    if (hasConsumedCustomEditorRequest.value || !state.selected.tab) {
+      return;
+    }
+
+    hasConsumedCustomEditorRequest.value = true;
+    openCustomRuleEditorForm();
   },
   { immediate: true }
 );
@@ -1240,18 +1267,34 @@ function createNewRuleWithType(typeId) {
     applyForTabs: tabId ? [tabId] : []
   };
   isNewRule.value = true;
+  isCustomRuleEditorMode.value = false;
+  showRuleEditModal.value = true;
+}
+
+function openCustomRuleEditorForm() {
+  const tabId = state.selected.tab?._id;
+  currentRule.value = {
+    ...createLocalRule('categorize', ['categorize', '', '', '', 'category', ''], {
+      orderOfExecution: getEnabledRulesByType('categorize').length
+    }),
+    applyForTabs: tabId ? [tabId] : []
+  };
+  isNewRule.value = true;
+  isCustomRuleEditorMode.value = true;
   showRuleEditModal.value = true;
 }
 
 function editRule(rule) {
   currentRule.value = cloneRule(rule);
   isNewRule.value = false;
+  isCustomRuleEditorMode.value = false;
   showRuleEditModal.value = true;
 }
 
 function closeRuleEditModal() {
   showRuleEditModal.value = false;
   currentRule.value = null;
+  isCustomRuleEditorMode.value = false;
 }
 
 async function saveRule(rule) {

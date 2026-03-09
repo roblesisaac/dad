@@ -8,7 +8,11 @@
     @close="closeModal"
   >
     <template #content>
-      <RuleManager :section="initialSection" @close="closeModal" />
+      <RuleManager
+        :section="initialSection"
+        :open-custom-rule-editor="openCustomRuleEditor"
+        @close="closeModal"
+      />
     </template>
   </BaseModal>
 </template>
@@ -29,6 +33,10 @@ const props = defineProps({
   initialSection: {
     type: String,
     default: null
+  },
+  openCustomRuleEditor: {
+    type: Boolean,
+    default: false
   }
 });
 

@@ -154,6 +154,7 @@
       <RuleManagerModal
         :is-open="showRuleManagerModal"
         :initial-section="targetTabEditorSection"
+        :open-custom-rule-editor="openCustomRuleEditor"
         @close="handleRuleManagerClose"
       />
 
@@ -249,6 +250,7 @@ const { processAllTabsForSelectedGroup } = useTabProcessing();
 
 const showRuleManagerModal = ref(false);
 const targetTabEditorSection = ref(null);
+const openCustomRuleEditor = ref(false);
 const isAccountModalOpen = ref(false);
 const isRearrangeModeActive = ref(false);
 const dashboardView = ref('group');
@@ -656,7 +658,11 @@ function openTabEditor(sectionValue = null) {
     return;
   }
 
-  targetTabEditorSection.value = typeof sectionValue === 'string' ? sectionValue : null;
+  const isCustomEditorRequest = sectionValue === 'custom';
+  targetTabEditorSection.value = isCustomEditorRequest
+    ? null
+    : (typeof sectionValue === 'string' ? sectionValue : null);
+  openCustomRuleEditor.value = isCustomEditorRequest;
 
   tabEditorSnapshot.value = {
     tabId: String(state.selected.tab._id || ''),
@@ -684,6 +690,7 @@ function buildTabEditorFingerprint(tab) {
 
 async function handleRuleManagerClose() {
   showRuleManagerModal.value = false;
+  openCustomRuleEditor.value = false;
 
   const currentTab = state.selected.tab;
   const previousSnapshot = tabEditorSnapshot.value;

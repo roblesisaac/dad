@@ -311,7 +311,8 @@ const editTabOptions = [
   { id: 'groupBy', label: 'Group By' },
   { id: 'sort', label: 'Sort' },
   { id: 'categorize', label: 'Categorize' },
-  { id: 'filter', label: 'Filter' }
+  { id: 'filter', label: 'Filter' },
+  { id: 'custom', label: 'Custom' }
 ];
 
 function toggleEditTabDropdown() {

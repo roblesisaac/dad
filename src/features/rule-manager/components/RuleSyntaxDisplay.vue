@@ -88,12 +88,22 @@ function formatPropName(propName) {
   if (normalizedPropName === 'date') return 'date';
   if (normalizedPropName === 'name') return 'name';
   if (normalizedPropName === 'category') return 'category';
+  if (isGlobalCategoryProperty(normalizedPropName)) return 'global category';
   if (normalizedPropName === 'none') return 'no grouping';
   
   // General case: convert camelCase to words
   return normalizedPropName
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, str => str.toUpperCase());
+}
+
+function isGlobalCategoryProperty(propName) {
+  const normalizedPropName = String(propName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  return normalizedPropName === 'globalcategory';
 }
 
 // Format method names for better readability
@@ -189,13 +199,20 @@ function formatCombinator(combinator) {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
 }
 
 function normalizeCategorizeSetTarget(target) {
-  return String(target || '').trim().toLowerCase() === 'name'
-    ? 'name'
-    : 'category';
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
 }
 
 function usesCategorizeSetTargetFormat(ruleValues = []) {

@@ -48,7 +48,7 @@
                       ? 'rule-action-button-active'
                       : 'rule-action-button-inactive'"
                   >
-                    {{ capitalizeFirstLetter(t) }}
+                    {{ formatRuleActionLabel(t) }}
                   </button>
                 </div>
               </div>
@@ -121,10 +121,13 @@
                         class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
                       >
                         <option value="" disabled selected>Select property...</option>
-                        <option value="amount">Amount</option>
-                        <option value="date">Date</option>
-                        <option value="name">Name</option>
-                        <option value="category">Category</option>
+                        <option
+                          v-for="propertyOption in getConditionPropertyOptions(ruleData.rule[0])"
+                          :key="`primary-property-option-${propertyOption.value}`"
+                          :value="propertyOption.value"
+                        >
+                          {{ propertyOption.label }}
+                        </option>
                       </select>
                       
                       <select
@@ -230,10 +233,13 @@
                             class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
                           >
                             <option value="" disabled selected>Select property...</option>
-                            <option value="amount">Amount</option>
-                            <option value="date">Date</option>
-                            <option value="name">Name</option>
-                            <option value="category">Category</option>
+                            <option
+                              v-for="propertyOption in getConditionPropertyOptions(ruleData.rule[0])"
+                              :key="`and-property-option-${index}-${propertyOption.value}`"
+                              :value="propertyOption.value"
+                            >
+                              {{ propertyOption.label }}
+                            </option>
                           </select>
 
                           <select
@@ -274,11 +280,11 @@
               <!-- Result (Categorize specific) -->
               <div v-if="ruleData.rule[0] === 'categorize'" class="space-y-4">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
-                  {{ props.scope === 'global' ? 'Set' : 'Assign to Category' }}
+                  {{ useCategorizeSetTarget ? 'Set' : 'Assign to Category' }}
                 </label>
 
                 <div
-                  v-if="props.scope === 'global'"
+                  v-if="useCategorizeSetTarget"
                   class="grid grid-cols-1 sm:grid-cols-[220px_minmax(0,1fr)] gap-4"
                 >
                   <select
@@ -367,6 +373,10 @@ const props = defineProps({
   fixedType: {
     type: Boolean,
     default: true
+  },
+  showCategorizeSetTarget: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -374,7 +384,7 @@ const emit = defineEmits(['close', 'save']);
 const ruleActionOptions = computed(() => (
   props.scope === 'global'
     ? ['categorize']
-    : ['categorize', 'filter']
+    : ['groupBy', 'sort', 'categorize', 'filter']
 ));
 
 const typeDisplayNames = {
@@ -386,6 +396,14 @@ const typeDisplayNames = {
 
 function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
+}
+
+function formatRuleActionLabel(ruleAction) {
+  if (ruleAction === 'groupBy') {
+    return 'Group By';
+  }
+
+  return capitalizeFirstLetter(ruleAction);
 }
 
 // Create a deep copy of the rule to avoid mutating props directly
@@ -427,6 +445,17 @@ const METHOD_OPTIONS = {
   ]
 };
 
+const CONDITION_PROPERTY_OPTIONS = [
+  { value: 'amount', label: 'Amount' },
+  { value: 'date', label: 'Date' },
+  { value: 'name', label: 'Name' },
+  { value: 'category', label: 'Category' }
+];
+
+const FILTER_ONLY_PROPERTY_OPTIONS = [
+  { value: 'globalCategory', label: 'Global Category' }
+];
+
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
   { value: 'date', label: 'Date' },
@@ -452,7 +481,8 @@ const GROUP_BY_OPTIONS = [
 
 const CATEGORIZE_SET_TARGET_OPTIONS = [
   { value: 'category', label: 'Category' },
-  { value: 'name', label: 'Name' }
+  { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' }
 ];
 
 const criterionInput = ref(null);
@@ -495,9 +525,12 @@ function normalizeRuleScope() {
 const supportsAndCondition = computed(() =>
   ['filter', 'categorize'].includes(ruleData.value.rule[0])
 );
+const useCategorizeSetTarget = computed(() => (
+  props.scope === 'global' || props.showCategorizeSetTarget
+));
 
 const andConditions = ref(extractAndConditions(ruleData.value.rule));
-normalizeGlobalCategorizeRuleForEditor();
+normalizeCategorizeSetTargetRuleForEditor();
 
 const hasAndConditions = computed(() => andConditions.value.length > 0);
 
@@ -588,27 +621,45 @@ function updateRuleType() {
 
   if (ruleData.value.rule[0] === 'sort') {
     ruleData.value.rule[2] = 'asc';
+    ruleData.value.rule[4] = '';
   }
   
   if (ruleData.value.rule[0] === 'categorize') {
-    if (props.scope === 'global') {
+    if (useCategorizeSetTarget.value) {
       ruleData.value.rule[4] = 'category';
       ruleData.value.rule[5] = '';
     } else {
       ruleData.value.rule[4] = '';
     }
+    return;
+  }
+
+  if (ruleData.value.rule[0] === 'groupBy') {
+    ruleData.value.rule[4] = '';
+    return;
+  }
+
+  if (ruleData.value.rule[0] === 'filter') {
+    ruleData.value.rule[4] = '';
   }
 }
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
 }
 
 function normalizeCategorizeSetTarget(target) {
-  return String(target || '').trim().toLowerCase() === 'name'
-    ? 'name'
-    : 'category';
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
 }
 
 function isCategorizeRuleUsingSetTarget(rule = []) {
@@ -623,8 +674,8 @@ function getCategorizeConditionStartIndex(rule = []) {
   return isCategorizeRuleUsingSetTarget(rule) ? 6 : 5;
 }
 
-function normalizeGlobalCategorizeRuleForEditor() {
-  if (props.scope !== 'global' || ruleData.value.rule[0] !== 'categorize') {
+function normalizeCategorizeSetTargetRuleForEditor() {
+  if (!useCategorizeSetTarget.value || ruleData.value.rule[0] !== 'categorize') {
     return;
   }
 
@@ -642,9 +693,17 @@ function normalizeGlobalCategorizeRuleForEditor() {
 }
 
 function getCategorizeSetValuePlaceholder(setTarget) {
-  return normalizeCategorizeSetTarget(setTarget) === 'name'
-    ? 'e.g. Uber Eats'
-    : 'e.g. Groceries';
+  const normalizedTarget = normalizeCategorizeSetTarget(setTarget);
+
+  if (normalizedTarget === 'name') {
+    return 'e.g. Uber Eats';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'e.g. reimbursable';
+  }
+
+  return 'e.g. Groceries';
 }
 
 function getCriterionPlaceholder() {
@@ -669,16 +728,33 @@ function getCriterionPlaceholderForProperty(propType) {
   }
 }
 
+function getConditionPropertyOptions(ruleType) {
+  if (ruleType === 'filter') {
+    return [...CONDITION_PROPERTY_OPTIONS, ...FILTER_ONLY_PROPERTY_OPTIONS];
+  }
+
+  return CONDITION_PROPERTY_OPTIONS;
+}
+
 function isNumericProperty(propName) {
   return propName === 'amount';
 }
 
 function isTextProperty(propName) {
-  return propName === 'name' || propName === 'category';
+  return propName === 'name' || propName === 'category' || isGlobalCategoryProperty(propName);
 }
 
 function isDateProperty(propName) {
   return propName === 'date';
+}
+
+function isGlobalCategoryProperty(propName) {
+  const normalizedPropName = String(propName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  return normalizedPropName === 'globalcategory';
 }
 
 function useDateInputForCondition(propName) {
@@ -844,7 +920,7 @@ function saveRule() {
     ruleData.value.rule[3] = '';
   }
 
-  if (ruleData.value.rule[0] === 'categorize' && props.scope === 'global') {
+  if (ruleData.value.rule[0] === 'categorize' && useCategorizeSetTarget.value) {
     ruleData.value.rule[4] = normalizeCategorizeSetTarget(ruleData.value.rule[4]);
   }
 
@@ -864,7 +940,7 @@ function validateRule() {
   }
   
   if (rule[0] === 'categorize') {
-    if (props.scope === 'global') {
+    if (useCategorizeSetTarget.value) {
       if (!isCategorizeSetTarget(rule[4])) {
         alert('Please select what to set');
         return false;
@@ -920,7 +996,7 @@ function validateRule() {
 
 function normalizeAndCondition() {
   const baseRule = Array.isArray(ruleData.value.rule) ? ruleData.value.rule : [];
-  const normalizedRule = baseRule[0] === 'categorize' && props.scope === 'global'
+  const normalizedRule = baseRule[0] === 'categorize' && useCategorizeSetTarget.value
     ? [
       'categorize',
       baseRule[1] ?? '',

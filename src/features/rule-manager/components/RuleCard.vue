@@ -101,7 +101,7 @@
             <template v-for="(cond, idx) in additionalConditions" :key="idx">
               <span class="text-[11px] font-bold text-gray-400">
                  <span class="uppercase text-[9px] text-black mr-1">{{ formatCombinator(cond.combinator) }}</span>
-                 {{ cond.property }} <span class="uppercase text-[9px] text-black">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
+                 {{ formatPropertyLabel(cond.property) }} <span class="uppercase text-[9px] text-black">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
               </span>
             </template>
           </div>
@@ -168,7 +168,7 @@ const ruleSummaryParts = computed(() => {
   
   else if (type === 'filter') {
     parts.push({ text: 'filter where' });
-    parts.push({ text: r[1] || 'field', highlight: true });
+    parts.push({ text: formatPropertyLabel(r[1]) || 'field', highlight: true });
     parts.push({ text: getOperatorDisplay(r[2]), highlight: true });
     parts.push({ text: r[3] || 'value', highlight: true });
     
@@ -184,7 +184,7 @@ const ruleSummaryParts = computed(() => {
     parts.push({ text: 'to' });
     parts.push({ text: getCategorizeAssignmentValue(r) || 'value', highlight: true });
     parts.push({ text: 'if' });
-    parts.push({ text: r[1] || 'field', highlight: true });
+    parts.push({ text: formatPropertyLabel(r[1]) || 'field', highlight: true });
     parts.push({ text: getOperatorDisplay(r[2]), highlight: true });
     parts.push({ text: r[3] || 'value', highlight: true });
   } 
@@ -257,6 +257,28 @@ function formatGroupByTarget(target) {
   return target || 'property';
 }
 
+function formatPropertyLabel(propertyName) {
+  const normalizedPropertyName = String(propertyName || '').trim();
+  if (!normalizedPropertyName) {
+    return '';
+  }
+
+  if (isGlobalCategoryProperty(normalizedPropertyName)) {
+    return 'global category';
+  }
+
+  return normalizedPropertyName;
+}
+
+function isGlobalCategoryProperty(propertyName) {
+  const normalizedPropertyName = String(propertyName || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, '');
+
+  return normalizedPropertyName === 'globalcategory';
+}
+
 function normalizeCombinator(combinator) {
   return String(combinator || '').toLowerCase() === 'or'
     ? 'or'
@@ -296,13 +318,20 @@ function formatCombinator(combinator) {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
 }
 
 function normalizeCategorizeSetTarget(target) {
-  return String(target || '').trim().toLowerCase() === 'name'
-    ? 'name'
-    : 'category';
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
 }
 
 function usesCategorizeSetTargetFormat(ruleValues = []) {
