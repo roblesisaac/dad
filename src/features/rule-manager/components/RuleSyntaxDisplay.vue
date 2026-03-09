@@ -459,6 +459,10 @@ function getAdditionalConditionsStartIndex(ruleValues = []) {
   color: var(--theme-text);
 }
 
+.rule-syntax {
+  cursor: pointer;
+}
+
 .rule-syntax.inline .rule-part {
   display: inline-flex;
   align-items: center;

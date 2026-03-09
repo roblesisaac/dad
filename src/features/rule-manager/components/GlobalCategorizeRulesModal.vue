@@ -9,6 +9,14 @@
       <div class="mx-auto w-full max-w-3xl px-6 py-8">
         <div class="flex items-center justify-end gap-4">
           <button
+            v-if="isReorderModeActive"
+            type="button"
+            class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-700 transition-colors hover:border-black hover:text-black"
+            @click="exitReorderMode"
+          >
+            Done Reordering
+          </button>
+          <button
             type="button"
             class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-800 transition-colors hover:border-black hover:text-black"
             @click="openCreateRule"
@@ -214,7 +222,7 @@ watch(
 );
 
 function closeModal() {
-  closeRuleActionsMenu();
+  exitReorderMode();
   searchQuery.value = '';
   emit('close');
 }
@@ -224,7 +232,7 @@ function closeRuleEditor() {
 }
 
 function openCreateRule() {
-  closeRuleActionsMenu();
+  exitReorderMode();
   isCreatingRule.value = true;
   activeRule.value = {
     rule: ['categorize', '', '', '', 'category', ''],
@@ -237,7 +245,7 @@ function openCreateRule() {
 }
 
 function openEditRule(rule) {
-  closeRuleActionsMenu();
+  exitReorderMode();
   isCreatingRule.value = false;
   activeRule.value = JSON.parse(JSON.stringify(rule));
   showRuleEditor.value = true;
@@ -265,7 +273,7 @@ async function saveRule(rulePayload) {
   }
 
   await processAllTabsForSelectedGroup({ showLoading: false });
-  closeRuleActionsMenu();
+  exitReorderMode();
   closeRuleEditor();
 }
 
@@ -286,7 +294,7 @@ async function deleteRule(rule) {
 
   state.allUserRules = state.allUserRules.filter(existingRule => existingRule._id !== rule._id);
   await processAllTabsForSelectedGroup({ showLoading: false });
-  closeRuleActionsMenu();
+  closeRuleMenu();
 }
 
 function ruleKey(rule) {
@@ -312,11 +320,15 @@ function toggleRuleActionsMenu(rule) {
   activeRuleMenuId.value = activeRuleMenuId.value === key ? '' : key;
 }
 
-function closeRuleActionsMenu() {
+function closeRuleMenu() {
   activeRuleMenuId.value = '';
   longPressVisibleRuleId.value = '';
-  isReorderModeActive.value = false;
   clearRuleLongPressTimer();
+}
+
+function exitReorderMode() {
+  isReorderModeActive.value = false;
+  closeRuleMenu();
 }
 
 function clearRuleLongPressTimer() {
@@ -438,24 +450,24 @@ function closeMenusOnOutsideClick(event) {
     return;
   }
 
-  closeRuleActionsMenu();
+  closeRuleMenu();
 }
 
 async function handleRuleMenuAction(action, rule) {
   if (action === 'edit') {
-    closeRuleActionsMenu();
+    exitReorderMode();
     openEditRule(rule);
     return;
   }
 
   if (action === 'copy') {
-    closeRuleActionsMenu();
+    closeRuleMenu();
     await copyRuleJson(rule);
     return;
   }
 
   if (action === 'delete') {
-    closeRuleActionsMenu();
+    closeRuleMenu();
     await deleteRule(rule);
   }
 }
@@ -492,6 +504,7 @@ async function onGlobalRulesDragEnd(event) {
     });
 
     await processAllTabsForSelectedGroup({ showLoading: false });
+    exitReorderMode();
   } catch (error) {
     console.error('Error reordering global rules:', error);
     displayedGlobalRules.value = [...filteredGlobalCategorizeRules.value];
