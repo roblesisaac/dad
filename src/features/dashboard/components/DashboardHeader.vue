@@ -511,7 +511,7 @@ const renderedHelperBodyDraft = computed(() => renderNoteTemplate(helperBodyDraf
 const helperBodyDisplay = computed(() => (
   hasViewNote.value
     ? renderedViewNote.value
-    : renderMarkdown(headerInfo.value.summary)
+    : renderNoteTemplate(headerInfo.value.summary, true)
 ));
 
 const isBreadcrumbDropdownOpen = ref(false);
@@ -804,20 +804,20 @@ const headerInfo = computed(() => {
     const hasDrillBreadcrumb = drillBreadcrumbs.value.length > 0;
     if (hasDrillBreadcrumb) {
       return {
-        title: 'Tab Total',
-        summary: `This is the total for ${selectedDrillLabel.value} in ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
+        title: 'Drill Level Total',
+        summary: `{{ total }} is the total for {{ selected-level }} in {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
       };
     }
 
     return {
       title: 'Tab Total',
-      summary: `This is the total for ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
+      summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
     };
   }
 
   return {
     title: 'Tab Total',
-    summary: `This is the total for ${selectedTabLabel.value} in ${selectedGroupLabel.value} for ${activeDateRangeLabel.value}.`
+    summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
   };
 });
 
