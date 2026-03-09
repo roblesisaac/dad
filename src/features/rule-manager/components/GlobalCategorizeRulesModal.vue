@@ -7,7 +7,7 @@
   >
     <template #content>
       <div class="mx-auto w-full max-w-3xl px-6 py-8">
-        <div class="flex items-center justify-between gap-4">
+        <div class="flex items-center justify-end gap-4">
           <button
             type="button"
             class="rounded-xl border border-gray-300 bg-white px-4 py-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-800 transition-colors hover:border-black hover:text-black"
@@ -52,7 +52,7 @@
               @touchcancel="handleRuleRowTouchEnd"
             >
               <div class="flex items-start justify-between gap-3">
-                <RuleSyntaxDisplay :rule="rule" compact />
+                <RuleSyntaxDisplay :rule="rule" compact class="min-w-0" />
 
                 <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
                   <button
@@ -535,5 +535,6 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+  display: inline-block !important;
 }
 </style>
