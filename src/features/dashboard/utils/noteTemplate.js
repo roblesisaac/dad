@@ -32,6 +32,10 @@ export function buildDynamicNoteTokens({
   selectedDrillLabel = '',
   dateLabel = '',
   totalLabel = '',
+  numMonths = 0,
+  numRows = 0,
+  numTransactions = 0,
+  averageLabel = '',
   drillGroups = [],
   formatAmount = (amount) => String(amount)
 } = {}) {
@@ -42,6 +46,10 @@ export function buildDynamicNoteTokens({
   addToken(tokenMap, 'selected-level', selectedDrillLabel);
   addToken(tokenMap, 'date', dateLabel);
   addToken(tokenMap, 'total', totalLabel);
+  addToken(tokenMap, 'num_months', numMonths);
+  addToken(tokenMap, 'num_rows', numRows);
+  addToken(tokenMap, 'num_transactions', numTransactions);
+  addToken(tokenMap, 'average', averageLabel);
 
   for (const group of Array.isArray(drillGroups) ? drillGroups : []) {
     const labelToken = normalizeTemplateToken(group?.label);

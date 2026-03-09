@@ -163,14 +163,15 @@
       </div>
     </div>
 
+    <!-- Modal -->
     <Teleport to="body">
       <div
         v-if="isHeaderInfoModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] px-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] px-4 py-4"
         @click.self="closeHeaderInfoModal"
       >
         <div
-          class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
+          class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)] max-h-full flex flex-col"
           role="dialog"
           aria-modal="true"
           :aria-label="headerInfo.title"
@@ -221,7 +222,7 @@
               </button>
             </div>
           </div>
-          <div class="space-y-3 px-4 py-4 text-left">
+          <div class="space-y-3 px-4 py-4 text-left overflow-y-auto">
             <template v-if="isEditingHelperBody">
               <p class="text-xs leading-relaxed text-[var(--theme-text-soft)]">
                 Edit the helper text body for this specific tab view. Dynamic tokens and arithmetic are supported.
@@ -324,6 +325,10 @@ const props = defineProps({
     type: Array,
     default: () => []
   },
+  drillTransactionCount: {
+    type: Number,
+    default: 0
+  },
   viewNoteTemplate: {
     type: String,
     default: ''
@@ -416,6 +421,38 @@ const isHeaderInfoMenuOpen = ref(false);
 const headerInfoMenuRef = ref(null);
 const isEditingHelperBody = ref(false);
 const helperBodyDraft = ref('');
+const currentTransactionCount = computed(() => {
+  const count = Number(props.drillTransactionCount);
+  return Number.isFinite(count) && count > 0
+    ? Math.round(count)
+    : 0;
+});
+const currentRowCount = computed(() => {
+  if (!isDrillView.value) {
+    return 0;
+  }
+
+  if (props.isDrillLeaf) {
+    return currentTransactionCount.value;
+  }
+
+  const groupedRowCount = drillGroups.value.length;
+  return groupedRowCount > 0
+    ? groupedRowCount
+    : currentTransactionCount.value;
+});
+const activeMonthCount = computed(() => {
+  const startDate = parseDateForSummary(state.date.start);
+  const endDate = parseDateForSummary(state.date.end);
+  return resolveMonthSpanCount(startDate, endDate);
+});
+const averagePerRow = computed(() => {
+  if (currentRowCount.value <= 0) {
+    return 0;
+  }
+
+  return headerTotal.value / currentRowCount.value;
+});
 
 const noteTokens = computed(() => buildDynamicNoteTokens({
   selectedTabLabel: selectedTabLabel.value,
@@ -423,12 +460,26 @@ const noteTokens = computed(() => buildDynamicNoteTokens({
   selectedDrillLabel: selectedDrillLabel.value,
   dateLabel: activeDateRangeLabel.value,
   totalLabel: formatPrice(headerTotal.value, { toFixed: 0 }),
+  numMonths: activeMonthCount.value,
+  numRows: currentRowCount.value,
+  numTransactions: currentTransactionCount.value,
+  averageLabel: formatPrice(averagePerRow.value, { toFixed: 0 }),
   drillGroups: drillGroups.value,
   formatAmount: (amount) => formatPrice(amount, { toFixed: 0 })
 }));
 
 const availableNoteTokenEntries = computed(() => {
-  const orderedStaticTokens = ['selected-tab', 'selected-account', 'selected-level', 'date', 'total'];
+  const orderedStaticTokens = [
+    'selected-tab',
+    'selected-account',
+    'selected-level',
+    'date',
+    'total',
+    'num-months',
+    'num-rows',
+    'num-transactions',
+    'average'
+  ];
   const tokenKeys = Object.keys(noteTokens.value);
   const dynamicKeys = tokenKeys
     .filter(token => !orderedStaticTokens.includes(token))
@@ -790,6 +841,27 @@ function parseDateForSummary(value) {
 
 function formatDateLabel(date, includeYear = false) {
   return format(date, includeYear ? 'MMM d yyyy' : 'MMM d');
+}
+
+function resolveMonthSpanCount(startDate, endDate) {
+  if (!startDate || !endDate) {
+    return 0;
+  }
+
+  const startTime = startDate.getTime();
+  const endTime = endDate.getTime();
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime)) {
+    return 0;
+  }
+
+  const normalizedStart = startTime <= endTime ? startDate : endDate;
+  const normalizedEnd = startTime <= endTime ? endDate : startDate;
+
+  const yearDelta = normalizedEnd.getFullYear() - normalizedStart.getFullYear();
+  const monthDelta = normalizedEnd.getMonth() - normalizedStart.getMonth();
+  const span = (yearDelta * 12) + monthDelta + 1;
+
+  return span > 0 ? span : 0;
 }
 
 function formatActiveDateRange(startValue, endValue) {

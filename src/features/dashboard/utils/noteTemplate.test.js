@@ -18,6 +18,10 @@ describe('noteTemplate', () => {
       selectedDrillLabel: 'Money Out',
       dateLabel: 'Mar 1 - Mar 9 2026',
       totalLabel: '-$200',
+      numMonths: 1,
+      numRows: 5,
+      numTransactions: 18,
+      averageLabel: '-$40',
       drillGroups: [
         { label: 'Shop Subscriptions', total: -120.45 },
         { label: 'Splurges', total: -79.55 }
@@ -29,6 +33,10 @@ describe('noteTemplate', () => {
     expect(tokens['selected-account']).toBe('Westminster Account');
     expect(tokens['shop-subscriptions']).toBe('$120.45');
     expect(tokens.splurges).toBe('$79.55');
+    expect(tokens['num-months']).toBe('1');
+    expect(tokens['num-rows']).toBe('5');
+    expect(tokens['num-transactions']).toBe('18');
+    expect(tokens.average).toBe('-$40');
   });
 
   test('renders known tokens and preserves unknown tokens', () => {
@@ -78,5 +86,17 @@ describe('noteTemplate', () => {
     );
 
     expect(rendered).toBe('Value: {{ money-in + unknown-token }}');
+  });
+
+  test('resolves underscore token names for numeric helper vars', () => {
+    const rendered = renderTemplateWithTokens(
+      'Rows: {{ num_rows }}, Months: {{ num_months }}',
+      {
+        'num-rows': '7',
+        'num-months': '2'
+      }
+    );
+
+    expect(rendered).toBe('Rows: 7, Months: 2');
   });
 });
