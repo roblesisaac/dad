@@ -811,7 +811,7 @@ const headerInfo = computed(() => {
 
     return {
       title: 'Tab Total',
-      summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
+      summary: `{{ total }} is the total for {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
     };
   }
 
