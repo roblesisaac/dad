@@ -80,7 +80,7 @@
       <div class="flex">
         <div class="flex-shrink-0">
           <CheckCircle v-if="notification.type === 'success'" class="h-5 w-5 text-green-400" />
-          <AlertCircle v-else-if="notification.type === 'error'" class="h-5 w-5 text-red-400" />
+          <AlertCircle v-else-if="notification.type === 'error'" class="h-5 w-5 text-black-400" />
         </div>
         <div class="ml-3">
           <p class="text-sm font-medium">

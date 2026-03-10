@@ -21,7 +21,7 @@
       </div>
 
       <button
-        class="text-gray-400 hover:text-red-600 transition-colors"
+        class="text-gray-400 hover:text-black-600 transition-colors"
         @click="$emit('delete-report', report._id)"
         title="Delete report"
       >

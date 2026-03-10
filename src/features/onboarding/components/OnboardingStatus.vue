@@ -30,14 +30,14 @@
                  'bg-[var(--theme-browser-chrome)] text-[var(--theme-text)] opacity-70': state.syncProgress.status === 'queued',
                  'bg-[var(--theme-text)] text-[var(--theme-browser-chrome)]': ['syncing', 'in_progress'].includes(state.syncProgress.status),
                  'bg-green-100 text-green-800': state.syncProgress.status === 'completed',
-                 'bg-red-100 text-red-800': state.syncProgress.status === 'error'
+                 'bg-red-100 text-black-800': state.syncProgress.status === 'error'
                }">
             {{ formatStatus(state.syncProgress.status) }}
           </div>
         </div>
 
         <div v-if="state.error" class="text-center mt-6">
-          <p class="text-sm text-red-600 mb-4">{{ state.error }}</p>
+          <p class="text-sm text-black-600 mb-4">{{ state.error }}</p>
           <button 
             class="px-6 py-3 bg-[var(--theme-text)] text-[var(--theme-browser-chrome)] hover:opacity-70 transition-opacity rounded-xl text-xs font-black uppercase tracking-[0.2em]"
             @click="retrySync">

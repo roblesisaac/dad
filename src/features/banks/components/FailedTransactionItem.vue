@@ -19,7 +19,7 @@
     </slot>
     
     <div class="bg-red-50 p-1 rounded border border-red-100" :class="{ 'mt-1': !showDetails }">
-      <div class="font-medium text-red-700">Error:</div>
+      <div class="font-medium text-black-700">Error:</div>
       <div v-if="error?.code">
         <span class="font-medium">Code:</span> {{ error?.code }}
       </div>

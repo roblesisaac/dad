@@ -66,7 +66,7 @@
             </label>
           </div>
 
-          <p v-if="issue" class="text-xs font-semibold text-red-600">
+          <p v-if="issue" class="text-xs font-semibold text-black-600">
             {{ issue }}
           </p>
         </template>
@@ -99,7 +99,7 @@
       </div>
 
       <button
-        class="text-gray-400 hover:text-red-600 transition-colors mt-2"
+        class="text-gray-400 hover:text-black-600 transition-colors mt-2"
         @click="$emit('remove-row', row.rowId)"
         title="Remove row"
       >

@@ -15,10 +15,10 @@
     
     <!-- Error state -->
     <div v-else-if="error" class="py-8 text-center">
-      <div class="mx-auto h-6 w-6 mb-4 text-red-500">
+      <div class="mx-auto h-6 w-6 mb-4 text-black-500">
         <AlertTriangle class="h-6 w-6" />
       </div>
-      <p class="text-red-600 mb-2">{{ error }}</p>
+      <p class="text-black-600 mb-2">{{ error }}</p>
       <button 
         @click="$emit('refresh')" 
         class="inline-flex items-center px-3 py-2 border border-black shadow-sm text-sm leading-4 font-medium rounded-md text-black bg-white hover:bg-gray-50 focus:outline-none"

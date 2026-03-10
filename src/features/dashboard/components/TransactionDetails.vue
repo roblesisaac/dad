@@ -26,7 +26,7 @@
         <!-- Amount Section -->
         <div class="flex flex-col items-center py-4">
           <div class="text-[10px] font-black uppercase tracking-widest mb-1" style="color: var(--theme-text-soft);">Amount Summary</div>
-          <div class="text-5xl sm:text-6xl font-black" :class="item.amount < 0 ? 'text-black-500' : 'text-red-500'">
+          <div class="text-5xl sm:text-6xl font-black" :class="item.amount < 0 ? 'text-black-500' : 'text-black-500'">
             {{ formatPrice(item.amount) }}
           </div>
         </div>

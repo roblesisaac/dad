@@ -138,38 +138,34 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div class="space-y-1">
                     <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Key</label>
-                    <select
-                      :value="selectedSortProperty"
-                      @change="onSortPropertyChange($event.target.value)"
-                      :disabled="isSavingSort"
-                      class="w-full rounded-xl border-2 border-gray-100 bg-white text-sm py-2.5 px-3 focus:border-black focus:ring-0 font-black text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option
+                    <div class="flex flex-wrap gap-2 pt-1">
+                      <button
                         v-for="sortPropertyOption in SORT_PROPERTY_OPTIONS"
                         :key="`sort-property-${sortPropertyOption.value}`"
-                        :value="sortPropertyOption.value"
+                        @click="onSortPropertyChange(sortPropertyOption.value)"
+                        :disabled="isSavingSort"
+                        class="px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :style="getSortButtonStyle(sortPropertyOption.value, selectedSortProperty)"
                       >
                         {{ sortPropertyOption.label }}
-                      </option>
-                    </select>
+                      </button>
+                    </div>
                   </div>
 
                   <div class="space-y-1">
                     <label class="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 px-1">Direction</label>
-                    <select
-                      :value="selectedSortDirection"
-                      @change="onSortDirectionChange($event.target.value)"
-                      :disabled="isSavingSort"
-                      class="w-full rounded-xl border-2 border-gray-100 bg-white text-sm py-2.5 px-3 focus:border-black focus:ring-0 font-black text-gray-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      <option
+                    <div class="flex flex-wrap gap-2 pt-1">
+                      <button
                         v-for="sortDirectionOption in getSortDirectionOptions(selectedSortProperty)"
                         :key="`sort-direction-${selectedSortProperty}-${sortDirectionOption.value}`"
-                        :value="sortDirectionOption.value"
+                        @click="onSortDirectionChange(sortDirectionOption.value)"
+                        :disabled="isSavingSort"
+                        class="px-3 py-1.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+                        :style="getSortButtonStyle(sortDirectionOption.value, selectedSortDirection)"
                       >
                         {{ sortDirectionOption.label }}
-                      </option>
-                    </select>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -350,11 +346,11 @@
               </div>
 
               <div class="pt-4 border-t border-red-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <p class="text-xs font-black uppercase tracking-[0.2em] text-red-500">Delete Tab</p>
+                <p class="text-xs font-black uppercase tracking-[0.2em] text-black-500">Delete Tab</p>
                 <button
                   @click="deleteCurrentTab"
                   :disabled="isDeletingTab"
-                  class="px-4 py-2 rounded-xl border-2 border-red-200 text-red-600 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                  class="px-4 py-2 rounded-xl border-2 border-red-200 text-black-600 text-xs font-black uppercase tracking-widest hover:bg-red-50 transition-all flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Trash2 class="w-4 h-4" />
                   {{ isDeletingTab ? 'Deleting...' : 'Delete' }}
@@ -1214,7 +1210,11 @@ function normalizeGroupByOptionForUi(rawGroupByOption) {
 }
 
 function getGroupByButtonStyle(groupByOption) {
-  const isSelected = selectedGroupByOption.value === groupByOption;
+  return getSortButtonStyle(groupByOption, selectedGroupByOption.value);
+}
+
+function getSortButtonStyle(optionValue, currentValue) {
+  const isSelected = currentValue === optionValue;
 
   if (isSelected) {
     return {

@@ -10,7 +10,7 @@
         <!-- Modal header -->
         <div class="flex flex-col items-center text-center mb-8">
           <div class="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle class="h-8 w-8 text-red-600" aria-hidden="true" />
+            <AlertTriangle class="h-8 w-8 text-black-600" aria-hidden="true" />
           </div>
           <h3 class="text-2xl font-black text-gray-900 tracking-tight">
             Delete Rule

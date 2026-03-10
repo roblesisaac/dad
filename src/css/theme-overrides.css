@@ -51,7 +51,6 @@
 [data-theme]:not([data-theme='light']) :where([class*='text-white'],
   [class*='text-black'],
   [class*='text-gray-'],
-  [class*='text-red-'],
   [class*='text-orange-'],
   [class*='text-yellow-'],
   [class*='text-green-'],

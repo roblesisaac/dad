@@ -108,7 +108,7 @@
         
         <button 
           @click="handleDeleteGroup" 
-          class="px-6 py-4 bg-red-50 hover:bg-red-600 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2"
+          class="px-6 py-4 bg-red-50 hover:bg-red-600 text-black-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-2xl transition-all flex items-center justify-center gap-2"
         >
           <Trash2 class="w-3.5 h-3.5" />
           Delete

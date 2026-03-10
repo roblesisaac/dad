@@ -109,7 +109,7 @@
                     </button>
                     <button
                       type="button"
-                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-red-700 transition-colors hover:bg-red-50 hover:text-red-800"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest text-black-700 transition-colors hover:bg-red-50 hover:text-black-800"
                       @click.stop="handleRuleMenuAction('delete', rule)"
                     >
                       Delete

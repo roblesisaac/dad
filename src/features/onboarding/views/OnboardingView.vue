@@ -66,7 +66,7 @@
         </button>
       </div>
 
-      <div v-if="state.error" class="mt-8 p-4 bg-red-100 text-red-800 flex items-start gap-3 rounded-xl text-sm border-none shadow-none">
+      <div v-if="state.error" class="mt-8 p-4 bg-red-100 text-black-800 flex items-start gap-3 rounded-xl text-sm border-none shadow-none">
         <LucideAlertCircle class="w-5 h-5 flex-shrink-0 mt-0.5" />
         <span class="font-medium">{{ state.error }}</span>
       </div>

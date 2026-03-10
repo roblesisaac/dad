@@ -17,7 +17,7 @@
             <div class="font-bold text-lg mb-1">
               {{ item.institution_name || item.institution_id }}
             </div>
-            <div v-if="item.error" class="flex items-center text-red-600 text-sm">
+            <div v-if="item.error" class="flex items-center text-black-600 text-sm">
               <LucideAlertCircle class="w-4 h-4 mr-1" />
               {{ getErrorMessage(item.error) }}
             </div>
@@ -46,7 +46,7 @@
         </div>
       </div>
 
-      <div v-if="state.error" class="mt-6 p-4 bg-red-100 border-2 border-red-600 text-red-700 flex items-center">
+      <div v-if="state.error" class="mt-6 p-4 bg-red-100 border-2 border-red-600 text-black-700 flex items-center">
         <LucideAlertCircle class="w-5 h-5 mr-2 flex-shrink-0" />
         <span>{{ state.error }}</span>
       </div>

@@ -61,22 +61,22 @@ export function useUtils() {
     const year = normalizedDate.getFullYear();
     const month = String(normalizedDate.getMonth() + 1).padStart(2, '0');
     const day = String(normalizedDate.getDate()).padStart(2, '0');
-    
+
     return `${year}-${month}-${day}`;
   }
 
   function getDayOfWeekPST(dateString) {
     let date = new Date(dateString + 'T00:00:00');
-    let dayOfWeek = date.toLocaleDateString('en-US', { 
-      weekday: 'long', 
-      timeZone: 'America/Los_Angeles' 
+    let dayOfWeek = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      timeZone: 'America/Los_Angeles'
     });
     return dayOfWeek;
   }
 
   // String/value utilities
   function lowercase(string) {
-    if(typeof string === 'string') {
+    if (typeof string === 'string') {
       return string.toLowerCase();
     }
     return string;
@@ -87,7 +87,7 @@ export function useUtils() {
   }
 
   // UI helpers
-  function waitUntilTypingStops(ms=500) {
+  function waitUntilTypingStops(ms = 500) {
     return new Promise((resolve) => {
       if (window.typingTimer) clearTimeout(window.typingTimer);
       window.typingTimer = setTimeout(resolve, ms);
@@ -100,10 +100,10 @@ export function useUtils() {
     //   ? 'text-blue-800' 
     //   : amt === 0
     //   ? 'text-gray-700'
-    //   : 'text-red-500'
+    //   : 'text-black-500'
   }
 
-  function formatPrice(amt=0, { toFixed = 2 } = {}) {
+  function formatPrice(amt = 0, { toFixed = 2 } = {}) {
     return amt.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: toFixed, maximumFractionDigits: toFixed });
   }
 
@@ -112,14 +112,14 @@ export function useUtils() {
     extractDateRange,
     yyyyMmDd,
     getDayOfWeekPST,
-    
+
     // Sort utilities
     sortBy,
-    
+
     // String/value utilities
     lowercase,
     makeArray,
-    
+
     // UI helpers
     waitUntilTypingStops,
     fontColor,

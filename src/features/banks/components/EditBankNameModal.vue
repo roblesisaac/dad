@@ -23,11 +23,11 @@
         
         <!-- Bank status info -->
         <div v-if="bank && bank.status === 'error'" class="my-4 p-4 bg-red-50 border border-red-200 rounded-md">
-          <p class="text-red-800 font-medium text-sm mb-2 flex items-center">
+          <p class="text-black-800 font-medium text-sm mb-2 flex items-center">
             <AlertCircle class="h-4 w-4 mr-2" />
             Connection Update Required
           </p>
-          <p class="text-sm text-red-700">
+          <p class="text-sm text-black-700">
             Your login credentials might have changed or additional authentication may be required.
           </p>
         </div>
@@ -123,7 +123,7 @@
 
           <button
             @click="toggleDeleteOptions"
-            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-black-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
             :disabled="isDeleting"
           >
             <Trash2 v-if="!isDeleting" class="h-4 w-4 mr-2" />
@@ -135,8 +135,8 @@
             v-if="showDeleteOptions"
             class="w-full p-3 border border-red-200 rounded-md bg-white text-sm text-gray-700"
           >
-            <p class="font-medium mb-2 text-gray-900 text-red-700">Select data to delete</p>
-            <p class="mb-2 text-xs text-red-600">This action is destructive and cannot be undone.</p>
+            <p class="font-medium mb-2 text-gray-900 text-black-700">Select data to delete</p>
+            <p class="mb-2 text-xs text-black-600">This action is destructive and cannot be undone.</p>
             <label class="flex items-center mb-2">
               <input v-model="deleteSelection.transactions" type="checkbox" class="mr-2" :disabled="isDeleting">
               Transactions
@@ -168,14 +168,14 @@
 
           <div
             v-if="isDeleting && deleteStatus"
-            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-black-700"
           >
             {{ deleteStatus }}
           </div>
 
           <div
             v-if="deleteSummary"
-            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-black-700"
           >
             <p class="font-medium mb-2 text-gray-900">Last Delete Summary</p>
             <p class="mb-1">Completed: {{ formatSummaryTime(deleteSummary.completedAt) }}</p>
@@ -190,7 +190,7 @@
 
           <button
             @click="toggleDeleteBankOptions"
-            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-red-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            class="w-full flex items-center justify-center px-4 py-2 border border-red-200 rounded-md shadow-sm text-sm font-medium text-black-600 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
             :disabled="isDeletingBank || !bank?.itemId"
           >
             <Trash2 v-if="!isDeletingBank" class="h-4 w-4 mr-2" />
@@ -202,11 +202,11 @@
             v-if="showDeleteBankOptions"
             class="w-full p-3 border border-red-200 rounded-md bg-white text-sm text-gray-700"
           >
-            <p class="font-medium mb-2 text-gray-900 text-red-800">Delete This Connected Bank</p>
-            <p class="mb-2 text-xs text-red-700">
+            <p class="font-medium mb-2 text-gray-900 text-black-800">Delete This Connected Bank</p>
+            <p class="mb-2 text-xs text-black-700">
               This removes this bank and its related item, accounts, transactions, sync sessions, and linked customizations.
             </p>
-            <p class="mb-2 text-xs text-red-700">
+            <p class="mb-2 text-xs text-black-700">
               Type <span class="font-bold">DELETE</span> to confirm.
             </p>
             <input
@@ -227,14 +227,14 @@
 
           <div
             v-if="isDeletingBank && deleteBankStatus"
-            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+            class="w-full px-3 py-2 border border-red-200 rounded-md bg-red-50 text-sm text-black-700"
           >
             {{ deleteBankStatus }}
           </div>
 
           <div
             v-if="deleteBankSummary"
-            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-red-700"
+            class="w-full p-3 border border-red-200 rounded-md bg-red-50 text-sm text-black-700"
           >
             <p class="font-medium mb-2 text-gray-900">Last Delete Bank Summary</p>
             <p class="mb-1">Completed: {{ formatSummaryTime(deleteBankSummary.completedAt) }}</p>
@@ -291,7 +291,7 @@
           <!-- Disconnect bank button - commented out for future implementation -->
           <!-- <button 
             @click="disconnectBank" 
-            class="w-full px-4 py-2 border border-red-300 rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none"
+            class="w-full px-4 py-2 border border-red-300 rounded-md text-black-700 bg-white hover:bg-red-50 focus:outline-none"
           >
             Disconnect Bank
           </button> -->

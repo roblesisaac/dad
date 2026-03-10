@@ -35,7 +35,7 @@
       </div>
     </div>
 
-    <div v-if="searchError" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+    <div v-if="searchError" class="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-black-700">
       {{ searchError }}
     </div>
 

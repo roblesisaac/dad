@@ -1,8 +1,8 @@
 <template>
   <div class="mb-2">
-    <div class="flex justify-between items-center text-xs font-medium text-red-600 border-b border-red-200 pb-1 mb-1">
+    <div class="flex justify-between items-center text-xs font-medium text-black-600 border-b border-red-200 pb-1 mb-1">
       <span>{{ transactions.length }} {{ title }}</span>
-      <button @click="toggleExpanded" class="text-red-700">
+      <button @click="toggleExpanded" class="text-black-700">
         <ChevronUp v-if="isExpanded" class="h-4 w-4" />
         <ChevronDown v-else class="h-4 w-4" />
       </button>

@@ -6,7 +6,7 @@
   >
     <template #content>
       <div class="p-4">
-        <div class="text-red-500 mb-4">
+        <div class="text-black-500 mb-4">
           <AlertTriangle class="h-12 w-12 mx-auto mb-2" />
           <p class="text-center text-xl font-bold">Warning: This action cannot be undone</p>
         </div>

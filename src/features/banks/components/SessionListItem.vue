@@ -17,7 +17,7 @@
         <!-- Status icon -->
         <div class="w-5 h-5">
           <!-- Error icon -->
-          <AlertTriangle v-if="session.status === 'error'" class="h-5 w-5 text-red-500" />
+          <AlertTriangle v-if="session.status === 'error'" class="h-5 w-5 text-black-500" />
           
           <!-- Recovery icon -->
           <RefreshCw v-else-if="session.isRecovery" class="h-5 w-5 text-blue-500" />
@@ -151,7 +151,7 @@
       
       <!-- Failed transactions section -->
       <div v-if="hasFailedTransactions" class="mb-3">
-        <div class="font-medium text-red-700 mb-2">Failed Transactions</div>
+        <div class="font-medium text-black-700 mb-2">Failed Transactions</div>
         
         <!-- Failed added transactions -->
         <FailedTransactionsGroup 

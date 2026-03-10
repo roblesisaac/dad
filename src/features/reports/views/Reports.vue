@@ -42,7 +42,7 @@
         <LoadingDots />
       </div>
 
-      <div v-else-if="state.error" class="border border-red-200 bg-red-50 text-red-700 rounded-xl p-4">
+      <div v-else-if="state.error" class="border border-red-200 bg-red-50 text-black-700 rounded-xl p-4">
         {{ state.error }}
       </div>
 
@@ -444,7 +444,7 @@
                       <p v-else class="text-sm text-gray-500 mt-1">
                         {{ rowSubtitle(row) }}
                       </p>
-                      <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-red-600 mt-1">
+                      <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-black-600 mt-1">
                         {{ getRowIssue(selectedReport._id, row.rowId) }}
                       </p>
                     </div>
@@ -610,7 +610,7 @@
             <p class="text-xs text-gray-500">
               Supports rN row refs, numbers, + - * /, parentheses, and unary +/-.
             </p>
-            <p v-if="selectedReportTotalIssue" class="text-xs text-red-600">
+            <p v-if="selectedReportTotalIssue" class="text-xs text-black-600">
               Formula issue: {{ selectedReportTotalIssue }}. Showing default sum.
             </p>
           </div>
@@ -751,7 +751,7 @@
           <div class="mt-5 flex items-center justify-between gap-2">
             <button
               v-if="reportBeingMovedIsInFolder"
-              class="btn-secondary text-red-600 border-red-200 hover:bg-red-50"
+              class="btn-secondary text-black-600 border-red-200 hover:bg-red-50"
               :disabled="isMovingReportToFolder"
               @click="removeFromFolderInModal"
             >
@@ -914,7 +914,7 @@
                 <p v-else-if="tabRowCategoryGuideState.isLoading" class="text-xs text-gray-500">
                   Loading categories...
                 </p>
-                <p v-else-if="tabRowCategoryGuideState.issue" class="text-xs text-red-600">
+                <p v-else-if="tabRowCategoryGuideState.issue" class="text-xs text-black-600">
                   {{ tabRowCategoryGuideState.issue }}
                 </p>
                 <p v-else-if="!tabRowCategoryGuideState.selectors.length" class="text-xs text-gray-500">
