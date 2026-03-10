@@ -196,7 +196,7 @@ function shouldShowGroupSortLabel(group) {
 }
 
 function resolveLeafSortLabel(item) {
-  return primaryLabel(item) || 'unlabeled';
+  return primaryLabel(item);
 }
 
 function resolveGroupSortLabel(group) {
@@ -206,13 +206,19 @@ function resolveGroupSortLabel(group) {
   }
 
   const groupItems = Array.isArray(group?.items) ? group.items : [];
-  if (groupItems.length) {
-    return resolveLeafSortLabel(groupItems[0]);
+  for (const groupItem of groupItems) {
+    const nextLabel = resolveLeafSortLabel(groupItem);
+    if (nextLabel) {
+      return nextLabel;
+    }
   }
 
   const originalItems = Array.isArray(group?.originalItems) ? group.originalItems : [];
-  if (originalItems.length) {
-    return resolveLeafSortLabel(originalItems[0]);
+  for (const originalItem of originalItems) {
+    const nextLabel = resolveLeafSortLabel(originalItem);
+    if (nextLabel) {
+      return nextLabel;
+    }
   }
 
   return '';

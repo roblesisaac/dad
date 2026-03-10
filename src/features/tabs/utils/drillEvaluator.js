@@ -76,16 +76,19 @@ function compareTextValues(valueA, valueB) {
 }
 
 function resolveGroupSortLabel(groupItems = [], sortDirection = DEFAULT_SORT_DIRECTION) {
-  const items = Array.isArray(groupItems) ? groupItems : [];
-  if (!items.length) {
+  const labels = (Array.isArray(groupItems) ? groupItems : [])
+    .map(item => primaryLabel(item))
+    .filter(Boolean);
+
+  if (!labels.length) {
     return '';
   }
 
   const prefersHigherValues = String(sortDirection || '').toLowerCase() === 'desc';
-  let selectedLabel = primaryLabel(items[0]) || 'unlabeled';
+  let selectedLabel = labels[0];
 
-  for (let index = 1; index < items.length; index += 1) {
-    const nextLabel = primaryLabel(items[index]) || 'unlabeled';
+  for (let index = 1; index < labels.length; index += 1) {
+    const nextLabel = labels[index];
     const comparison = compareTextValues(nextLabel, selectedLabel);
     if ((prefersHigherValues && comparison > 0) || (!prefersHigherValues && comparison < 0)) {
       selectedLabel = nextLabel;

@@ -294,6 +294,9 @@ const DASHBOARD_VIEWS = ['group', 'tab', 'drill', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
 const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
+const isHandlingHistoryPopNavigation = ref(false);
+const historyPopDirection = ref('');
+const lastKnownHistoryPosition = ref(getHistoryPosition());
 const pendingSingleTabSelection = ref(null);
 const tabEditorSnapshot = ref({ tabId: '', fingerprint: '' });
 const isSavingViewNote = ref(false);
@@ -445,6 +448,15 @@ function queryDrillPath() {
   return decodeDrillPath(queryValue(DRILL_PATH_QUERY_KEY));
 }
 
+function getHistoryPosition() {
+  if (typeof window === 'undefined' || !window.history) {
+    return null;
+  }
+
+  const rawPosition = Number(window.history.state?.position);
+  return Number.isFinite(rawPosition) ? rawPosition : null;
+}
+
 function defaultDashboardView() {
   if (state.selected.tab) {
     return 'drill';
@@ -543,6 +555,74 @@ function setDashboardView(view, options = {}) {
   }
 
   return resolvedView;
+}
+
+function resolveParentBreadcrumbTarget() {
+  if (isDrillView.value) {
+    const currentPath = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
+    if (currentPath.length > 0) {
+      return {
+        view: 'drill',
+        drillPath: currentPath.slice(0, -1)
+      };
+    }
+
+    const shouldCondenseSingleTabBreadcrumb = state.selected.tabsForGroup.length === 1;
+    if (shouldCondenseSingleTabBreadcrumb) {
+      return {
+        view: 'group',
+        drillPath: []
+      };
+    }
+
+    return {
+      view: state.selected.group ? 'tab' : 'group',
+      drillPath: []
+    };
+  }
+
+  if (isTabSelectorView.value || isTransactionSearchView.value) {
+    return {
+      view: 'group',
+      drillPath: []
+    };
+  }
+
+  return null;
+}
+
+function navigateToParentBreadcrumb(options = {}) {
+  const {
+    syncRoute = true,
+    historyMode = 'replace'
+  } = options;
+  const target = resolveParentBreadcrumbTarget();
+  if (!target) {
+    return false;
+  }
+
+  state.selected.drillPath = target.drillPath;
+  state.selected.transaction = false;
+  setDashboardView(target.view, { syncRoute, historyMode });
+  return true;
+}
+
+function handleBrowserHistoryPop(event) {
+  const nextPosition = Number(event?.state?.position);
+  const normalizedNextPosition = Number.isFinite(nextPosition) ? nextPosition : null;
+  const previousPosition = lastKnownHistoryPosition.value;
+
+  historyPopDirection.value = '';
+  if (normalizedNextPosition !== null && previousPosition !== null) {
+    if (normalizedNextPosition < previousPosition) {
+      historyPopDirection.value = 'back';
+    } else if (normalizedNextPosition > previousPosition) {
+      historyPopDirection.value = 'forward';
+    }
+  }
+
+  isHandlingHistoryPopNavigation.value = true;
+  lastKnownHistoryPosition.value = normalizedNextPosition;
 }
 
 function parseReportDate(value) {
@@ -1015,8 +1095,24 @@ watch(
 watch(
   [() => queryValue(DASHBOARD_VIEW_QUERY_KEY), () => queryValue(DRILL_PATH_QUERY_KEY)],
   ([routeViewRaw]) => {
+    const wasHistoryPopNavigation = isHandlingHistoryPopNavigation.value;
+    const popDirection = historyPopDirection.value;
+    isHandlingHistoryPopNavigation.value = false;
+    historyPopDirection.value = '';
+    lastKnownHistoryPosition.value = getHistoryPosition();
+
+    if (route.name !== 'dashboard') {
+      return;
+    }
+
     if (isSyncingDashboardRouteQuery.value) {
       return;
+    }
+
+    if (wasHistoryPopNavigation && popDirection === 'back') {
+      if (navigateToParentBreadcrumb({ syncRoute: true, historyMode: 'replace' })) {
+        return;
+      }
     }
 
     if (!routeViewRaw) {
@@ -1112,6 +1208,11 @@ const {
 });
 
 onMounted(async () => {
+  if (typeof window !== 'undefined') {
+    lastKnownHistoryPosition.value = getHistoryPosition();
+    window.addEventListener('popstate', handleBrowserHistoryPop);
+  }
+
   const preferredGroupIdFromStorage = readPreferredGroupIdFromStorage();
   const initialPreferredGroupId = String(reportContext.groupId || preferredGroupIdFromStorage || '').trim();
 
@@ -1139,6 +1240,10 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('popstate', handleBrowserHistoryPop);
+  }
+
   stopRemoteDashboardSync();
 });
 </script>
