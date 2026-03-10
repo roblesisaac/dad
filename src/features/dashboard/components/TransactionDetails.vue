@@ -110,7 +110,7 @@
         <!-- Recategorize Section -->
         <div class="flex flex-col gap-4 px-2">
           <div class="flex items-center justify-between">
-            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Categorization Override</h3>
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Re-categorize this item</h3>
             <div v-if="item.recategorizeAs" class="relative" data-category-menu-surface>
               <button type="button" class="p-1.5 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleCategoryMenu">
                 <MoreVertical class="h-5 w-5" />
@@ -338,7 +338,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { MoreVertical, X } from 'lucide-vue-next';
 import RuleSyntaxDisplay from '@/features/rule-manager/components/RuleSyntaxDisplay.vue';
 import RuleEditModal from '@/features/rule-manager/components/RuleEditModal.vue';
@@ -346,12 +346,13 @@ import BaseModal from '@/shared/components/BaseModal.vue';
 import { useApi } from '@/shared/composables/useApi';
 import { useRulesAPI } from '@/features/rule-manager/composables/useRulesAPI';
 import { useTabProcessing } from '@/features/tabs/composables/useTabProcessing';
+import { resolveDrillState, getTransactionKey } from '@/features/tabs/utils/drillEvaluator.js';
 import { useUtils } from '@/shared/composables/useUtils';
 
 const api = useApi();
 const rulesAPI = useRulesAPI();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
-const { waitUntilTypingStops, formatPrice } = useUtils();
+const { formatPrice } = useUtils();
 const { item, state } = defineProps({
   item: Object,
   state: Object
@@ -384,14 +385,6 @@ const rulesAppliedToItem = computed(() => {
   });
 });
 
-async function updateTransaction() {
-  await waitUntilTypingStops();
-  api.put(`transactions/${item._id}`, item);
-}
-
-watch(() => item.recategorizeAs, updateTransaction);
-watch(() => item.notes, updateTransaction);
-
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 12;
 
@@ -412,6 +405,128 @@ const showCategoryEditor = ref(false);
 const categoryDraft = ref('');
 const applyCategoryTo = ref('this-item-only');
 
+function transactionsMatch(leftTransaction, rightTransaction) {
+  const leftKey = getTransactionKey(leftTransaction);
+  const rightKey = getTransactionKey(rightTransaction);
+  if (!leftKey || !rightKey) {
+    return false;
+  }
+
+  return leftKey === rightKey;
+}
+
+function findSourceTransaction(targetTransaction) {
+  const allTransactions = Array.isArray(state.selected?.allGroupTransactions)
+    ? state.selected.allGroupTransactions
+    : [];
+
+  return allTransactions.find((sourceTransaction) => (
+    transactionsMatch(sourceTransaction, targetTransaction)
+  )) || null;
+}
+
+function patchTransactionLocally(targetTransaction, patch) {
+  if (!patch || typeof patch !== 'object') {
+    return;
+  }
+
+  Object.assign(item, patch);
+
+  const sourceTransaction = findSourceTransaction(targetTransaction);
+  if (sourceTransaction) {
+    Object.assign(sourceTransaction, patch);
+  }
+
+  if (state.selected?.transaction && transactionsMatch(state.selected.transaction, targetTransaction)) {
+    Object.assign(state.selected.transaction, patch);
+  }
+}
+
+function buildDrillStateForPath(drillPath = []) {
+  if (!state.selected?.tab) {
+    return null;
+  }
+
+  return resolveDrillState({
+    tab: state.selected.tab,
+    transactions: state.selected.allGroupTransactions,
+    allRules: state.allUserRules,
+    drillPath
+  });
+}
+
+function findTransactionInDrillTransactions(transactions, targetTransaction) {
+  if (!Array.isArray(transactions)) {
+    return null;
+  }
+
+  return transactions.find((candidateTransaction) => (
+    transactionsMatch(candidateTransaction, targetTransaction)
+  )) || null;
+}
+
+function findDrillPathForTransaction(targetTransaction) {
+  const resolvedPath = [];
+  const MAX_DRILL_DEPTH = 12;
+
+  for (let depth = 0; depth < MAX_DRILL_DEPTH; depth += 1) {
+    const drillState = buildDrillStateForPath(resolvedPath);
+    if (!drillState) {
+      return { path: resolvedPath, transaction: null, found: false };
+    }
+
+    if (drillState.isLeaf) {
+      const transaction = findTransactionInDrillTransactions(drillState.transactions, targetTransaction);
+      return {
+        path: resolvedPath,
+        transaction,
+        found: Boolean(transaction)
+      };
+    }
+
+    const matchedGroup = (Array.isArray(drillState.groups) ? drillState.groups : []).find((group) => (
+      Array.isArray(group?.originalItems)
+      && group.originalItems.some((candidateTransaction) => (
+        transactionsMatch(candidateTransaction, targetTransaction)
+      ))
+    ));
+
+    if (!matchedGroup?.key) {
+      return { path: resolvedPath, transaction: null, found: false };
+    }
+
+    resolvedPath.push(matchedGroup.key);
+  }
+
+  const fallbackDrillState = buildDrillStateForPath(resolvedPath);
+  const fallbackTransaction = findTransactionInDrillTransactions(
+    fallbackDrillState?.transactions,
+    targetTransaction
+  );
+
+  return {
+    path: resolvedPath,
+    transaction: fallbackTransaction,
+    found: Boolean(fallbackTransaction)
+  };
+}
+
+function showTransientBlueBarMessage(message, timeoutMs = 2200) {
+  const normalizedMessage = String(message || '').trim();
+  if (!normalizedMessage || state.blueBar.loading) {
+    return;
+  }
+
+  state.blueBar.loading = false;
+  state.blueBar.message = normalizedMessage;
+
+  setTimeout(() => {
+    if (state.blueBar.message === normalizedMessage && !state.blueBar.loading) {
+      state.blueBar.message = '';
+    }
+  }, timeoutMs);
+}
+
 function toggleNotesMenu() {
   showNotesMenu.value = !showNotesMenu.value;
 }
@@ -424,8 +539,15 @@ function closeNotesEditor() {
   showNotesEditor.value = false;
 }
 async function saveNotes() {
-  item.notes = notesDraft.value;
-  closeNotesEditor();
+  const nextNotes = notesDraft.value ?? '';
+
+  try {
+    const updatedTransaction = await api.put(`transactions/${item._id}`, { notes: nextNotes });
+    const savedNotes = updatedTransaction?.notes ?? nextNotes;
+    patchTransactionLocally(item, { notes: savedNotes });
+    closeNotesEditor();
+  } catch (_error) {
+  }
 }
 
 function toggleCategoryMenu() {
@@ -434,6 +556,7 @@ function toggleCategoryMenu() {
 function openCategoryEditor() {
   showCategoryMenu.value = false;
   categoryDraft.value = item.recategorizeAs || '';
+  transactionDetailsState.value.originalCategory = item.recategorizeAs || '';
   applyCategoryTo.value = 'this-item-only';
   showCategoryEditor.value = true;
 }
@@ -441,8 +564,57 @@ function closeCategoryEditor() {
   showCategoryEditor.value = false;
 }
 async function saveCategory() {
-  item.recategorizeAs = categoryDraft.value;
-  closeCategoryEditor();
+  const nextCategory = String(categoryDraft.value || '').trim();
+  const currentCategory = String(item.recategorizeAs || '').trim();
+  if (nextCategory === currentCategory) {
+    closeCategoryEditor();
+    return;
+  }
+
+  const previousDrillPath = Array.isArray(state.selected?.drillPath)
+    ? [...state.selected.drillPath]
+    : [];
+
+  try {
+    const updatedTransaction = await api.put(`transactions/${item._id}`, { recategorizeAs: nextCategory });
+    const savedCategory = String(updatedTransaction?.recategorizeAs ?? nextCategory).trim();
+
+    patchTransactionLocally(item, { recategorizeAs: savedCategory });
+    transactionDetailsState.value.originalCategory = savedCategory;
+
+    await processAllTabsForSelectedGroup({ showLoading: false });
+
+    const currentDrillState = buildDrillStateForPath(previousDrillPath);
+    const visibleInCurrentPath = Boolean(
+      findTransactionInDrillTransactions(currentDrillState?.transactions, item)
+    );
+
+    if (!visibleInCurrentPath) {
+      const relocation = findDrillPathForTransaction(item);
+      if (relocation.found) {
+        state.selected.drillPath = relocation.path;
+        state.selected.transaction = relocation.transaction;
+
+        const destinationLabel = String(
+          relocation.path[relocation.path.length - 1]
+          || savedCategory
+          || 'updated category'
+        ).trim();
+        showTransientBlueBarMessage(`Moved to ${destinationLabel}.`);
+      } else {
+        state.selected.transaction = false;
+        showTransientBlueBarMessage('Category updated. Transaction moved out of this view.');
+      }
+    } else {
+      const refreshedTransaction = findTransactionInDrillTransactions(currentDrillState?.transactions, item);
+      if (refreshedTransaction) {
+        state.selected.transaction = refreshedTransaction;
+      }
+    }
+
+    closeCategoryEditor();
+  } catch (_error) {
+  }
 }
 
 function ruleKey(rule) {

@@ -1093,6 +1093,29 @@ watch(
 );
 
 watch(
+  [() => dashboardView.value, () => encodeDrillPath(state.selected.drillPath), () => queryValue(DRILL_PATH_QUERY_KEY)],
+  ([view, encodedSelectedPath, encodedRoutePath]) => {
+    if (route.name !== 'dashboard') {
+      return;
+    }
+
+    if (view !== 'drill') {
+      return;
+    }
+
+    if (isSyncingDashboardRouteQuery.value) {
+      return;
+    }
+
+    if (encodedSelectedPath === encodedRoutePath) {
+      return;
+    }
+
+    void syncDashboardViewQuery('drill', 'replace');
+  }
+);
+
+watch(
   [() => queryValue(DASHBOARD_VIEW_QUERY_KEY), () => queryValue(DRILL_PATH_QUERY_KEY)],
   ([routeViewRaw]) => {
     const wasHistoryPopNavigation = isHandlingHistoryPopNavigation.value;
