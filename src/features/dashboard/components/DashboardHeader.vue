@@ -110,10 +110,13 @@
                   v-for="option in editTabOptions"
                   :key="option.id"
                   @click="handleEditTabOption(option.id)"
-                  class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors truncate"
+                  class="px-5 py-3 text-left text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)] hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none transition-colors"
                   type="button"
                 >
-                  {{ option.label }}
+                  <span class="flex items-center justify-between gap-3">
+                    <span class="truncate">{{ option.label }}</span>
+                    <span v-if="option.count > 0" class="text-[10px] text-[var(--theme-text-soft)]">{{ option.count }}</span>
+                  </span>
                 </button>
               </div>
             </div>
@@ -308,6 +311,7 @@ import {
   buildDynamicNoteTokens,
   renderTemplateWithTokens
 } from '@/features/dashboard/utils/noteTemplate.js';
+import { levelRulesForDepth, normalizeDrillPath } from '@/features/tabs/utils/drillSchema.js';
 
 const props = defineProps({
   view: {
@@ -519,13 +523,96 @@ const breadcrumbDropdownRef = ref(null);
 const isEditTabDropdownOpen = ref(false);
 const editTabDropdownRef = ref(null);
 
-const editTabOptions = [
+const EDIT_TAB_OPTION_DEFINITIONS = [
   { id: 'groupBy', label: 'Group By' },
   { id: 'sort', label: 'Sort' },
   { id: 'categorize', label: 'Categorize' },
   { id: 'filter', label: 'Filter' },
   { id: 'custom', label: 'Custom' }
 ];
+
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+}
+
+function normalizeCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
+}
+
+function resolveCategorizeRuleSetTarget(ruleConfig) {
+  const rule = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
+  if (rule[0] !== 'categorize') {
+    return null;
+  }
+
+  const usesSetTargetFormat = rule.length >= 6
+    && (rule.length - 6) % 4 === 0
+    && isCategorizeSetTarget(rule[4]);
+
+  if (usesSetTargetFormat) {
+    return normalizeCategorizeSetTarget(rule[4]);
+  }
+
+  return 'category';
+}
+
+const editTabRuleCounts = computed(() => {
+  const selectedTab = state.selected.tab;
+  if (!selectedTab) {
+    return {
+      groupBy: 0,
+      sort: 0,
+      categorize: 0,
+      filter: 0,
+      custom: 0
+    };
+  }
+
+  const activePath = normalizeDrillPath(state.selected.drillPath);
+  const { level } = levelRulesForDepth(selectedTab.drillSchema, activePath.length, activePath);
+  const groupByRules = Array.isArray(level?.groupByRules) ? level.groupByRules : [];
+  const sortRules = Array.isArray(level?.sortRules) ? level.sortRules : [];
+  const filterRules = Array.isArray(level?.filterRules) ? level.filterRules : [];
+  const categorizeRules = Array.isArray(level?.categorizeRules) ? level.categorizeRules : [];
+
+  let categorizeCount = 0;
+  let customCount = 0;
+
+  categorizeRules.forEach((ruleConfig) => {
+    const setTarget = resolveCategorizeRuleSetTarget(ruleConfig);
+    if (setTarget === 'category') {
+      categorizeCount += 1;
+      return;
+    }
+
+    customCount += 1;
+  });
+
+  return {
+    groupBy: groupByRules.length,
+    sort: sortRules.length,
+    categorize: categorizeCount,
+    filter: filterRules.length,
+    custom: customCount
+  };
+});
+
+const editTabOptions = computed(() =>
+  EDIT_TAB_OPTION_DEFINITIONS.map(option => ({
+    ...option,
+    count: Number(editTabRuleCounts.value[option.id] || 0)
+  }))
+);
 
 function toggleEditTabDropdown() {
   isEditTabDropdownOpen.value = !isEditTabDropdownOpen.value;
