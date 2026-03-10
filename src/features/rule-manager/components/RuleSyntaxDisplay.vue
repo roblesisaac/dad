@@ -289,7 +289,7 @@ function formatPropName(propName) {
   if (normalizedPropName === 'name') return 'name';
   if (normalizedPropName === 'category') return 'category';
   if (normalizedPropName === 'account') return 'account';
-  if (isGlobalCategoryProperty(normalizedPropName)) return 'global rule';
+  if (isGlobalCategoryProperty(normalizedPropName)) return 'global category';
   if (normalizedPropName === 'none') return 'no grouping';
   
   // General case: convert camelCase to words

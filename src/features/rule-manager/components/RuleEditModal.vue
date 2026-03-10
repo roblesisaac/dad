@@ -537,7 +537,7 @@ const CONDITION_PROPERTY_OPTIONS = [
 ];
 
 const FILTER_ONLY_PROPERTY_OPTIONS = [
-  { value: 'globalCategory', label: 'Global Rule' }
+  { value: 'globalCategory', label: 'Global Category' }
 ];
 
 const accountConditionOptions = computed(() => {
