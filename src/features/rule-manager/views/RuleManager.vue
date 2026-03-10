@@ -501,12 +501,43 @@ function isCategorizeSetTarget(target) {
   return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
 }
 
-function isCustomCategorizeRule(ruleConfig) {
+function normalizeCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  if (normalizedTarget === 'name') {
+    return 'name';
+  }
+
+  if (normalizedTarget === 'tag') {
+    return 'tag';
+  }
+
+  return 'category';
+}
+
+function resolveCategorizeRuleSetTarget(ruleConfig) {
   const rule = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
-  return rule[0] === 'categorize'
-    && rule.length >= 6
+  if (rule[0] !== 'categorize') {
+    return null;
+  }
+
+  const usesSetTargetFormat = rule.length >= 6
     && (rule.length - 6) % 4 === 0
     && isCategorizeSetTarget(rule[4]);
+
+  if (usesSetTargetFormat) {
+    return normalizeCategorizeSetTarget(rule[4]);
+  }
+
+  return 'category';
+}
+
+function isCategorizeCategoryRule(ruleConfig) {
+  return resolveCategorizeRuleSetTarget(ruleConfig) === 'category';
+}
+
+function isCustomSectionRule(ruleConfig) {
+  const setTarget = resolveCategorizeRuleSetTarget(ruleConfig);
+  return setTarget !== 'category';
 }
 
 function normalizeLocalRule(typeId, rule) {
@@ -591,12 +622,12 @@ function getEnabledRulesByType(typeId) {
 function getRulesForSection(typeId) {
   if (typeId === 'custom') {
     return getEnabledRulesByType('categorize')
-      .filter(rule => isCustomCategorizeRule(rule));
+      .filter(rule => isCustomSectionRule(rule));
   }
 
   if (typeId === 'categorize') {
     return getEnabledRulesByType('categorize')
-      .filter(rule => !isCustomCategorizeRule(rule));
+      .filter(rule => isCategorizeCategoryRule(rule));
   }
 
   return getEnabledRulesByType(typeId);
@@ -1356,13 +1387,19 @@ function createNewRuleWithType(typeId) {
   const tabId = state.selected.tab?._id;
 
   currentRule.value = {
-    ...createLocalRule(normalizedType, [normalizedType, '', '', '', ''], {
-      orderOfExecution: getEnabledRulesByType(normalizedType).length
-    }),
+    ...createLocalRule(
+      normalizedType,
+      normalizedType === 'categorize'
+        ? ['categorize', '', '', '', 'category', '']
+        : [normalizedType, '', '', '', ''],
+      {
+        orderOfExecution: getEnabledRulesByType(normalizedType).length
+      }
+    ),
     applyForTabs: tabId ? [tabId] : []
   };
   isNewRule.value = true;
-  isCustomRuleEditorMode.value = false;
+  isCustomRuleEditorMode.value = normalizedType === 'categorize';
   initialMakeGlobalForEditor.value = false;
   showRuleEditModal.value = true;
 }
@@ -1384,7 +1421,7 @@ function openCustomRuleEditorForm() {
 function editRule(rule) {
   currentRule.value = cloneRule(rule);
   isNewRule.value = false;
-  isCustomRuleEditorMode.value = isCustomCategorizeRule(rule);
+  isCustomRuleEditorMode.value = String(rule?.rule?.[0] || '').trim().toLowerCase() === 'categorize';
   initialMakeGlobalForEditor.value = Boolean(
     rule?.rule?.[0] === 'categorize' && findGlobalCategorizeRuleById(rule?._id)
   );

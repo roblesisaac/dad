@@ -27,7 +27,7 @@
           <!-- Info section -->
           <div class="flex-grow min-w-0">
             <div class="flex items-center gap-2 mb-0.5">
-              <span class="text-[9px] font-black uppercase tracking-widest text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded">
+              <span class="text-[9px] font-black uppercase tracking-widest text-black-600 bg-emerald-50 px-1.5 py-0.5 rounded">
                 {{ item.authorized_date }}
               </span>
               <span v-if="item.pending" class="text-[9px] font-black uppercase tracking-widest text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-1">

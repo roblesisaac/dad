@@ -1,12 +1,10 @@
 <template>
-  <div class="transaction-details-container p-4 sm:p-8 flex flex-col items-center" style="background-color: var(--theme-bg-soft); border-top: 1px solid var(--theme-border);">
+  <div class="transaction-details-container p-4 sm:p-8 flex flex-col items-center" style="background-color: var(--theme-browser-chrome); border-top: 1px solid var(--theme-border);">
     
     <!-- Receipt Paper -->
-    <div class="receipt-paper w-full max-w-2xl flex flex-col rounded shadow-xl overflow-hidden" 
+    <div class="receipt-paper w-full max-w-2xl flex flex-col rounded overflow-hidden" 
          style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
       
-      <!-- Top Receipt Edge -->
-      <div class="h-2 w-full opacity-10" style="background: linear-gradient(to bottom, var(--theme-text) 0%, transparent 100%);"></div>
 
       <!-- Main Receipt Content -->
       <div class="p-6 sm:p-10 flex flex-col gap-8">
@@ -28,7 +26,7 @@
         <!-- Amount Section -->
         <div class="flex flex-col items-center py-4">
           <div class="text-[10px] font-black uppercase tracking-widest mb-1" style="color: var(--theme-text-soft);">Amount Summary</div>
-          <div class="text-5xl sm:text-6xl font-black" :class="item.amount < 0 ? 'text-emerald-500' : 'text-red-500'">
+          <div class="text-5xl sm:text-6xl font-black" :class="item.amount < 0 ? 'text-black-500' : 'text-red-500'">
             {{ formatPrice(item.amount) }}
           </div>
         </div>
@@ -62,7 +60,7 @@
               </div>
               <div>
                 <div class="text-[9px] font-bold uppercase opacity-60">Settlement Status</div>
-                <div class="font-medium flex items-center gap-1.5" :class="item.pending ? 'text-amber-500' : 'text-emerald-500'">
+                <div class="font-medium flex items-center gap-1.5" :class="item.pending ? 'text-amber-500' : 'text-black-500'">
                   <div class="h-1.5 w-1.5 rounded-full" :class="item.pending ? 'bg-amber-500' : 'bg-emerald-500'"></div>
                   {{ item.pending ? 'Pending' : 'Settled' }}
                 </div>
@@ -91,7 +89,7 @@
               <button type="button" class="p-1.5 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleNotesMenu">
                 <MoreVertical class="h-5 w-5" />
               </button>
-              <div v-if="showNotesMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-2xl z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-notes-menu-surface>
+              <div v-if="showNotesMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-notes-menu-surface>
                 <button type="button" class="w-full px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openNotesEditor">
                   Edit Note
                 </button>
@@ -117,7 +115,7 @@
               <button type="button" class="p-1.5 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleCategoryMenu">
                 <MoreVertical class="h-5 w-5" />
               </button>
-              <div v-if="showCategoryMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-2xl z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-category-menu-surface>
+              <div v-if="showCategoryMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-category-menu-surface>
                 <button type="button" class="w-full px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openCategoryEditor">
                   Update Category
                 </button>
@@ -127,7 +125,7 @@
           
           <div v-if="item.recategorizeAs" class="text-lg font-black p-6 rounded-2xl border flex items-center justify-between" style="background-color: var(--theme-bg-soft); color: var(--theme-text); border-color: var(--theme-border);">
             <span>{{ item.recategorizeAs }}</span>
-            <div class="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.6)]"></div>
+            <div class="h-2.5 w-2.5 rounded-full bg-blue-500"></div>
           </div>
           <div v-else class="flex">
             <button @click="openCategoryEditor" class="text-[10px] font-black uppercase tracking-[0.25em] px-6 py-3 rounded-2xl transition-all border w-full sm:w-auto" style="background-color: var(--theme-bg); color: var(--theme-text-soft); border-color: var(--theme-border);">

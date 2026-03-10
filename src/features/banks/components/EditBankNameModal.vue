@@ -275,14 +275,14 @@
 
           <button
             @click="togglePlaidItemJson"
-            class="w-full flex items-center justify-center px-4 py-2 border border-emerald-200 rounded-md shadow-sm text-sm font-medium text-emerald-600 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
+            class="w-full flex items-center justify-center px-4 py-2 border border-emerald-200 rounded-md shadow-sm text-sm font-medium text-black-600 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors"
           >
             {{ showPlaidItemJson ? 'Hide Plaid Item JSON' : 'Show Plaid Item JSON' }}
           </button>
 
           <div
             v-if="showPlaidItemJson"
-            class="w-full p-3 border border-emerald-200 rounded-md bg-emerald-50 text-xs text-emerald-900 overflow-x-auto"
+            class="w-full p-3 border border-emerald-200 rounded-md bg-emerald-50 text-xs text-black-900 overflow-x-auto"
           >
             <p class="font-medium mb-2 text-gray-900 text-sm">Plaid Item JSON</p>
             <pre class="whitespace-pre-wrap break-words">{{ plaidItemJson }}</pre>

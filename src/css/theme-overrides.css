@@ -64,7 +64,6 @@
   [class*='text-neutral-'],
   [class*='text-stone-'],
   [class*='text-amber-'],
-  [class*='text-emerald-'],
   [class*='text-transparent']) {
   color: var(--theme-text) !important;
 }

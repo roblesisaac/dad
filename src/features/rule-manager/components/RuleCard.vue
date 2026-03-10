@@ -16,13 +16,13 @@
         <!-- Summary String with Highlights -->
         <div class="flex flex-col min-w-0">
           <div class="flex items-center gap-2 mb-1">
-            <div class="text-[13px] leading-tight tracking-tight truncate flex items-center flex-wrap gap-x-1 gap-y-0.5">
+            <div class="flex items-center flex-wrap gap-x-1 gap-y-1.5">
               <template v-for="(part, idx) in ruleSummaryParts" :key="idx">
                 <span 
                   :class="[
                     part.highlight 
-                      ? 'bg-gray-100/80 px-1 py-px rounded text-black font-black' 
-                      : 'text-gray-400 font-medium'
+                      ? 'rule-part' 
+                      : 'text-gray-400 font-medium text-[13px]'
                   ]"
                 >
                   {{ part.text }}
@@ -99,10 +99,12 @@
           <div class="text-[9px] font-black text-black uppercase tracking-widest mb-2">Conditions</div>
           <div class="flex flex-wrap gap-x-3 gap-y-1">
             <template v-for="(cond, idx) in additionalConditions" :key="idx">
-              <span class="text-[11px] font-bold text-gray-400">
-                 <span class="uppercase text-[9px] text-black mr-1">{{ formatCombinator(cond.combinator) }}</span>
-                 {{ formatPropertyLabel(cond.property) }} <span class="uppercase text-[9px] text-black">{{ getOperatorDisplay(cond.method) }}</span> {{ cond.value }}
-              </span>
+              <div class="flex items-center flex-wrap gap-x-1 gap-y-1.5 py-1">
+                 <span class="uppercase text-[9px] text-black bg-gray-100/50 px-1.5 py-0.5 rounded-md mr-1">{{ formatCombinator(cond.combinator) }}</span>
+                 <span class="rule-part">{{ formatPropertyLabel(cond.property) }}</span>
+                 <span class="rule-part">{{ getOperatorDisplay(cond.method) }}</span>
+                 <span class="rule-part">{{ cond.value }}</span>
+              </div>
             </template>
           </div>
         </div>
@@ -364,10 +366,29 @@ function getAdditionalConditionsStartIndex(ruleValues = []) {
 </script>
 
 <style scoped>
+.rule-part {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background-color: var(--theme-rule-part-bg);
+  color: var(--theme-rule-part-text);
+  font-weight: 500;
+  font-size: 0.8125rem;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  transition: all 0.3s ease;
+}
+
+.group:hover .rule-part {
+  color: var(--theme-text);
+}
+
 .expand-enter-active,
 .expand-leave-active {
   transition: all 0.3s ease-in-out;
-  max-height: 200px;
+  max-height: 400px;
 }
 
 .expand-enter-from,
