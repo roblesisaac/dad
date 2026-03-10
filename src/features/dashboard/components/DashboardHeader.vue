@@ -167,7 +167,7 @@
     <Teleport to="body">
       <div
         v-if="isHeaderInfoModalOpen"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] px-4 py-4"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] backdrop-blur-md px-4 py-4"
         @click.self="closeHeaderInfoModal"
       >
         <div
