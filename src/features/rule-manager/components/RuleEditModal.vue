@@ -53,6 +53,46 @@
                 </div>
               </div>
 
+              <!-- Result (Categorize specific) -->
+              <div v-if="ruleData.rule[0] === 'categorize'" class="space-y-4">
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
+                  {{ useCategorizeSetTarget ? 'Set' : 'Assign to Category' }}
+                </label>
+
+                <div
+                  v-if="useCategorizeSetTarget"
+                  class="grid grid-cols-1 sm:grid-cols-[220px_minmax(0,1fr)] gap-4"
+                >
+                  <select
+                    v-model="ruleData.rule[4]"
+                    class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
+                  >
+                    <option
+                      v-for="categorizeSetTargetOption in CATEGORIZE_SET_TARGET_OPTIONS"
+                      :key="`categorize-set-target-option-${categorizeSetTargetOption.value}`"
+                      :value="categorizeSetTargetOption.value"
+                    >
+                      {{ categorizeSetTargetOption.label }}
+                    </option>
+                  </select>
+
+                  <input 
+                    v-model="ruleData.rule[5]" 
+                    type="text" 
+                    class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
+                    :placeholder="getCategorizeSetValuePlaceholder(ruleData.rule[4])"
+                  />
+                </div>
+
+                <input 
+                  v-else
+                  v-model="ruleData.rule[4]" 
+                  type="text" 
+                  class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
+                  placeholder="e.g. Groceries"
+                />
+              </div>
+
               <!-- Condition Builder -->
               <div class="space-y-4">
                 <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
@@ -322,45 +362,6 @@
                 </div>
               </div>
 
-              <!-- Result (Categorize specific) -->
-              <div v-if="ruleData.rule[0] === 'categorize'" class="space-y-4">
-                <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.2em]">
-                  {{ useCategorizeSetTarget ? 'Set' : 'Assign to Category' }}
-                </label>
-
-                <div
-                  v-if="useCategorizeSetTarget"
-                  class="grid grid-cols-1 sm:grid-cols-[220px_minmax(0,1fr)] gap-4"
-                >
-                  <select
-                    v-model="ruleData.rule[4]"
-                    class="form-select w-full rounded-xl border-2 border-gray-100 bg-white text-base py-3 px-4 focus:border-black focus:ring-0 shadow-none font-bold text-gray-800 transition-colors"
-                  >
-                    <option
-                      v-for="categorizeSetTargetOption in CATEGORIZE_SET_TARGET_OPTIONS"
-                      :key="`categorize-set-target-option-${categorizeSetTargetOption.value}`"
-                      :value="categorizeSetTargetOption.value"
-                    >
-                      {{ categorizeSetTargetOption.label }}
-                    </option>
-                  </select>
-
-                  <input 
-                    v-model="ruleData.rule[5]" 
-                    type="text" 
-                    class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
-                    :placeholder="getCategorizeSetValuePlaceholder(ruleData.rule[4])"
-                  />
-                </div>
-
-                <input 
-                  v-else
-                  v-model="ruleData.rule[4]" 
-                  type="text" 
-                  class="form-input w-full rounded-2xl border-2 border-gray-100 focus:border-black focus:ring-0 shadow-none text-2xl font-black py-5 px-6 placeholder-gray-200 bg-white"
-                  placeholder="e.g. Groceries"
-                />
-              </div>
 
               <div v-if="showAdvancedGlobalSection" class="space-y-4">
                 <button
