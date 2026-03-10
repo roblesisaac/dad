@@ -68,7 +68,7 @@
                 type="button"
                 @click.stop="openTabEditor"
               >
-                <EllipsisVertical />
+                Edit Tab
               </button>
 
               <button
