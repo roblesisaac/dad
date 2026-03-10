@@ -805,19 +805,19 @@ const headerInfo = computed(() => {
     if (hasDrillBreadcrumb) {
       return {
         title: 'Drill Level Total',
-        summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }} averaging {{ average }} per transaction.`
+        summary: `There were {{ transaction-count }} {{ selected-level }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
       };
     }
 
     return {
       title: 'Tab Total',
-      summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }} averaging {{ average }} per transaction.`
+      summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
     };
   }
 
   return {
     title: 'Tab Total',
-    summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ transaction-count }} transaction(s).`
+    summary: `There were {{ transaction-count }} {{ selected-level }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
   };
 });
 
