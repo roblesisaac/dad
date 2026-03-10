@@ -143,19 +143,53 @@
               :key="rule._id" 
               class="group rounded-2xl p-4 border border-dashed transition-all hover:bg-black/5 dark:hover:bg-white/5"
               style="background-color: var(--theme-bg-soft); border-color: var(--theme-border);"
+              @touchstart.passive="handleRuleRowTouchStart($event, rule)"
+              @touchmove="handleRuleRowTouchMove"
+              @touchend="handleRuleRowTouchEnd"
+              @touchcancel="handleRuleRowTouchEnd"
               @mousedown="handleRuleRowMouseDown($event, rule)"
+              @mousemove="handleRuleRowMouseMove"
               @mouseup="handleRuleRowMouseUp"
+              @mouseleave="handleRuleRowMouseUp"
             >
               <div class="flex items-center justify-between gap-4">
                 <RuleSyntaxDisplay :rule="rule" compact class="min-w-0 flex-1 opacity-80 group-hover:opacity-100" />
-                <button
-                  type="button"
-                  class="rounded-full p-1.5 transition-all opacity-0 group-hover:opacity-100 hover:bg-black/5"
-                  style="color: var(--theme-text-muted);"
-                  @click.stop="toggleRuleActionsMenu(rule)"
-                >
-                  <MoreVertical class="h-4 w-4" />
-                </button>
+                <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
+                  <button
+                    type="button"
+                    class="rounded-full p-1.5 transition-all opacity-0 pointer-events-none hover:bg-black/5 group-hover:opacity-100 group-hover:pointer-events-auto"
+                    :class="shouldShowRuleMenuTrigger(rule) ? 'opacity-100 pointer-events-auto' : ''"
+                    style="color: var(--theme-text-muted);"
+                    data-rule-menu-surface
+                    @click.stop="toggleRuleActionsMenu(rule)"
+                  >
+                    <MoreVertical class="h-4 w-4" />
+                  </button>
+
+                  <div
+                    v-if="activeRuleMenuId === ruleKey(rule)"
+                    class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border z-40"
+                    style="background-color: var(--theme-bg); border-color: var(--theme-border);"
+                    data-rule-menu-surface
+                  >
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style="color: var(--theme-text);"
+                      @click.stop="handleRuleMenuAction('edit', rule)"
+                    >
+                      Edit Rule
+                    </button>
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style="color: var(--theme-text);"
+                      @click.stop="handleRuleMenuAction('copy', rule)"
+                    >
+                      Copy JSON
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
