@@ -3,7 +3,7 @@
     class="flex flex-col transition-all bg-transparent"
     :class="state.isOnboarding ? 'pb-4 sm:pb-6' : 'pb-12 sm:pb-20'"
   >
-    <div class="fixed inset-x-0 top-0 z-30 backdrop-blur-md">
+    <div class="fixed inset-x-0 top-0 z-30 backdrop-blur-md themed-header-border rounded-b-xl">
       <div class="max-w-5xl mx-auto w-full sm:px-6">
         <div class="px-4 flex items-center justify-between py-4 transition-all">
           <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -1060,5 +1060,9 @@ onBeforeUnmount(() => {
   margin-top: 0.5rem;
   margin-bottom: 0.25rem;
   color: var(--theme-text-muted);
+}
+
+.themed-header-border {
+  border-bottom: 1px solid var(--theme-footer-border);
 }
 </style>

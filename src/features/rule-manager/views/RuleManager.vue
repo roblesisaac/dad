@@ -433,6 +433,7 @@ const GROUP_BY_OPTIONS = [
   { value: 'none', label: 'No Grouping' },
   { value: 'category', label: 'Category' },
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'date', label: 'Day' },
   { value: 'year_month', label: 'Month' },
   { value: 'weekday', label: 'Weekday' }
@@ -1135,6 +1136,7 @@ function normalizeGroupByOptionForUi(rawGroupByOption) {
     'none',
     'category',
     'name',
+    'tag',
     'date',
     'year_month',
     'weekday'

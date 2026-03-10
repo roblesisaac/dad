@@ -48,7 +48,8 @@ export const THEME_REGISTRY = Object.freeze({
     '--theme-toggle-text': '#111827',
     '--theme-toggle-border': '#111827',
     '--theme-toggle-hover-bg': '#f9fafb',
-    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.5)'
+    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.5)',
+    '--theme-footer-border': 'rgba(0, 0, 0, 0.1)'
   }),
   dark: Object.freeze({
     '--theme-bg': '#000000',
@@ -95,7 +96,8 @@ export const THEME_REGISTRY = Object.freeze({
     '--theme-toggle-text': '#ffffff',
     '--theme-toggle-border': '#ffffff',
     '--theme-toggle-hover-bg': '#000000',
-    '--theme-scroll-arrow': 'rgba(255, 255, 255, 0.8)'
+    '--theme-scroll-arrow': 'rgba(255, 255, 255, 0.8)',
+    '--theme-footer-border': 'rgba(255, 255, 255, 0.2)'
   }),
   bw: Object.freeze({
     '--theme-bg': '#ffffff',
@@ -142,7 +144,8 @@ export const THEME_REGISTRY = Object.freeze({
     '--theme-toggle-text': '#000000',
     '--theme-toggle-border': '#000000',
     '--theme-toggle-hover-bg': '#ffffff',
-    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.8)'
+    '--theme-scroll-arrow': 'rgba(0, 0, 0, 0.8)',
+    '--theme-footer-border': 'rgba(0, 0, 0, 0.1)'
   })
 });
 

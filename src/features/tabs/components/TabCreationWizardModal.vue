@@ -561,6 +561,8 @@ const SORT_KEY_OPTIONS = Object.freeze([
 const GROUP_BY_OPTIONS = Object.freeze([
   { value: 'none', label: 'No grouping' },
   { value: 'category', label: 'Category' },
+  { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'year', label: 'Year' },
   { value: 'month', label: 'Month' },
   { value: 'year_month', label: 'Year + Month' },

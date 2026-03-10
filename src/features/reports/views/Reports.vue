@@ -509,8 +509,8 @@
         </div>
 
       </template>
-
-      <div class="fixed bottom-0 left-0 right-0 bg-white z-30">
+      <!-- Footer (removed bg-white/80) -->
+      <div class="fixed bottom-0 left-0 right-0 z-30 backdrop-blur-md themed-footer-border rounded-t-xl">
         <div class="max-w-5xl mx-auto px-4 py-4 flex items-start justify-between gap-3">
           <div v-if="selectedReport" class="flex-1 min-w-0">
             <div class="flex items-center gap-3 min-w-0">
@@ -3460,5 +3460,8 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
+.themed-footer-border {
+  border-top: 1px solid var(--theme-footer-border);
+}
 
 </style>

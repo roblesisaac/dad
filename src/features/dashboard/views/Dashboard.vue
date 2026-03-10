@@ -112,10 +112,10 @@
           </div>
         </Transition>
       </div>
-
+      <!-- Footer (removed bg-white/90)▊ -->
       <footer
         v-if="!state.isLoading && shouldShowFooter"
-        class="fixed bottom-0 py-2 left-0 right-0 z-20 bg-white/90 backdrop-blur-md"
+        class="fixed bottom-0 left-0 right-0 z-20 backdrop-blur-md themed-footer-border rounded-t-xl py-4"
       >
         <div class="max-w-5xl mx-auto w-full px-6 py-2 grid grid-cols-3 items-center">
           <div class="flex justify-start">
@@ -212,6 +212,10 @@
   text-transform: uppercase;
   color: #111827;
   white-space: nowrap;
+}
+
+.themed-footer-border {
+  border-top: 1px solid var(--theme-footer-border);
 }
 </style>
 

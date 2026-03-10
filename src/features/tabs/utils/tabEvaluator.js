@@ -922,6 +922,22 @@ function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {
     [NO_GROUPING_RULE_VALUE]: () => NO_GROUPING_CATEGORY_NAME,
     category: (item) => item.personal_finance_category?.primary || 'misc',
     name: (item) => String(item?.name || '').trim() || 'unnamed transaction',
+    tag: (item) => {
+      const rawTags = item?.tags;
+      if (Array.isArray(rawTags)) {
+        const firstTag = rawTags
+          .map(tag => String(tag || '').trim())
+          .find(Boolean);
+        return firstTag || 'untagged';
+      }
+
+      if (typeof rawTags === 'string') {
+        const tag = rawTags.trim();
+        return tag || 'untagged';
+      }
+
+      return 'untagged';
+    },
     year: (item) => {
       const [year] = String(item.authorized_date || item.date || '').split('-');
       return year;

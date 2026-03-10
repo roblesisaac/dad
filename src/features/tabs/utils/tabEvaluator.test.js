@@ -947,6 +947,54 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['Bravo', 'Alpha']);
   });
 
+  test('groupBy tag groups tagged and untagged transactions', () => {
+    const result = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions: [
+        {
+          transaction_id: 'uber-trip',
+          amount: 10,
+          authorized_date: '2026-01-01',
+          date: '2026-01-01',
+          name: 'Uber',
+          tags: ['rideshare'],
+          personal_finance_category: { primary: 'TRAVEL' }
+        },
+        {
+          transaction_id: 'lyft-trip',
+          amount: 8,
+          authorized_date: '2026-01-02',
+          date: '2026-01-02',
+          name: 'Lyft',
+          tags: ['rideshare'],
+          personal_finance_category: { primary: 'TRANSPORTATION' }
+        },
+        {
+          transaction_id: 'grocery',
+          amount: 20,
+          authorized_date: '2026-01-03',
+          date: '2026-01-03',
+          name: 'Groceries',
+          personal_finance_category: { primary: 'FOOD_AND_DRINK' }
+        }
+      ],
+      tabRules: [
+        {
+          _id: 'g-tag',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'tag', '', '', '']
+        }
+      ]
+    });
+
+    const rideshareGroup = result.categorizedItems.find(([groupName]) => groupName === 'rideshare');
+    const untaggedGroup = result.categorizedItems.find(([groupName]) => groupName === 'untagged');
+
+    expect(result.groupByMode).toBe('tag');
+    expect(rideshareGroup?.[1].map(item => item.transaction_id).sort()).toEqual(['lyft-trip', 'uber-trip']);
+    expect(untaggedGroup?.[1].map(item => item.transaction_id)).toEqual(['grocery']);
+  });
+
   test('groupBy date respects sort date direction for group row order', () => {
     const ascendingResult = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

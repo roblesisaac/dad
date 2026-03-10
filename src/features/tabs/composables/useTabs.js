@@ -79,6 +79,8 @@ const ALLOWED_SORT_DIRECTIONS = new Set(['asc', 'desc']);
 const ALLOWED_GROUP_BY_VALUES = new Set([
   'none',
   'category',
+  'name',
+  'tag',
   'year',
   'month',
   'year_month',
