@@ -1428,6 +1428,18 @@ function editRule(rule) {
   showRuleEditModal.value = true;
 }
 
+function showRuleMovedToCustomToast() {
+  const toastMessage = 'Rule moved to Custom Rules';
+  state.blueBar.loading = false;
+  state.blueBar.message = toastMessage;
+
+  setTimeout(() => {
+    if (state.blueBar.message === toastMessage && !state.blueBar.loading) {
+      state.blueBar.message = '';
+    }
+  }, 2600);
+}
+
 function closeRuleEditModal() {
   showRuleEditModal.value = false;
   currentRule.value = null;
@@ -1493,6 +1505,10 @@ async function saveRule(rule) {
   const existingRules = getEnabledRulesByType(normalizedType).map(cloneRule);
   const normalizedRule = normalizeLocalRule(normalizedType, rule);
   const shouldMakeGlobal = Boolean(rule?._makeGlobal);
+  const currentSection = String(props.section || '').trim().toLowerCase();
+  const shouldNotifyMovedToCustom = normalizedType === 'categorize'
+    && currentSection === 'categorize'
+    && resolveCategorizeRuleSetTarget(normalizedRule) !== 'category';
 
   if (isNewRule.value) {
     existingRules.push(normalizedRule);
@@ -1510,6 +1526,9 @@ async function saveRule(rule) {
   const didChangeGlobalMirror = await syncGlobalCategorizeMirror(normalizedRule, shouldMakeGlobal);
   if (didChangeGlobalMirror) {
     await processAllTabsForSelectedGroup({ showLoading: false });
+  }
+  if (shouldNotifyMovedToCustom) {
+    showRuleMovedToCustomToast();
   }
   closeRuleEditModal();
 }

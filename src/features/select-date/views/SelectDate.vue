@@ -3,10 +3,19 @@
   <!-- Date Range Summary (Clickable to expand) -->
   <button 
     @click="toggleDatePicker"
+    :disabled="state.isLoading"
     class="flex items-center justify-center gap-1.5 hover:opacity-70 transition-opacity group focus:outline-none"
+    :class="state.isLoading ? 'opacity-60 cursor-wait pointer-events-none' : ''"
   >
     <span class="text-xs sm:text-sm font-black text-black uppercase tracking-[0.2em] truncate">
       {{ dateRangeSummary }}
+    </span>
+    <span
+      v-if="state.isLoading"
+      class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] inline-flex items-center gap-1"
+    >
+      Syncing
+      <LoadingDots />
     </span>
     <ChevronDown 
       class="h-3 w-3 text-black group-hover:text-black transition-all duration-300 flex-shrink-0"
@@ -23,69 +32,87 @@
     @close="showDatePicker = false"
   >
     <template #content>
-      <!-- Scrollable content area -->
-      <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto bg-inherit" data-no-pull-refresh>
-        <!-- Quick Action Buttons -->
-        <div class="mb-12">
-          <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-6 px-2 opacity-50">Quick Select</div>
-          
-          <div class="flex flex-col">
-            <button 
-              v-for="option in quickSelectOptions"
-              :key="option.id"
-              @click="onQuickSelect(option.id)" 
-              data-no-pull-refresh
-              class="w-full flex items-center justify-between py-6 transition-all group"
-            >
-              <span class="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[var(--theme-text)] group-hover:translate-x-1 transition-transform duration-300 flex items-baseline gap-2">
-                <span>{{ option.label }}</span>
-                <span
-                  v-if="option.secondaryLabel"
-                  class="text-sm sm:text-base font-semibold text-[var(--theme-text-soft)]"
-                >
-                  {{ option.secondaryLabel }}
+      <div class="relative">
+        <!-- Scrollable content area -->
+        <div class="p-6 md:p-8 max-h-[70vh] overflow-y-auto bg-inherit" data-no-pull-refresh>
+          <!-- Quick Action Buttons -->
+          <div class="mb-12">
+            <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-6 px-2 opacity-50">Quick Select</div>
+            
+            <div class="flex flex-col">
+              <button 
+                v-for="option in quickSelectOptions"
+                :key="option.id"
+                @click="onQuickSelect(option.id)" 
+                data-no-pull-refresh
+                :disabled="state.isLoading"
+                class="w-full flex items-center justify-between py-6 transition-all group"
+                :class="state.isLoading ? 'opacity-60 pointer-events-none' : ''"
+              >
+                <span class="text-xl sm:text-2xl font-black uppercase tracking-tighter text-[var(--theme-text)] group-hover:translate-x-1 transition-transform duration-300 flex items-baseline gap-2">
+                  <span>{{ option.label }}</span>
+                  <span
+                    v-if="option.secondaryLabel"
+                    class="text-sm sm:text-base font-semibold text-[var(--theme-text-soft)]"
+                  >
+                    {{ option.secondaryLabel }}
+                  </span>
                 </span>
-              </span>
-              <div class="flex items-center gap-2">
-                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300">
-                  Select
-                </span>
-                <ChevronRight class="w-4 h-4 text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300" />
-              </div>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Custom Date Pickers -->
-        <div class="space-y-10 pb-8">
-          <div>
-            <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">Start Date</div>
-            <DatePicker 
-              :date="tempDate" 
-              when="start" 
-              @date-selected="onDateSelected"
-            />
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    Select
+                  </span>
+                  <ChevronRight class="w-4 h-4 text-[var(--theme-text-soft)] opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                </div>
+              </button>
+            </div>
           </div>
           
-          <div>
-            <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">End Date</div>
-            <DatePicker 
-              :date="tempDate" 
-              when="end" 
-              @date-selected="onDateSelected"
-            />
+          <!-- Custom Date Pickers -->
+          <div class="space-y-10 pb-8">
+            <div>
+              <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">Start Date</div>
+              <DatePicker 
+                :date="tempDate" 
+                when="start" 
+                @date-selected="onDateSelected"
+              />
+            </div>
+            
+            <div>
+              <div class="text-[10px] font-black tracking-[0.3em] text-[var(--theme-text-soft)] uppercase mb-4 px-2 opacity-50">End Date</div>
+              <DatePicker 
+                :date="tempDate" 
+                when="end" 
+                @date-selected="onDateSelected"
+              />
+            </div>
           </div>
         </div>
-      </div>
-      
-      <!-- Sticky Footer Actions -->
-      <div class="border-t border-[var(--theme-border)]/20 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
-        <button 
-          @click="onApplyDates" 
-          class="w-full px-6 py-5 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-sm font-black uppercase tracking-[0.3em] rounded-2xl transition-all active:scale-[0.98] border border-[var(--theme-border)]/10"
+
+        <!-- Sticky Footer Actions -->
+        <div class="border-t border-[var(--theme-border)]/20 backdrop-blur-md p-6 sticky bottom-0 z-10 w-full rounded-b-[inherit]">
+          <button 
+            @click="onApplyDates"
+            :disabled="state.isLoading"
+            class="w-full px-6 py-5 bg-[var(--theme-btn-primary-bg)] hover:bg-[var(--theme-btn-primary-hover-bg)] text-[var(--theme-btn-primary-text)] text-sm font-black uppercase tracking-[0.3em] rounded-2xl transition-all active:scale-[0.98] border border-[var(--theme-border)]/10 disabled:opacity-60 disabled:cursor-wait disabled:transform-none"
+          >
+            {{ state.isLoading ? 'Applying...' : 'Apply Selection' }}
+          </button>
+        </div>
+
+        <div
+          v-if="state.isLoading"
+          class="absolute inset-0 z-20 flex items-center justify-center bg-[var(--theme-browser-chrome)]/80 backdrop-blur-sm"
         >
-          Apply Selection
-        </button>
+          <div class="flex flex-col items-center gap-2">
+            <span class="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--theme-text-soft)]">Updating Data</span>
+            <span class="text-sm font-black uppercase tracking-[0.2em] text-[var(--theme-text)] inline-flex items-center gap-1">
+              Syncing
+              <LoadingDots />
+            </span>
+          </div>
+        </div>
       </div>
     </template>
   </BaseModal>
@@ -96,9 +123,11 @@
 import { ref, onMounted, computed } from 'vue';
 import DatePicker from '../components/DatePicker.vue';
 import BaseModal from '@/shared/components/BaseModal.vue';
+import LoadingDots from '@/shared/components/LoadingDots.vue';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import { subYears, addYears, subMonths, addMonths, isSameYear } from 'date-fns';
 import { useDate } from '../composables/useDate.js';
+import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
 
 // Use the date composable
 const { 
@@ -110,6 +139,7 @@ const {
   applyDates,
   convertToDate
 } = useDate();
+const { state } = useDashboardState();
 
 const showDatePicker = ref(false);
 
