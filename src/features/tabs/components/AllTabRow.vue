@@ -68,7 +68,7 @@
                 type="button"
                 @click.stop="openTabEditor"
               >
-                Edit Tab
+                <EllipsisVertical />
               </button>
 
               <button
@@ -114,7 +114,7 @@
           class="p-2 rounded-xl text-black hover:text-black hover:bg-gray-50 transition-colors"
           title="Edit tab"
         >
-          <Settings size="16" />
+          <EllipsisVertical size="16" />
         </button>
         
         <div @click.stop>

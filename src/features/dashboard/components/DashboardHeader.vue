@@ -99,8 +99,7 @@
                 class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none flex items-center gap-1"
                 @click="toggleEditTabDropdown"
               >
-                Edit Tab
-                <ChevronDown class="w-3 h-3 transition-transform" :class="isEditTabDropdownOpen ? 'rotate-180' : ''" />
+                <EllipsisVertical class="w-4 h-4" />
               </button>
               
               <div
@@ -302,7 +301,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { format, isSameYear, isValid, parseISO, startOfMonth, startOfYear } from 'date-fns';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
-import { AlertTriangle, Home, Info, X, ChevronDown, MoreVertical } from 'lucide-vue-next';
+import { AlertTriangle, Home, Info, X, ChevronDown, MoreVertical, EllipsisVertical } from 'lucide-vue-next';
 import SelectDate from '@/features/select-date/views/SelectDate.vue';
 import { renderMarkdown } from '@/shared/utils/markdown';
 import {
