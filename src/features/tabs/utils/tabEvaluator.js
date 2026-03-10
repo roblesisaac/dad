@@ -250,6 +250,10 @@ function getItemValue(item, propName) {
     return item.personal_finance_category?.primary;
   }
 
+  if (propName === 'tag') {
+    return primaryTag(item);
+  }
+
   if (isAccountProperty(propName)) {
     return item?.account_id || item?.accountId || item?.account || '';
   }
@@ -259,6 +263,21 @@ function getItemValue(item, propName) {
   }
 
   return item[propName];
+}
+
+function primaryTag(item) {
+  const rawTags = item?.tags;
+  if (Array.isArray(rawTags)) {
+    return rawTags
+      .map(tag => String(tag || '').trim())
+      .find(Boolean) || '';
+  }
+
+  if (typeof rawTags === 'string') {
+    return rawTags.trim();
+  }
+
+  return '';
 }
 
 function isGlobalCategoryProperty(propName) {
@@ -424,6 +443,10 @@ function shouldSortGroupsBySelectedSort(groupByMode, sortPropName) {
     return sortPropName === 'name';
   }
 
+  if (groupByMode === 'tag') {
+    return sortPropName === 'tag';
+  }
+
   if (['year', 'month', 'year_month', 'day', 'date', 'weekday'].includes(groupByMode)) {
     return sortPropName === 'date';
   }
@@ -435,6 +458,46 @@ function shouldSortGroupsByAmount(groupByMode, sortPropName) {
   return Boolean(groupByMode)
     && groupByMode !== NO_GROUPING_RULE_VALUE
     && sortPropName === 'amount';
+}
+
+function shouldSortGroupsByFirstItemProperty(groupByMode, sortPropName) {
+  return Boolean(groupByMode)
+    && groupByMode !== NO_GROUPING_RULE_VALUE
+    && sortPropName === 'tag'
+    && groupByMode !== 'tag';
+}
+
+function resolveGroupSortValueByDirection(groupItems, sortPropName, sortDirection) {
+  const items = Array.isArray(groupItems) ? groupItems : [];
+  if (!items.length) {
+    return '';
+  }
+
+  let selectedValue = getItemValue(items[0], sortPropName);
+  const preferHigherValue = String(sortDirection || '').toLowerCase() === 'desc';
+
+  for (let index = 1; index < items.length; index += 1) {
+    const nextValue = getItemValue(items[index], sortPropName);
+    const comparisonResult = compareSortValues(nextValue, selectedValue);
+
+    if ((preferHigherValue && comparisonResult > 0) || (!preferHigherValue && comparisonResult < 0)) {
+      selectedValue = nextValue;
+    }
+  }
+
+  return selectedValue;
+}
+
+function compareGroupsByFirstItemProperty(groupA, groupB, sortPropName, groupByMode, sortDirection) {
+  const valueA = resolveGroupSortValueByDirection(groupA?.[1], sortPropName, sortDirection);
+  const valueB = resolveGroupSortValueByDirection(groupB?.[1], sortPropName, sortDirection);
+  const propertySortResult = compareSortValues(valueA, valueB);
+
+  if (propertySortResult !== 0) {
+    return propertySortResult;
+  }
+
+  return compareGroupLabelsByDateMode(groupA?.[0], groupB?.[0], groupByMode);
 }
 
 function isCategorizeSetTarget(target) {
@@ -922,22 +985,7 @@ function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {
     [NO_GROUPING_RULE_VALUE]: () => NO_GROUPING_CATEGORY_NAME,
     category: (item) => item.personal_finance_category?.primary || 'misc',
     name: (item) => String(item?.name || '').trim() || 'unnamed transaction',
-    tag: (item) => {
-      const rawTags = item?.tags;
-      if (Array.isArray(rawTags)) {
-        const firstTag = rawTags
-          .map(tag => String(tag || '').trim())
-          .find(Boolean);
-        return firstTag || 'untagged';
-      }
-
-      if (typeof rawTags === 'string') {
-        const tag = rawTags.trim();
-        return tag || 'untagged';
-      }
-
-      return 'untagged';
-    },
+    tag: (item) => primaryTag(item) || 'untagged',
     year: (item) => {
       const [year] = String(item.authorized_date || item.date || '').split('-');
       return year;
@@ -1072,6 +1120,19 @@ export function evaluateTabData({
       }
 
       return compareGroupLabelsByDateMode(a?.[0], b?.[0], propToGroupBy);
+    });
+  } else if (shouldSortGroupsByFirstItemProperty(propToGroupBy, primarySort.propName)) {
+    categorizedItems.sort((a, b) => {
+      const groupSortResult = compareGroupsByFirstItemProperty(
+        a,
+        b,
+        primarySort.propName,
+        propToGroupBy,
+        primarySort.direction
+      );
+      return primarySort.direction === 'desc'
+        ? -groupSortResult
+        : groupSortResult;
     });
   } else if (shouldSortGroupsBySelectedSort(propToGroupBy, primarySort.propName)) {
     categorizedItems.sort((a, b) => {

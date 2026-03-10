@@ -178,7 +178,7 @@ const ruleSummaryParts = computed(() => {
     }
   } 
   
-  else if (type === 'categorize') {
+  else if (type === 'categorize' || type === 'custom') {
     parts.push({ text: 'set' });
     parts.push({ text: getCategorizeAssignmentTarget(r), highlight: true });
     parts.push({ text: 'to' });
@@ -301,7 +301,11 @@ function getSortDirectionLabel(sortPropertyName, sortDirection) {
       : 'high to low';
   }
 
-  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+  if (
+    normalizedSortPropertyName === 'name'
+    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'category'
+  ) {
     return normalizedSortDirection === 'asc'
       ? 'A to Z'
       : 'Z to A';

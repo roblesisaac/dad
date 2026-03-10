@@ -531,6 +531,7 @@ const CONDITION_PROPERTY_OPTIONS = [
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'category', label: 'Category' },
   { value: 'account', label: 'Account' }
 ];
@@ -563,6 +564,7 @@ const accountConditionOptions = computed(() => {
 
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'date', label: 'Date' },
   { value: 'category', label: 'Category' },
   { value: 'amount', label: 'Amount' }
@@ -701,7 +703,11 @@ function getSortDirectionOptions(sortPropertyName) {
     ];
   }
 
-  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+  if (
+    normalizedSortPropertyName === 'name'
+    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'category'
+  ) {
     return [
       { value: 'asc', label: 'A to Z' },
       { value: 'desc', label: 'Z to A' }
@@ -1008,7 +1014,7 @@ function isNumericProperty(propName) {
 }
 
 function isTextProperty(propName) {
-  return propName === 'name' || propName === 'category' || isGlobalCategoryProperty(propName);
+  return propName === 'name' || propName === 'tag' || propName === 'category' || isGlobalCategoryProperty(propName);
 }
 
 function isAccountProperty(propName) {

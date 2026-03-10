@@ -524,6 +524,7 @@ const PROPERTY_OPTIONS = Object.freeze([
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'category', label: 'Category' }
 ]);
 
@@ -555,6 +556,7 @@ const SORT_KEY_OPTIONS = Object.freeze([
   { value: 'date', label: 'Date' },
   { value: 'amount', label: 'Amount' },
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'category', label: 'Category' }
 ]);
 
@@ -708,7 +710,7 @@ function isDateProperty(property) {
 }
 
 function isTextProperty(property) {
-  return property === 'name' || property === 'category';
+  return property === 'name' || property === 'tag' || property === 'category';
 }
 
 function normalizeConditionCombinator(combinator) {
@@ -738,7 +740,11 @@ function getSortDirectionOptions(sortPropertyName) {
     ];
   }
 
-  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+  if (
+    normalizedSortPropertyName === 'name'
+    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'category'
+  ) {
     return [
       { value: 'asc', label: 'A to Z' },
       { value: 'desc', label: 'Z to A' }

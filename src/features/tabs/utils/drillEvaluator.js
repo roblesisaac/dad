@@ -15,6 +15,77 @@ function defaultGetDayOfWeekPST(dateString) {
 
 const DEFAULT_MONTHS = ['jan', 'feb', 'march', 'april', 'may', 'june', 'july', 'aug', 'sep', 'oct', 'nov', 'dec'];
 const NO_GROUPING_RULE_VALUE = 'none';
+const DEFAULT_SORT_PROPERTY = 'date';
+const DEFAULT_SORT_DIRECTION = 'desc';
+
+function normalizeSortPropertyName(rawSortPropertyName) {
+  return String(rawSortPropertyName || '').trim().replace(/^-/, '').toLowerCase();
+}
+
+function normalizeSortDirection(sortDirection, rawSortPropertyName = '') {
+  const normalizedSortDirection = String(sortDirection || '').trim().toLowerCase();
+  if (normalizedSortDirection === 'asc' || normalizedSortDirection === 'desc') {
+    return normalizedSortDirection;
+  }
+
+  return String(rawSortPropertyName || '').trim().startsWith('-')
+    ? 'desc'
+    : DEFAULT_SORT_DIRECTION;
+}
+
+function resolvePrimarySort(levelRuleConfigs = []) {
+  const sortRuleConfigs = (Array.isArray(levelRuleConfigs) ? levelRuleConfigs : [])
+    .filter(ruleConfig => Array.isArray(ruleConfig?.rule) && ruleConfig.rule[0] === 'sort')
+    .sort((a, b) => Number(a?.orderOfExecution || 0) - Number(b?.orderOfExecution || 0));
+  const [primarySortRule] = sortRuleConfigs;
+  const rawSortProperty = String(primarySortRule?.rule?.[1] || '').trim();
+  const sortProperty = normalizeSortPropertyName(rawSortProperty) || DEFAULT_SORT_PROPERTY;
+  const sortDirection = normalizeSortDirection(primarySortRule?.rule?.[2], rawSortProperty);
+
+  return {
+    sortProperty,
+    sortDirection
+  };
+}
+
+function primaryTag(item) {
+  const rawTags = item?.tags;
+  if (Array.isArray(rawTags)) {
+    return rawTags
+      .map(tag => String(tag || '').trim())
+      .find(Boolean) || '';
+  }
+
+  if (typeof rawTags === 'string') {
+    return rawTags.trim();
+  }
+
+  return '';
+}
+
+function compareTextValues(valueA, valueB) {
+  return String(valueA || '').toLowerCase().localeCompare(String(valueB || '').toLowerCase());
+}
+
+function resolveGroupSortTag(groupItems = [], sortDirection = DEFAULT_SORT_DIRECTION) {
+  const items = Array.isArray(groupItems) ? groupItems : [];
+  if (!items.length) {
+    return '';
+  }
+
+  const prefersHigherValues = String(sortDirection || '').toLowerCase() === 'desc';
+  let selectedTag = primaryTag(items[0]) || 'untagged';
+
+  for (let index = 1; index < items.length; index += 1) {
+    const nextTag = primaryTag(items[index]) || 'untagged';
+    const comparison = compareTextValues(nextTag, selectedTag);
+    if ((prefersHigherValues && comparison > 0) || (!prefersHigherValues && comparison < 0)) {
+      selectedTag = nextTag;
+    }
+  }
+
+  return selectedTag;
+}
 
 function normalizeRecategorizeBehaviorDecision(value) {
   const normalizedValue = String(value || '').trim().toLowerCase();
@@ -156,6 +227,7 @@ function evaluateLevel({
   ];
   const sourceTransactions = Array.isArray(transactions) ? transactions : [];
   const originalLookup = buildOriginalLookup(sourceTransactions);
+  const primarySort = resolvePrimarySort(levelRuleConfigs);
 
   const evaluation = evaluateTabData({
     tab: {
@@ -173,12 +245,16 @@ function evaluateLevel({
     const groupItems = Array.isArray(items) ? items : [];
     const originalItems = extractOriginalItemsFromProcessed(groupItems, originalLookup);
     const key = String(label || '').trim().toLowerCase();
+    const sortTag = primarySort.sortProperty === 'tag'
+      ? resolveGroupSortTag(groupItems, primarySort.sortDirection)
+      : '';
 
     return {
       key,
       label: String(label || ''),
       total: Number.isFinite(Number(total)) ? Number(total) : 0,
       count: originalItems.length,
+      sortTag,
       items: groupItems,
       originalItems
     };
@@ -187,6 +263,8 @@ function evaluateLevel({
   return {
     tabTotal: Number.isFinite(Number(evaluation.tabTotal)) ? Number(evaluation.tabTotal) : 0,
     groupByMode: String(evaluation.groupByMode || 'category'),
+    sortProperty: primarySort.sortProperty,
+    sortDirection: primarySort.sortDirection,
     hiddenItems: Array.isArray(evaluation.hiddenItems) ? evaluation.hiddenItems : [],
     overriddenRecategorizeCount: Number.isFinite(Number(evaluation.overriddenRecategorizeCount))
       ? Number(evaluation.overriddenRecategorizeCount)
@@ -225,6 +303,8 @@ export function resolveDrillState({
       transactions: [],
       hiddenItems: [],
       groupByMode: NO_GROUPING_RULE_VALUE,
+      sortProperty: DEFAULT_SORT_PROPERTY,
+      sortDirection: DEFAULT_SORT_DIRECTION,
       isLeaf: true,
       overriddenRecategorizeCount: 0,
       honorRecategorizeAs: false,
@@ -280,6 +360,8 @@ export function resolveDrillState({
           transactions: levelResult.transactions,
           hiddenItems: levelResult.hiddenItems,
           groupByMode: levelResult.groupByMode,
+          sortProperty: levelResult.sortProperty,
+          sortDirection: levelResult.sortDirection,
           isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
           overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount,
           honorRecategorizeAs: recategorizeBehaviorState.honorRecategorizeAs,
@@ -310,6 +392,8 @@ export function resolveDrillState({
       transactions: levelResult.transactions,
       hiddenItems: levelResult.hiddenItems,
       groupByMode: levelResult.groupByMode,
+      sortProperty: levelResult.sortProperty,
+      sortDirection: levelResult.sortDirection,
       isLeaf: levelResult.groupByMode === NO_GROUPING_RULE_VALUE,
       overriddenRecategorizeCount: levelResult.overriddenRecategorizeCount,
       honorRecategorizeAs: recategorizeBehaviorState.honorRecategorizeAs,
@@ -346,6 +430,8 @@ export function resolveDrillState({
     transactions: fallbackResult.transactions,
     hiddenItems: fallbackResult.hiddenItems,
     groupByMode: fallbackResult.groupByMode,
+    sortProperty: fallbackResult.sortProperty,
+    sortDirection: fallbackResult.sortDirection,
     isLeaf: fallbackResult.groupByMode === NO_GROUPING_RULE_VALUE,
     overriddenRecategorizeCount: fallbackResult.overriddenRecategorizeCount,
     honorRecategorizeAs: fallbackRecategorizeBehaviorState.honorRecategorizeAs,

@@ -20,9 +20,15 @@
                 {{ item.name }}
               </div>
               <div
-                v-if="item.pending || item.check_number"
+                v-if="shouldShowLeafSortTag(item) || item.pending || item.check_number"
                 class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
               >
+                <span
+                  v-if="shouldShowLeafSortTag(item)"
+                  class="px-2 py-1 group-count-badge rounded-lg tracking-widest text-[10px] font-black"
+                >
+                  {{ resolveLeafSortTag(item) }}
+                </span>
                 <span v-if="item.pending">Pending</span>
                 <span v-if="item.check_number">#{{ item.check_number }}</span>
               </div>
@@ -69,9 +75,18 @@
             <span class="text-base font-black text-gray-900 uppercase tracking-tight truncate group-hover:text-black transition-colors">
               {{ group.label }}
             </span>
-            <span v-if="group.count > 0" class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg uppercase tracking-widest transition-colors shrink-0">
-              {{ group.count }}
-            </span>
+            <!-- Group Count Section -->
+            <div class="flex items-center gap-1.5 shrink-0">
+              <span v-if="group.count > 0" class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg uppercase tracking-widest transition-colors shrink-0">
+                {{ group.count }}
+              </span>
+              <span
+                v-if="shouldShowGroupSortTag(group)"
+                class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg tracking-widest transition-colors shrink-0"
+              >
+                {{ group.sortTag }}
+              </span>
+            </div>
           </div>
 
           <div class="flex items-center gap-4 ml-4 shrink-0">
@@ -90,6 +105,7 @@
 </template>
 
 <script setup>
+import { computed } from 'vue';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useUtils } from '@/shared/composables/useUtils';
 import TransactionDetails from './TransactionDetails.vue';
@@ -111,12 +127,41 @@ const props = defineProps({
   isLeaf: {
     type: Boolean,
     default: false
+  },
+  groupByMode: {
+    type: String,
+    default: 'none'
+  },
+  sortProperty: {
+    type: String,
+    default: 'date'
+  },
+  sortDirection: {
+    type: String,
+    default: 'desc'
   }
 });
 
 const emit = defineEmits(['group-selected']);
 const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();
+const isSortingByTag = computed(() => String(props.sortProperty || '').trim().toLowerCase() === 'tag');
+const normalizedGroupByMode = computed(() => String(props.groupByMode || '').trim().toLowerCase());
+
+function primaryTag(item) {
+  const rawTags = item?.tags;
+  if (Array.isArray(rawTags)) {
+    return rawTags
+      .map(tag => String(tag || '').trim())
+      .find(Boolean) || '';
+  }
+
+  if (typeof rawTags === 'string') {
+    return rawTags.trim();
+  }
+
+  return '';
+}
 
 function itemIsSelected(itemId) {
   return state.selected.transaction?._id === itemId;
@@ -133,6 +178,27 @@ function selectTransaction(item) {
 
 function transactionDate(item) {
   return item?.authorized_date || item?.date || '';
+}
+
+function shouldShowGroupSortTag(group) {
+  return Boolean(
+    isSortingByTag.value
+    && normalizedGroupByMode.value !== 'tag'
+    && typeof group?.sortTag === 'string'
+    && group.sortTag.trim().length
+  );
+}
+
+function resolveLeafSortTag(item) {
+  return primaryTag(item) || 'untagged';
+}
+
+function shouldShowLeafSortTag(item) {
+  return Boolean(
+    isSortingByTag.value
+    && normalizedGroupByMode.value === 'none'
+    && resolveLeafSortTag(item)
+  );
 }
 </script>
 

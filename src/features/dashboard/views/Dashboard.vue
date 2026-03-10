@@ -101,6 +101,9 @@
               :transactions="drillState.transactions"
               :hidden-items="drillState.hiddenItems"
               :is-leaf="drillState.isLeaf"
+              :group-by-mode="drillState.groupByMode"
+              :sort-property="drillState.sortProperty"
+              :sort-direction="drillState.sortDirection"
               @group-selected="handleDrillGroupSelected"
             />
           </div>
@@ -304,6 +307,8 @@ const EMPTY_DRILL_STATE = Object.freeze({
   transactions: [],
   hiddenItems: [],
   groupByMode: 'none',
+  sortProperty: 'date',
+  sortDirection: 'desc',
   isLeaf: true,
   overriddenRecategorizeCount: 0,
   honorRecategorizeAs: false,
@@ -697,11 +702,10 @@ function openTabEditor(sectionValue = null) {
     return;
   }
 
-  const isCustomEditorRequest = sectionValue === 'custom';
-  targetTabEditorSection.value = isCustomEditorRequest
-    ? null
-    : (typeof sectionValue === 'string' ? sectionValue : null);
-  openCustomRuleEditor.value = isCustomEditorRequest;
+  targetTabEditorSection.value = typeof sectionValue === 'string'
+    ? sectionValue
+    : null;
+  openCustomRuleEditor.value = false;
 
   tabEditorSnapshot.value = {
     tabId: String(state.selected.tab._id || ''),

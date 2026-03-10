@@ -1,181 +1,176 @@
 <template>
-  <div class="transaction-details-container p-6 flex flex-col gap-6" style="background-color: var(--theme-bg-soft); border-top: 1px solid var(--theme-border);">
+  <div class="transaction-details-container p-4 sm:p-8 flex flex-col items-center" style="background-color: var(--theme-bg-soft); border-top: 1px solid var(--theme-border);">
     
-    <!-- Top row: Account & Transaction Details -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Receipt Paper -->
+    <div class="receipt-paper w-full max-w-2xl flex flex-col rounded shadow-xl overflow-hidden" 
+         style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
       
-      <!-- Account Info -->
-      <div class="flex flex-col gap-3 rounded-xl p-5" style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
-        <h3 class="text-[10px] font-black uppercase tracking-widest text-opacity-80" style="color: var(--theme-text-muted);">Account Information</h3>
-        
-        <div class="flex flex-col gap-0.5">
-          <span class="text-[10px] font-bold uppercase tracking-widest mb-1" style="color: var(--theme-text-soft);">
-            {{ item.amount < 0 ? 'Paid From' : 'Deposited To' }}
-          </span>
-          <span class="text-base font-medium" style="color: var(--theme-text);">
-            {{ accountData.name }} <span style="color: var(--theme-text-soft); font-weight: normal;">#{{ accountData.mask }}</span>
-          </span>
-          <span v-if="accountName && accountName !== accountData.name" class="text-xs" style="color: var(--theme-text-muted);">
-            {{ accountName }}
-          </span>
-        </div>
-        
-        <div class="flex justify-between items-end mt-2 pt-3" style="border-top: 1px solid var(--theme-border); opacity: 0.8;">
-          <span class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--theme-text-muted);">Current Balance</span>
-          <span class="font-bold text-emerald-500">{{ formatPrice(accountData.balances?.current) }}</span>
-        </div>
-      </div>
-      
-      <!-- Transaction Details -->
-      <div class="flex flex-col gap-3 rounded-xl p-5" style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
-        <h3 class="text-[10px] font-black uppercase tracking-widest text-opacity-80" style="color: var(--theme-text-muted);">Transaction Details</h3>
-        
-        <div class="grid grid-cols-2 gap-y-4 gap-x-4 text-sm mt-1">
-          <div class="flex flex-col gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--theme-text-soft);">Channel</div>
-            <div class="font-medium" style="color: var(--theme-text);">{{ item.payment_channel || 'Unknown' }}</div>
-          </div>
-          <div class="flex flex-col gap-1">
-            <div class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--theme-text-soft);">Status</div>
-            <div class="font-medium flex items-center gap-1.5" style="color: var(--theme-text);">
-              <span v-if="item.pending" class="flex items-center gap-1.5 text-amber-500">
-                <span class="h-2 w-2 rounded-full bg-amber-500"></span> Pending
-              </span>
-              <span v-else class="flex items-center gap-1.5 text-emerald-500">
-                <span class="h-2 w-2 rounded-full bg-emerald-500"></span> Settled
-              </span>
-            </div>
-          </div>
-          <div class="col-span-2 flex flex-col gap-1 mt-1">
-            <div class="text-[10px] font-bold uppercase tracking-widest" style="color: var(--theme-text-soft);">Category</div>
-            <div class="font-medium" style="color: var(--theme-text);">{{ prettyCategory }}</div>
-          </div>
-        </div>
-      </div>
-      
-    </div>
-    
-    <!-- Middle row: Notes & Recategorize -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <!-- Notes -->
-      <div class="flex flex-col gap-3 rounded-xl p-5" style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
-        <div class="flex items-center justify-between">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-opacity-80" style="color: var(--theme-text-muted);">Transaction Notes</h3>
-          <div v-if="item.notes" class="relative" data-notes-menu-surface>
-            <button type="button" class="rounded-lg p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleNotesMenu">
-              <MoreVertical class="h-4 w-4" />
-            </button>
-            <div v-if="showNotesMenu" class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-notes-menu-surface>
-              <button type="button" class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openNotesEditor">
-                Edit Notes
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div v-if="item.notes" class="text-sm mt-1" style="color: var(--theme-text); white-space: pre-wrap;">{{ item.notes }}</div>
-        <div v-else class="flex mt-1">
-          <button @click="openNotesEditor" class="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border" style="background-color: var(--theme-bg-muted); color: var(--theme-text); border-color: var(--theme-border);">
-            + Add Notes
-          </button>
-        </div>
-      </div>
-      
-      <!-- Recategorize -->
-      <div class="flex flex-col gap-3 rounded-xl p-5" style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
-        <div class="flex items-center justify-between">
-          <h3 class="text-[10px] font-black uppercase tracking-widest text-opacity-80" style="color: var(--theme-text-muted);">
-            Recategorized As
-          </h3>
-          <div v-if="item.recategorizeAs" class="relative" data-category-menu-surface>
-            <button type="button" class="rounded-lg p-1 transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleCategoryMenu">
-              <MoreVertical class="h-4 w-4" />
-            </button>
-            <div v-if="showCategoryMenu" class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-category-menu-surface>
-              <button type="button" class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openCategoryEditor">
-                Edit Category
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div v-if="item.recategorizeAs" class="text-sm mt-1 font-medium" style="color: var(--theme-text);">
-          {{ item.recategorizeAs }}
-        </div>
-        <div v-else class="flex mt-1">
-          <button @click="openCategoryEditor" class="text-xs font-bold px-3 py-1.5 rounded-lg transition-colors border" style="background-color: var(--theme-bg-muted); color: var(--theme-text); border-color: var(--theme-border);">
-            + Recategorize
-          </button>
-        </div>
-      </div>
-      
-    </div>
-    
-    <!-- Bottom Row: Rules Applied & Raw Data -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <!-- Rules Applied -->
-      <div v-if="rulesAppliedToItem && rulesAppliedToItem.length" class="flex flex-col gap-3 rounded-xl p-5" style="background-color: var(--theme-bg); border: 1px solid var(--theme-border);">
-        <h3 class="text-[10px] font-black uppercase tracking-widest text-opacity-80" style="color: var(--theme-text-muted);">Applied Rules</h3>
-        
-        <div class="flex flex-col gap-2 mt-1">
-          <div 
-            v-for="rule in rulesAppliedToItem" 
-            :key="rule._id" 
-            class="group rounded-xl p-3 select-none flex items-start justify-between gap-3 relative transition-colors border"
-            style="background-color: var(--theme-bg-muted); border-color: transparent;"
-            @touchstart.passive="handleRuleRowTouchStart($event, rule)"
-            @touchmove="handleRuleRowTouchMove"
-            @touchend="handleRuleRowTouchEnd"
-            @touchcancel="handleRuleRowTouchEnd"
-            @mousedown="handleRuleRowMouseDown($event, rule)"
-            @mousemove="handleRuleRowMouseMove"
-            @mouseup="handleRuleRowMouseUp"
-            @mouseleave="handleRuleRowMouseUp"
-          >
-            <div class="flex min-w-0 flex-1 items-start gap-2">
-              <RuleSyntaxDisplay :rule="rule" compact class="min-w-0" />
-            </div>
+      <!-- Top Receipt Edge -->
+      <div class="h-2 w-full opacity-10" style="background: linear-gradient(to bottom, var(--theme-text) 0%, transparent 100%);"></div>
 
-            <div class="relative flex shrink-0 items-center gap-1" data-rule-menu-surface>
-              <button
-                type="button"
-                class="rounded-lg p-1 transition-all focus:outline-none opacity-0 pointer-events-none hover:bg-black/5 dark:hover:bg-white/5 group-hover:opacity-100 group-hover:pointer-events-auto"
-                style="color: var(--theme-text-muted);"
-                :class="shouldShowRuleMenuTrigger(rule) ? 'opacity-100 pointer-events-auto' : ''"
-                data-rule-menu-surface
-                @click.stop="toggleRuleActionsMenu(rule)"
-              >
-                <MoreVertical class="h-4 w-4" />
-              </button>
+      <!-- Main Receipt Content -->
+      <div class="p-6 sm:p-10 flex flex-col gap-8">
+        
+        <!-- Header Section -->
+        <div class="flex flex-col items-center text-center gap-2">
+          <div class="text-[10px] font-black uppercase tracking-[0.4em]" style="color: var(--theme-text-soft);">Transaction Receipt</div>
+          <h2 class="text-3xl sm:text-4xl font-black tracking-tight leading-tight pt-2" style="color: var(--theme-text);">
+            {{ item.name }}
+          </h2>
+          <div class="text-sm font-medium mt-1" style="color: var(--theme-text-muted);">
+            {{ item.authorized_date || item.date }}
+          </div>
+        </div>
 
-              <div
-                v-if="activeRuleMenuId === ruleKey(rule)"
-                class="absolute right-0 top-full mt-1 min-w-[140px] overflow-hidden rounded-xl border shadow-[0_10px_25px_rgba(0,0,0,0.08)] z-40"
-                style="background-color: var(--theme-bg); border-color: var(--theme-border);"
-                data-rule-menu-surface
-              >
-                <button
-                  type="button"
-                  class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                  style="color: var(--theme-text);"
-                  @click.stop="handleRuleMenuAction('edit', rule)"
-                >
-                  Edit
+        <!-- Divider -->
+        <div class="border-t-2 border-dashed mx-4" style="border-color: var(--theme-border); opacity: 0.3;"></div>
+
+        <!-- Amount Section -->
+        <div class="flex flex-col items-center py-4">
+          <div class="text-[10px] font-black uppercase tracking-widest mb-1" style="color: var(--theme-text-soft);">Amount Summary</div>
+          <div class="text-5xl sm:text-6xl font-black" :class="item.amount < 0 ? 'text-emerald-500' : 'text-red-500'">
+            {{ formatPrice(item.amount) }}
+          </div>
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t-2 border-dashed mx-4" style="border-color: var(--theme-border); opacity: 0.3;"></div>
+
+        <!-- Info Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-8 gap-x-12 px-2 py-2">
+          
+          <!-- Account Details -->
+          <div class="flex flex-col gap-2">
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Account Source</h3>
+            <div class="flex flex-col">
+              <span class="text-base font-bold" style="color: var(--theme-text);">{{ accountData.name }}</span>
+              <span class="text-xs" style="color: var(--theme-text-muted);">#{{ accountData.mask }} {{ accountName !== accountData.name ? `• ${accountName}` : '' }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-2 pt-2 border-t text-[10px] uppercase font-bold tracking-wider" style="border-color: var(--theme-border); border-style: solid; border-width: 1px 0 0 0; opacity: 0.6;">
+              <span style="color: var(--theme-text-muted);">Current Balance</span>
+              <span style="color: var(--theme-text);">{{ formatPrice(accountData.balances?.current) }}</span>
+            </div>
+          </div>
+
+          <!-- Transaction Logistics -->
+          <div class="flex flex-col gap-2">
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Transaction Context</h3>
+            <div class="grid grid-cols-2 gap-4 text-xs">
+              <div>
+                <div class="text-[9px] font-bold uppercase opacity-60">Payment Channel</div>
+                <div class="font-medium" style="color: var(--theme-text);">{{ item.payment_channel || 'Physical' }}</div>
+              </div>
+              <div>
+                <div class="text-[9px] font-bold uppercase opacity-60">Settlement Status</div>
+                <div class="font-medium flex items-center gap-1.5" :class="item.pending ? 'text-amber-500' : 'text-emerald-500'">
+                  <div class="h-1.5 w-1.5 rounded-full" :class="item.pending ? 'bg-amber-500' : 'bg-emerald-500'"></div>
+                  {{ item.pending ? 'Pending' : 'Settled' }}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Category -->
+          <div class="flex flex-col gap-2 sm:col-span-2">
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Original Categorization</h3>
+            <div class="text-sm font-medium p-4 rounded-xl border border-dashed" style="background-color: var(--theme-bg-soft); border-color: var(--theme-border); color: var(--theme-text);">
+              {{ prettyCategory }}
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Divider -->
+        <div class="border-t-2 border-dashed mx-4" style="border-color: var(--theme-border); opacity: 0.3;"></div>
+
+        <!-- Notes Section -->
+        <div class="flex flex-col gap-4 px-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Metadata & Notes</h3>
+            <div v-if="item.notes" class="relative" data-notes-menu-surface>
+              <button type="button" class="p-1.5 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleNotesMenu">
+                <MoreVertical class="h-5 w-5" />
+              </button>
+              <div v-if="showNotesMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-2xl z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-notes-menu-surface>
+                <button type="button" class="w-full px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openNotesEditor">
+                  Edit Note
                 </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="item.notes" class="text-base font-mono p-6 rounded-2xl border bg-opacity-50 text-left leading-relaxed" style="background-color: var(--theme-bg-soft); color: var(--theme-text); border-color: var(--theme-border);">
+            {{ item.notes }}
+          </div>
+          <div v-else class="flex">
+            <button @click="openNotesEditor" class="text-[10px] font-black uppercase tracking-[0.25em] px-6 py-3 rounded-2xl transition-all border w-full sm:w-auto" style="background-color: var(--theme-bg); color: var(--theme-text-soft); border-color: var(--theme-border);">
+              + Attach Memo
+            </button>
+          </div>
+        </div>
+
+        <!-- Recategorize Section -->
+        <div class="flex flex-col gap-4 px-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Categorization Override</h3>
+            <div v-if="item.recategorizeAs" class="relative" data-category-menu-surface>
+              <button type="button" class="p-1.5 transition-colors rounded-full hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text-muted);" @click.stop="toggleCategoryMenu">
+                <MoreVertical class="h-5 w-5" />
+              </button>
+              <div v-if="showCategoryMenu" class="absolute right-0 top-full mt-1 min-w-[160px] overflow-hidden rounded-xl border shadow-2xl z-40" style="background-color: var(--theme-bg); border-color: var(--theme-border);" data-category-menu-surface>
+                <button type="button" class="w-full px-4 py-4 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5" style="color: var(--theme-text);" @click.stop="openCategoryEditor">
+                  Update Category
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="item.recategorizeAs" class="text-lg font-black p-6 rounded-2xl border flex items-center justify-between" style="background-color: var(--theme-bg-soft); color: var(--theme-text); border-color: var(--theme-border);">
+            <span>{{ item.recategorizeAs }}</span>
+            <div class="h-2.5 w-2.5 rounded-full bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.6)]"></div>
+          </div>
+          <div v-else class="flex">
+            <button @click="openCategoryEditor" class="text-[10px] font-black uppercase tracking-[0.25em] px-6 py-3 rounded-2xl transition-all border w-full sm:w-auto" style="background-color: var(--theme-bg); color: var(--theme-text-soft); border-color: var(--theme-border);">
+              + Manual classification
+            </button>
+          </div>
+        </div>
+
+        <!-- Rules Applied -->
+        <div v-if="rulesAppliedToItem && rulesAppliedToItem.length" class="flex flex-col gap-4 px-2">
+          <h3 class="text-[10px] font-black uppercase tracking-widest" style="color: var(--theme-text-soft);">Applied Rule Set</h3>
+          <div class="flex flex-col gap-3">
+            <div 
+              v-for="rule in rulesAppliedToItem" 
+              :key="rule._id" 
+              class="group rounded-2xl p-4 border border-dashed transition-all hover:bg-black/5 dark:hover:bg-white/5"
+              style="background-color: var(--theme-bg-soft); border-color: var(--theme-border);"
+              @mousedown="handleRuleRowMouseDown($event, rule)"
+              @mouseup="handleRuleRowMouseUp"
+            >
+              <div class="flex items-center justify-between gap-4">
+                <RuleSyntaxDisplay :rule="rule" compact class="min-w-0 flex-1 opacity-80 group-hover:opacity-100" />
                 <button
                   type="button"
-                  class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                  style="color: var(--theme-text);"
-                  @click.stop="handleRuleMenuAction('copy', rule)"
+                  class="rounded-full p-1.5 transition-all opacity-0 group-hover:opacity-100 hover:bg-black/5"
+                  style="color: var(--theme-text-muted);"
+                  @click.stop="toggleRuleActionsMenu(rule)"
                 >
-                  Copy
+                  <MoreVertical class="h-4 w-4" />
                 </button>
               </div>
             </div>
           </div>
         </div>
+
+        <!-- Footer Receipt Edge -->
+        <div class="flex flex-col items-center gap-5 mt-8 pt-8 border-t-2 border-dashed" style="border-color: var(--theme-border); opacity: 0.3;">
+          <div class="text-[10px] font-mono uppercase tracking-[0.5em]" style="color: var(--theme-text-soft);">Verification Complete</div>
+          <div class="flex gap-2">
+            <div v-for="n in 15" :key="n" class="h-1.5 w-1.5 rounded-full" style="background-color: var(--theme-text-soft); opacity: 0.15;"></div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>

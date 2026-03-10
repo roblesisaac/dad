@@ -74,7 +74,7 @@ const DEFAULT_ORGANIZE_SETTINGS = Object.freeze({
   groupBy: 'none'
 });
 
-const ALLOWED_SORT_KEYS = new Set(['amount', 'date', 'name', 'category']);
+const ALLOWED_SORT_KEYS = new Set(['amount', 'date', 'name', 'tag', 'category']);
 const ALLOWED_SORT_DIRECTIONS = new Set(['asc', 'desc']);
 const ALLOWED_GROUP_BY_VALUES = new Set([
   'none',
@@ -128,7 +128,7 @@ function normalizeMethodForProperty(property, methodName) {
     return normalizeLegacyDateMethod(methodName);
   }
 
-  if (property === 'name' || property === 'category') {
+  if (property === 'name' || property === 'tag' || property === 'category') {
     return normalizeLegacyTextMethod(methodName);
   }
 

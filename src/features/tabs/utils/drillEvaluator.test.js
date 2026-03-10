@@ -171,6 +171,47 @@ describe('drillEvaluator', () => {
     expect(result.groups.map(group => group.key)).toEqual(['bravo', 'alpha']);
   });
 
+  test('exposes sort-tag metadata for grouped rows when sort by tag is active', () => {
+    const tab = createTab([
+      {
+        id: 'level-1',
+        sortRules: [createRule('sort-tag', ['sort', 'tag', 'asc', '', ''])],
+        categorizeRules: [],
+        filterRules: [],
+        groupByRules: [createRule('group-category', ['groupBy', 'category', '', '', ''])]
+      }
+    ]);
+
+    const transactions = [
+      createTransaction('t1', {
+        tags: ['zebra'],
+        personal_finance_category: { primary: 'ALPHA' }
+      }),
+      createTransaction('t2', {
+        tags: ['alpha'],
+        personal_finance_category: { primary: 'ALPHA' }
+      }),
+      createTransaction('t3', {
+        tags: ['mango'],
+        personal_finance_category: { primary: 'BETA' }
+      })
+    ];
+
+    const result = resolveDrillState({
+      tab,
+      transactions,
+      allRules: [],
+      drillPath: []
+    });
+
+    expect(result.sortProperty).toBe('tag');
+    expect(result.sortDirection).toBe('asc');
+    expect(result.groups.map(group => ({ key: group.key, sortTag: group.sortTag }))).toEqual([
+      { key: 'alpha', sortTag: 'alpha' },
+      { key: 'beta', sortTag: 'mango' }
+    ]);
+  });
+
   test('applies branch-local rules only for the matching branch path', () => {
     const tab = createTab(
       [

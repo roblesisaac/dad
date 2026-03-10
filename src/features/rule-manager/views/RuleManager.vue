@@ -215,7 +215,7 @@
               </div>
 
               <div
-                v-if="getEnabledRulesByType(ruleType.id).length === 0"
+                v-if="getRulesForSection(ruleType.id).length === 0"
                 class="py-12 px-6 rounded-2xl border-2 border-dashed border-gray-100 flex flex-col items-center justify-center text-center space-y-3"
               >
                 <p class="text-sm font-bold text-black">No active {{ ruleType.name.toLowerCase() }}</p>
@@ -441,6 +441,7 @@ const GROUP_BY_OPTIONS = [
 
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
+  { value: 'tag', label: 'Tag' },
   { value: 'date', label: 'Date' },
   { value: 'category', label: 'Category' },
   { value: 'amount', label: 'Amount' }
@@ -453,6 +454,7 @@ const SORT_DIRECTION_OPTIONS = [
 const RECAT_BEHAVIOR_RULE_MARKER_PREFIX = '__recat_behavior:';
 
 const standardRuleTypes = [
+  { id: 'custom', name: 'Custom Rules', icon: FolderCheck },
   { id: 'categorize', name: 'Categorize Rules', icon: FolderCheck },
   { id: 'filter', name: 'Filter Rules', icon: Filter }
 ];
@@ -492,6 +494,19 @@ function createLocalRule(typeId, ruleArray = [], options = {}) {
 
 function sanitizeRuleType(typeId = '') {
   return LOCAL_RULE_TYPES.includes(typeId) ? typeId : 'categorize';
+}
+
+function isCategorizeSetTarget(target) {
+  const normalizedTarget = String(target || '').trim().toLowerCase();
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+}
+
+function isCustomCategorizeRule(ruleConfig) {
+  const rule = Array.isArray(ruleConfig?.rule) ? ruleConfig.rule : [];
+  return rule[0] === 'categorize'
+    && rule.length >= 6
+    && (rule.length - 6) % 4 === 0
+    && isCategorizeSetTarget(rule[4]);
 }
 
 function normalizeLocalRule(typeId, rule) {
@@ -573,6 +588,20 @@ function getEnabledRulesByType(typeId) {
     .sort((a, b) => safeOrder(a.orderOfExecution) - safeOrder(b.orderOfExecution));
 }
 
+function getRulesForSection(typeId) {
+  if (typeId === 'custom') {
+    return getEnabledRulesByType('categorize')
+      .filter(rule => isCustomCategorizeRule(rule));
+  }
+
+  if (typeId === 'categorize') {
+    return getEnabledRulesByType('categorize')
+      .filter(rule => !isCustomCategorizeRule(rule));
+  }
+
+  return getEnabledRulesByType(typeId);
+}
+
 function isGlobalCategorizeRule(rule) {
   const applyForTabs = Array.isArray(rule?.applyForTabs) ? rule.applyForTabs : [];
   return rule?.rule?.[0] === 'categorize' && applyForTabs.includes('_GLOBAL');
@@ -603,10 +632,10 @@ function getDisabledRulesByType() {
 
 function getRuleCountByType(typeId, enabledOnly = false) {
   if (enabledOnly) {
-    return getEnabledRulesByType(typeId).length;
+    return getRulesForSection(typeId).length;
   }
 
-  return getEnabledRulesByType(typeId).length;
+  return getRulesForSection(typeId).length;
 }
 
 const enabledRules = computed(() => [
@@ -753,7 +782,7 @@ const enabledRulesByTypeComputed = computed({
   get: () => {
     const result = {};
     standardRuleTypes.forEach(type => {
-      result[type.id] = getEnabledRulesByType(type.id);
+      result[type.id] = getRulesForSection(type.id);
     });
     return result;
   },
@@ -1108,7 +1137,11 @@ function getSortDirectionOptions(sortPropertyName) {
     ];
   }
 
-  if (normalizedSortPropertyName === 'name' || normalizedSortPropertyName === 'category') {
+  if (
+    normalizedSortPropertyName === 'name'
+    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'category'
+  ) {
     return [
       { value: 'asc', label: 'A to Z' },
       { value: 'desc', label: 'Z to A' }
@@ -1276,7 +1309,37 @@ async function onDragEnd(event) {
   const { newIndex, oldIndex, from } = event;
   if (newIndex === oldIndex) return;
 
-  const ruleTypeId = sanitizeRuleType(from.getAttribute('data-rule-type'));
+  const sectionTypeId = String(from.getAttribute('data-rule-type') || '').trim();
+
+  if (sectionTypeId === 'custom') {
+    const customRules = getRulesForSection('custom').map(cloneRule);
+    const [removedCustomRule] = customRules.splice(oldIndex, 1);
+    customRules.splice(newIndex, 0, removedCustomRule);
+
+    const categorizeRules = getRulesForSection('categorize').map(cloneRule);
+    localRulesByType.value.categorize = withRenumberedOrder([
+      ...customRules,
+      ...categorizeRules
+    ]);
+    await persistDepthRules();
+    return;
+  }
+
+  if (sectionTypeId === 'categorize') {
+    const customRules = getRulesForSection('custom').map(cloneRule);
+    const categorizeRules = getRulesForSection('categorize').map(cloneRule);
+    const [removedCategorizeRule] = categorizeRules.splice(oldIndex, 1);
+    categorizeRules.splice(newIndex, 0, removedCategorizeRule);
+
+    localRulesByType.value.categorize = withRenumberedOrder([
+      ...customRules,
+      ...categorizeRules
+    ]);
+    await persistDepthRules();
+    return;
+  }
+
+  const ruleTypeId = sanitizeRuleType(sectionTypeId);
   const rules = getEnabledRulesByType(ruleTypeId).map(cloneRule);
   const [removed] = rules.splice(oldIndex, 1);
   rules.splice(newIndex, 0, removed);
@@ -1285,6 +1348,10 @@ async function onDragEnd(event) {
 }
 
 function createNewRuleWithType(typeId) {
+  if (typeId === 'custom') {
+    return openCustomRuleEditorForm();
+  }
+
   const normalizedType = sanitizeRuleType(typeId);
   const tabId = state.selected.tab?._id;
 
@@ -1317,7 +1384,7 @@ function openCustomRuleEditorForm() {
 function editRule(rule) {
   currentRule.value = cloneRule(rule);
   isNewRule.value = false;
-  isCustomRuleEditorMode.value = false;
+  isCustomRuleEditorMode.value = isCustomCategorizeRule(rule);
   initialMakeGlobalForEditor.value = Boolean(
     rule?.rule?.[0] === 'categorize' && findGlobalCategorizeRuleById(rule?._id)
   );
