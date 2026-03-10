@@ -1387,6 +1387,150 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['feb, 01', 'jan, 10', 'jan, 02']);
   });
 
+  test('groupBy category respects sort date direction for group row order', () => {
+    const transactions = [
+      {
+        transaction_id: 'alpha-oldest',
+        amount: 20,
+        authorized_date: '2026-01-05',
+        date: '2026-01-05',
+        personal_finance_category: { primary: 'ALPHA' }
+      },
+      {
+        transaction_id: 'alpha-newest',
+        amount: 10,
+        authorized_date: '2026-01-20',
+        date: '2026-01-20',
+        personal_finance_category: { primary: 'ALPHA' }
+      },
+      {
+        transaction_id: 'beta-oldest',
+        amount: 15,
+        authorized_date: '2026-01-10',
+        date: '2026-01-10',
+        personal_finance_category: { primary: 'BETA' }
+      },
+      {
+        transaction_id: 'beta-newest',
+        amount: 12,
+        authorized_date: '2026-02-01',
+        date: '2026-02-01',
+        personal_finance_category: { primary: 'BETA' }
+      }
+    ];
+
+    const ascendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        },
+        {
+          _id: 's-date-asc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'asc', '', '']
+        }
+      ]
+    });
+
+    const descendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        {
+          _id: 'g-category',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'category', '', '', '']
+        },
+        {
+          _id: 's-date-desc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'desc', '', '']
+        }
+      ]
+    });
+
+    expect(ascendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['alpha', 'beta']);
+    expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['beta', 'alpha']);
+  });
+
+  test('groupBy tag respects sort date direction for group row order', () => {
+    const transactions = [
+      {
+        transaction_id: 'alpha-oldest',
+        amount: 30,
+        authorized_date: '2026-01-01',
+        date: '2026-01-01',
+        tags: ['alpha'],
+        personal_finance_category: { primary: 'MISC' }
+      },
+      {
+        transaction_id: 'alpha-newest',
+        amount: 22,
+        authorized_date: '2026-01-15',
+        date: '2026-01-15',
+        tags: ['alpha'],
+        personal_finance_category: { primary: 'MISC' }
+      },
+      {
+        transaction_id: 'beta-oldest',
+        amount: 18,
+        authorized_date: '2026-01-10',
+        date: '2026-01-10',
+        tags: ['beta'],
+        personal_finance_category: { primary: 'MISC' }
+      },
+      {
+        transaction_id: 'beta-newest',
+        amount: 16,
+        authorized_date: '2026-02-01',
+        date: '2026-02-01',
+        tags: ['beta'],
+        personal_finance_category: { primary: 'MISC' }
+      }
+    ];
+
+    const ascendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        {
+          _id: 'g-tag',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'tag', '', '', '']
+        },
+        {
+          _id: 's-date-asc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'asc', '', '']
+        }
+      ]
+    });
+
+    const descendingResult = evaluateTabData({
+      tab: { _id: 'tab-1', isSelected: true },
+      transactions,
+      tabRules: [
+        {
+          _id: 'g-tag',
+          orderOfExecution: 0,
+          rule: ['groupBy', 'tag', '', '', '']
+        },
+        {
+          _id: 's-date-desc',
+          orderOfExecution: 0,
+          rule: ['sort', 'date', 'desc', '', '']
+        }
+      ]
+    });
+
+    expect(ascendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['alpha', 'beta']);
+    expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['beta', 'alpha']);
+  });
+
   test('groupBy category respects sort amount direction using category totals', () => {
     const ascendingResult = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },

@@ -84,7 +84,7 @@
                 v-if="shouldShowGroupSortTag(group)"
                 class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg tracking-widest transition-colors shrink-0"
               >
-                {{ group.sortTag }}
+                {{ resolveGroupSortTag(group) }}
               </span>
             </div>
           </div>
@@ -145,22 +145,29 @@ const props = defineProps({
 const emit = defineEmits(['group-selected']);
 const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();
-const isSortingByTag = computed(() => String(props.sortProperty || '').trim().toLowerCase() === 'tag');
 const normalizedGroupByMode = computed(() => String(props.groupByMode || '').trim().toLowerCase());
 
 function primaryTag(item) {
-  const rawTags = item?.tags;
-  if (Array.isArray(rawTags)) {
-    return rawTags
-      .map(tag => String(tag || '').trim())
-      .find(Boolean) || '';
+  const normalizedPrimaryTag = (rawValue) => {
+    if (Array.isArray(rawValue)) {
+      return rawValue
+        .map(tag => String(tag || '').trim())
+        .find(Boolean) || '';
+    }
+
+    if (typeof rawValue === 'string') {
+      return rawValue.trim();
+    }
+
+    return '';
+  };
+
+  const fromTags = normalizedPrimaryTag(item?.tags);
+  if (fromTags) {
+    return fromTags;
   }
 
-  if (typeof rawTags === 'string') {
-    return rawTags.trim();
-  }
-
-  return '';
+  return normalizedPrimaryTag(item?.tag);
 }
 
 function itemIsSelected(itemId) {
@@ -181,11 +188,10 @@ function transactionDate(item) {
 }
 
 function shouldShowGroupSortTag(group) {
+  const resolvedGroupSortTag = resolveGroupSortTag(group);
   return Boolean(
-    isSortingByTag.value
-    && normalizedGroupByMode.value !== 'tag'
-    && typeof group?.sortTag === 'string'
-    && group.sortTag.trim().length
+    normalizedGroupByMode.value !== 'tag'
+    && resolvedGroupSortTag
   );
 }
 
@@ -193,10 +199,28 @@ function resolveLeafSortTag(item) {
   return primaryTag(item) || 'untagged';
 }
 
+function resolveGroupSortTag(group) {
+  const explicitSortTag = String(group?.sortTag || '').trim();
+  if (explicitSortTag) {
+    return explicitSortTag;
+  }
+
+  const groupItems = Array.isArray(group?.items) ? group.items : [];
+  if (groupItems.length) {
+    return resolveLeafSortTag(groupItems[0]);
+  }
+
+  const originalItems = Array.isArray(group?.originalItems) ? group.originalItems : [];
+  if (originalItems.length) {
+    return resolveLeafSortTag(originalItems[0]);
+  }
+
+  return '';
+}
+
 function shouldShowLeafSortTag(item) {
   return Boolean(
-    isSortingByTag.value
-    && normalizedGroupByMode.value === 'none'
+    normalizedGroupByMode.value === 'none'
     && resolveLeafSortTag(item)
   );
 }

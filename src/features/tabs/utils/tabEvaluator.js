@@ -242,42 +242,52 @@ export function buildTabRulesForId(allRules = [], tabId) {
 }
 
 function getItemValue(item, propName) {
+  const normalizedPropName = String(propName || '').trim().toLowerCase();
+
   if (isGlobalCategoryProperty(propName)) {
     return item._globalCategory || item.personal_finance_category?.primary;
   }
 
-  if (propName === 'category') {
+  if (normalizedPropName === 'category') {
     return item.personal_finance_category?.primary;
   }
 
-  if (propName === 'tag') {
+  if (normalizedPropName === 'tag' || normalizedPropName === 'tags') {
     return primaryTag(item);
   }
 
-  if (isAccountProperty(propName)) {
+  if (isAccountProperty(normalizedPropName)) {
     return item?.account_id || item?.accountId || item?.account || '';
   }
 
-  if (propName === 'date') {
+  if (normalizedPropName === 'date') {
     return item.authorized_date || item.date;
   }
 
-  return item[propName];
+  return item[propName] ?? item[normalizedPropName];
 }
 
 function primaryTag(item) {
-  const rawTags = item?.tags;
-  if (Array.isArray(rawTags)) {
-    return rawTags
-      .map(tag => String(tag || '').trim())
-      .find(Boolean) || '';
+  const normalizeTagValue = (rawValue) => {
+    if (Array.isArray(rawValue)) {
+      return rawValue
+        .map(tag => String(tag || '').trim())
+        .find(Boolean) || '';
+    }
+
+    if (typeof rawValue === 'string') {
+      return rawValue.trim();
+    }
+
+    return '';
+  };
+
+  const tagsValue = normalizeTagValue(item?.tags);
+  if (tagsValue) {
+    return tagsValue;
   }
 
-  if (typeof rawTags === 'string') {
-    return rawTags.trim();
-  }
-
-  return '';
+  return normalizeTagValue(item?.tag);
 }
 
 function isGlobalCategoryProperty(propName) {
@@ -461,10 +471,19 @@ function shouldSortGroupsByAmount(groupByMode, sortPropName) {
 }
 
 function shouldSortGroupsByFirstItemProperty(groupByMode, sortPropName) {
-  return Boolean(groupByMode)
-    && groupByMode !== NO_GROUPING_RULE_VALUE
-    && sortPropName === 'tag'
-    && groupByMode !== 'tag';
+  if (!groupByMode || groupByMode === NO_GROUPING_RULE_VALUE) {
+    return false;
+  }
+
+  if (sortPropName === 'tag') {
+    return groupByMode !== 'tag';
+  }
+
+  if (sortPropName === 'date') {
+    return !['year', 'month', 'day', 'date', 'year_month', 'weekday'].includes(groupByMode);
+  }
+
+  return false;
 }
 
 function resolveGroupSortValueByDirection(groupItems, sortPropName, sortDirection) {
@@ -634,7 +653,11 @@ function normalizeConditionCombinator(combinator) {
 }
 
 function normalizeSortPropertyName(itemPropName) {
-  return String(itemPropName || '').trim().replace(/^-/, '');
+  const normalizedSortPropertyName = String(itemPropName || '').trim().replace(/^-/, '').toLowerCase();
+
+  return normalizedSortPropertyName === 'tags'
+    ? 'tag'
+    : normalizedSortPropertyName;
 }
 
 function buildSortPropertyName(itemPropName, sortDirection) {

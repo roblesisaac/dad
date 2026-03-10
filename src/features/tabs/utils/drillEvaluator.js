@@ -49,18 +49,26 @@ function resolvePrimarySort(levelRuleConfigs = []) {
 }
 
 function primaryTag(item) {
-  const rawTags = item?.tags;
-  if (Array.isArray(rawTags)) {
-    return rawTags
-      .map(tag => String(tag || '').trim())
-      .find(Boolean) || '';
+  const normalizeTagValue = (rawValue) => {
+    if (Array.isArray(rawValue)) {
+      return rawValue
+        .map(tag => String(tag || '').trim())
+        .find(Boolean) || '';
+    }
+
+    if (typeof rawValue === 'string') {
+      return rawValue.trim();
+    }
+
+    return '';
+  };
+
+  const tagsValue = normalizeTagValue(item?.tags);
+  if (tagsValue) {
+    return tagsValue;
   }
 
-  if (typeof rawTags === 'string') {
-    return rawTags.trim();
-  }
-
-  return '';
+  return normalizeTagValue(item?.tag);
 }
 
 function compareTextValues(valueA, valueB) {
