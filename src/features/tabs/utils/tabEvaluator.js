@@ -252,8 +252,8 @@ function getItemValue(item, propName) {
     return item.personal_finance_category?.primary;
   }
 
-  if (normalizedPropName === 'tag' || normalizedPropName === 'tags') {
-    return primaryTag(item);
+  if (normalizedPropName === 'label') {
+    return primaryLabel(item);
   }
 
   if (isAccountProperty(normalizedPropName)) {
@@ -267,11 +267,11 @@ function getItemValue(item, propName) {
   return item[propName] ?? item[normalizedPropName];
 }
 
-function primaryTag(item) {
-  const normalizeTagValue = (rawValue) => {
+function primaryLabel(item) {
+  const normalizeLabelValue = (rawValue) => {
     if (Array.isArray(rawValue)) {
       return rawValue
-        .map(tag => String(tag || '').trim())
+        .map(label => String(label || '').trim())
         .find(Boolean) || '';
     }
 
@@ -282,12 +282,12 @@ function primaryTag(item) {
     return '';
   };
 
-  const tagsValue = normalizeTagValue(item?.tags);
-  if (tagsValue) {
-    return tagsValue;
+  const labelsValue = normalizeLabelValue(item?.labels);
+  if (labelsValue) {
+    return labelsValue;
   }
 
-  return normalizeTagValue(item?.tag);
+  return '';
 }
 
 function isGlobalCategoryProperty(propName) {
@@ -453,8 +453,8 @@ function shouldSortGroupsBySelectedSort(groupByMode, sortPropName) {
     return sortPropName === 'name';
   }
 
-  if (groupByMode === 'tag') {
-    return sortPropName === 'tag';
+  if (groupByMode === 'label') {
+    return sortPropName === 'label';
   }
 
   if (['year', 'month', 'year_month', 'day', 'date', 'weekday'].includes(groupByMode)) {
@@ -475,8 +475,8 @@ function shouldSortGroupsByFirstItemProperty(groupByMode, sortPropName) {
     return false;
   }
 
-  if (sortPropName === 'tag') {
-    return groupByMode !== 'tag';
+  if (sortPropName === 'label') {
+    return groupByMode !== 'label';
   }
 
   if (sortPropName === 'date') {
@@ -521,7 +521,7 @@ function compareGroupsByFirstItemProperty(groupA, groupB, sortPropName, groupByM
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'label';
 }
 
 function normalizeCategorizeSetTarget(target) {
@@ -530,8 +530,8 @@ function normalizeCategorizeSetTarget(target) {
     return 'name';
   }
 
-  if (normalizedTarget === 'tag') {
-    return 'tag';
+  if (normalizedTarget === 'label') {
+    return 'label';
   }
 
   return 'category';
@@ -653,11 +653,7 @@ function normalizeConditionCombinator(combinator) {
 }
 
 function normalizeSortPropertyName(itemPropName) {
-  const normalizedSortPropertyName = String(itemPropName || '').trim().replace(/^-/, '').toLowerCase();
-
-  return normalizedSortPropertyName === 'tags'
-    ? 'tag'
-    : normalizedSortPropertyName;
+  return String(itemPropName || '').trim().replace(/^-/, '').toLowerCase();
 }
 
 function buildSortPropertyName(itemPropName, sortDirection) {
@@ -906,10 +902,10 @@ function applyCategorizerScope(item, categorizers = []) {
       continue;
     }
 
-    if (setTarget === 'tag') {
-      const nextTag = String(setValue || '').trim();
-      if (nextTag) {
-        item.tags = [nextTag];
+    if (setTarget === 'label') {
+      const nextLabel = String(setValue || '').trim();
+      if (nextLabel) {
+        item.labels = [nextLabel];
       }
       continue;
     }
@@ -1008,7 +1004,7 @@ function buildGroupByMethod(propToGroupByArray, months, getDayOfWeekPST) {
     [NO_GROUPING_RULE_VALUE]: () => NO_GROUPING_CATEGORY_NAME,
     category: (item) => item.personal_finance_category?.primary || 'misc',
     name: (item) => String(item?.name || '').trim() || 'unnamed transaction',
-    tag: (item) => primaryTag(item) || 'untagged',
+    label: (item) => primaryLabel(item) || 'unlabeled',
     year: (item) => {
       const [year] = String(item.authorized_date || item.date || '').split('-');
       return year;

@@ -429,7 +429,7 @@ const GROUP_BY_OPTIONS = [
   { value: 'none', label: 'No Grouping' },
   { value: 'category', label: 'Category' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'date', label: 'Day' },
   { value: 'year_month', label: 'Month' },
   { value: 'weekday', label: 'Weekday' }
@@ -437,7 +437,7 @@ const GROUP_BY_OPTIONS = [
 
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'date', label: 'Date' },
   { value: 'category', label: 'Category' },
   { value: 'amount', label: 'Amount' }
@@ -494,7 +494,7 @@ function sanitizeRuleType(typeId = '') {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'label';
 }
 
 function normalizeCategorizeSetTarget(target) {
@@ -503,8 +503,8 @@ function normalizeCategorizeSetTarget(target) {
     return 'name';
   }
 
-  if (normalizedTarget === 'tag') {
-    return 'tag';
+  if (normalizedTarget === 'label') {
+    return 'label';
   }
 
   return 'category';
@@ -1166,7 +1166,7 @@ function getSortDirectionOptions(sortPropertyName) {
 
   if (
     normalizedSortPropertyName === 'name'
-    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'label'
     || normalizedSortPropertyName === 'category'
   ) {
     return [
@@ -1196,7 +1196,7 @@ function normalizeGroupByOptionForUi(rawGroupByOption) {
     'none',
     'category',
     'name',
-    'tag',
+    'label',
     'date',
     'year_month',
     'weekday'

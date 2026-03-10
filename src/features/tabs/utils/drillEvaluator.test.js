@@ -171,11 +171,11 @@ describe('drillEvaluator', () => {
     expect(result.groups.map(group => group.key)).toEqual(['bravo', 'alpha']);
   });
 
-  test('exposes sort-tag metadata for grouped rows when sort by tag is active', () => {
+  test('exposes sort-label metadata for grouped rows when sort by label is active', () => {
     const tab = createTab([
       {
         id: 'level-1',
-        sortRules: [createRule('sort-tag', ['sort', 'tag', 'asc', '', ''])],
+        sortRules: [createRule('sort-label', ['sort', 'label', 'asc', '', ''])],
         categorizeRules: [],
         filterRules: [],
         groupByRules: [createRule('group-category', ['groupBy', 'category', '', '', ''])]
@@ -184,15 +184,15 @@ describe('drillEvaluator', () => {
 
     const transactions = [
       createTransaction('t1', {
-        tags: ['zebra'],
+        labels: ['zebra'],
         personal_finance_category: { primary: 'ALPHA' }
       }),
       createTransaction('t2', {
-        tags: ['alpha'],
+        labels: ['alpha'],
         personal_finance_category: { primary: 'ALPHA' }
       }),
       createTransaction('t3', {
-        tags: ['mango'],
+        labels: ['mango'],
         personal_finance_category: { primary: 'BETA' }
       })
     ];
@@ -204,11 +204,11 @@ describe('drillEvaluator', () => {
       drillPath: []
     });
 
-    expect(result.sortProperty).toBe('tag');
+    expect(result.sortProperty).toBe('label');
     expect(result.sortDirection).toBe('asc');
-    expect(result.groups.map(group => ({ key: group.key, sortTag: group.sortTag }))).toEqual([
-      { key: 'alpha', sortTag: 'alpha' },
-      { key: 'beta', sortTag: 'mango' }
+    expect(result.groups.map(group => ({ key: group.key, sortLabel: group.sortLabel }))).toEqual([
+      { key: 'alpha', sortLabel: 'alpha' },
+      { key: 'beta', sortLabel: 'mango' }
     ]);
   });
 

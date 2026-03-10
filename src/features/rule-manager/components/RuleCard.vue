@@ -305,7 +305,7 @@ function getSortDirectionLabel(sortPropertyName, sortDirection) {
 
   if (
     normalizedSortPropertyName === 'name'
-    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'label'
     || normalizedSortPropertyName === 'category'
   ) {
     return normalizedSortDirection === 'asc'
@@ -324,7 +324,7 @@ function formatCombinator(combinator) {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'label';
 }
 
 function normalizeCategorizeSetTarget(target) {
@@ -333,8 +333,8 @@ function normalizeCategorizeSetTarget(target) {
     return 'name';
   }
 
-  if (normalizedTarget === 'tag') {
-    return 'tag';
+  if (normalizedTarget === 'label') {
+    return 'label';
   }
 
   return 'category';

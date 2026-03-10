@@ -827,46 +827,17 @@
                   <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase px-1">Quick Select</div>
                   <div class="grid grid-cols-2 gap-2">
                     <button
+                      v-for="option in rowEditorQuickSelectOptions"
+                      :key="option.id"
                       class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('today')"
+                      @click="applyQuickSelect(option.id)"
                     >
-                      Today
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('prevMonth')"
-                    >
-                      Prev Month
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('nextMonth')"
-                    >
-                      Next Month
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('prevYear')"
-                    >
-                      Prev Year
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('nextYear')"
-                    >
-                      Next Year
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('last30Days')"
-                    >
-                      Last 30
-                    </button>
-                    <button
-                      class="px-3 py-2 bg-gray-100 hover:bg-black text-gray-800 hover:text-white text-xs font-black uppercase tracking-widest rounded-xl transition-colors border-2 border-transparent"
-                      @click="applyQuickSelect('last90Days')"
-                    >
-                      Last 90
+                      <span class="inline-flex items-baseline gap-1">
+                        <span>{{ option.label }}</span>
+                        <span v-if="option.secondaryLabel" class="text-[10px] font-semibold text-gray-500 tracking-normal">
+                          {{ option.secondaryLabel }}
+                        </span>
+                      </span>
                     </button>
                   </div>
                 </div>
@@ -1043,8 +1014,8 @@ import {
   isValid,
   parseISO,
   startOfMonth,
+  startOfWeek,
   startOfYear,
-  subDays,
   subMonths,
   subYears
 } from 'date-fns';
@@ -1266,6 +1237,207 @@ const isTabRowDateRangeValid = computed(() => {
   }
 
   return dateStart <= dateEnd;
+});
+
+const rowEditorDateRange = computed(() => {
+  if (rowEditorDraft.value?.type !== 'tab') {
+    return null;
+  }
+
+  const dateStart = String(rowEditorDraft.value?.dateStart || '').trim();
+  const dateEnd = String(rowEditorDraft.value?.dateEnd || '').trim();
+  if (!dateStart || !dateEnd) {
+    return null;
+  }
+
+  return {
+    start: parseDateInput(dateStart),
+    end: parseDateInput(dateEnd)
+  };
+});
+
+const isRowEditorRangeThisYear = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return false;
+  }
+
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const { start, end } = rowEditorDateRange.value;
+
+  return start.getFullYear() === currentYear
+    && start.getMonth() === 0
+    && start.getDate() === 1
+    && end.getFullYear() === today.getFullYear()
+    && end.getMonth() === today.getMonth()
+    && end.getDate() === today.getDate();
+});
+
+const isRowEditorRangeLastYear = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return false;
+  }
+
+  const lastYear = subYears(new Date(), 1).getFullYear();
+  const { start, end } = rowEditorDateRange.value;
+
+  return start.getFullYear() === lastYear
+    && start.getMonth() === 0
+    && start.getDate() === 1
+    && end.getFullYear() === lastYear
+    && end.getMonth() === 11
+    && end.getDate() === 31;
+});
+
+const isRowEditorRangeThisMonth = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return false;
+  }
+
+  const today = new Date();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+  const { start, end } = rowEditorDateRange.value;
+
+  return start.getFullYear() === currentYear
+    && start.getMonth() === currentMonth
+    && start.getDate() === 1
+    && end.getFullYear() === today.getFullYear()
+    && end.getMonth() === today.getMonth()
+    && end.getDate() === today.getDate();
+});
+
+const isRowEditorRangeLastMonth = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return false;
+  }
+
+  const lastMonthDate = subMonths(new Date(), 1);
+  const lastMonth = lastMonthDate.getMonth();
+  const lastMonthYear = lastMonthDate.getFullYear();
+  const { start, end } = rowEditorDateRange.value;
+  const lastDayOfLastMonth = new Date(lastMonthYear, lastMonth + 1, 0).getDate();
+
+  return start.getFullYear() === lastMonthYear
+    && start.getMonth() === lastMonth
+    && start.getDate() === 1
+    && end.getFullYear() === lastMonthYear
+    && end.getMonth() === lastMonth
+    && end.getDate() === lastDayOfLastMonth;
+});
+
+const rowEditorCurrentYear = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return null;
+  }
+
+  const { start, end } = rowEditorDateRange.value;
+
+  const isFullYearRange = isSameYear(start, end)
+    && start.getMonth() === 0
+    && start.getDate() === 1
+    && end.getMonth() === 11
+    && end.getDate() === 31;
+
+  return isFullYearRange ? start.getFullYear() : null;
+});
+
+const rowEditorCurrentMonthKey = computed(() => {
+  if (!rowEditorDateRange.value) {
+    return null;
+  }
+
+  const { start, end } = rowEditorDateRange.value;
+  const lastDayOfMonth = new Date(start.getFullYear(), start.getMonth() + 1, 0).getDate();
+  const isFullMonthRange = start.getFullYear() === end.getFullYear()
+    && start.getMonth() === end.getMonth()
+    && start.getDate() === 1
+    && end.getDate() === lastDayOfMonth;
+
+  return isFullMonthRange ? (start.getFullYear() * 12 + start.getMonth()) : null;
+});
+
+const getMonthSortValue = (date) => (date.getFullYear() * 12) + date.getMonth();
+const formatMonthYearLabel = (date) => {
+  const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+  return `${month} ${date.getFullYear()}`;
+};
+
+const rowEditorQuickSelectOptions = computed(() => {
+  const today = new Date();
+  const thisYear = today.getFullYear();
+  const lastYear = subYears(today, 1).getFullYear();
+  const thisMonthDate = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastMonthDate = subMonths(thisMonthDate, 1);
+
+  const yearOptions = [
+    ...(isRowEditorRangeThisYear.value ? [] : [{ id: 'thisYear', label: 'This Year', year: thisYear, secondaryLabel: String(thisYear) }]),
+    ...(isRowEditorRangeLastYear.value ? [] : [{ id: 'lastYear', label: 'Last Year', year: lastYear, secondaryLabel: String(lastYear) }]),
+  ];
+
+  const monthOptions = [
+    ...(isRowEditorRangeThisMonth.value ? [] : [{
+      id: 'thisMonth',
+      label: 'This Month',
+      monthSort: getMonthSortValue(thisMonthDate),
+      secondaryLabel: formatMonthYearLabel(thisMonthDate)
+    }]),
+    ...(isRowEditorRangeLastMonth.value ? [] : [{
+      id: 'lastMonth',
+      label: 'Last Month',
+      monthSort: getMonthSortValue(lastMonthDate),
+      secondaryLabel: formatMonthYearLabel(lastMonthDate)
+    }]),
+  ];
+
+  const nonDateScopedOptions = [
+    { id: 'thisWeek', label: 'This Week' },
+    { id: 'today', label: 'Today' },
+  ];
+
+  if (rowEditorCurrentYear.value !== null) {
+    const previousYear = rowEditorCurrentYear.value - 1;
+    const nextYear = addYears(rowEditorDateRange.value.start, 1).getFullYear();
+
+    if (previousYear !== lastYear) {
+      yearOptions.push({ id: 'prevYear', label: 'Prev Year', year: previousYear, secondaryLabel: String(previousYear) });
+    }
+
+    if (nextYear !== lastYear && nextYear !== thisYear) {
+      yearOptions.push({ id: 'nextYear', label: 'Next Year', year: nextYear, secondaryLabel: String(nextYear) });
+    }
+  }
+
+  if (rowEditorCurrentMonthKey.value !== null) {
+    const previousMonthDate = subMonths(rowEditorDateRange.value.start, 1);
+    const nextMonthDate = addMonths(rowEditorDateRange.value.start, 1);
+    const previousMonthSort = getMonthSortValue(previousMonthDate);
+    const nextMonthSort = getMonthSortValue(nextMonthDate);
+    const lastMonthSort = getMonthSortValue(lastMonthDate);
+    const thisMonthSort = getMonthSortValue(thisMonthDate);
+
+    if (previousMonthSort !== lastMonthSort) {
+      monthOptions.push({
+        id: 'prevMonth',
+        label: 'Prev Month',
+        monthSort: previousMonthSort,
+        secondaryLabel: formatMonthYearLabel(previousMonthDate)
+      });
+    }
+
+    if (nextMonthSort !== lastMonthSort && nextMonthSort !== thisMonthSort) {
+      monthOptions.push({
+        id: 'nextMonth',
+        label: 'Next Month',
+        monthSort: nextMonthSort,
+        secondaryLabel: formatMonthYearLabel(nextMonthDate)
+      });
+    }
+  }
+
+  const orderedYearOptions = [...yearOptions].sort((a, b) => a.year - b.year);
+  const orderedMonthOptions = [...monthOptions].sort((a, b) => a.monthSort - b.monthSort);
+  return [...orderedYearOptions, ...orderedMonthOptions, ...nonDateScopedOptions];
 });
 
 const canResolveTabOptionsForRow = computed(() => (
@@ -3277,6 +3449,25 @@ function applyQuickSelect(period) {
     && formatDate(currentEnd, 'yyyy-MM-dd') === formatDate(endOfYear(currentEnd), 'yyyy-MM-dd');
 
   switch (period) {
+    case 'thisYear':
+      setDraftDateRange(startOfYear(today), today);
+      break;
+    case 'lastYear': {
+      const lastYear = subYears(today, 1);
+      setDraftDateRange(startOfYear(lastYear), endOfYear(lastYear));
+      break;
+    }
+    case 'thisMonth':
+      setDraftDateRange(startOfMonth(today), today);
+      break;
+    case 'lastMonth': {
+      const lastMonth = subMonths(today, 1);
+      setDraftDateRange(startOfMonth(lastMonth), endOfMonth(lastMonth));
+      break;
+    }
+    case 'thisWeek':
+      setDraftDateRange(startOfWeek(today), today);
+      break;
     case 'today':
       setDraftDateRange(today, today);
       break;
@@ -3300,12 +3491,6 @@ function applyQuickSelect(period) {
       setDraftDateRange(startOfYear(base), endOfYear(base));
       break;
     }
-    case 'last30Days':
-      setDraftDateRange(subDays(today, 30), today);
-      break;
-    case 'last90Days':
-      setDraftDateRange(subDays(today, 90), today);
-      break;
     default:
       break;
   }

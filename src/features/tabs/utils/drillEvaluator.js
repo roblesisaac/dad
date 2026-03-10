@@ -48,11 +48,11 @@ function resolvePrimarySort(levelRuleConfigs = []) {
   };
 }
 
-function primaryTag(item) {
-  const normalizeTagValue = (rawValue) => {
+function primaryLabel(item) {
+  const normalizeLabelValue = (rawValue) => {
     if (Array.isArray(rawValue)) {
       return rawValue
-        .map(tag => String(tag || '').trim())
+        .map(label => String(label || '').trim())
         .find(Boolean) || '';
     }
 
@@ -63,36 +63,36 @@ function primaryTag(item) {
     return '';
   };
 
-  const tagsValue = normalizeTagValue(item?.tags);
-  if (tagsValue) {
-    return tagsValue;
+  const labelsValue = normalizeLabelValue(item?.labels);
+  if (labelsValue) {
+    return labelsValue;
   }
 
-  return normalizeTagValue(item?.tag);
+  return '';
 }
 
 function compareTextValues(valueA, valueB) {
   return String(valueA || '').toLowerCase().localeCompare(String(valueB || '').toLowerCase());
 }
 
-function resolveGroupSortTag(groupItems = [], sortDirection = DEFAULT_SORT_DIRECTION) {
+function resolveGroupSortLabel(groupItems = [], sortDirection = DEFAULT_SORT_DIRECTION) {
   const items = Array.isArray(groupItems) ? groupItems : [];
   if (!items.length) {
     return '';
   }
 
   const prefersHigherValues = String(sortDirection || '').toLowerCase() === 'desc';
-  let selectedTag = primaryTag(items[0]) || 'untagged';
+  let selectedLabel = primaryLabel(items[0]) || 'unlabeled';
 
   for (let index = 1; index < items.length; index += 1) {
-    const nextTag = primaryTag(items[index]) || 'untagged';
-    const comparison = compareTextValues(nextTag, selectedTag);
+    const nextLabel = primaryLabel(items[index]) || 'unlabeled';
+    const comparison = compareTextValues(nextLabel, selectedLabel);
     if ((prefersHigherValues && comparison > 0) || (!prefersHigherValues && comparison < 0)) {
-      selectedTag = nextTag;
+      selectedLabel = nextLabel;
     }
   }
 
-  return selectedTag;
+  return selectedLabel;
 }
 
 function normalizeRecategorizeBehaviorDecision(value) {
@@ -253,8 +253,8 @@ function evaluateLevel({
     const groupItems = Array.isArray(items) ? items : [];
     const originalItems = extractOriginalItemsFromProcessed(groupItems, originalLookup);
     const key = String(label || '').trim().toLowerCase();
-    const sortTag = primarySort.sortProperty === 'tag'
-      ? resolveGroupSortTag(groupItems, primarySort.sortDirection)
+    const sortLabel = primarySort.sortProperty === 'label'
+      ? resolveGroupSortLabel(groupItems, primarySort.sortDirection)
       : '';
 
     return {
@@ -262,7 +262,7 @@ function evaluateLevel({
       label: String(label || ''),
       total: Number.isFinite(Number(total)) ? Number(total) : 0,
       count: originalItems.length,
-      sortTag,
+      sortLabel,
       items: groupItems,
       originalItems
     };

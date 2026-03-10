@@ -20,14 +20,14 @@
                 {{ item.name }}
               </div>
               <div
-                v-if="shouldShowLeafSortTag(item) || item.pending || item.check_number"
+                v-if="shouldShowLeafSortLabel(item) || item.pending || item.check_number"
                 class="mt-2 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400"
               >
                 <span
-                  v-if="shouldShowLeafSortTag(item)"
+                  v-if="shouldShowLeafSortLabel(item)"
                   class="px-2 py-1 group-count-badge rounded-lg tracking-widest text-[10px] font-black"
                 >
-                  {{ resolveLeafSortTag(item) }}
+                  {{ resolveLeafSortLabel(item) }}
                 </span>
                 <span v-if="item.pending">Pending</span>
                 <span v-if="item.check_number">#{{ item.check_number }}</span>
@@ -81,10 +81,10 @@
                 {{ group.count }}
               </span>
               <span
-                v-if="shouldShowGroupSortTag(group)"
+                v-if="shouldShowGroupSortLabel(group)"
                 class="px-2 py-1 text-[10px] font-black group-count-badge rounded-lg tracking-widest transition-colors shrink-0"
               >
-                {{ resolveGroupSortTag(group) }}
+                {{ resolveGroupSortLabel(group) }}
               </span>
             </div>
           </div>
@@ -147,11 +147,11 @@ const { state } = useDashboardState();
 const { fontColor, formatPrice } = useUtils();
 const normalizedGroupByMode = computed(() => String(props.groupByMode || '').trim().toLowerCase());
 
-function primaryTag(item) {
-  const normalizedPrimaryTag = (rawValue) => {
+function primaryLabel(item) {
+  const normalizedPrimaryLabel = (rawValue) => {
     if (Array.isArray(rawValue)) {
       return rawValue
-        .map(tag => String(tag || '').trim())
+        .map(label => String(label || '').trim())
         .find(Boolean) || '';
     }
 
@@ -162,12 +162,12 @@ function primaryTag(item) {
     return '';
   };
 
-  const fromTags = normalizedPrimaryTag(item?.tags);
-  if (fromTags) {
-    return fromTags;
+  const fromLabels = normalizedPrimaryLabel(item?.labels);
+  if (fromLabels) {
+    return fromLabels;
   }
 
-  return normalizedPrimaryTag(item?.tag);
+  return '';
 }
 
 function itemIsSelected(itemId) {
@@ -187,41 +187,41 @@ function transactionDate(item) {
   return item?.authorized_date || item?.date || '';
 }
 
-function shouldShowGroupSortTag(group) {
-  const resolvedGroupSortTag = resolveGroupSortTag(group);
+function shouldShowGroupSortLabel(group) {
+  const resolvedGroupSortLabel = resolveGroupSortLabel(group);
   return Boolean(
-    normalizedGroupByMode.value !== 'tag'
-    && resolvedGroupSortTag
+    normalizedGroupByMode.value !== 'label'
+    && resolvedGroupSortLabel
   );
 }
 
-function resolveLeafSortTag(item) {
-  return primaryTag(item) || 'untagged';
+function resolveLeafSortLabel(item) {
+  return primaryLabel(item) || 'unlabeled';
 }
 
-function resolveGroupSortTag(group) {
-  const explicitSortTag = String(group?.sortTag || '').trim();
-  if (explicitSortTag) {
-    return explicitSortTag;
+function resolveGroupSortLabel(group) {
+  const explicitSortLabel = String(group?.sortLabel || '').trim();
+  if (explicitSortLabel) {
+    return explicitSortLabel;
   }
 
   const groupItems = Array.isArray(group?.items) ? group.items : [];
   if (groupItems.length) {
-    return resolveLeafSortTag(groupItems[0]);
+    return resolveLeafSortLabel(groupItems[0]);
   }
 
   const originalItems = Array.isArray(group?.originalItems) ? group.originalItems : [];
   if (originalItems.length) {
-    return resolveLeafSortTag(originalItems[0]);
+    return resolveLeafSortLabel(originalItems[0]);
   }
 
   return '';
 }
 
-function shouldShowLeafSortTag(item) {
+function shouldShowLeafSortLabel(item) {
   return Boolean(
     normalizedGroupByMode.value === 'none'
-    && resolveLeafSortTag(item)
+    && resolveLeafSortLabel(item)
   );
 }
 </script>

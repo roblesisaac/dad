@@ -450,7 +450,7 @@ describe('tabEvaluator', () => {
     expect(uberTransaction?.personal_finance_category?.primary).toBe('travel');
   });
 
-  test('supports set-target categorize rules that set transaction tags', () => {
+  test('supports set-target categorize rules that set transaction labels', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
@@ -473,10 +473,10 @@ describe('tabEvaluator', () => {
       ],
       tabRules: [
         {
-          _id: 'global-tag-uber',
+          _id: 'global-label-uber',
           orderOfExecution: 0,
           _isGlobalCategorizeRule: true,
-          rule: ['categorize', 'name', 'includes', 'uber', 'tag', 'rideshare']
+          rule: ['categorize', 'name', 'includes', 'uber', 'label', 'rideshare']
         },
         {
           _id: 'g-category',
@@ -490,12 +490,12 @@ describe('tabEvaluator', () => {
     const uberTransaction = allItems.find(item => item.transaction_id === 'uber-trip');
     const coffeeTransaction = allItems.find(item => item.transaction_id === 'coffee');
 
-    expect(uberTransaction?.tags).toEqual(['rideshare']);
-    expect(coffeeTransaction?.tags).toBeUndefined();
+    expect(uberTransaction?.labels).toEqual(['rideshare']);
+    expect(coffeeTransaction?.labels).toBeUndefined();
     expect(uberTransaction?.personal_finance_category?.primary).toBe('travel');
   });
 
-  test('supports filter rules that target transaction tags', () => {
+  test('supports filter rules that target transaction labels', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
@@ -505,7 +505,7 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-01',
           date: '2026-01-01',
           name: 'Work Lunch',
-          tags: ['reimbursable'],
+          labels: ['reimbursable'],
           personal_finance_category: { primary: 'FOOD_AND_DRINK' }
         },
         {
@@ -514,15 +514,15 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-02',
           date: '2026-01-02',
           name: 'Personal Coffee',
-          tags: ['personal'],
+          labels: ['personal'],
           personal_finance_category: { primary: 'FOOD_AND_DRINK' }
         }
       ],
       tabRules: [
         {
-          _id: 'filter-tag',
+          _id: 'filter-label',
           orderOfExecution: 0,
-          rule: ['filter', 'tag', '=', 'reimbursable', '']
+          rule: ['filter', 'label', '=', 'reimbursable', '']
         },
         {
           _id: 'group-category',
@@ -543,7 +543,7 @@ describe('tabEvaluator', () => {
     expect(hiddenTransactionIds).toEqual(['personal-coffee']);
   });
 
-  test('supports categorize rules that target transaction tags', () => {
+  test('supports categorize rules that target transaction labels', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
@@ -553,7 +553,7 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-01',
           date: '2026-01-01',
           name: 'Work Lunch',
-          tags: ['reimbursable'],
+          labels: ['reimbursable'],
           personal_finance_category: { primary: 'FOOD_AND_DRINK' }
         },
         {
@@ -562,15 +562,15 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-02',
           date: '2026-01-02',
           name: 'Personal Coffee',
-          tags: ['personal'],
+          labels: ['personal'],
           personal_finance_category: { primary: 'FOOD_AND_DRINK' }
         }
       ],
       tabRules: [
         {
-          _id: 'categorize-tag',
+          _id: 'categorize-label',
           orderOfExecution: 0,
-          rule: ['categorize', 'tag', '=', 'reimbursable', 'work expenses']
+          rule: ['categorize', 'label', '=', 'reimbursable', 'work expenses']
         },
         {
           _id: 'group-category',
@@ -1039,7 +1039,7 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['Bravo', 'Alpha']);
   });
 
-  test('groupBy tag groups tagged and untagged transactions', () => {
+  test('groupBy label groups labeled and unlabeled transactions', () => {
     const result = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
@@ -1049,7 +1049,7 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-01',
           date: '2026-01-01',
           name: 'Uber',
-          tags: ['rideshare'],
+          labels: ['rideshare'],
           personal_finance_category: { primary: 'TRAVEL' }
         },
         {
@@ -1058,7 +1058,7 @@ describe('tabEvaluator', () => {
           authorized_date: '2026-01-02',
           date: '2026-01-02',
           name: 'Lyft',
-          tags: ['rideshare'],
+          labels: ['rideshare'],
           personal_finance_category: { primary: 'TRANSPORTATION' }
         },
         {
@@ -1072,54 +1072,54 @@ describe('tabEvaluator', () => {
       ],
       tabRules: [
         {
-          _id: 'g-tag',
+          _id: 'g-label',
           orderOfExecution: 0,
-          rule: ['groupBy', 'tag', '', '', '']
+          rule: ['groupBy', 'label', '', '', '']
         }
       ]
     });
 
     const rideshareGroup = result.categorizedItems.find(([groupName]) => groupName === 'rideshare');
-    const untaggedGroup = result.categorizedItems.find(([groupName]) => groupName === 'untagged');
+    const unlabeledGroup = result.categorizedItems.find(([groupName]) => groupName === 'unlabeled');
 
-    expect(result.groupByMode).toBe('tag');
+    expect(result.groupByMode).toBe('label');
     expect(rideshareGroup?.[1].map(item => item.transaction_id).sort()).toEqual(['lyft-trip', 'uber-trip']);
-    expect(untaggedGroup?.[1].map(item => item.transaction_id)).toEqual(['grocery']);
+    expect(unlabeledGroup?.[1].map(item => item.transaction_id)).toEqual(['grocery']);
   });
 
-  test('groupBy tag respects sort tag direction for group row order', () => {
+  test('groupBy label respects sort label direction for group row order', () => {
     const ascendingResult = evaluateTabData({
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
         {
-          transaction_id: 'zebra-tag',
+          transaction_id: 'zebra-label',
           amount: 10,
           authorized_date: '2026-01-01',
           date: '2026-01-01',
           name: 'Zebra',
-          tags: ['zebra'],
+          labels: ['zebra'],
           personal_finance_category: { primary: 'MISC' }
         },
         {
-          transaction_id: 'alpha-tag',
+          transaction_id: 'alpha-label',
           amount: 8,
           authorized_date: '2026-01-02',
           date: '2026-01-02',
           name: 'Alpha',
-          tags: ['alpha'],
+          labels: ['alpha'],
           personal_finance_category: { primary: 'MISC' }
         }
       ],
       tabRules: [
         {
-          _id: 'g-tag',
+          _id: 'g-label',
           orderOfExecution: 0,
-          rule: ['groupBy', 'tag', '', '', '']
+          rule: ['groupBy', 'label', '', '', '']
         },
         {
-          _id: 's-tag-asc',
+          _id: 's-label-asc',
           orderOfExecution: 0,
-          rule: ['sort', 'tag', 'asc', '', '']
+          rule: ['sort', 'label', 'asc', '', '']
         }
       ]
     });
@@ -1128,34 +1128,34 @@ describe('tabEvaluator', () => {
       tab: { _id: 'tab-1', isSelected: true },
       transactions: [
         {
-          transaction_id: 'zebra-tag',
+          transaction_id: 'zebra-label',
           amount: 10,
           authorized_date: '2026-01-01',
           date: '2026-01-01',
           name: 'Zebra',
-          tags: ['zebra'],
+          labels: ['zebra'],
           personal_finance_category: { primary: 'MISC' }
         },
         {
-          transaction_id: 'alpha-tag',
+          transaction_id: 'alpha-label',
           amount: 8,
           authorized_date: '2026-01-02',
           date: '2026-01-02',
           name: 'Alpha',
-          tags: ['alpha'],
+          labels: ['alpha'],
           personal_finance_category: { primary: 'MISC' }
         }
       ],
       tabRules: [
         {
-          _id: 'g-tag',
+          _id: 'g-label',
           orderOfExecution: 0,
-          rule: ['groupBy', 'tag', '', '', '']
+          rule: ['groupBy', 'label', '', '', '']
         },
         {
-          _id: 's-tag-desc',
+          _id: 's-label-desc',
           orderOfExecution: 0,
-          rule: ['sort', 'tag', 'desc', '', '']
+          rule: ['sort', 'label', 'desc', '', '']
         }
       ]
     });
@@ -1164,7 +1164,7 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['zebra', 'alpha']);
   });
 
-  test('groupBy category respects sort tag direction for group row order', () => {
+  test('groupBy category respects sort label direction for group row order', () => {
     const transactions = [
       {
         transaction_id: 'alpha-zebra',
@@ -1201,10 +1201,10 @@ describe('tabEvaluator', () => {
     ];
 
     const categorizeRules = [
-      { _id: 'c-zebra', orderOfExecution: 0, rule: ['categorize', 'name', 'includes', 'zebra', 'tag', 'zebra'] },
-      { _id: 'c-alpha', orderOfExecution: 1, rule: ['categorize', 'name', 'includes', 'alpha', 'tag', 'alpha'] },
-      { _id: 'c-mango', orderOfExecution: 2, rule: ['categorize', 'name', 'includes', 'mango', 'tag', 'mango'] },
-      { _id: 'c-zulu', orderOfExecution: 3, rule: ['categorize', 'name', 'includes', 'zulu', 'tag', 'zulu'] }
+      { _id: 'c-zebra', orderOfExecution: 0, rule: ['categorize', 'name', 'includes', 'zebra', 'label', 'zebra'] },
+      { _id: 'c-alpha', orderOfExecution: 1, rule: ['categorize', 'name', 'includes', 'alpha', 'label', 'alpha'] },
+      { _id: 'c-mango', orderOfExecution: 2, rule: ['categorize', 'name', 'includes', 'mango', 'label', 'mango'] },
+      { _id: 'c-zulu', orderOfExecution: 3, rule: ['categorize', 'name', 'includes', 'zulu', 'label', 'zulu'] }
     ];
 
     const ascendingResult = evaluateTabData({
@@ -1212,7 +1212,7 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         { _id: 'g-category', orderOfExecution: 0, rule: ['groupBy', 'category', '', '', ''] },
-        { _id: 's-tag-asc', orderOfExecution: 0, rule: ['sort', 'tag', 'asc', '', ''] },
+        { _id: 's-label-asc', orderOfExecution: 0, rule: ['sort', 'label', 'asc', '', ''] },
         ...categorizeRules
       ]
     });
@@ -1222,7 +1222,7 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         { _id: 'g-category', orderOfExecution: 0, rule: ['groupBy', 'category', '', '', ''] },
-        { _id: 's-tag-desc', orderOfExecution: 0, rule: ['sort', 'tag', 'desc', '', ''] },
+        { _id: 's-label-desc', orderOfExecution: 0, rule: ['sort', 'label', 'desc', '', ''] },
         ...categorizeRules
       ]
     });
@@ -1231,7 +1231,7 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['beta', 'alpha']);
   });
 
-  test('groupBy day respects sort tag direction for group row order', () => {
+  test('groupBy day respects sort label direction for group row order', () => {
     const transactions = [
       {
         transaction_id: 'day-one-beta',
@@ -1268,10 +1268,10 @@ describe('tabEvaluator', () => {
     ];
 
     const categorizeRules = [
-      { _id: 'c-beta', orderOfExecution: 0, rule: ['categorize', 'name', 'includes', 'beta', 'tag', 'beta'] },
-      { _id: 'c-alpha', orderOfExecution: 1, rule: ['categorize', 'name', 'includes', 'alpha', 'tag', 'alpha'] },
-      { _id: 'c-mango', orderOfExecution: 2, rule: ['categorize', 'name', 'includes', 'mango', 'tag', 'mango'] },
-      { _id: 'c-zulu', orderOfExecution: 3, rule: ['categorize', 'name', 'includes', 'zulu', 'tag', 'zulu'] }
+      { _id: 'c-beta', orderOfExecution: 0, rule: ['categorize', 'name', 'includes', 'beta', 'label', 'beta'] },
+      { _id: 'c-alpha', orderOfExecution: 1, rule: ['categorize', 'name', 'includes', 'alpha', 'label', 'alpha'] },
+      { _id: 'c-mango', orderOfExecution: 2, rule: ['categorize', 'name', 'includes', 'mango', 'label', 'mango'] },
+      { _id: 'c-zulu', orderOfExecution: 3, rule: ['categorize', 'name', 'includes', 'zulu', 'label', 'zulu'] }
     ];
 
     const ascendingResult = evaluateTabData({
@@ -1279,7 +1279,7 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         { _id: 'g-day', orderOfExecution: 0, rule: ['groupBy', 'day', '', '', ''] },
-        { _id: 's-tag-asc', orderOfExecution: 0, rule: ['sort', 'tag', 'asc', '', ''] },
+        { _id: 's-label-asc', orderOfExecution: 0, rule: ['sort', 'label', 'asc', '', ''] },
         ...categorizeRules
       ]
     });
@@ -1289,7 +1289,7 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         { _id: 'g-day', orderOfExecution: 0, rule: ['groupBy', 'day', '', '', ''] },
-        { _id: 's-tag-desc', orderOfExecution: 0, rule: ['sort', 'tag', 'desc', '', ''] },
+        { _id: 's-label-desc', orderOfExecution: 0, rule: ['sort', 'label', 'desc', '', ''] },
         ...categorizeRules
       ]
     });
@@ -1457,14 +1457,14 @@ describe('tabEvaluator', () => {
     expect(descendingResult.categorizedItems.map(([groupName]) => groupName)).toEqual(['beta', 'alpha']);
   });
 
-  test('groupBy tag respects sort date direction for group row order', () => {
+  test('groupBy label respects sort date direction for group row order', () => {
     const transactions = [
       {
         transaction_id: 'alpha-oldest',
         amount: 30,
         authorized_date: '2026-01-01',
         date: '2026-01-01',
-        tags: ['alpha'],
+        labels: ['alpha'],
         personal_finance_category: { primary: 'MISC' }
       },
       {
@@ -1472,7 +1472,7 @@ describe('tabEvaluator', () => {
         amount: 22,
         authorized_date: '2026-01-15',
         date: '2026-01-15',
-        tags: ['alpha'],
+        labels: ['alpha'],
         personal_finance_category: { primary: 'MISC' }
       },
       {
@@ -1480,7 +1480,7 @@ describe('tabEvaluator', () => {
         amount: 18,
         authorized_date: '2026-01-10',
         date: '2026-01-10',
-        tags: ['beta'],
+        labels: ['beta'],
         personal_finance_category: { primary: 'MISC' }
       },
       {
@@ -1488,7 +1488,7 @@ describe('tabEvaluator', () => {
         amount: 16,
         authorized_date: '2026-02-01',
         date: '2026-02-01',
-        tags: ['beta'],
+        labels: ['beta'],
         personal_finance_category: { primary: 'MISC' }
       }
     ];
@@ -1498,9 +1498,9 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         {
-          _id: 'g-tag',
+          _id: 'g-label',
           orderOfExecution: 0,
-          rule: ['groupBy', 'tag', '', '', '']
+          rule: ['groupBy', 'label', '', '', '']
         },
         {
           _id: 's-date-asc',
@@ -1515,9 +1515,9 @@ describe('tabEvaluator', () => {
       transactions,
       tabRules: [
         {
-          _id: 'g-tag',
+          _id: 'g-label',
           orderOfExecution: 0,
-          rule: ['groupBy', 'tag', '', '', '']
+          rule: ['groupBy', 'label', '', '', '']
         },
         {
           _id: 's-date-desc',

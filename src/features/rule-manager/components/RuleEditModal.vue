@@ -531,7 +531,7 @@ const CONDITION_PROPERTY_OPTIONS = [
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'category', label: 'Category' },
   { value: 'account', label: 'Account' }
 ];
@@ -564,7 +564,7 @@ const accountConditionOptions = computed(() => {
 
 const SORT_PROPERTY_OPTIONS = [
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'date', label: 'Date' },
   { value: 'category', label: 'Category' },
   { value: 'amount', label: 'Amount' }
@@ -579,7 +579,7 @@ const GROUP_BY_OPTIONS = [
   { value: 'none', label: 'No grouping' },
   { value: 'category', label: 'Category' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'year', label: 'Year' },
   { value: 'month', label: 'Month' },
   { value: 'year_month', label: 'Year + Month' },
@@ -591,7 +591,7 @@ const GROUP_BY_OPTIONS = [
 const CATEGORIZE_SET_TARGET_OPTIONS = [
   { value: 'category', label: 'Category' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' }
+  { value: 'label', label: 'Label' }
 ];
 
 const criterionInput = ref(null);
@@ -705,7 +705,7 @@ function getSortDirectionOptions(sortPropertyName) {
 
   if (
     normalizedSortPropertyName === 'name'
-    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'label'
     || normalizedSortPropertyName === 'category'
   ) {
     return [
@@ -770,7 +770,7 @@ function updateRuleType() {
 
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
-  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'tag';
+  return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'label';
 }
 
 function normalizeCategorizeSetTarget(target) {
@@ -779,8 +779,8 @@ function normalizeCategorizeSetTarget(target) {
     return 'name';
   }
 
-  if (normalizedTarget === 'tag') {
-    return 'tag';
+  if (normalizedTarget === 'label') {
+    return 'label';
   }
 
   return 'category';
@@ -823,7 +823,7 @@ function getCategorizeSetValuePlaceholder(setTarget) {
     return 'e.g. Uber Eats';
   }
 
-  if (normalizedTarget === 'tag') {
+  if (normalizedTarget === 'label') {
     return 'e.g. reimbursable';
   }
 
@@ -1014,7 +1014,7 @@ function isNumericProperty(propName) {
 }
 
 function isTextProperty(propName) {
-  return propName === 'name' || propName === 'tag' || propName === 'category' || isGlobalCategoryProperty(propName);
+  return propName === 'name' || propName === 'label' || propName === 'category' || isGlobalCategoryProperty(propName);
 }
 
 function isAccountProperty(propName) {

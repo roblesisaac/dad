@@ -524,7 +524,7 @@ const PROPERTY_OPTIONS = Object.freeze([
   { value: 'amount', label: 'Amount' },
   { value: 'date', label: 'Date' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'category', label: 'Category' }
 ]);
 
@@ -556,7 +556,7 @@ const SORT_KEY_OPTIONS = Object.freeze([
   { value: 'date', label: 'Date' },
   { value: 'amount', label: 'Amount' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'category', label: 'Category' }
 ]);
 
@@ -564,7 +564,7 @@ const GROUP_BY_OPTIONS = Object.freeze([
   { value: 'none', label: 'No grouping' },
   { value: 'category', label: 'Category' },
   { value: 'name', label: 'Name' },
-  { value: 'tag', label: 'Tag' },
+  { value: 'label', label: 'Label' },
   { value: 'year', label: 'Year' },
   { value: 'month', label: 'Month' },
   { value: 'year_month', label: 'Year + Month' },
@@ -710,7 +710,7 @@ function isDateProperty(property) {
 }
 
 function isTextProperty(property) {
-  return property === 'name' || property === 'tag' || property === 'category';
+  return property === 'name' || property === 'label' || property === 'category';
 }
 
 function normalizeConditionCombinator(combinator) {
@@ -742,7 +742,7 @@ function getSortDirectionOptions(sortPropertyName) {
 
   if (
     normalizedSortPropertyName === 'name'
-    || normalizedSortPropertyName === 'tag'
+    || normalizedSortPropertyName === 'label'
     || normalizedSortPropertyName === 'category'
   ) {
     return [
