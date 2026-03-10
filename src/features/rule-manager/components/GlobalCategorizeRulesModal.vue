@@ -599,6 +599,7 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+  text-transform: uppercase;
   display: inline-block !important;
 }
 </style>

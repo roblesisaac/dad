@@ -449,12 +449,12 @@ const activeMonthCount = computed(() => {
   const endDate = parseDateForSummary(state.date.end);
   return resolveMonthSpanCount(startDate, endDate);
 });
-const averagePerRow = computed(() => {
-  if (currentRowCount.value <= 0) {
+const averagePerTransaction = computed(() => {
+  if (currentTransactionCount.value <= 0) {
     return 0;
   }
 
-  return headerTotal.value / currentRowCount.value;
+  return headerTotal.value / currentTransactionCount.value;
 });
 
 const noteTokens = computed(() => buildDynamicNoteTokens({
@@ -463,10 +463,10 @@ const noteTokens = computed(() => buildDynamicNoteTokens({
   selectedDrillLabel: selectedDrillLabel.value,
   dateLabel: activeDateRangeLabel.value,
   totalLabel: formatPrice(headerTotal.value, { toFixed: 0 }),
-  numMonths: activeMonthCount.value,
-  numRows: currentRowCount.value,
-  numTransactions: currentTransactionCount.value,
-  averageLabel: formatPrice(averagePerRow.value, { toFixed: 0 }),
+  monthCount: activeMonthCount.value,
+  rowCount: currentRowCount.value,
+  transactionCount: currentTransactionCount.value,
+  averageLabel: formatPrice(averagePerTransaction.value, { toFixed: 0 }),
   drillGroups: drillGroups.value,
   formatAmount: (amount) => formatPrice(amount, { toFixed: 0 })
 }));
@@ -478,9 +478,9 @@ const availableNoteTokenEntries = computed(() => {
     'selected-level',
     'date',
     'total',
-    'num-months',
-    'num-rows',
-    'num-transactions',
+    'month-count',
+    'row-count',
+    'transaction-count',
     'average'
   ];
   const tokenKeys = Object.keys(noteTokens.value);
@@ -805,19 +805,19 @@ const headerInfo = computed(() => {
     if (hasDrillBreadcrumb) {
       return {
         title: 'Drill Level Total',
-        summary: `{{ total }} is the total for {{ selected-level }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
+        summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }} averaging {{ average }} per transaction.`
       };
     }
 
     return {
       title: 'Tab Total',
-      summary: `{{ total }} is the total for {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
+      summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }} averaging {{ average }} per transaction.`
     };
   }
 
   return {
     title: 'Tab Total',
-    summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ num-rows }} row(s).`
+    summary: `{{ total }} is the total for {{ selected-tab }} in {{ selected-account }} for {{ date }}. The average is {{ average }} per {{ transaction-count }} transaction(s).`
   };
 });
 
@@ -994,6 +994,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.rule-part) {
+  text-transform: uppercase;
   padding: 0.15rem 0.4rem;
   border-radius: 0.4rem;
   background-color: var(--theme-rule-part-bg);

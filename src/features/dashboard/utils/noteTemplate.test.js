@@ -18,9 +18,9 @@ describe('noteTemplate', () => {
       selectedDrillLabel: 'Money Out',
       dateLabel: 'Mar 1 - Mar 9 2026',
       totalLabel: '-$200',
-      numMonths: 1,
-      numRows: 5,
-      numTransactions: 18,
+      monthCount: 1,
+      rowCount: 5,
+      transactionCount: 18,
       averageLabel: '-$40',
       drillGroups: [
         { label: 'Shop Subscriptions', total: -120.45 },
@@ -33,9 +33,9 @@ describe('noteTemplate', () => {
     expect(tokens['selected-account']).toBe('Westminster Account');
     expect(tokens['shop-subscriptions']).toBe('$120.45');
     expect(tokens.splurges).toBe('$79.55');
-    expect(tokens['num-months']).toBe('1');
-    expect(tokens['num-rows']).toBe('5');
-    expect(tokens['num-transactions']).toBe('18');
+    expect(tokens['month-count']).toBe('1');
+    expect(tokens['row-count']).toBe('5');
+    expect(tokens['transaction-count']).toBe('18');
     expect(tokens.average).toBe('-$40');
   });
 
@@ -90,13 +90,14 @@ describe('noteTemplate', () => {
 
   test('resolves underscore token names for numeric helper vars', () => {
     const rendered = renderTemplateWithTokens(
-      'Rows: {{ num_rows }}, Months: {{ num_months }}',
+      'Rows: {{ row_count }}, Months: {{ month_count }}, Tx: {{ transaction_count }}',
       {
-        'num-rows': '7',
-        'num-months': '2'
+        'row-count': '7',
+        'month-count': '2',
+        'transaction-count': '12'
       }
     );
 
-    expect(rendered).toBe('Rows: 7, Months: 2');
+    expect(rendered).toBe('Rows: 7, Months: 2, Tx: 12');
   });
 });
