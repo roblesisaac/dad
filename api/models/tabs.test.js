@@ -101,6 +101,7 @@ describe('tabs model drill schema normalization', () => {
     const normalized = normalizeTabNotesByView({
       'group:group-1|path:root': {
         template: 'You spent {{ money-out }}',
+        showInMainView: true,
         updatedAt: '2026-03-09T00:00:00.000Z'
       },
       'group:group-1|path:empty': {
@@ -116,6 +117,7 @@ describe('tabs model drill schema normalization', () => {
     expect(normalized).toEqual({
       'group:group-1|path:root': {
         template: 'You spent {{ money-out }}',
+        showInMainView: true,
         updatedAt: '2026-03-09T00:00:00.000Z'
       }
     });

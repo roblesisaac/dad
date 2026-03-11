@@ -477,6 +477,14 @@
             <button
               type="button"
               class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+              :style="actionButtonStyle(false)"
+              @click="copyExportRulesToClipboard"
+            >
+              Copy
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
               :style="actionButtonStyle(true)"
               @click="exportRules"
             >
@@ -1486,9 +1494,9 @@ function buildExportMetadata(scope = 'all') {
   };
 }
 
-function exportRules() {
+function buildExportArtifact() {
   if (!state.selected.tab?._id) {
-    return;
+    return null;
   }
 
   const scopedRules = resolveRulesForTransferScope(exportScope.value);
@@ -1507,9 +1515,72 @@ function exportRules() {
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const fileName = `${tabSegment}-rules-${scopeSegment}-${timestamp}.${extension}`;
 
-  downloadTextContent(formattedContent, fileName, exportMimeType(exportFormat.value));
+  return {
+    scopedRules,
+    formattedContent,
+    fileName
+  };
+}
+
+async function copyTextToClipboard(text) {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_error) {
+      // Fallback below.
+    }
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = String(text || '');
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '-9999px';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  textarea.setSelectionRange(0, textarea.value.length);
+
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } catch (_error) {
+    copied = false;
+  }
+
+  document.body.removeChild(textarea);
+  return copied;
+}
+
+async function copyExportRulesToClipboard() {
+  const artifact = buildExportArtifact();
+  if (!artifact) {
+    return;
+  }
+
+  const copied = await copyTextToClipboard(artifact.formattedContent);
+  if (!copied) {
+    showRuleTransferMessage('Unable to copy export content.');
+    return;
+  }
+
+  showRuleTransferMessage(`Copied ${artifact.scopedRules.length} rule${artifact.scopedRules.length === 1 ? '' : 's'} to clipboard.`);
+}
+
+function exportRules() {
+  const artifact = buildExportArtifact();
+  if (!artifact) {
+    return;
+  }
+
+  downloadTextContent(artifact.formattedContent, artifact.fileName, exportMimeType(exportFormat.value));
   closeExportRulesModal();
-  showRuleTransferMessage(`Exported ${scopedRules.length} rule${scopedRules.length === 1 ? '' : 's'}.`);
+  showRuleTransferMessage(`Exported ${artifact.scopedRules.length} rule${artifact.scopedRules.length === 1 ? '' : 's'}.`);
 }
 
 function resetImportModalState() {

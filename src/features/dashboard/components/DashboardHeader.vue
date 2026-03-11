@@ -235,6 +235,12 @@
           class="clickable-date-selector"
         />
         <span v-else>Available</span>
+        <div v-if="showHelperCaptionInMainView" class="mt-3 w-full px-4">
+          <div
+            class="header-main-helper-caption markdown-content mx-auto max-w-2xl rounded-xl bg-[var(--theme-overlay-5)] px-3 py-2 text-left text-xs leading-relaxed text-[var(--theme-text)] sm:text-sm"
+            v-html="renderedViewNote"
+          />
+        </div>
       </div>
     </div>
 
@@ -331,6 +337,16 @@
                   v-html="renderedHelperBodyDraft || 'No helper text yet.'"
                 />
               </div>
+              <label class="flex items-center justify-between gap-3 rounded-xl border border-[var(--theme-border)] bg-[var(--theme-overlay-5)] px-3 py-2">
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
+                  Show in main view
+                </span>
+                <input
+                  v-model="helperShowInMainViewDraft"
+                  type="checkbox"
+                  class="h-4 w-4 rounded border border-[var(--theme-border)] bg-transparent text-[var(--theme-text)] focus:ring-2 focus:ring-[var(--theme-ring)]"
+                />
+              </label>
               <div class="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="button"
@@ -411,6 +427,10 @@ const props = defineProps({
   viewNoteTemplate: {
     type: String,
     default: ''
+  },
+  viewNoteShowInMainView: {
+    type: Boolean,
+    default: false
   },
   isSavingViewNote: {
     type: Boolean,
@@ -496,6 +516,7 @@ const selectedTabLabel = computed(() => state.selected.tab?.tabName || 'Select T
 const activeDateRangeLabel = computed(() => formatActiveDateRange(state.date.start, state.date.end));
 const drillGroups = computed(() => (Array.isArray(props.drillGroups) ? props.drillGroups : []));
 const viewNoteTemplate = computed(() => String(props.viewNoteTemplate || ''));
+const viewNoteShowInMainView = computed(() => Boolean(props.viewNoteShowInMainView));
 const isSavingViewNote = computed(() => props.isSavingViewNote);
 const showViewNoteActions = computed(() => (
   isDrillView.value
@@ -510,6 +531,7 @@ const isHeaderInfoMenuOpen = ref(false);
 const headerInfoMenuRef = ref(null);
 const isEditingHelperBody = ref(false);
 const helperBodyDraft = ref('');
+const helperShowInMainViewDraft = ref(false);
 const currentTransactionCount = computed(() => {
   const count = Number(props.drillTransactionCount);
   return Number.isFinite(count) && count > 0
@@ -624,6 +646,11 @@ const helperBodyDisplay = computed(() => (
   hasViewNote.value
     ? renderedViewNote.value
     : renderNoteTemplate(headerInfo.value.summary, true)
+));
+const showHelperCaptionInMainView = computed(() => (
+  showViewNoteActions.value
+  && hasViewNote.value
+  && viewNoteShowInMainView.value
 ));
 
 const isBreadcrumbDropdownOpen = ref(false);
@@ -805,6 +832,7 @@ function startHelperBodyEdit() {
   helperBodyDraft.value = hasViewNote.value
     ? viewNoteTemplate.value
     : headerInfo.value.summary;
+  helperShowInMainViewDraft.value = viewNoteShowInMainView.value;
   isEditingHelperBody.value = true;
   closeHeaderInfoMenu();
 }
@@ -812,6 +840,7 @@ function startHelperBodyEdit() {
 function cancelHelperBodyEdit() {
   isEditingHelperBody.value = false;
   helperBodyDraft.value = viewNoteTemplate.value;
+  helperShowInMainViewDraft.value = viewNoteShowInMainView.value;
 }
 
 function saveHelperBodyText() {
@@ -819,7 +848,10 @@ function saveHelperBodyText() {
     return;
   }
 
-  emit('save-view-note', helperBodyDraft.value);
+  emit('save-view-note', {
+    template: helperBodyDraft.value,
+    showInMainView: helperShowInMainViewDraft.value
+  });
   isEditingHelperBody.value = false;
   closeHeaderInfoMenu();
 }
@@ -845,11 +877,22 @@ watch(
 );
 
 watch(
+  () => viewNoteShowInMainView.value,
+  (nextShowInMainView) => {
+    if (!isEditingHelperBody.value) {
+      helperShowInMainViewDraft.value = nextShowInMainView;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
   () => showViewNoteActions.value,
   (canShowNotes) => {
     if (!canShowNotes) {
       closeHeaderInfoMenu();
       isEditingHelperBody.value = false;
+      helperShowInMainViewDraft.value = false;
     }
   }
 );
@@ -870,6 +913,7 @@ watch(
       helperBodyDraft.value = hasViewNote.value
         ? viewNoteTemplate.value
         : headerInfo.value.summary;
+      helperShowInMainViewDraft.value = viewNoteShowInMainView.value;
       return;
     }
 
@@ -1280,6 +1324,14 @@ onBeforeUnmount(() => {
 }
 
 .markdown-content :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.header-main-helper-caption :deep(p) {
+  margin-bottom: 0.35rem;
+}
+
+.header-main-helper-caption :deep(p:last-child) {
   margin-bottom: 0;
 }
 

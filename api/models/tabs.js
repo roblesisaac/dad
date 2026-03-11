@@ -35,6 +35,15 @@ function normalizeTabNoteTemplate(template) {
   return normalizedTemplate.trim() ? normalizedTemplate : '';
 }
 
+function normalizeTabNoteShowInMainView(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  return normalizedValue === 'true' || normalizedValue === '1';
+}
+
 function normalizeTabNotesByView(value, context = {}) {
   const item = context?.item;
   const hasFieldInPayload = item && Object.prototype.hasOwnProperty.call(item, 'tabNotesByView');
@@ -71,10 +80,12 @@ function normalizeTabNotesByView(value, context = {}) {
 
     const rawUpdatedAt = isPlainObject(rawEntry) ? rawEntry.updatedAt : '';
     const updatedAt = String(rawUpdatedAt || '').trim();
+    const rawShowInMainView = isPlainObject(rawEntry) ? rawEntry.showInMainView : false;
+    const showInMainView = normalizeTabNoteShowInMainView(rawShowInMainView);
 
     normalizedEntries[scopeKey] = updatedAt
-      ? { template, updatedAt }
-      : { template };
+      ? { template, showInMainView, updatedAt }
+      : { template, showInMainView };
     count += 1;
   }
 

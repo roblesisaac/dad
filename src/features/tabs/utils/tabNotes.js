@@ -37,6 +37,15 @@ export function normalizeTabViewNoteTemplate(value) {
   return normalizedTemplate.trim() ? normalizedTemplate : '';
 }
 
+export function normalizeTabViewNoteShowInMainView(value) {
+  if (typeof value === 'boolean') {
+    return value;
+  }
+
+  const normalizedValue = String(value || '').trim().toLowerCase();
+  return normalizedValue === 'true' || normalizedValue === '1';
+}
+
 function normalizeNoteEntry(entry) {
   const rawTemplate = typeof entry === 'string'
     ? entry
@@ -48,10 +57,12 @@ function normalizeNoteEntry(entry) {
 
   const rawUpdatedAt = isPlainObject(entry) ? entry.updatedAt : '';
   const updatedAt = String(rawUpdatedAt || '').trim();
+  const rawShowInMainView = isPlainObject(entry) ? entry.showInMainView : false;
+  const showInMainView = normalizeTabViewNoteShowInMainView(rawShowInMainView);
 
   return updatedAt
-    ? { template, updatedAt }
-    : { template };
+    ? { template, showInMainView, updatedAt }
+    : { template, showInMainView };
 }
 
 export function normalizeTabNotesByView(value) {
@@ -92,4 +103,14 @@ export function resolveTabViewNoteTemplate(tab = null, scopeKey = '') {
 
   const notesByView = normalizeTabNotesByView(tab.tabNotesByView);
   return String(notesByView[normalizedScopeKey]?.template || '');
+}
+
+export function resolveTabViewNoteShowInMainView(tab = null, scopeKey = '') {
+  const normalizedScopeKey = normalizeScopeKey(scopeKey);
+  if (!tab || !normalizedScopeKey) {
+    return false;
+  }
+
+  const notesByView = normalizeTabNotesByView(tab.tabNotesByView);
+  return normalizeTabViewNoteShowInMainView(notesByView[normalizedScopeKey]?.showInMainView);
 }

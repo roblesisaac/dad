@@ -34,6 +34,7 @@
           :is-honoring-recategorize-as="drillState.honorRecategorizeAs"
           :has-recategorize-behavior-decision="drillState.hasRecategorizeBehaviorDecision"
           :view-note-template="selectedTabViewNoteTemplate"
+          :view-note-show-in-main-view="selectedTabViewNoteShowInMainView"
           :is-saving-view-note="isSavingViewNote"
           :can-copy-current-rows="canCopyCurrentRows"
           @navigate-group="openGroupSelector"
@@ -313,7 +314,9 @@ import { resolveSingleTabAutoSelectTarget } from '@/features/dashboard/utils/sin
 import {
   buildTabViewNoteScopeKey,
   normalizeTabNotesByView,
+  normalizeTabViewNoteShowInMainView,
   normalizeTabViewNoteTemplate,
+  resolveTabViewNoteShowInMainView,
   resolveTabViewNoteTemplate
 } from '@/features/tabs/utils/tabNotes.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
@@ -499,6 +502,16 @@ const selectedTabViewNoteTemplate = computed(() => {
   }
 
   return resolveTabViewNoteTemplate(selectedTab, scopeKey);
+});
+
+const selectedTabViewNoteShowInMainView = computed(() => {
+  const selectedTab = state.selected.tab;
+  const scopeKey = selectedTabViewNoteScopeKey.value;
+  if (!selectedTab || !scopeKey) {
+    return false;
+  }
+
+  return resolveTabViewNoteShowInMainView(selectedTab, scopeKey);
 });
 
 function readPreferredGroupIdFromStorage() {
@@ -1207,16 +1220,29 @@ function openTransactionSearch() {
   setDashboardView('transaction-search', { syncRoute: true });
 }
 
-async function handleSaveViewNote(template = '') {
+async function handleSaveViewNote(payload = {}) {
   const selectedTab = state.selected.tab;
   const scopeKey = selectedTabViewNoteScopeKey.value;
   if (!selectedTab?._id || !scopeKey) {
     return;
   }
 
-  const normalizedTemplate = normalizeTabViewNoteTemplate(template);
+  const requestedTemplate = typeof payload === 'string'
+    ? payload
+    : payload?.template;
+  const requestedShowInMainView = typeof payload === 'object' && payload !== null
+    ? payload.showInMainView
+    : undefined;
+  const normalizedTemplate = normalizeTabViewNoteTemplate(requestedTemplate);
   const nextTabNotesByView = normalizeTabNotesByView(selectedTab.tabNotesByView);
-  const previousTemplate = String(nextTabNotesByView[scopeKey]?.template || '');
+  const previousEntry = nextTabNotesByView[scopeKey] || null;
+  const previousTemplate = String(previousEntry?.template || '');
+  const previousShowInMainView = normalizeTabViewNoteShowInMainView(previousEntry?.showInMainView);
+  const nextShowInMainView = normalizedTemplate
+    ? normalizeTabViewNoteShowInMainView(
+      requestedShowInMainView === undefined ? previousShowInMainView : requestedShowInMainView
+    )
+    : false;
 
   if (!normalizedTemplate) {
     if (!previousTemplate) {
@@ -1224,12 +1250,13 @@ async function handleSaveViewNote(template = '') {
     }
     delete nextTabNotesByView[scopeKey];
   } else {
-    if (previousTemplate === normalizedTemplate) {
+    if (previousTemplate === normalizedTemplate && previousShowInMainView === nextShowInMainView) {
       return;
     }
 
     nextTabNotesByView[scopeKey] = {
       template: normalizedTemplate,
+      showInMainView: nextShowInMainView,
       updatedAt: new Date().toISOString()
     };
   }

@@ -2,7 +2,9 @@ import { describe, expect, test } from 'vitest';
 import {
   buildTabViewNoteScopeKey,
   normalizeTabNotesByView,
+  normalizeTabViewNoteShowInMainView,
   normalizeTabViewNoteTemplate,
+  resolveTabViewNoteShowInMainView,
   resolveTabViewNoteTemplate
 } from './tabNotes.js';
 
@@ -22,6 +24,7 @@ describe('tabNotes', () => {
     const normalized = normalizeTabNotesByView({
       'group:1|path:root': {
         template: 'You spent {{ money-out }}',
+        showInMainView: true,
         updatedAt: '2026-03-09T00:00:00.000Z'
       },
       'group:1|path:empty': {
@@ -36,6 +39,7 @@ describe('tabNotes', () => {
     expect(normalized).toEqual({
       'group:1|path:root': {
         template: 'You spent {{ money-out }}',
+        showInMainView: true,
         updatedAt: '2026-03-09T00:00:00.000Z'
       }
     });
@@ -45,20 +49,34 @@ describe('tabNotes', () => {
     const tab = {
       tabNotesByView: {
         'group:group-1|path:root': {
-          template: 'Root note'
+          template: 'Root note',
+          showInMainView: false
         },
         'group:group-1|path:money out': {
-          template: 'Money out note'
+          template: 'Money out note',
+          showInMainView: true
         }
       }
     };
 
     expect(resolveTabViewNoteTemplate(tab, 'group:group-1|path:money out')).toBe('Money out note');
     expect(resolveTabViewNoteTemplate(tab, 'group:group-1|path:missing')).toBe('');
+    expect(resolveTabViewNoteShowInMainView(tab, 'group:group-1|path:money out')).toBe(true);
+    expect(resolveTabViewNoteShowInMainView(tab, 'group:group-1|path:root')).toBe(false);
+    expect(resolveTabViewNoteShowInMainView(tab, 'group:group-1|path:missing')).toBe(false);
   });
 
   test('normalizes template to empty when it only has whitespace', () => {
     expect(normalizeTabViewNoteTemplate('   \n\t  ')).toBe('');
     expect(normalizeTabViewNoteTemplate('Note text')).toBe('Note text');
+  });
+
+  test('normalizes show-in-main-view to a safe boolean', () => {
+    expect(normalizeTabViewNoteShowInMainView(true)).toBe(true);
+    expect(normalizeTabViewNoteShowInMainView('true')).toBe(true);
+    expect(normalizeTabViewNoteShowInMainView('1')).toBe(true);
+    expect(normalizeTabViewNoteShowInMainView(false)).toBe(false);
+    expect(normalizeTabViewNoteShowInMainView('false')).toBe(false);
+    expect(normalizeTabViewNoteShowInMainView('0')).toBe(false);
   });
 });
