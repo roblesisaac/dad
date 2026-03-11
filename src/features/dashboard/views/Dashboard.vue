@@ -544,17 +544,44 @@ function writePreferredGroupIdToStorage(group) {
   }
 }
 
+function selectionAccountKey(account) {
+  if (!account) {
+    return '';
+  }
+
+  if (typeof account === 'string') {
+    return String(account).trim();
+  }
+
+  return String(account._id || account.account_id || '').trim();
+}
+
+function sanitizeAccountText(value) {
+  if (typeof value !== 'string') {
+    return '';
+  }
+
+  return value
+    .replace(/\uFFFD+/g, ' ')
+    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function normalizedAccountText(value) {
+  return sanitizeAccountText(value).toLowerCase();
+}
+
 function selectionAccountIdentifiers(account) {
   if (!account) {
     return [];
   }
 
-  return [
-    account._id,
-    account.account_id,
-    account.id,
-    account.accountId
-  ]
+  if (typeof account === 'string') {
+    return [String(account).trim()].filter(Boolean);
+  }
+
+  return [account._id, account.account_id]
     .map(identifier => String(identifier || '').trim())
     .filter(Boolean);
 }
@@ -565,43 +592,139 @@ function selectionAccountsMatch(accountA, accountB) {
   return accountAIds.some(accountId => accountBIdSet.has(accountId));
 }
 
-function normalizeHomeSwitcherAccountId(account) {
-  return selectionAccountIdentifiers(account)[0] || '';
-}
-
-function formatHomeSwitcherAccountLabel(account) {
-  const baseName = String(account?.name || account?.official_name || account?.subtype || 'Unnamed Account').trim();
-  const mask = String(account?.mask || '').trim();
-  if (!mask) {
-    return baseName;
-  }
-
-  return `${baseName} •••${mask}`;
-}
-
-function formatHomeSwitcherGroupLabel(group) {
-  return String(group?.name || 'Unnamed Group').trim() || 'Unnamed Group';
-}
-
-function groupContainsAccount(group, account) {
-  const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
-  return groupAccounts.some(groupAccount => selectionAccountsMatch(groupAccount, account));
-}
-
-function resolveFallbackGroupForAccount(account) {
+function resolveSelectionAccount(account) {
   if (!account) {
     return null;
   }
 
-  const accountContextGroup = state.allUserGroups.find((group) => (
-    group?.isLabel === false
-    && groupContainsAccount(group, account)
-  ));
+  const ids = selectionAccountIdentifiers(account);
+  if (!ids.length) {
+    return typeof account === 'object' ? account : null;
+  }
+
+  return state.allUserAccounts.find((userAccount) => {
+    return selectionAccountIdentifiers(userAccount).some(id => ids.includes(id));
+  }) || (typeof account === 'object' ? account : null);
+}
+
+function accountDefaultLabel(account) {
+  const resolved = resolveSelectionAccount(account) || account;
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+
+  let mask = '';
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = sanitizeAccountText(String(resolved.mask));
+  }
+
+  return officialName || accountName || mask || 'Account';
+}
+
+function resolveAccountContextGroupForSelection(account) {
+  const accountContextGroup = getAccountContextGroup(account);
   if (accountContextGroup) {
     return accountContextGroup;
   }
 
-  return state.allUserGroups.find(group => groupContainsAccount(group, account)) || null;
+  return state.allUserGroups.find((group) => {
+    if (!Array.isArray(group?.accounts) || group.accounts.length !== 1) {
+      return false;
+    }
+
+    return group.accounts.some(groupAccount => selectionAccountsMatch(groupAccount, account));
+  }) || null;
+}
+
+function accountDisplayLabel(account) {
+  const contextGroup = resolveAccountContextGroupForSelection(account);
+  const contextGroupName = sanitizeAccountText(contextGroup?.name || '');
+  const resolved = resolveSelectionAccount(account) || account;
+
+  const officialName = sanitizeAccountText(resolved?.official_name || resolved?.officialName || '');
+  const accountName = sanitizeAccountText(resolved?.name || '');
+  let mask = '';
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = sanitizeAccountText(String(resolved.mask));
+  }
+
+  const defaultLabel = officialName || accountName || mask || 'Account';
+
+  if (!contextGroupName) {
+    return defaultLabel;
+  }
+
+  const defaultNameCandidates = new Set(
+    ['Account', officialName, accountName, mask]
+      .map(value => normalizedAccountText(value))
+      .filter(Boolean)
+  );
+
+  if (defaultNameCandidates.has(normalizedAccountText(contextGroupName))) {
+    return defaultLabel;
+  }
+
+  return contextGroupName;
+}
+
+function accountRowMask(account) {
+  const resolved = resolveSelectionAccount(account) || account;
+  let mask = '';
+
+  if (resolved?.mask !== undefined && resolved?.mask !== null) {
+    mask = sanitizeAccountText(String(resolved.mask));
+  }
+
+  if (!mask) {
+    return '';
+  }
+
+  const displayLabel = accountDisplayLabel(account);
+  const normalizedDisplayLabel = normalizedAccountText(displayLabel);
+  const normalizedMask = normalizedAccountText(mask);
+
+  if (normalizedDisplayLabel === normalizedMask) {
+    return '';
+  }
+
+  return mask;
+}
+
+const sortedAccountsForHomeSwitcher = computed(() => {
+  const rows = state.allUserAccounts.map((account, index) => {
+    const contextGroup = resolveAccountContextGroupForSelection(account);
+    const sort = Number.isFinite(Number(contextGroup?.sort))
+      ? Number(contextGroup.sort)
+      : Number.MAX_SAFE_INTEGER;
+
+    return { account, index, sort };
+  });
+
+  rows.sort((a, b) => {
+    if (a.sort !== b.sort) {
+      return a.sort - b.sort;
+    }
+
+    return a.index - b.index;
+  });
+
+  return rows.map(({ account }) => account);
+});
+
+const sortedLabelGroupsForHomeSwitcher = computed(() => {
+  return state.allUserGroups
+    .filter(group => group?.isLabel === true)
+    .sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+});
+
+const allAccountsHomeSwitcherGroup = computed(() => ({
+  _id: ALL_ACCOUNTS_GROUP_ID,
+  name: 'All Accounts',
+  isVirtualAllAccounts: true,
+  accounts: state.allUserAccounts
+}));
+
+function formatHomeSwitcherGroupLabel(group) {
+  return String(group?.name || 'Unnamed Group').trim() || 'Unnamed Group';
 }
 
 function resolveAccountFromHomeSwitcherOption(option = {}) {
@@ -611,7 +734,7 @@ function resolveAccountFromHomeSwitcherOption(option = {}) {
   }
 
   return state.allUserAccounts.find((account) => (
-    selectionAccountIdentifiers(account).includes(requestedAccountId)
+    selectionAccountKey(account) === requestedAccountId
   )) || null;
 }
 
@@ -621,6 +744,10 @@ function resolveTargetGroupForHomeSwitcherOption(option = {}) {
     const groupId = String(option?.groupId || '').trim();
     if (!groupId) {
       return null;
+    }
+
+    if (groupId === ALL_ACCOUNTS_GROUP_ID) {
+      return allAccountsHomeSwitcherGroup.value;
     }
 
     return state.allUserGroups.find(group => String(group?._id || '').trim() === groupId) || null;
@@ -635,39 +762,40 @@ function resolveTargetGroupForHomeSwitcherOption(option = {}) {
     return null;
   }
 
-  return getAccountContextGroup(account)
-    || resolveFallbackGroupForAccount(account)
-    || null;
+  return resolveAccountContextGroupForSelection(account);
 }
 
 const homeSwitcherOptions = computed(() => {
   const selectedGroupId = normalizeSelectionGroupId(state.selected.group);
+  const allAccountsGroup = allAccountsHomeSwitcherGroup.value;
+  const allAccountsGroupId = normalizeSelectionGroupId(allAccountsGroup);
 
-  const accountOptions = state.allUserAccounts
+  const accountOptions = sortedAccountsForHomeSwitcher.value
     .map((account) => {
-      const accountId = normalizeHomeSwitcherAccountId(account);
+      const accountId = selectionAccountKey(account);
       if (!accountId) {
         return null;
       }
 
-      const targetGroup = getAccountContextGroup(account)
-        || resolveFallbackGroupForAccount(account);
+      const targetGroup = resolveAccountContextGroupForSelection(account);
       const targetGroupId = normalizeSelectionGroupId(targetGroup);
+      const mask = accountRowMask(account);
+      const displayLabel = accountDisplayLabel(account);
+      const label = mask ? `${mask} ${displayLabel}` : displayLabel;
 
       return {
         id: `account:${accountId}`,
         kind: HOME_SWITCHER_ACCOUNT_KIND,
-        label: formatHomeSwitcherAccountLabel(account),
+        label: label || accountDefaultLabel(account),
         caption: 'Account',
         accountId,
         groupId: targetGroupId,
         isCurrent: Boolean(targetGroupId && targetGroupId === selectedGroupId)
       };
     })
-    .filter(Boolean)
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .filter(Boolean);
 
-  const groupOptions = state.allUserGroups
+  const groupOptions = sortedLabelGroupsForHomeSwitcher.value
     .map((group) => {
       const groupId = normalizeSelectionGroupId(group);
       if (!groupId) {
@@ -683,8 +811,7 @@ const homeSwitcherOptions = computed(() => {
         isCurrent: groupId === selectedGroupId
       };
     })
-    .filter(Boolean)
-    .sort((a, b) => a.label.localeCompare(b.label));
+    .filter(Boolean);
 
   return [{
     id: 'home:go',
@@ -692,6 +819,13 @@ const homeSwitcherOptions = computed(() => {
     label: 'Go Home',
     caption: 'Home',
     isCurrent: isGroupSelectorView.value
+  }, {
+    id: `group:${allAccountsGroupId}`,
+    kind: HOME_SWITCHER_GROUP_KIND,
+    label: formatHomeSwitcherGroupLabel(allAccountsGroup),
+    caption: 'Group',
+    groupId: allAccountsGroupId,
+    isCurrent: allAccountsGroupId === selectedGroupId
   }, ...accountOptions, ...groupOptions];
 });
 
@@ -1273,6 +1407,27 @@ function openGroupSelector() {
   setDashboardView('group', { syncRoute: true });
 }
 
+async function selectAllAccountsFromHomeSwitcher(options = {}) {
+  const {
+    preserveSelectedTab = false,
+    showLoading = true
+  } = options;
+  const allAccountsGroup = allAccountsHomeSwitcherGroup.value;
+
+  state.selected.groupOverride = allAccountsGroup;
+  state.allUserGroups.forEach((group) => {
+    group.isSelected = false;
+  });
+  writePreferredGroupIdToStorage(allAccountsGroup);
+
+  await handleGroupChange({
+    preserveSelectedTab,
+    showLoading
+  });
+
+  return allAccountsGroup;
+}
+
 async function handleHomeSwitcherSelect(option = {}) {
   const optionKind = String(option?.kind || '').trim().toLowerCase();
 
@@ -1304,9 +1459,15 @@ async function handleHomeSwitcherSelect(option = {}) {
 
   try {
     if (targetGroupId !== currentGroupId) {
-      await selectGroup(targetGroup, {
-        preserveSelectedTab: shouldPreserveSelectedTab
-      });
+      if (targetGroupId === ALL_ACCOUNTS_GROUP_ID) {
+        await selectAllAccountsFromHomeSwitcher({
+          preserveSelectedTab: shouldPreserveSelectedTab
+        });
+      } else {
+        await selectGroup(targetGroup, {
+          preserveSelectedTab: shouldPreserveSelectedTab
+        });
+      }
     }
   } catch (error) {
     console.error('Error switching account/group from home menu:', error);
