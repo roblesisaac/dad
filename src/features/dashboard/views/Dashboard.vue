@@ -35,6 +35,7 @@
           :has-recategorize-behavior-decision="drillState.hasRecategorizeBehaviorDecision"
           :view-note-template="selectedTabViewNoteTemplate"
           :is-saving-view-note="isSavingViewNote"
+          :can-copy-current-rows="canCopyCurrentRows"
           @navigate-group="openGroupSelector"
           @navigate-tab="openTabSelector"
           @navigate-category="openDrillRoot"
@@ -43,6 +44,7 @@
           @edit-tab="openTabEditor"
           @save-view-note="handleSaveViewNote"
           @remove-view-note="handleRemoveViewNote"
+          @copy-current-rows="handleCopyCurrentRows"
         />
       </div>
 
@@ -333,6 +335,42 @@ const drillState = computed(() => {
     drillPath: state.selected.drillPath
   });
 });
+const copyableDrillRows = computed(() => {
+  if (!isDrillView.value) {
+    return [];
+  }
+
+  if (drillState.value.isLeaf) {
+    return drillState.value.transactions.map((transaction) => {
+      const date = String(transaction?.authorized_date || transaction?.date || '').trim();
+      const row = {
+        title: String(transaction?.name || '').trim(),
+        amount: normalizeCopyRowTotal(transaction?.amount)
+      };
+
+      if (date) {
+        row.date = date;
+      }
+
+      return row;
+    });
+  }
+
+  return drillState.value.groups.map((group) => {
+    const date = resolveCopyGroupDate(group);
+    const row = {
+      title: String(group?.label || '').trim(),
+      amount: normalizeCopyRowTotal(group?.total)
+    };
+
+    if (date) {
+      row.date = date;
+    }
+
+    return row;
+  });
+});
+const canCopyCurrentRows = computed(() => copyableDrillRows.value.length > 0);
 
 const {
   isRefreshing: isPullRefreshing,
@@ -635,6 +673,102 @@ function parseReportDate(value) {
 function parseReportRowTotal(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+}
+
+function normalizeCopyRowTotal(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(parsed) : '0';
+}
+
+function resolveCopyGroupDate(group) {
+  const groupLabel = String(group?.label || '').trim();
+  if (ISO_DATE_PATTERN.test(groupLabel)) {
+    return groupLabel;
+  }
+
+  const groupKey = String(group?.key || '').trim();
+  if (ISO_DATE_PATTERN.test(groupKey)) {
+    return groupKey;
+  }
+
+  return '';
+}
+
+function sanitizeCopyCell(value) {
+  return String(value ?? '').replace(/[\t\n\r]+/g, ' ').trim();
+}
+
+function buildCopyRowsClipboardText(rows = []) {
+  const toMarkdownCell = (value) => sanitizeCopyCell(value).replace(/\|/g, '\\|');
+  const preferredColumnOrder = ['date', 'title', 'amount'];
+  const firstRow = rows[0] && typeof rows[0] === 'object' ? rows[0] : {};
+  const discoveredColumns = Object.keys(firstRow);
+  const columns = preferredColumnOrder
+    .filter(column => rows.some(row => Object.prototype.hasOwnProperty.call(row || {}, column)))
+    .concat(
+      discoveredColumns.filter(column => !preferredColumnOrder.includes(column))
+    );
+  const safeColumns = columns.length ? columns : discoveredColumns;
+  if (!safeColumns.length) {
+    return '';
+  }
+
+  const headerLine = `| ${safeColumns.join(' | ')} |`;
+  const dividerLine = `| ${safeColumns.map(() => '---').join(' | ')} |`;
+  const rowLines = rows.map((row) => (
+    `| ${safeColumns.map(column => toMarkdownCell(row?.[column])).join(' | ')} |`
+  ));
+
+  return [headerLine, dividerLine, ...rowLines].join('\n');
+}
+
+async function copyTextToClipboard(text = '') {
+  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch (_error) {
+      // Fallback below.
+    }
+  }
+
+  if (typeof document === 'undefined') {
+    return false;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  textarea.style.pointerEvents = 'none';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+
+  let didCopy = false;
+
+  try {
+    didCopy = document.execCommand('copy');
+  } catch (_error) {
+    didCopy = false;
+  }
+
+  document.body.removeChild(textarea);
+  return didCopy;
+}
+
+async function handleCopyCurrentRows() {
+  const rows = copyableDrillRows.value;
+  if (!rows.length) {
+    return;
+  }
+
+  const didCopy = await copyTextToClipboard(buildCopyRowsClipboardText(rows));
+  if (!didCopy && typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert('Unable to copy rows.');
+  }
 }
 
 function getReportContextFromQuery() {

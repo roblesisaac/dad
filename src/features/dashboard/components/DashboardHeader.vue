@@ -24,12 +24,43 @@
               >
                 <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
                 
-                <span
+                <div
                   v-if="segment.type === 'current'"
-                  class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+                  class="relative flex min-w-0 items-center gap-1 breadcrumb-current-group"
                 >
-                  {{ segment.label }}
-                </span>
+                  <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                    {{ segment.label }}
+                  </span>
+
+                  <div
+                    v-if="showCurrentBreadcrumbCopyAction"
+                    ref="currentBreadcrumbMenuRef"
+                    class="relative flex-shrink-0"
+                  >
+                    <button
+                      type="button"
+                      class="breadcrumb-current-menu-trigger rounded-full p-0.5 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                      :class="{ 'is-open': isCurrentBreadcrumbMenuOpen }"
+                      :aria-expanded="isCurrentBreadcrumbMenuOpen"
+                      aria-label="Current breadcrumb actions"
+                      @click="toggleCurrentBreadcrumbMenu"
+                    >
+                      <EllipsisVertical class="h-3.5 w-3.5" />
+                    </button>
+                    <div
+                      v-if="isCurrentBreadcrumbMenuOpen"
+                      class="absolute top-full right-0 mt-2 min-w-[140px] overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+                    >
+                      <button
+                        type="button"
+                        class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                        @click="handleCopyCurrentRows"
+                      >
+                        Copy rows
+                      </button>
+                    </div>
+                  </div>
+                </div>
                 <button
                   v-else
                   @click="segment.action"
@@ -75,11 +106,39 @@
               
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               
-              <span
-                class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
-              >
-                {{ breadcrumbSegments[breadcrumbSegments.length - 1].label }}
-              </span>
+              <div class="relative flex min-w-0 items-center gap-1 breadcrumb-current-group">
+                <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                  {{ breadcrumbSegments[breadcrumbSegments.length - 1].label }}
+                </span>
+                <div
+                  v-if="showCurrentBreadcrumbCopyAction"
+                  ref="currentBreadcrumbMenuRef"
+                  class="relative flex-shrink-0"
+                >
+                  <button
+                    type="button"
+                    class="breadcrumb-current-menu-trigger rounded-full p-0.5 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                    :class="{ 'is-open': isCurrentBreadcrumbMenuOpen }"
+                    :aria-expanded="isCurrentBreadcrumbMenuOpen"
+                    aria-label="Current breadcrumb actions"
+                    @click="toggleCurrentBreadcrumbMenu"
+                  >
+                    <EllipsisVertical class="h-3.5 w-3.5" />
+                  </button>
+                  <div
+                    v-if="isCurrentBreadcrumbMenuOpen"
+                    class="absolute top-full right-0 mt-2 min-w-[140px] overflow-hidden rounded-xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)]"
+                  >
+                    <button
+                      type="button"
+                      class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                      @click="handleCopyCurrentRows"
+                    >
+                      Copy rows
+                    </button>
+                  </div>
+                </div>
+              </div>
             </template>
           </nav>
 
@@ -366,6 +425,10 @@ const props = defineProps({
   hasRecategorizeBehaviorDecision: {
     type: Boolean,
     default: false
+  },
+  canCopyCurrentRows: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -377,7 +440,8 @@ const emit = defineEmits([
   'toggle-rearrange',
   'edit-tab',
   'save-view-note',
-  'remove-view-note'
+  'remove-view-note',
+  'copy-current-rows'
 ]);
 const { state } = useDashboardState();
 const { formatPrice } = useUtils();
@@ -421,6 +485,10 @@ const isSavingViewNote = computed(() => props.isSavingViewNote);
 const showViewNoteActions = computed(() => (
   isDrillView.value
   && Boolean(state.selected.tab)
+));
+const showCurrentBreadcrumbCopyAction = computed(() => (
+  isDrillView.value
+  && Boolean(props.canCopyCurrentRows)
 ));
 const hasViewNote = computed(() => Boolean(viewNoteTemplate.value.trim()));
 const isHeaderInfoMenuOpen = ref(false);
@@ -545,6 +613,8 @@ const helperBodyDisplay = computed(() => (
 
 const isBreadcrumbDropdownOpen = ref(false);
 const breadcrumbDropdownRef = ref(null);
+const isCurrentBreadcrumbMenuOpen = ref(false);
+const currentBreadcrumbMenuRef = ref(null);
 
 const isEditTabDropdownOpen = ref(false);
 const editTabDropdownRef = ref(null);
@@ -641,6 +711,7 @@ const editTabOptions = computed(() =>
 );
 
 function toggleEditTabDropdown() {
+  closeCurrentBreadcrumbMenu();
   isEditTabDropdownOpen.value = !isEditTabDropdownOpen.value;
 }
 
@@ -654,6 +725,7 @@ function handleEditTabOption(sectionId) {
 }
 
 function toggleBreadcrumbDropdown() {
+  closeCurrentBreadcrumbMenu();
   isBreadcrumbDropdownOpen.value = !isBreadcrumbDropdownOpen.value;
 }
 
@@ -664,15 +736,37 @@ function closeBreadcrumbDropdown() {
 function handleDropdownNavigation(action) {
   if (action) action();
   closeBreadcrumbDropdown();
+  closeCurrentBreadcrumbMenu();
 }
 
 function handleGroupSegmentNavigation() {
+  closeCurrentBreadcrumbMenu();
   if (isDrillView.value && shouldCondenseSingleTabBreadcrumb.value) {
     emit('navigate-category');
     return;
   }
 
   emit('navigate-tab');
+}
+
+function toggleCurrentBreadcrumbMenu() {
+  if (!showCurrentBreadcrumbCopyAction.value) {
+    return;
+  }
+
+  closeBreadcrumbDropdown();
+  closeEditTabDropdown();
+  closeHeaderInfoMenu();
+  isCurrentBreadcrumbMenuOpen.value = !isCurrentBreadcrumbMenuOpen.value;
+}
+
+function closeCurrentBreadcrumbMenu() {
+  isCurrentBreadcrumbMenuOpen.value = false;
+}
+
+function handleCopyCurrentRows() {
+  emit('copy-current-rows');
+  closeCurrentBreadcrumbMenu();
 }
 
 function toggleHeaderInfoMenu() {
@@ -736,6 +830,15 @@ watch(
     if (!canShowNotes) {
       closeHeaderInfoMenu();
       isEditingHelperBody.value = false;
+    }
+  }
+);
+
+watch(
+  () => showCurrentBreadcrumbCopyAction.value,
+  (canShowCopyAction) => {
+    if (!canShowCopyAction) {
+      closeCurrentBreadcrumbMenu();
     }
   }
 );
@@ -1034,6 +1137,9 @@ function onWindowKeydown(event) {
     if (isHeaderInfoMenuOpen.value) {
       closeHeaderInfoMenu();
     }
+    if (isCurrentBreadcrumbMenuOpen.value) {
+      closeCurrentBreadcrumbMenu();
+    }
   }
 }
 
@@ -1047,6 +1153,26 @@ function onWindowClick(event) {
   if (isHeaderInfoMenuOpen.value && headerInfoMenuRef.value && !headerInfoMenuRef.value.contains(event.target)) {
     closeHeaderInfoMenu();
   }
+  if (isCurrentBreadcrumbMenuOpen.value && !currentBreadcrumbMenuContainsTarget(event.target)) {
+    closeCurrentBreadcrumbMenu();
+  }
+}
+
+function currentBreadcrumbMenuContainsTarget(target) {
+  if (!target) {
+    return false;
+  }
+
+  const breadcrumbMenuRefValue = currentBreadcrumbMenuRef.value;
+  if (!breadcrumbMenuRefValue) {
+    return false;
+  }
+
+  if (Array.isArray(breadcrumbMenuRefValue)) {
+    return breadcrumbMenuRefValue.some(element => element?.contains?.(target));
+  }
+
+  return breadcrumbMenuRefValue.contains(target);
 }
 
 onMounted(() => {
@@ -1074,6 +1200,17 @@ onBeforeUnmount(() => {
 
 .clickable-underline:hover,
 .clickable-underline:focus-visible {
+  opacity: 1;
+}
+
+.breadcrumb-current-menu-trigger {
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.breadcrumb-current-group:hover .breadcrumb-current-menu-trigger,
+.breadcrumb-current-group:focus-within .breadcrumb-current-menu-trigger,
+.breadcrumb-current-menu-trigger.is-open {
   opacity: 1;
 }
 
