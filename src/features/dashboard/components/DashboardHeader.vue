@@ -1083,19 +1083,19 @@ const headerInfo = computed(() => {
     const hasDrillBreadcrumb = drillBreadcrumbs.value.length > 0;
     if (hasDrillBreadcrumb) {
       return {
-        title: 'Drill Level Total',
+        title: 'More Info',
         summary: `There were {{ transaction-count }} {{ selected-level }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
       };
     }
 
     return {
-      title: 'Tab Total',
+      title: 'More Info',
       summary: `There were {{ transaction-count }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
     };
   }
 
   return {
-    title: 'Tab Total',
+    title: 'More Info',
     summary: `There were {{ transaction-count }} {{ selected-level }} transactions with a net sum of {{ total }} for {{ selected-account }} from {{ date }}, with an average of {{ average }} per transaction.`
   };
 });
