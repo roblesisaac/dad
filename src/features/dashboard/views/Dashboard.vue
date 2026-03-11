@@ -45,6 +45,7 @@
           @save-view-note="handleSaveViewNote"
           @remove-view-note="handleRemoveViewNote"
           @copy-current-rows="handleCopyCurrentRows"
+          @open-export-rows-modal="openExportRowsModal"
         />
       </div>
 
@@ -173,6 +174,75 @@
         :is-open="isAccountModalOpen"
         @close="isAccountModalOpen = false"
       />
+
+      <Teleport to="body">
+        <div
+          v-if="isExportRowsModalOpen"
+          class="fixed inset-0 z-50 flex items-center justify-center bg-[var(--theme-overlay-30)] backdrop-blur-md px-4 py-4"
+          @click.self="closeExportRowsModal"
+        >
+          <div
+            class="w-full max-w-sm rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_20px_60px_-24px_var(--theme-overlay-50)]"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Export rows"
+          >
+            <div class="flex items-center justify-between gap-4 border-b border-[var(--theme-border)] px-4 py-3">
+              <h3 class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)]">
+                Export Rows
+              </h3>
+              <button
+                type="button"
+                class="rounded-full p-1 text-[var(--theme-text-soft)] transition-colors hover:text-[var(--theme-text)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                aria-label="Close export rows modal"
+                @click="closeExportRowsModal"
+              >
+                <X class="h-4 w-4" />
+              </button>
+            </div>
+
+            <div class="space-y-3 px-4 py-4">
+              <label class="block text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]" for="rows-export-filename">
+                Filename
+              </label>
+              <input
+                id="rows-export-filename"
+                v-model="exportRowsFilenameDraft"
+                type="text"
+                class="w-full rounded-xl border border-[var(--theme-border)] bg-transparent px-3 py-2 text-sm text-[var(--theme-text)] placeholder:text-[var(--theme-text-soft)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                placeholder="rows-2026-03-11"
+              />
+
+              <div class="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]">
+                Export Format
+              </div>
+              <div class="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  class="rounded-xl border border-[var(--theme-border)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  @click="handleExportRowsAs('json')"
+                >
+                  JSON
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-[var(--theme-border)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  @click="handleExportRowsAs('markdown')"
+                >
+                  Markdown
+                </button>
+                <button
+                  type="button"
+                  class="rounded-xl border border-[var(--theme-border)] px-3 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:outline-none focus:ring-2 focus:ring-[var(--theme-ring)]"
+                  @click="handleExportRowsAs('csv')"
+                >
+                  CSV
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -248,7 +318,7 @@ import {
 } from '@/features/tabs/utils/tabNotes.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
-import { ChevronDown, Loader2 } from 'lucide-vue-next';
+import { ChevronDown, Loader2, X } from 'lucide-vue-next';
 
 import BlueBar from '../components/BlueBar.vue';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -302,6 +372,8 @@ const lastKnownHistoryPosition = ref(getHistoryPosition());
 const pendingSingleTabSelection = ref(null);
 const tabEditorSnapshot = ref({ tabId: '', fingerprint: '' });
 const isSavingViewNote = ref(false);
+const isExportRowsModalOpen = ref(false);
+const exportRowsFilenameDraft = ref('');
 const EMPTY_DRILL_STATE = Object.freeze({
   tabTotal: 0,
   currentLevelTotal: 0,
@@ -698,28 +770,72 @@ function sanitizeCopyCell(value) {
   return String(value ?? '').replace(/[\t\n\r]+/g, ' ').trim();
 }
 
+function resolveCopyRowColumns(rows = []) {
+  const preferredColumnOrder = ['date', 'title', 'amount'];
+  const discoveredColumns = [];
+  const discoveredColumnSet = new Set();
+
+  rows.forEach((row) => {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) {
+      return;
+    }
+
+    Object.keys(row).forEach((column) => {
+      if (discoveredColumnSet.has(column)) {
+        return;
+      }
+
+      discoveredColumnSet.add(column);
+      discoveredColumns.push(column);
+    });
+  });
+
+  const preferredColumns = preferredColumnOrder.filter(column => discoveredColumnSet.has(column));
+  const dynamicColumns = discoveredColumns.filter(column => !preferredColumns.includes(column));
+  return [...preferredColumns, ...dynamicColumns];
+}
+
 function buildCopyRowsClipboardText(rows = []) {
   const toMarkdownCell = (value) => sanitizeCopyCell(value).replace(/\|/g, '\\|');
-  const preferredColumnOrder = ['date', 'title', 'amount'];
-  const firstRow = rows[0] && typeof rows[0] === 'object' ? rows[0] : {};
-  const discoveredColumns = Object.keys(firstRow);
-  const columns = preferredColumnOrder
-    .filter(column => rows.some(row => Object.prototype.hasOwnProperty.call(row || {}, column)))
-    .concat(
-      discoveredColumns.filter(column => !preferredColumnOrder.includes(column))
-    );
-  const safeColumns = columns.length ? columns : discoveredColumns;
-  if (!safeColumns.length) {
+  const columns = resolveCopyRowColumns(rows);
+  if (!columns.length) {
     return '';
   }
 
-  const headerLine = `| ${safeColumns.join(' | ')} |`;
-  const dividerLine = `| ${safeColumns.map(() => '---').join(' | ')} |`;
+  const headerLine = `| ${columns.join(' | ')} |`;
+  const dividerLine = `| ${columns.map(() => '---').join(' | ')} |`;
   const rowLines = rows.map((row) => (
-    `| ${safeColumns.map(column => toMarkdownCell(row?.[column])).join(' | ')} |`
+    `| ${columns.map(column => toMarkdownCell(row?.[column])).join(' | ')} |`
   ));
 
   return [headerLine, dividerLine, ...rowLines].join('\n');
+}
+
+function buildRowsCsvText(rows = []) {
+  const columns = resolveCopyRowColumns(rows);
+  if (!columns.length) {
+    return '';
+  }
+
+  const toCsvCell = (value) => {
+    const normalizedCell = sanitizeCopyCell(value).replace(/"/g, '""');
+    if (normalizedCell.includes(',') || normalizedCell.includes('"')) {
+      return `"${normalizedCell}"`;
+    }
+
+    return normalizedCell;
+  };
+
+  const headerLine = columns.map(column => toCsvCell(column)).join(',');
+  const rowLines = rows.map((row) => (
+    columns.map(column => toCsvCell(row?.[column])).join(',')
+  ));
+
+  return [headerLine, ...rowLines].join('\n');
+}
+
+function buildRowsJsonText(rows = []) {
+  return JSON.stringify(rows, null, 2);
 }
 
 async function copyTextToClipboard(text = '') {
@@ -769,6 +885,116 @@ async function handleCopyCurrentRows() {
   if (!didCopy && typeof window !== 'undefined' && typeof window.alert === 'function') {
     window.alert('Unable to copy rows.');
   }
+}
+
+function defaultExportRowsFilename() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `rows-${year}-${month}-${day}`;
+}
+
+function sanitizeExportFilenameInput(value) {
+  const normalizedValue = String(value ?? '').trim();
+  const withoutIllegalCharacters = normalizedValue.replace(/[\\/:*?"<>|]+/g, '-');
+  const compactedValue = withoutIllegalCharacters
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+
+  return compactedValue || defaultExportRowsFilename();
+}
+
+function resolveExportFilenameWithExtension(baseName, extension) {
+  const normalizedBaseName = sanitizeExportFilenameInput(baseName);
+  const normalizedExtension = String(extension || '').trim().toLowerCase().replace(/^\./, '');
+  if (!normalizedExtension) {
+    return normalizedBaseName;
+  }
+
+  const extensionSuffix = `.${normalizedExtension}`;
+  if (normalizedBaseName.toLowerCase().endsWith(extensionSuffix)) {
+    return normalizedBaseName;
+  }
+
+  return `${normalizedBaseName}${extensionSuffix}`;
+}
+
+function downloadRowsFile({ filename, contents, mimeType }) {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return false;
+  }
+
+  try {
+    const blob = new Blob([contents], { type: mimeType });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = downloadUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    window.URL.revokeObjectURL(downloadUrl);
+    return true;
+  } catch (_error) {
+    return false;
+  }
+}
+
+function openExportRowsModal() {
+  if (!copyableDrillRows.value.length) {
+    return;
+  }
+
+  exportRowsFilenameDraft.value = defaultExportRowsFilename();
+  isExportRowsModalOpen.value = true;
+}
+
+function closeExportRowsModal() {
+  isExportRowsModalOpen.value = false;
+}
+
+function handleExportRowsAs(format = 'json') {
+  const rows = copyableDrillRows.value;
+  if (!rows.length) {
+    return;
+  }
+
+  const normalizedFormat = String(format || '').trim().toLowerCase();
+  let fileContents = '';
+  let fileExtension = '';
+  let mimeType = 'text/plain;charset=utf-8';
+
+  if (normalizedFormat === 'json') {
+    fileContents = buildRowsJsonText(rows);
+    fileExtension = 'json';
+    mimeType = 'application/json;charset=utf-8';
+  } else if (normalizedFormat === 'markdown') {
+    fileContents = buildCopyRowsClipboardText(rows);
+    fileExtension = 'md';
+    mimeType = 'text/markdown;charset=utf-8';
+  } else if (normalizedFormat === 'csv') {
+    fileContents = buildRowsCsvText(rows);
+    fileExtension = 'csv';
+    mimeType = 'text/csv;charset=utf-8';
+  } else {
+    return;
+  }
+
+  const filename = resolveExportFilenameWithExtension(exportRowsFilenameDraft.value, fileExtension);
+  const didDownload = downloadRowsFile({
+    filename,
+    contents: fileContents,
+    mimeType
+  });
+
+  if (!didDownload && typeof window !== 'undefined' && typeof window.alert === 'function') {
+    window.alert('Unable to export rows.');
+    return;
+  }
+
+  closeExportRowsModal();
 }
 
 function getReportContextFromQuery() {

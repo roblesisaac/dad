@@ -58,6 +58,13 @@
                       >
                         Copy rows
                       </button>
+                      <button
+                        type="button"
+                        class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                        @click="handleOpenExportRowsModal"
+                      >
+                        Export rows
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -135,6 +142,13 @@
                       @click="handleCopyCurrentRows"
                     >
                       Copy rows
+                    </button>
+                    <button
+                      type="button"
+                      class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                      @click="handleOpenExportRowsModal"
+                    >
+                      Export rows
                     </button>
                   </div>
                 </div>
@@ -441,7 +455,8 @@ const emit = defineEmits([
   'edit-tab',
   'save-view-note',
   'remove-view-note',
-  'copy-current-rows'
+  'copy-current-rows',
+  'open-export-rows-modal'
 ]);
 const { state } = useDashboardState();
 const { formatPrice } = useUtils();
@@ -766,6 +781,11 @@ function closeCurrentBreadcrumbMenu() {
 
 function handleCopyCurrentRows() {
   emit('copy-current-rows');
+  closeCurrentBreadcrumbMenu();
+}
+
+function handleOpenExportRowsModal() {
+  emit('open-export-rows-modal');
   closeCurrentBreadcrumbMenu();
 }
 
