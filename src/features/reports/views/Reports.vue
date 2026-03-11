@@ -540,7 +540,7 @@
                 Select Existing Row
               </button>
               <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
-              <button class="menu-item" @click="addAndEditRow('note')">Markdown Note / Spacer</button>
+              <button class="menu-item" @click="addAndEditRow('note')">Add Note</button>
             </div>
           </div>
         </div>
