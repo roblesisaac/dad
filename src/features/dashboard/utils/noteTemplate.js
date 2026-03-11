@@ -8,6 +8,7 @@ function hasOwn(target, key) {
 export function normalizeTemplateToken(token) {
   return String(token || '')
     .trim()
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
     .toLowerCase()
     .replace(/&/g, ' and ')
     .replace(/[_\s]+/g, '-')
@@ -211,10 +212,9 @@ function tokenizeExpression(expression, tokenMap = {}) {
       }
 
       const tokenValue = tokenMap[normalizedIdentifier];
-      const numericTokenValue = parseTokenNumber(tokenValue);
       tokens.push({
         type: 'value',
-        value: numericTokenValue !== null ? numericTokenValue : String(tokenValue)
+        value: tokenValue
       });
       index = end;
       continue;
@@ -323,15 +323,29 @@ function evaluateExpressionTokens(tokens = []) {
     return true;
   }
 
+  function stringifyExpressionValue(value) {
+    if (value === null || value === undefined) {
+      return '';
+    }
+
+    return String(value);
+  }
+
+  function evaluateAddOperator(lhs, rhs) {
+    const leftNumber = parseTokenNumber(lhs);
+    const rightNumber = parseTokenNumber(rhs);
+    if (leftNumber !== null && rightNumber !== null) {
+      return leftNumber + rightNumber;
+    }
+
+    return `${stringifyExpressionValue(lhs)}${stringifyExpressionValue(rhs)}`;
+  }
+
   function evaluateNumericBinaryOperator(lhs, rhs, operator) {
     const left = parseTokenNumber(lhs);
     const right = parseTokenNumber(rhs);
     if (left === null || right === null) {
       return null;
-    }
-
-    if (operator === '+') {
-      return left + right;
     }
 
     if (operator === '-') {
@@ -426,6 +440,11 @@ function evaluateExpressionTokens(tokens = []) {
       const rhs = parseMulDiv();
       if (rhs === null) {
         return null;
+      }
+
+      if (current.value === '+') {
+        value = evaluateAddOperator(value, rhs);
+        continue;
       }
 
       const nextValue = evaluateNumericBinaryOperator(value, rhs, current.value);

@@ -9,6 +9,7 @@ describe('noteTemplate', () => {
   test('normalizes token names from free text labels', () => {
     expect(normalizeTemplateToken(' Shop Subscriptions ')).toBe('shop-subscriptions');
     expect(normalizeTemplateToken('money_that went out')).toBe('money-that-went-out');
+    expect(normalizeTemplateToken('selectedAccount')).toBe('selected-account');
   });
 
   test('builds dynamic tokens including row totals', () => {
@@ -106,6 +107,27 @@ describe('noteTemplate', () => {
     );
 
     expect(rendered).toBe('Displayed: $250');
+  });
+
+  test('supports ternary branches with string concatenation and camelCase token names', () => {
+    const template = "{{ total < 0 ? selectedAccount + ' sent ' + (total * -1) + ' to your 9098 account' : 'You paid ' + total + ' out of pocket from your 9098 account to ' + selectedAccount }}";
+    const renderedNegative = renderTemplateWithTokens(
+      template,
+      {
+        total: '-$45',
+        'selected-account': 'Checking'
+      }
+    );
+    const renderedPositive = renderTemplateWithTokens(
+      template,
+      {
+        total: '$45',
+        'selected-account': 'Checking'
+      }
+    );
+
+    expect(renderedNegative).toBe('Checking sent 45 to your 9098 account');
+    expect(renderedPositive).toBe('You paid $45 out of pocket from your 9098 account to Checking');
   });
 
   test('keeps expression untouched when it cannot be evaluated safely', () => {
