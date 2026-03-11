@@ -272,18 +272,28 @@ export function useSelectGroup() {
   /**
    * Select a group and deselect others
    */
-  async function selectGroup(groupToSelect) {
-    state.isLoading = true;
+  async function selectGroup(groupToSelect, options = {}) {
+    const {
+      preserveSelectedTab = false,
+      showLoading = true
+    } = options;
+
+    if (showLoading) {
+      state.isLoading = true;
+    }
+
     state.selected.groupOverride = null;
     const previousSelectedGroupId = String(state.selected.group?._id || '').trim();
     const selectedGroup = setSelectedGroupInMemory(groupToSelect, state.allUserGroups);
     if (!selectedGroup) {
-      state.isLoading = false;
+      if (showLoading) {
+        state.isLoading = false;
+      }
       return null;
     }
 
     void persistSelectedGroupSelection(selectedGroup._id, previousSelectedGroupId);
-    await handleGroupChange();
+    await handleGroupChange({ preserveSelectedTab, showLoading });
 
     return selectedGroup;
   }

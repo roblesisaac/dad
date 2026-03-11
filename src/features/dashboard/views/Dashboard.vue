@@ -37,7 +37,9 @@
           :view-note-show-in-main-view="selectedTabViewNoteShowInMainView"
           :is-saving-view-note="isSavingViewNote"
           :can-copy-current-rows="canCopyCurrentRows"
+          :home-switcher-options="homeSwitcherOptions"
           @navigate-group="openGroupSelector"
+          @home-switcher-select="handleHomeSwitcherSelect"
           @navigate-tab="openTabSelector"
           @navigate-category="openDrillRoot"
           @navigate-drill-depth="handleNavigateDrillDepth"
@@ -338,7 +340,7 @@ const router = useRouter();
 const route = useRoute();
 const { state } = useDashboardState();
 const { init } = useInit();
-const { selectGroup, handleGroupChange } = useSelectGroup();
+const { selectGroup, handleGroupChange, getAccountContextGroup } = useSelectGroup();
 const { selectTab, ensureDefaultTabsForTabView, setTabNotesByView } = useTabs();
 const { processAllTabsForSelectedGroup } = useTabProcessing();
 
@@ -367,6 +369,9 @@ const DRILL_PATH_QUERY_KEY = 'drillPath';
 const PREFERRED_GROUP_STORAGE_KEY = 'tracktabs.preferred-group-id';
 const DASHBOARD_VIEWS = ['group', 'tab', 'drill', 'transaction-search'];
 const DASHBOARD_VIEW_SET = new Set(DASHBOARD_VIEWS);
+const HOME_SWITCHER_HOME_KIND = 'home';
+const HOME_SWITCHER_GROUP_KIND = 'group';
+const HOME_SWITCHER_ACCOUNT_KIND = 'account';
 const isSyncingDashboardRouteQuery = ref(false);
 const isApplyingRemoteDashboardSync = ref(false);
 const isHandlingHistoryPopNavigation = ref(false);
@@ -538,6 +543,157 @@ function writePreferredGroupIdToStorage(group) {
     // Ignore storage write failures.
   }
 }
+
+function selectionAccountIdentifiers(account) {
+  if (!account) {
+    return [];
+  }
+
+  return [
+    account._id,
+    account.account_id,
+    account.id,
+    account.accountId
+  ]
+    .map(identifier => String(identifier || '').trim())
+    .filter(Boolean);
+}
+
+function selectionAccountsMatch(accountA, accountB) {
+  const accountAIds = selectionAccountIdentifiers(accountA);
+  const accountBIdSet = new Set(selectionAccountIdentifiers(accountB));
+  return accountAIds.some(accountId => accountBIdSet.has(accountId));
+}
+
+function normalizeHomeSwitcherAccountId(account) {
+  return selectionAccountIdentifiers(account)[0] || '';
+}
+
+function formatHomeSwitcherAccountLabel(account) {
+  const baseName = String(account?.name || account?.official_name || account?.subtype || 'Unnamed Account').trim();
+  const mask = String(account?.mask || '').trim();
+  if (!mask) {
+    return baseName;
+  }
+
+  return `${baseName} •••${mask}`;
+}
+
+function formatHomeSwitcherGroupLabel(group) {
+  return String(group?.name || 'Unnamed Group').trim() || 'Unnamed Group';
+}
+
+function groupContainsAccount(group, account) {
+  const groupAccounts = Array.isArray(group?.accounts) ? group.accounts : [];
+  return groupAccounts.some(groupAccount => selectionAccountsMatch(groupAccount, account));
+}
+
+function resolveFallbackGroupForAccount(account) {
+  if (!account) {
+    return null;
+  }
+
+  const accountContextGroup = state.allUserGroups.find((group) => (
+    group?.isLabel === false
+    && groupContainsAccount(group, account)
+  ));
+  if (accountContextGroup) {
+    return accountContextGroup;
+  }
+
+  return state.allUserGroups.find(group => groupContainsAccount(group, account)) || null;
+}
+
+function resolveAccountFromHomeSwitcherOption(option = {}) {
+  const requestedAccountId = String(option?.accountId || '').trim();
+  if (!requestedAccountId) {
+    return null;
+  }
+
+  return state.allUserAccounts.find((account) => (
+    selectionAccountIdentifiers(account).includes(requestedAccountId)
+  )) || null;
+}
+
+function resolveTargetGroupForHomeSwitcherOption(option = {}) {
+  const optionKind = String(option?.kind || '').trim().toLowerCase();
+  if (optionKind === HOME_SWITCHER_GROUP_KIND) {
+    const groupId = String(option?.groupId || '').trim();
+    if (!groupId) {
+      return null;
+    }
+
+    return state.allUserGroups.find(group => String(group?._id || '').trim() === groupId) || null;
+  }
+
+  if (optionKind !== HOME_SWITCHER_ACCOUNT_KIND) {
+    return null;
+  }
+
+  const account = resolveAccountFromHomeSwitcherOption(option);
+  if (!account) {
+    return null;
+  }
+
+  return getAccountContextGroup(account)
+    || resolveFallbackGroupForAccount(account)
+    || null;
+}
+
+const homeSwitcherOptions = computed(() => {
+  const selectedGroupId = normalizeSelectionGroupId(state.selected.group);
+
+  const accountOptions = state.allUserAccounts
+    .map((account) => {
+      const accountId = normalizeHomeSwitcherAccountId(account);
+      if (!accountId) {
+        return null;
+      }
+
+      const targetGroup = getAccountContextGroup(account)
+        || resolveFallbackGroupForAccount(account);
+      const targetGroupId = normalizeSelectionGroupId(targetGroup);
+
+      return {
+        id: `account:${accountId}`,
+        kind: HOME_SWITCHER_ACCOUNT_KIND,
+        label: formatHomeSwitcherAccountLabel(account),
+        caption: 'Account',
+        accountId,
+        groupId: targetGroupId,
+        isCurrent: Boolean(targetGroupId && targetGroupId === selectedGroupId)
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const groupOptions = state.allUserGroups
+    .map((group) => {
+      const groupId = normalizeSelectionGroupId(group);
+      if (!groupId) {
+        return null;
+      }
+
+      return {
+        id: `group:${groupId}`,
+        kind: HOME_SWITCHER_GROUP_KIND,
+        label: formatHomeSwitcherGroupLabel(group),
+        caption: 'Group',
+        groupId,
+        isCurrent: groupId === selectedGroupId
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return [{
+    id: 'home:go',
+    kind: HOME_SWITCHER_HOME_KIND,
+    label: 'Go Home',
+    caption: 'Home',
+    isCurrent: isGroupSelectorView.value
+  }, ...accountOptions, ...groupOptions];
+});
 
 function tabsEnabledForGroup(group) {
   const targetGroupId = normalizeSelectionGroupId(group);
@@ -1115,6 +1271,100 @@ function setDefaultDashboardView(options = {}) {
 function openGroupSelector() {
   pendingSingleTabSelection.value = null;
   setDashboardView('group', { syncRoute: true });
+}
+
+async function handleHomeSwitcherSelect(option = {}) {
+  const optionKind = String(option?.kind || '').trim().toLowerCase();
+
+  if (optionKind === HOME_SWITCHER_HOME_KIND) {
+    openGroupSelector();
+    return;
+  }
+
+  const targetGroup = resolveTargetGroupForHomeSwitcherOption(option);
+  const targetGroupId = normalizeSelectionGroupId(targetGroup);
+  if (!targetGroup || !targetGroupId) {
+    openGroupSelector();
+    return;
+  }
+
+  const currentGroupId = normalizeSelectionGroupId(state.selected.group);
+  const previousView = dashboardView.value;
+  const previousTabId = String(state.selected.tab?._id || '').trim();
+  const previousDrillPath = Array.isArray(state.selected.drillPath)
+    ? [...state.selected.drillPath]
+    : [];
+  const tabsForTargetGroup = tabsEnabledForGroup(targetGroup);
+  const matchingTab = previousTabId
+    ? tabsForTargetGroup.find(tab => String(tab?._id || '').trim() === previousTabId)
+    : null;
+  const shouldPreserveSelectedTab = Boolean(matchingTab);
+
+  pendingSingleTabSelection.value = null;
+
+  try {
+    if (targetGroupId !== currentGroupId) {
+      await selectGroup(targetGroup, {
+        preserveSelectedTab: shouldPreserveSelectedTab
+      });
+    }
+  } catch (error) {
+    console.error('Error switching account/group from home menu:', error);
+    return;
+  }
+
+  if (shouldPreserveSelectedTab) {
+    const selectedMatchingTab = state.selected.tabsForGroup.find(
+      tab => String(tab?._id || '').trim() === String(matchingTab?._id || '').trim()
+    );
+    if (selectedMatchingTab) {
+      selectTab(selectedMatchingTab);
+    }
+
+    if (previousView === 'drill') {
+      state.selected.drillPath = previousDrillPath;
+      state.selected.transaction = false;
+      setDashboardView('drill', {
+        syncRoute: true,
+        historyMode: 'replace'
+      });
+      return;
+    }
+
+    if (previousView === 'transaction-search') {
+      setDashboardView('transaction-search', {
+        syncRoute: true,
+        historyMode: 'replace'
+      });
+      return;
+    }
+  }
+
+  resetDrillSelection();
+
+  const nextTabs = state.selected.tabsForGroup;
+  if (!nextTabs.length) {
+    setDashboardView('group', {
+      syncRoute: true,
+      historyMode: 'replace'
+    });
+    return;
+  }
+
+  if (nextTabs.length === 1) {
+    const onlyTabId = String(nextTabs[0]?._id || '').trim();
+    if (onlyTabId) {
+      pendingSingleTabSelection.value = {
+        groupId: targetGroupId,
+        tabId: onlyTabId
+      };
+    }
+  }
+
+  setDashboardView('tab', {
+    syncRoute: true,
+    historyMode: 'replace'
+  });
 }
 
 function openTabSelector() {

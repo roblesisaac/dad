@@ -7,14 +7,53 @@
       <div class="max-w-5xl mx-auto w-full sm:px-6">
         <div class="px-4 flex items-center justify-between py-4 transition-all">
           <nav class="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <button
-              @click="emit('navigate-group')"
-              class="flex-shrink-0 text-black hover:opacity-70 transition-opacity focus:outline-none"
-              type="button"
-              aria-label="Home"
+            <div
+              ref="homeSwitcherRef"
+              class="relative flex-shrink-0 home-switcher-container"
             >
-              <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
+              <button
+                @click="handleHomeTriggerClick"
+                class="text-black hover:opacity-70 transition-opacity focus:outline-none"
+                type="button"
+                aria-label="Home"
+                :aria-expanded="canShowHomeSwitcher ? isHomeSwitcherOpen : undefined"
+                :aria-haspopup="canShowHomeSwitcher ? 'menu' : undefined"
+              >
+                <Home class="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              </button>
+
+              <div
+                v-if="canShowHomeSwitcher && isHomeSwitcherOpen"
+                class="absolute top-full left-0 mt-3 py-1.5 min-w-[220px] max-h-[60vh] overflow-y-auto rounded-2xl border border-[var(--theme-border)] bg-[var(--theme-browser-chrome)] shadow-[0_8px_30px_rgb(0,0,0,0.12)] z-50 flex flex-col"
+              >
+                <button
+                  v-for="option in homeSwitcherOptions"
+                  :key="option.id"
+                  type="button"
+                  class="px-5 py-3 text-left transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                  :class="option.isCurrent ? 'bg-[var(--theme-overlay-5)]' : ''"
+                  @click="handleHomeSwitcherSelection(option)"
+                >
+                  <span class="flex items-center justify-between gap-3">
+                    <span class="truncate text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[var(--theme-text)]">
+                      {{ option.label }}
+                    </span>
+                    <span
+                      v-if="option.isCurrent"
+                      class="text-[9px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]"
+                    >
+                      Current
+                    </span>
+                  </span>
+                  <span
+                    v-if="option.caption"
+                    class="mt-1 block truncate text-[9px] font-black uppercase tracking-[0.2em] text-[var(--theme-text-soft)]"
+                  >
+                    {{ option.caption }}
+                  </span>
+                </button>
+              </div>
+            </div>
 
             <!-- Expanded Breadcrumbs (<= 2 items) -->
             <template v-if="breadcrumbSegments.length <= 2">
@@ -463,11 +502,16 @@ const props = defineProps({
   canCopyCurrentRows: {
     type: Boolean,
     default: false
+  },
+  homeSwitcherOptions: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits([
   'navigate-group',
+  'home-switcher-select',
   'navigate-tab',
   'navigate-category',
   'navigate-drill-depth',
@@ -486,6 +530,15 @@ const isGroupSelectorView = computed(() => props.view === 'group');
 const isTabSelectorView = computed(() => props.view === 'tab');
 const isDrillView = computed(() => props.view === 'drill');
 const isTransactionSearchView = computed(() => props.view === 'transaction-search');
+const homeSwitcherOptions = computed(() => (
+  Array.isArray(props.homeSwitcherOptions) ? props.homeSwitcherOptions : []
+));
+const canShowHomeSwitcher = computed(() => (
+  !isGroupSelectorView.value
+  && homeSwitcherOptions.value.length > 0
+));
+const isHomeSwitcherOpen = ref(false);
+const homeSwitcherRef = ref(null);
 const drillBreadcrumbs = computed(() => (Array.isArray(props.drillBreadcrumbs) ? props.drillBreadcrumbs : []));
 const selectedDrillLabel = computed(() => drillBreadcrumbs.value[drillBreadcrumbs.value.length - 1]?.label || 'Selected Level');
 const shouldCondenseSingleTabBreadcrumb = computed(() => (
@@ -669,6 +722,33 @@ const EDIT_TAB_OPTION_DEFINITIONS = [
   { id: 'custom', label: 'Custom' }
 ];
 
+function closeHomeSwitcher() {
+  isHomeSwitcherOpen.value = false;
+}
+
+function handleHomeTriggerClick() {
+  closeCurrentBreadcrumbMenu();
+  closeBreadcrumbDropdown();
+  closeEditTabDropdown();
+  closeHeaderInfoMenu();
+
+  if (!canShowHomeSwitcher.value) {
+    emit('navigate-group');
+    return;
+  }
+
+  isHomeSwitcherOpen.value = !isHomeSwitcherOpen.value;
+}
+
+function handleHomeSwitcherSelection(option) {
+  if (!option) {
+    return;
+  }
+
+  emit('home-switcher-select', option);
+  closeHomeSwitcher();
+}
+
 function isCategorizeSetTarget(target) {
   const normalizedTarget = String(target || '').trim().toLowerCase();
   return normalizedTarget === 'category' || normalizedTarget === 'name' || normalizedTarget === 'label';
@@ -753,6 +833,7 @@ const editTabOptions = computed(() =>
 );
 
 function toggleEditTabDropdown() {
+  closeHomeSwitcher();
   closeCurrentBreadcrumbMenu();
   isEditTabDropdownOpen.value = !isEditTabDropdownOpen.value;
 }
@@ -767,6 +848,7 @@ function handleEditTabOption(sectionId) {
 }
 
 function toggleBreadcrumbDropdown() {
+  closeHomeSwitcher();
   closeCurrentBreadcrumbMenu();
   isBreadcrumbDropdownOpen.value = !isBreadcrumbDropdownOpen.value;
 }
@@ -777,11 +859,13 @@ function closeBreadcrumbDropdown() {
 
 function handleDropdownNavigation(action) {
   if (action) action();
+  closeHomeSwitcher();
   closeBreadcrumbDropdown();
   closeCurrentBreadcrumbMenu();
 }
 
 function handleGroupSegmentNavigation() {
+  closeHomeSwitcher();
   closeCurrentBreadcrumbMenu();
   if (isDrillView.value && shouldCondenseSingleTabBreadcrumb.value) {
     emit('navigate-category');
@@ -796,6 +880,7 @@ function toggleCurrentBreadcrumbMenu() {
     return;
   }
 
+  closeHomeSwitcher();
   closeBreadcrumbDropdown();
   closeEditTabDropdown();
   closeHeaderInfoMenu();
@@ -821,6 +906,7 @@ function toggleHeaderInfoMenu() {
     return;
   }
 
+  closeHomeSwitcher();
   isHeaderInfoMenuOpen.value = !isHeaderInfoMenuOpen.value;
 }
 
@@ -893,6 +979,15 @@ watch(
       closeHeaderInfoMenu();
       isEditingHelperBody.value = false;
       helperShowInMainViewDraft.value = false;
+    }
+  }
+);
+
+watch(
+  () => canShowHomeSwitcher.value,
+  (canShowHomeDropdown) => {
+    if (!canShowHomeDropdown) {
+      closeHomeSwitcher();
     }
   }
 );
@@ -1177,6 +1272,7 @@ function formatActiveDateRange(startValue, endValue) {
 
 function openHeaderInfoModal() {
   isEditingHelperBody.value = false;
+  closeHomeSwitcher();
   closeHeaderInfoMenu();
   isHeaderInfoModalOpen.value = true;
 }
@@ -1189,6 +1285,9 @@ function closeHeaderInfoModal() {
 
 function onWindowKeydown(event) {
   if (event.key === 'Escape') {
+    if (isHomeSwitcherOpen.value) {
+      closeHomeSwitcher();
+    }
     if (isHeaderInfoModalOpen.value) {
       closeHeaderInfoModal();
     }
@@ -1208,6 +1307,9 @@ function onWindowKeydown(event) {
 }
 
 function onWindowClick(event) {
+  if (isHomeSwitcherOpen.value && homeSwitcherRef.value && !homeSwitcherRef.value.contains(event.target)) {
+    closeHomeSwitcher();
+  }
   if (isBreadcrumbDropdownOpen.value && breadcrumbDropdownRef.value && !breadcrumbDropdownRef.value.contains(event.target)) {
     closeBreadcrumbDropdown();
   }
