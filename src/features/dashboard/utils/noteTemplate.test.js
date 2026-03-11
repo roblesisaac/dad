@@ -77,6 +77,37 @@ describe('noteTemplate', () => {
     expect(renderedWithParens).toBe('Value: $36');
   });
 
+  test('supports ternary expressions with comparison operators', () => {
+    const renderedNegative = renderTemplateWithTokens(
+      "Direction: {{ total < 1 ? 'sent' : 'received' }}",
+      {
+        total: '-$25'
+      }
+    );
+    const renderedPositive = renderTemplateWithTokens(
+      "Direction: {{ total < 1 ? 'sent' : 'received' }}",
+      {
+        total: '$25'
+      }
+    );
+
+    expect(renderedNegative).toBe('Direction: sent');
+    expect(renderedPositive).toBe('Direction: received');
+  });
+
+  test('supports ternary expressions that resolve to numeric token values', () => {
+    const rendered = renderTemplateWithTokens(
+      'Displayed: {{ transaction-count > 0 ? total : average }}',
+      {
+        'transaction-count': '2',
+        total: '$250',
+        average: '$125'
+      }
+    );
+
+    expect(rendered).toBe('Displayed: $250');
+  });
+
   test('keeps expression untouched when it cannot be evaluated safely', () => {
     const rendered = renderTemplateWithTokens(
       'Value: {{ money-in + unknown-token }}',

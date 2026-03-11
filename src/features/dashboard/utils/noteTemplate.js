@@ -1,5 +1,4 @@
 const TEMPLATE_TOKEN_PATTERN = /\{\{\s*([^{}]+?)\s*\}\}/g;
-const EXPRESSION_OPERATOR_PATTERN = /[+\-*/()]/;
 const NUMBER_PATTERN = /^(?:\d+\.?\d*|\.\d+)$/;
 
 function hasOwn(target, key) {
@@ -95,22 +94,7 @@ function formatExpressionNumber(value) {
   });
 }
 
-function buildNumericTokenMap(tokenMap = {}) {
-  const numericTokens = {};
-
-  for (const [token, value] of Object.entries(tokenMap)) {
-    const parsedNumber = parseTokenNumber(value);
-    if (parsedNumber === null) {
-      continue;
-    }
-
-    numericTokens[token] = parsedNumber;
-  }
-
-  return numericTokens;
-}
-
-function tokenizeExpression(expression, numericTokenMap = {}) {
+function tokenizeExpression(expression, tokenMap = {}) {
   const tokens = [];
   const source = String(expression || '');
   let index = 0;
@@ -123,7 +107,14 @@ function tokenizeExpression(expression, numericTokenMap = {}) {
       continue;
     }
 
-    if (['+', '-', '*', '/', '(', ')'].includes(current)) {
+    const twoCharOperator = source.slice(index, index + 2);
+    if (['<=', '>=', '==', '!=', '&&', '||'].includes(twoCharOperator)) {
+      tokens.push({ type: 'operator', value: twoCharOperator });
+      index += 2;
+      continue;
+    }
+
+    if (['+', '-', '*', '/', '(', ')', '?', ':', '<', '>', '!'].includes(current)) {
       tokens.push({ type: 'operator', value: current });
       index += 1;
       continue;
@@ -140,8 +131,48 @@ function tokenizeExpression(expression, numericTokenMap = {}) {
         return null;
       }
 
-      tokens.push({ type: 'number', value: Number(rawNumber) });
+      tokens.push({ type: 'value', value: Number(rawNumber) });
       index = end;
+      continue;
+    }
+
+    if (current === '\'' || current === '"') {
+      const quote = current;
+      let end = index + 1;
+      let parsed = '';
+
+      while (end < source.length) {
+        const char = source[end];
+        if (char === '\\') {
+          if (end + 1 >= source.length) {
+            return null;
+          }
+          const escaped = source[end + 1];
+          if (escaped === 'n') {
+            parsed += '\n';
+          } else if (escaped === 't') {
+            parsed += '\t';
+          } else {
+            parsed += escaped;
+          }
+          end += 2;
+          continue;
+        }
+
+        if (char === quote) {
+          tokens.push({ type: 'value', value: parsed });
+          index = end + 1;
+          break;
+        }
+
+        parsed += char;
+        end += 1;
+      }
+
+      if (index <= end) {
+        return null;
+      }
+
       continue;
     }
 
@@ -153,13 +184,37 @@ function tokenizeExpression(expression, numericTokenMap = {}) {
 
       const rawIdentifier = source.slice(index, end);
       const normalizedIdentifier = normalizeTemplateToken(rawIdentifier);
-      if (!normalizedIdentifier || !hasOwn(numericTokenMap, normalizedIdentifier)) {
+      if (!normalizedIdentifier) {
         return null;
       }
 
+      if (normalizedIdentifier === 'true') {
+        tokens.push({ type: 'value', value: true });
+        index = end;
+        continue;
+      }
+
+      if (normalizedIdentifier === 'false') {
+        tokens.push({ type: 'value', value: false });
+        index = end;
+        continue;
+      }
+
+      if (normalizedIdentifier === 'null') {
+        tokens.push({ type: 'value', value: null });
+        index = end;
+        continue;
+      }
+
+      if (!hasOwn(tokenMap, normalizedIdentifier)) {
+        return null;
+      }
+
+      const tokenValue = tokenMap[normalizedIdentifier];
+      const numericTokenValue = parseTokenNumber(tokenValue);
       tokens.push({
-        type: 'number',
-        value: numericTokenMap[normalizedIdentifier]
+        type: 'value',
+        value: numericTokenValue !== null ? numericTokenValue : String(tokenValue)
       });
       index = end;
       continue;
@@ -202,14 +257,14 @@ function evaluateExpressionTokens(tokens = []) {
       return null;
     }
 
-    if (current.type === 'number') {
+    if (current.type === 'value') {
       consume();
       return current.value;
     }
 
     if (current.type === 'operator' && current.value === '(') {
       consume('(');
-      const nestedValue = parseAddSub();
+      const nestedValue = parseTernary();
       if (nestedValue === null || !consume(')')) {
         return null;
       }
@@ -223,16 +278,108 @@ function evaluateExpressionTokens(tokens = []) {
     const current = peek();
     if (current?.type === 'operator' && current.value === '+') {
       consume('+');
-      return parseUnary();
+      const unaryValue = parseUnary();
+      return parseTokenNumber(unaryValue);
     }
 
     if (current?.type === 'operator' && current.value === '-') {
       consume('-');
       const unaryValue = parseUnary();
-      return unaryValue === null ? null : -unaryValue;
+      const parsedNumber = parseTokenNumber(unaryValue);
+      return parsedNumber === null ? null : -parsedNumber;
+    }
+
+    if (current?.type === 'operator' && current.value === '!') {
+      consume('!');
+      const unaryValue = parseUnary();
+      if (unaryValue === null) {
+        return null;
+      }
+      return !coerceBoolean(unaryValue);
     }
 
     return parsePrimary();
+  }
+
+  function coerceBoolean(value) {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+
+    const parsedNumber = parseTokenNumber(value);
+    if (parsedNumber !== null) {
+      return parsedNumber !== 0;
+    }
+
+    if (value === null || value === undefined) {
+      return false;
+    }
+
+    const normalized = String(value).trim().toLowerCase();
+    if (!normalized || normalized === 'false' || normalized === 'null' || normalized === 'undefined' || normalized === 'no') {
+      return false;
+    }
+
+    return true;
+  }
+
+  function evaluateNumericBinaryOperator(lhs, rhs, operator) {
+    const left = parseTokenNumber(lhs);
+    const right = parseTokenNumber(rhs);
+    if (left === null || right === null) {
+      return null;
+    }
+
+    if (operator === '+') {
+      return left + right;
+    }
+
+    if (operator === '-') {
+      return left - right;
+    }
+
+    if (operator === '*') {
+      return left * right;
+    }
+
+    if (right === 0) {
+      return null;
+    }
+
+    return left / right;
+  }
+
+  function evaluateComparison(lhs, rhs, operator) {
+    const leftNumber = parseTokenNumber(lhs);
+    const rightNumber = parseTokenNumber(rhs);
+    if (leftNumber !== null && rightNumber !== null) {
+      if (operator === '<') return leftNumber < rightNumber;
+      if (operator === '<=') return leftNumber <= rightNumber;
+      if (operator === '>') return leftNumber > rightNumber;
+      return leftNumber >= rightNumber;
+    }
+
+    const leftString = String(lhs ?? '');
+    const rightString = String(rhs ?? '');
+    if (operator === '<') return leftString < rightString;
+    if (operator === '<=') return leftString <= rightString;
+    if (operator === '>') return leftString > rightString;
+    return leftString >= rightString;
+  }
+
+  function evaluateEquality(lhs, rhs, operator) {
+    const leftNumber = parseTokenNumber(lhs);
+    const rightNumber = parseTokenNumber(rhs);
+    let isEqual;
+    if (leftNumber !== null && rightNumber !== null) {
+      isEqual = leftNumber === rightNumber;
+    } else if (typeof lhs === 'boolean' || typeof rhs === 'boolean') {
+      isEqual = coerceBoolean(lhs) === coerceBoolean(rhs);
+    } else {
+      isEqual = String(lhs ?? '') === String(rhs ?? '');
+    }
+
+    return operator === '!=' ? !isEqual : isEqual;
   }
 
   function parseMulDiv() {
@@ -253,17 +400,14 @@ function evaluateExpressionTokens(tokens = []) {
         return null;
       }
 
-      if (current.value === '*') {
-        value *= rhs;
-      } else {
-        if (rhs === 0) {
-          return null;
-        }
-        value /= rhs;
+      const nextValue = evaluateNumericBinaryOperator(value, rhs, current.value);
+      if (nextValue === null || !Number.isFinite(nextValue)) {
+        return null;
       }
+      value = nextValue;
     }
 
-    return Number.isFinite(value) ? value : null;
+    return value;
   }
 
   function parseAddSub() {
@@ -284,16 +428,138 @@ function evaluateExpressionTokens(tokens = []) {
         return null;
       }
 
-      value = current.value === '+'
-        ? value + rhs
-        : value - rhs;
+      const nextValue = evaluateNumericBinaryOperator(value, rhs, current.value);
+      if (nextValue === null || !Number.isFinite(nextValue)) {
+        return null;
+      }
+      value = nextValue;
     }
 
-    return Number.isFinite(value) ? value : null;
+    return value;
   }
 
-  const result = parseAddSub();
-  if (result === null || position !== tokens.length || !Number.isFinite(result)) {
+  function parseComparison() {
+    let value = parseAddSub();
+    if (value === null) {
+      return null;
+    }
+
+    while (true) {
+      const current = peek();
+      if (!current || current.type !== 'operator' || !['<', '<=', '>', '>='].includes(current.value)) {
+        break;
+      }
+
+      consume();
+      const rhs = parseAddSub();
+      if (rhs === null) {
+        return null;
+      }
+
+      value = evaluateComparison(value, rhs, current.value);
+    }
+
+    return value;
+  }
+
+  function parseEquality() {
+    let value = parseComparison();
+    if (value === null) {
+      return null;
+    }
+
+    while (true) {
+      const current = peek();
+      if (!current || current.type !== 'operator' || (current.value !== '==' && current.value !== '!=')) {
+        break;
+      }
+
+      consume();
+      const rhs = parseComparison();
+      if (rhs === null) {
+        return null;
+      }
+
+      value = evaluateEquality(value, rhs, current.value);
+    }
+
+    return value;
+  }
+
+  function parseLogicalAnd() {
+    let value = parseEquality();
+    if (value === null) {
+      return null;
+    }
+
+    while (true) {
+      const current = peek();
+      if (!current || current.type !== 'operator' || current.value !== '&&') {
+        break;
+      }
+
+      consume();
+      const rhs = parseEquality();
+      if (rhs === null) {
+        return null;
+      }
+
+      value = coerceBoolean(value) && coerceBoolean(rhs);
+    }
+
+    return value;
+  }
+
+  function parseLogicalOr() {
+    let value = parseLogicalAnd();
+    if (value === null) {
+      return null;
+    }
+
+    while (true) {
+      const current = peek();
+      if (!current || current.type !== 'operator' || current.value !== '||') {
+        break;
+      }
+
+      consume();
+      const rhs = parseLogicalAnd();
+      if (rhs === null) {
+        return null;
+      }
+
+      value = coerceBoolean(value) || coerceBoolean(rhs);
+    }
+
+    return value;
+  }
+
+  function parseTernary() {
+    const condition = parseLogicalOr();
+    if (condition === null) {
+      return null;
+    }
+
+    const current = peek();
+    if (!current || current.type !== 'operator' || current.value !== '?') {
+      return condition;
+    }
+
+    consume('?');
+    const truthyBranch = parseTernary();
+    if (truthyBranch === null || !consume(':')) {
+      return null;
+    }
+    const falsyBranch = parseTernary();
+    if (falsyBranch === null) {
+      return null;
+    }
+
+    return coerceBoolean(condition) ? truthyBranch : falsyBranch;
+  }
+
+  const result = parseTernary();
+  if (result === null || position !== tokens.length) {
     return null;
   }
 
@@ -301,17 +567,24 @@ function evaluateExpressionTokens(tokens = []) {
 }
 
 function evaluateTemplateExpression(expression, tokenMap = {}) {
-  if (!EXPRESSION_OPERATOR_PATTERN.test(String(expression || ''))) {
-    return null;
-  }
-
-  const numericTokenMap = buildNumericTokenMap(tokenMap);
-  const tokens = tokenizeExpression(expression, numericTokenMap);
+  const tokens = tokenizeExpression(expression, tokenMap);
   if (!tokens) {
     return null;
   }
 
   return evaluateExpressionTokens(tokens);
+}
+
+function formatExpressionValue(value, formatExpressionResult) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(formatExpressionResult(value) || '').trim();
+  }
+
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  return String(value);
 }
 
 export function renderTemplateWithTokens(template, tokenMap = {}, options = {}) {
@@ -331,7 +604,7 @@ export function renderTemplateWithTokens(template, tokenMap = {}, options = {}) 
     if (!normalizedToken || !hasOwn(tokenMap, normalizedToken)) {
       const expressionResult = evaluateTemplateExpression(rawToken, tokenMap);
       if (expressionResult !== null) {
-        value = String(formatExpressionResult(expressionResult) || '').trim();
+        value = formatExpressionValue(expressionResult, formatExpressionResult);
       }
     } else {
       value = String(tokenMap[normalizedToken]);
