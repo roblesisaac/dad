@@ -32,6 +32,20 @@
                   <Copy class="w-4 h-4" />
                   Copy Schema
                 </button>
+                <button
+                  @click="openExportRulesModal"
+                  class="w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest text-gray-600 hover:text-black hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <ArrowDownToLine class="w-4 h-4" />
+                  Export Rules...
+                </button>
+                <button
+                  @click="openImportRulesModal"
+                  class="w-full text-left px-3 py-2 text-xs font-black uppercase tracking-widest text-gray-600 hover:text-black hover:bg-gray-50 rounded-lg transition-colors flex items-center gap-2"
+                >
+                  <ArrowUpFromLine class="w-4 h-4" />
+                  Import Rules...
+                </button>
               </div>
             </div>
 
@@ -363,6 +377,257 @@
     </div>
 
     <!-- Modals -->
+    <Teleport to="body">
+      <div
+        v-if="isExportRulesModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+        style="background-color: var(--theme-overlay-30);"
+        @click.self="closeExportRulesModal"
+      >
+        <div
+          class="w-full max-w-2xl rounded-2xl border shadow-[0_20px_60px_-24px_var(--theme-overlay-50)] overflow-hidden"
+          style="background-color: var(--theme-browser-chrome); border-color: var(--theme-border); color: var(--theme-text);"
+        >
+          <div class="flex items-center justify-between gap-3 px-5 py-4 border-b" style="border-color: var(--theme-border);">
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-[0.2em]">Export Rules</h3>
+              <p class="text-xs mt-1" style="color: var(--theme-text-soft);">
+                Export rules for the current tab level and breadcrumb path.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-full p-2 border transition-opacity hover:opacity-70"
+              style="border-color: var(--theme-border);"
+              @click="closeExportRulesModal"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div class="px-5 py-5 space-y-5">
+            <div class="space-y-2">
+              <p class="text-[10px] font-black uppercase tracking-[0.2em]" style="color: var(--theme-text-soft);">Format</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="formatOption in RULE_TRANSFER_FORMATS"
+                  :key="`export-format-${formatOption}`"
+                  type="button"
+                  class="px-3 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.18em] transition-opacity hover:opacity-80"
+                  :style="optionButtonStyle(exportFormat === formatOption)"
+                  @click="exportFormat = formatOption"
+                >
+                  {{ formatOption.toUpperCase() }}
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <p class="text-[10px] font-black uppercase tracking-[0.2em]" style="color: var(--theme-text-soft);">Scope</p>
+              <div class="flex flex-col gap-2">
+                <button
+                  type="button"
+                  class="w-full rounded-xl border px-3 py-2 text-left text-xs font-black uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
+                  :style="optionButtonStyle(exportScope === 'all')"
+                  @click="exportScope = 'all'"
+                >
+                  All rules at this level
+                </button>
+                <button
+                  type="button"
+                  class="w-full rounded-xl border px-3 py-2 text-left text-xs font-black uppercase tracking-[0.14em] transition-opacity hover:opacity-80"
+                  :style="optionButtonStyle(exportScope === 'visible')"
+                  @click="exportScope = 'visible'"
+                >
+                  {{ visibleScopeDescription }}
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label class="flex items-center gap-2 text-xs font-black uppercase tracking-[0.14em]">
+                <input
+                  v-model="includeExportMetadata"
+                  type="checkbox"
+                  :disabled="exportFormat !== 'json'"
+                  class="h-4 w-4 rounded border"
+                  style="accent-color: var(--theme-text); border-color: var(--theme-border);"
+                >
+                Include metadata wrapper (JSON only)
+              </label>
+              <p
+                v-if="exportFormat !== 'json'"
+                class="text-xs"
+                style="color: var(--theme-text-soft);"
+              >
+                CSV and Markdown exports always use flat row records without a metadata wrapper.
+              </p>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t" style="border-color: var(--theme-border);">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+              :style="actionButtonStyle(false)"
+              @click="closeExportRulesModal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+              :style="actionButtonStyle(true)"
+              @click="exportRules"
+            >
+              Export
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="isImportRulesModalOpen"
+        class="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+        style="background-color: var(--theme-overlay-30);"
+        @click.self="closeImportRulesModal"
+      >
+        <div
+          class="w-full max-w-2xl rounded-2xl border shadow-[0_20px_60px_-24px_var(--theme-overlay-50)] overflow-hidden"
+          style="background-color: var(--theme-browser-chrome); border-color: var(--theme-border); color: var(--theme-text);"
+        >
+          <div class="flex items-center justify-between gap-3 px-5 py-4 border-b" style="border-color: var(--theme-border);">
+            <div>
+              <h3 class="text-sm font-black uppercase tracking-[0.2em]">Import Rules</h3>
+              <p class="text-xs mt-1" style="color: var(--theme-text-soft);">
+                Preview changes before applying to this tab level and breadcrumb path.
+              </p>
+            </div>
+            <button
+              type="button"
+              class="rounded-full p-2 border transition-opacity hover:opacity-70"
+              style="border-color: var(--theme-border);"
+              @click="closeImportRulesModal"
+            >
+              <X class="w-4 h-4" />
+            </button>
+          </div>
+
+          <div class="px-5 py-5 space-y-5">
+            <div class="space-y-2">
+              <p class="text-[10px] font-black uppercase tracking-[0.2em]" style="color: var(--theme-text-soft);">Format</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-for="formatOption in RULE_TRANSFER_FORMATS"
+                  :key="`import-format-${formatOption}`"
+                  type="button"
+                  class="px-3 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.18em] transition-opacity hover:opacity-80"
+                  :style="optionButtonStyle(importFormat === formatOption)"
+                  @click="importFormat = formatOption"
+                >
+                  {{ formatOption.toUpperCase() }}
+                </button>
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <input
+                ref="importFileInputRef"
+                type="file"
+                class="hidden"
+                :accept="importFormat === 'json' ? '.json,application/json' : (importFormat === 'csv' ? '.csv,text/csv' : '.md,.markdown,text/markdown,text/plain')"
+                @change="handleImportFileSelection"
+              >
+              <div class="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+                  :style="actionButtonStyle(false)"
+                  @click="triggerImportFilePicker"
+                >
+                  Choose File
+                </button>
+                <button
+                  type="button"
+                  class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+                  :style="actionButtonStyle(false)"
+                  :disabled="!importRawText.trim() || isPreparingImportPreview"
+                  @click="prepareImportPreview"
+                >
+                  {{ isPreparingImportPreview ? 'Reading...' : 'Refresh Preview' }}
+                </button>
+              </div>
+              <p v-if="importFileName" class="text-xs" style="color: var(--theme-text-soft);">
+                Selected file: {{ importFileName }}
+              </p>
+            </div>
+
+            <div
+              v-if="importParseError"
+              class="rounded-xl border px-3 py-2 text-xs"
+              style="border-color: var(--theme-border); background-color: var(--theme-overlay-20); color: var(--theme-text);"
+            >
+              {{ importParseError }}
+            </div>
+
+            <div
+              v-if="importPreview"
+              class="rounded-xl border px-4 py-3 space-y-3"
+              style="border-color: var(--theme-border); background-color: var(--theme-overlay-20);"
+            >
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <div>Total rows: <span class="font-black">{{ importPreview.totalCount }}</span></div>
+                <div>Valid rules: <span class="font-black">{{ importPreview.parsedCount }}</span></div>
+                <div>Will update: <span class="font-black">{{ importPreview.updates }}</span></div>
+                <div>Will add: <span class="font-black">{{ importPreview.creates }}</span></div>
+                <div>Skipped globals: <span class="font-black">{{ importPreview.skippedGlobal }}</span></div>
+                <div>Invalid rows: <span class="font-black">{{ importPreview.invalidCount + importPreview.skippedInvalid }}</span></div>
+              </div>
+
+              <div class="space-y-1">
+                <p class="text-[10px] font-black uppercase tracking-[0.2em]" style="color: var(--theme-text-soft);">By Type</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div
+                    v-for="typeEntry in importPreviewByTypeEntries"
+                    :key="`preview-type-${typeEntry.typeId}`"
+                    class="rounded-lg border px-2 py-1.5"
+                    style="border-color: var(--theme-border);"
+                  >
+                    <span class="font-black">{{ typeEntry.label }}</span>
+                    <span class="ml-1" style="color: var(--theme-text-soft);">
+                      {{ typeEntry.updates }} updated, {{ typeEntry.creates }} added
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-end gap-2 px-5 py-4 border-t" style="border-color: var(--theme-border);">
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80"
+              :style="actionButtonStyle(false)"
+              @click="closeImportRulesModal"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 rounded-xl border text-xs font-black uppercase tracking-[0.16em] transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+              :style="actionButtonStyle(true)"
+              :disabled="!canApplyImport || isApplyingImport"
+              @click="applyImportRules"
+            >
+              {{ isApplyingImport ? 'Importing...' : 'Apply Import' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <RuleEditModal
       v-if="showRuleEditModal"
       :rule="currentRule"
@@ -387,7 +652,20 @@
 <script setup>
 import { ref, computed, nextTick, watch } from 'vue';
 import {
-  Plus, ChevronDown, SortAsc, FolderCheck, Group, Filter, Edit, X, Check, Trash2, MoreVertical, Copy
+  Plus,
+  ChevronDown,
+  SortAsc,
+  FolderCheck,
+  Group,
+  Filter,
+  Edit,
+  X,
+  Check,
+  Trash2,
+  MoreVertical,
+  Copy,
+  ArrowDownToLine,
+  ArrowUpFromLine
 } from 'lucide-vue-next';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState';
 import { useTabsAPI } from '@/features/tabs/composables/useTabsAPI';
@@ -402,6 +680,13 @@ import draggable from 'vuedraggable';
 import RuleCard from '../components/RuleCard.vue';
 import RuleEditModal from '../components/RuleEditModal.vue';
 import DeleteConfirmModal from '../components/DeleteConfirmModal.vue';
+import {
+  RULE_TRANSFER_FORMATS,
+  buildRuleExportContent,
+  parseRuleImportContent,
+  mergeImportedRules,
+  ruleTransferFileExtension
+} from '../utils/ruleTransfer.js';
 
 const { state } = useDashboardState();
 const { updateTabName, deleteTab: deleteTabById } = useTabsAPI();
@@ -585,6 +870,20 @@ const isAdvancedSectionOpen = ref(false);
 const isCustomRuleEditorMode = ref(false);
 const hasConsumedCustomEditorRequest = ref(false);
 const initialMakeGlobalForEditor = ref(false);
+const isExportRulesModalOpen = ref(false);
+const isImportRulesModalOpen = ref(false);
+const exportFormat = ref('json');
+const exportScope = ref('all');
+const includeExportMetadata = ref(false);
+const importFormat = ref('json');
+const importFileName = ref('');
+const importRawText = ref('');
+const importPreview = ref(null);
+const importPendingRulesByType = ref(null);
+const importParseError = ref('');
+const isPreparingImportPreview = ref(false);
+const isApplyingImport = ref(false);
+const importFileInputRef = ref(null);
 
 const currentDepth = computed(() => {
   const path = Array.isArray(state.selected.drillPath) ? state.selected.drillPath : [];
@@ -628,6 +927,57 @@ function getRulesForSection(typeId) {
 
   return getEnabledRulesByType(typeId);
 }
+
+const currentSectionId = computed(() => {
+  const normalizedSection = String(props.section || '').trim();
+  if (['groupBy', 'sort', 'categorize', 'filter', 'custom'].includes(normalizedSection)) {
+    return normalizedSection;
+  }
+
+  return '';
+});
+
+const visibleScopeDescription = computed(() => {
+  if (!currentSectionId.value) {
+    return 'Visible rules in current section (all sections)';
+  }
+
+  if (currentSectionId.value === 'groupBy') {
+    return 'Visible rules in current section (group by)';
+  }
+
+  if (currentSectionId.value === 'sort') {
+    return 'Visible rules in current section (sort)';
+  }
+
+  if (currentSectionId.value === 'filter') {
+    return 'Visible rules in current section (filter)';
+  }
+
+  if (currentSectionId.value === 'custom') {
+    return 'Visible rules in current section (custom)';
+  }
+
+  return 'Visible rules in current section (categorize)';
+});
+
+const canApplyImport = computed(() => {
+  return Boolean(importPreview.value && Number(importPreview.value.applied) > 0 && importPendingRulesByType.value);
+});
+
+const importPreviewByTypeEntries = computed(() => {
+  const byType = importPreview.value?.byType || {};
+  const labels = importPreview.value?.labels || {};
+  return Object.keys(byType).map((typeId) => {
+    const entry = byType[typeId] || {};
+    return {
+      typeId,
+      label: labels[typeId] || typeId,
+      updates: Number(entry.updates || 0),
+      creates: Number(entry.creates || 0)
+    };
+  });
+});
 
 function isGlobalCategorizeRule(rule) {
   const applyForTabs = Array.isArray(rule?.applyForTabs) ? rule.applyForTabs : [];
@@ -866,6 +1216,24 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => exportFormat.value,
+  (nextFormat) => {
+    if (nextFormat !== 'json') {
+      includeExportMetadata.value = false;
+    }
+  }
+);
+
+watch(
+  () => importFormat.value,
+  () => {
+    if (importRawText.value.trim()) {
+      void prepareImportPreview();
+    }
+  }
+);
+
 function buildDepthReplacementPayload() {
   return {
     sortRules: getEnabledRulesByType('sort').map(stripEditorFields),
@@ -924,7 +1292,7 @@ function toggleDisabledSection() {
 
 function startTabNameEdit() {
   if (state.selected.tab) {
-    showTabActionsMenu.value = false;
+    closeTabActionsMenu();
     editedTabName.value = state.selected.tab.tabName || '';
     isEditingTabName.value = true;
     nextTick(() => {
@@ -974,6 +1342,320 @@ function cancelTabNameEdit() {
 
 function toggleTabActionsMenu() {
   showTabActionsMenu.value = !showTabActionsMenu.value;
+}
+
+function closeTabActionsMenu() {
+  showTabActionsMenu.value = false;
+}
+
+function showRuleTransferMessage(message, durationMs = 2600) {
+  const normalizedMessage = String(message || '').trim();
+  if (!normalizedMessage) {
+    return;
+  }
+
+  state.blueBar.loading = false;
+  state.blueBar.message = normalizedMessage;
+
+  setTimeout(() => {
+    if (state.blueBar.message === normalizedMessage && !state.blueBar.loading) {
+      state.blueBar.message = '';
+    }
+  }, durationMs);
+}
+
+function optionButtonStyle(isActive) {
+  return {
+    backgroundColor: isActive ? 'var(--theme-text)' : 'transparent',
+    color: isActive ? 'var(--theme-bg)' : 'var(--theme-text)',
+    borderColor: 'var(--theme-border)'
+  };
+}
+
+function actionButtonStyle(isPrimary = false) {
+  return {
+    backgroundColor: isPrimary ? 'var(--theme-text)' : 'transparent',
+    color: isPrimary ? 'var(--theme-bg)' : 'var(--theme-text)',
+    borderColor: 'var(--theme-border)'
+  };
+}
+
+function resolveAllLevelRulesForTransfer() {
+  return [
+    ...getEnabledRulesByType('groupBy'),
+    ...getEnabledRulesByType('sort'),
+    ...getEnabledRulesByType('categorize'),
+    ...getEnabledRulesByType('filter')
+  ].map(cloneRule);
+}
+
+function resolveVisibleSectionRulesForTransfer() {
+  if (!currentSectionId.value) {
+    return resolveAllLevelRulesForTransfer();
+  }
+
+  if (currentSectionId.value === 'groupBy') {
+    return getEnabledRulesByType('groupBy').map(cloneRule);
+  }
+
+  if (currentSectionId.value === 'sort') {
+    return getEnabledRulesByType('sort').map(cloneRule);
+  }
+
+  if (currentSectionId.value === 'filter') {
+    return getEnabledRulesByType('filter').map(cloneRule);
+  }
+
+  if (currentSectionId.value === 'custom') {
+    return getRulesForSection('custom').map(cloneRule);
+  }
+
+  return getRulesForSection('categorize').map(cloneRule);
+}
+
+function resolveRulesForTransferScope(scope = 'all') {
+  if (scope === 'visible') {
+    return resolveVisibleSectionRulesForTransfer();
+  }
+
+  return resolveAllLevelRulesForTransfer();
+}
+
+function normalizeFileNameSegment(value, fallback = 'rules') {
+  const normalized = String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return normalized || fallback;
+}
+
+function downloadTextContent(content, fileName, mimeType = 'application/octet-stream') {
+  const blob = new Blob([String(content || '')], { type: mimeType });
+  const downloadUrl = window.URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = downloadUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  window.URL.revokeObjectURL(downloadUrl);
+}
+
+function exportMimeType(format = 'json') {
+  if (format === 'csv') {
+    return 'text/csv;charset=utf-8';
+  }
+
+  if (format === 'markdown') {
+    return 'text/markdown;charset=utf-8';
+  }
+
+  return 'application/json;charset=utf-8';
+}
+
+function openExportRulesModal() {
+  if (!state.selected.tab?._id) {
+    return;
+  }
+
+  closeTabActionsMenu();
+  exportFormat.value = 'json';
+  exportScope.value = 'all';
+  includeExportMetadata.value = false;
+  isExportRulesModalOpen.value = true;
+}
+
+function closeExportRulesModal() {
+  isExportRulesModalOpen.value = false;
+}
+
+function buildExportMetadata(scope = 'all') {
+  const selectedTab = state.selected.tab;
+  const normalizedPath = normalizeDrillPath(state.selected.drillPath);
+
+  return {
+    app: 'tracktabs',
+    tabId: String(selectedTab?._id || ''),
+    tabName: String(selectedTab?.tabName || ''),
+    drillPath: normalizedPath,
+    depth: normalizedPath.length,
+    scope,
+    section: currentSectionId.value || 'all',
+    exportedAt: new Date().toISOString()
+  };
+}
+
+function exportRules() {
+  if (!state.selected.tab?._id) {
+    return;
+  }
+
+  const scopedRules = resolveRulesForTransferScope(exportScope.value);
+  const selectedTabId = String(state.selected.tab._id || '');
+  const formattedContent = buildRuleExportContent({
+    rules: scopedRules,
+    format: exportFormat.value,
+    includeMetadata: exportFormat.value === 'json' && includeExportMetadata.value,
+    metadata: buildExportMetadata(exportScope.value),
+    defaultApplyForTabs: selectedTabId ? [selectedTabId] : []
+  });
+
+  const extension = ruleTransferFileExtension(exportFormat.value);
+  const tabSegment = normalizeFileNameSegment(state.selected.tab?.tabName, 'tab');
+  const scopeSegment = exportScope.value === 'visible' ? 'visible' : 'all';
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `${tabSegment}-rules-${scopeSegment}-${timestamp}.${extension}`;
+
+  downloadTextContent(formattedContent, fileName, exportMimeType(exportFormat.value));
+  closeExportRulesModal();
+  showRuleTransferMessage(`Exported ${scopedRules.length} rule${scopedRules.length === 1 ? '' : 's'}.`);
+}
+
+function resetImportModalState() {
+  importFileName.value = '';
+  importRawText.value = '';
+  importPreview.value = null;
+  importPendingRulesByType.value = null;
+  importParseError.value = '';
+  isPreparingImportPreview.value = false;
+  isApplyingImport.value = false;
+}
+
+function openImportRulesModal() {
+  if (!state.selected.tab?._id) {
+    return;
+  }
+
+  closeTabActionsMenu();
+  importFormat.value = 'json';
+  resetImportModalState();
+  isImportRulesModalOpen.value = true;
+}
+
+function closeImportRulesModal() {
+  isImportRulesModalOpen.value = false;
+  resetImportModalState();
+}
+
+function triggerImportFilePicker() {
+  importFileInputRef.value?.click();
+}
+
+async function handleImportFileSelection(event) {
+  const selectedFile = event?.target?.files?.[0];
+  if (!selectedFile) {
+    return;
+  }
+
+  importFileName.value = String(selectedFile.name || '');
+  importParseError.value = '';
+
+  try {
+    importRawText.value = await selectedFile.text();
+    await prepareImportPreview();
+  } catch (error) {
+    importPreview.value = null;
+    importPendingRulesByType.value = null;
+    importParseError.value = error instanceof Error ? error.message : 'Unable to read import file.';
+  } finally {
+    if (event?.target) {
+      event.target.value = '';
+    }
+  }
+}
+
+async function prepareImportPreview() {
+  if (!state.selected.tab?._id) {
+    return;
+  }
+
+  const rawText = String(importRawText.value || '');
+  if (!rawText.trim()) {
+    importPreview.value = null;
+    importPendingRulesByType.value = null;
+    importParseError.value = 'Choose a file to preview import changes.';
+    return;
+  }
+
+  importParseError.value = '';
+  isPreparingImportPreview.value = true;
+
+  try {
+    const selectedTabId = String(state.selected.tab._id || '');
+    const parsed = parseRuleImportContent(rawText, importFormat.value, {
+      defaultApplyForTabs: selectedTabId ? [selectedTabId] : []
+    });
+
+    if (!parsed.totalCount) {
+      importPreview.value = null;
+      importPendingRulesByType.value = null;
+      importParseError.value = 'No rows or rules were found in this file.';
+      return;
+    }
+
+    const mergeResult = mergeImportedRules({
+      existingRulesByType: {
+        groupBy: getEnabledRulesByType('groupBy').map(stripEditorFields),
+        sort: getEnabledRulesByType('sort').map(stripEditorFields),
+        categorize: getEnabledRulesByType('categorize').map(stripEditorFields),
+        filter: getEnabledRulesByType('filter').map(stripEditorFields)
+      },
+      importedRules: parsed.rules
+    });
+
+    importPreview.value = {
+      ...mergeResult.summary,
+      totalCount: parsed.totalCount,
+      parsedCount: parsed.rules.length,
+      invalidCount: parsed.invalidCount,
+      metadata: parsed.metadata
+    };
+    importPendingRulesByType.value = mergeResult.rulesByType;
+  } catch (error) {
+    importPreview.value = null;
+    importPendingRulesByType.value = null;
+    importParseError.value = error instanceof Error ? error.message : 'Unable to parse import file.';
+  } finally {
+    isPreparingImportPreview.value = false;
+  }
+}
+
+async function applyImportRules() {
+  if (!canApplyImport.value || isApplyingImport.value) {
+    return;
+  }
+
+  isApplyingImport.value = true;
+
+  try {
+    const nextRulesByType = importPendingRulesByType.value || {};
+    localRulesByType.value = {
+      groupBy: withRenumberedOrder(
+        (nextRulesByType.groupBy || []).map(rule => normalizeLocalRule('groupBy', rule))
+      ),
+      sort: withRenumberedOrder(
+        (nextRulesByType.sort || []).map(rule => normalizeLocalRule('sort', rule))
+      ),
+      categorize: withRenumberedOrder(
+        (nextRulesByType.categorize || []).map(rule => normalizeLocalRule('categorize', rule))
+      ),
+      filter: withRenumberedOrder(
+        (nextRulesByType.filter || []).map(rule => normalizeLocalRule('filter', rule))
+      )
+    };
+
+    await persistDepthRules();
+    const updates = Number(importPreview.value?.updates || 0);
+    const creates = Number(importPreview.value?.creates || 0);
+    closeImportRulesModal();
+    showRuleTransferMessage(`Imported rules (${updates} updated, ${creates} added).`);
+  } catch (error) {
+    console.error('Error importing rules:', error);
+    importParseError.value = error instanceof Error ? error.message : 'Unable to import rules.';
+  } finally {
+    isApplyingImport.value = false;
+  }
 }
 
 function toggleAdvancedSection() {
@@ -1057,7 +1739,7 @@ async function copyCurrentTabSchema() {
     return;
   }
 
-  showTabActionsMenu.value = false;
+  closeTabActionsMenu();
   const copiedTab = await copyTabSchemaToGroup(sourceTab._id, targetGroup._id || ALL_ACCOUNTS_GROUP_ID);
   if (copiedTab?._id) {
     state.blueBar.message = `Copied schema to ${targetGroup.name || 'target group'}.`;
