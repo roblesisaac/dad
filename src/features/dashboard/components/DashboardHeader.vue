@@ -501,12 +501,38 @@ const availableNoteTokenEntries = computed(() => {
   }));
 });
 
+function escapeHtmlValue(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function renderNoteTemplate(template, wrap = false) {
   const interpolated = renderTemplateWithTokens(template, noteTokens.value, {
     formatExpressionResult: (value) => formatPrice(value, { toFixed: 0 }),
     wrapInterpolated: wrap
   });
-  return renderMarkdown(interpolated);
+  if (!wrap) {
+    return renderMarkdown(interpolated);
+  }
+
+  const rulePartSegments = [];
+  const withPlaceholders = interpolated.replace(
+    /<span class="rule-part">([\s\S]*?)<\/span>/g,
+    (_, content) => {
+      const placeholder = `@@RULEPART${rulePartSegments.length}@@`;
+      rulePartSegments.push(`<span class="rule-part">${escapeHtmlValue(content)}</span>`);
+      return placeholder;
+    }
+  );
+  let rendered = renderMarkdown(withPlaceholders);
+  rulePartSegments.forEach((segment, index) => {
+    rendered = rendered.replaceAll(`@@RULEPART${index}@@`, segment);
+  });
+  return rendered;
 }
 
 const renderedViewNote = computed(() => renderNoteTemplate(viewNoteTemplate.value, true));
