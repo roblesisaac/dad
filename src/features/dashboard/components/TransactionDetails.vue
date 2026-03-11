@@ -188,6 +188,14 @@
                     >
                       Copy JSON
                     </button>
+                    <button
+                      type="button"
+                      class="w-full px-4 py-2 text-left text-[10px] font-black uppercase tracking-widest transition-colors hover:bg-red-50 dark:hover:bg-red-900/20"
+                      style="color: #b91c1c;"
+                      @click.stop="handleRuleMenuAction('delete', rule)"
+                    >
+                      Delete Rule
+                    </button>
                   </div>
                 </div>
               </div>
@@ -210,9 +218,9 @@
   <RuleEditModal
     v-if="showRuleEditor"
     :rule="activeRule"
-    :is-new="false"
+    :is-new="isCreatingRule"
     :scope="activeRule?.applyForTabs?.includes('_GLOBAL') ? 'global' : 'tab'"
-    @close="closeRuleEditor"
+    @close="handleRuleEditorClose"
     @save="saveRule"
   />
 
@@ -308,7 +316,7 @@
                 </label>
                 
                 <label class="flex items-center gap-3 cursor-pointer group">
-                  <input type="radio" v-model="applyCategoryTo" value="anything-that-matches" class="w-5 h-5 text-black border-2 focus:ring-0 checked:bg-black checked:border-black dark:checked:bg-white dark:checked:border-white" style="border-color: var(--theme-border);" />
+                  <input type="radio" v-model="applyCategoryTo" value="anything-that-matches" class="w-5 h-5 text-black border-2 focus:ring-0 checked:bg-black checked:border-black dark:checked:bg-white dark:checked:border-white" style="border-color: var(--theme-border);" @change="handleApplyCategoryTargetChange" />
                   <span class="text-sm font-medium transition-colors" style="color: var(--theme-text-muted);" onmouseover="this.style.color='var(--theme-text)'" onmouseout="this.style.color='var(--theme-text-muted)'">All matching transactions</span>
                 </label>
               </div>
@@ -390,6 +398,9 @@ const LONG_PRESS_MOVE_THRESHOLD_PX = 12;
 
 const showRuleEditor = ref(false);
 const activeRule = ref(null);
+const isCreatingRule = ref(false);
+const isRuleEditorFromCategoryFlow = ref(false);
+const pendingCategoryRuleDraftValue = ref('');
 
 const activeRuleMenuId = ref('');
 const longPressVisibleRuleId = ref('');
@@ -527,6 +538,93 @@ function showTransientBlueBarMessage(message, timeoutMs = 2200) {
   }, timeoutMs);
 }
 
+function refreshSelectionAfterCategoryMutation(previousDrillPath = [], destinationFallback = '') {
+  const currentDrillState = buildDrillStateForPath(previousDrillPath);
+  const visibleInCurrentPath = Boolean(
+    findTransactionInDrillTransactions(currentDrillState?.transactions, item)
+  );
+
+  if (!visibleInCurrentPath) {
+    const relocation = findDrillPathForTransaction(item);
+    if (relocation.found) {
+      state.selected.drillPath = relocation.path;
+      state.selected.transaction = relocation.transaction;
+
+      const destinationLabel = String(
+        relocation.path[relocation.path.length - 1]
+        || destinationFallback
+        || 'updated category'
+      ).trim();
+      showTransientBlueBarMessage(`Moved to ${destinationLabel}.`);
+      return;
+    }
+
+    state.selected.transaction = false;
+    showTransientBlueBarMessage('Category updated. Transaction moved out of this view.');
+    return;
+  }
+
+  const refreshedTransaction = findTransactionInDrillTransactions(currentDrillState?.transactions, item);
+  if (refreshedTransaction) {
+    state.selected.transaction = refreshedTransaction;
+  }
+}
+
+function nextTabRuleOrder() {
+  const tabId = String(state.selected?.tab?._id || '').trim();
+  if (!tabId) {
+    return 0;
+  }
+
+  const tabRules = (Array.isArray(state.allUserRules) ? state.allUserRules : [])
+    .filter((rule) => {
+      const applyForTabs = Array.isArray(rule?.applyForTabs) ? rule.applyForTabs : [];
+      return applyForTabs.includes(tabId);
+    });
+
+  if (!tabRules.length) {
+    return 0;
+  }
+
+  return tabRules.reduce((maxOrder, rule) => (
+    Math.max(maxOrder, Number(rule?.orderOfExecution || 0))
+  ), -1) + 1;
+}
+
+function buildAllMatchingCategoryRule(categoryValue) {
+  const merchantText = String(item.merchant_name || item.name || '').trim();
+
+  return {
+    rule: ['categorize', 'name', 'includes', merchantText, categoryValue],
+    applyForTabs: ['_GLOBAL'],
+    filterJoinOperator: 'and',
+    _isImportant: false,
+    orderOfExecution: nextTabRuleOrder()
+  };
+}
+
+function openRuleEditorForAllMatchingCategory(categoryValue) {
+  pendingCategoryRuleDraftValue.value = categoryValue;
+  isRuleEditorFromCategoryFlow.value = true;
+  isCreatingRule.value = true;
+  activeRule.value = buildAllMatchingCategoryRule(categoryValue);
+  closeCategoryEditor();
+  showRuleEditor.value = true;
+}
+
+function handleApplyCategoryTargetChange() {
+  if (!showCategoryEditor.value) {
+    return;
+  }
+
+  if (applyCategoryTo.value !== 'anything-that-matches') {
+    return;
+  }
+
+  const nextCategory = String(categoryDraft.value || '').trim();
+  openRuleEditorForAllMatchingCategory(nextCategory);
+}
+
 function toggleNotesMenu() {
   showNotesMenu.value = !showNotesMenu.value;
 }
@@ -565,6 +663,17 @@ function closeCategoryEditor() {
 }
 async function saveCategory() {
   const nextCategory = String(categoryDraft.value || '').trim();
+
+  if (applyCategoryTo.value === 'anything-that-matches') {
+    if (!nextCategory) {
+      alert('Please enter a category before creating a matching rule.');
+      return;
+    }
+
+    openRuleEditorForAllMatchingCategory(nextCategory);
+    return;
+  }
+
   const currentCategory = String(item.recategorizeAs || '').trim();
   if (nextCategory === currentCategory) {
     closeCategoryEditor();
@@ -583,34 +692,7 @@ async function saveCategory() {
     transactionDetailsState.value.originalCategory = savedCategory;
 
     await processAllTabsForSelectedGroup({ showLoading: false });
-
-    const currentDrillState = buildDrillStateForPath(previousDrillPath);
-    const visibleInCurrentPath = Boolean(
-      findTransactionInDrillTransactions(currentDrillState?.transactions, item)
-    );
-
-    if (!visibleInCurrentPath) {
-      const relocation = findDrillPathForTransaction(item);
-      if (relocation.found) {
-        state.selected.drillPath = relocation.path;
-        state.selected.transaction = relocation.transaction;
-
-        const destinationLabel = String(
-          relocation.path[relocation.path.length - 1]
-          || savedCategory
-          || 'updated category'
-        ).trim();
-        showTransientBlueBarMessage(`Moved to ${destinationLabel}.`);
-      } else {
-        state.selected.transaction = false;
-        showTransientBlueBarMessage('Category updated. Transaction moved out of this view.');
-      }
-    } else {
-      const refreshedTransaction = findTransactionInDrillTransactions(currentDrillState?.transactions, item);
-      if (refreshedTransaction) {
-        state.selected.transaction = refreshedTransaction;
-      }
-    }
+    refreshSelectionAfterCategoryMutation(previousDrillPath, savedCategory);
 
     closeCategoryEditor();
   } catch (_error) {
@@ -732,17 +814,41 @@ function closeMenusOnOutsideClick(event) {
 async function handleRuleMenuAction(action, rule) {
   if (action === 'edit') {
     closeRuleMenu();
+    isCreatingRule.value = false;
+    isRuleEditorFromCategoryFlow.value = false;
+    pendingCategoryRuleDraftValue.value = '';
     activeRule.value = JSON.parse(JSON.stringify(rule));
     showRuleEditor.value = true;
   } else if (action === 'copy') {
     closeRuleMenu();
     await copyRuleJson(rule);
+  } else if (action === 'delete') {
+    closeRuleMenu();
+    await deleteRule(rule);
   }
 }
 
-function closeRuleEditor() {
+function handleRuleEditorClose() {
+  closeRuleEditor({ reopenCategoryEditor: true });
+}
+
+function closeRuleEditor({ reopenCategoryEditor = false } = {}) {
+  const shouldReopenCategoryEditor = reopenCategoryEditor && isRuleEditorFromCategoryFlow.value;
+  const restoredCategoryDraft = pendingCategoryRuleDraftValue.value;
+
   showRuleEditor.value = false;
   activeRule.value = null;
+  isCreatingRule.value = false;
+  isRuleEditorFromCategoryFlow.value = false;
+  pendingCategoryRuleDraftValue.value = '';
+
+  if (shouldReopenCategoryEditor) {
+    applyCategoryTo.value = 'this-item-only';
+    if (restoredCategoryDraft) {
+      categoryDraft.value = restoredCategoryDraft;
+    }
+    showCategoryEditor.value = true;
+  }
 }
 
 async function saveRule(rulePayload) {
@@ -752,15 +858,51 @@ async function saveRule(rulePayload) {
     orderOfExecution: Number(rulePayload?.orderOfExecution || 0)
   };
 
-  const updatedRule = await rulesAPI.updateRule(normalizedRule._id, normalizedRule);
-  const existingRuleIndex = state.allUserRules.findIndex(rule => rule._id === normalizedRule._id);
-  
-  if (existingRuleIndex !== -1 && updatedRule) {
-    state.allUserRules[existingRuleIndex] = updatedRule;
+  const rulePayloadForApi = { ...normalizedRule };
+  delete rulePayloadForApi._makeGlobal;
+  const shouldCreateRule = isCreatingRule.value || !rulePayloadForApi?._id;
+  const previousDrillPath = Array.isArray(state.selected?.drillPath)
+    ? [...state.selected.drillPath]
+    : [];
+  const categoryFallback = pendingCategoryRuleDraftValue.value;
+
+  if (shouldCreateRule) {
+    const createdRule = await rulesAPI.createRule(rulePayloadForApi);
+    if (createdRule?._id) {
+      state.allUserRules.push(createdRule);
+    }
+  } else {
+    const updatedRule = await rulesAPI.updateRule(rulePayloadForApi._id, rulePayloadForApi);
+    const existingRuleIndex = state.allUserRules.findIndex(rule => rule._id === rulePayloadForApi._id);
+    if (existingRuleIndex !== -1 && updatedRule) {
+      state.allUserRules[existingRuleIndex] = updatedRule;
+    }
   }
 
   await processAllTabsForSelectedGroup({ showLoading: false });
-  closeRuleEditor();
+  if (isRuleEditorFromCategoryFlow.value) {
+    refreshSelectionAfterCategoryMutation(previousDrillPath, categoryFallback);
+  }
+  closeRuleEditor({ reopenCategoryEditor: false });
+}
+
+async function deleteRule(rule) {
+  if (!rule?._id) {
+    return;
+  }
+
+  const shouldDelete = confirm('Delete this rule?');
+  if (!shouldDelete) {
+    return;
+  }
+
+  const didDelete = await rulesAPI.deleteRule(rule._id);
+  if (!didDelete) {
+    return;
+  }
+
+  state.allUserRules = state.allUserRules.filter(existingRule => existingRule._id !== rule._id);
+  await processAllTabsForSelectedGroup({ showLoading: false });
 }
 
 async function copyRuleJson(rule) {
