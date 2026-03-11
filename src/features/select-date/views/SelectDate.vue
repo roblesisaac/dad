@@ -333,8 +333,8 @@ const quickSelectOptions = computed(() => {
     }
   }
 
-  const orderedYearOptions = [...yearOptions].sort((a, b) => a.year - b.year);
-  const orderedMonthOptions = [...monthOptions].sort((a, b) => a.monthSort - b.monthSort);
+  const orderedYearOptions = [...yearOptions].sort((a, b) => b.year - a.year);
+  const orderedMonthOptions = [...monthOptions].sort((a, b) => b.monthSort - a.monthSort);
   return [...orderedYearOptions, ...orderedMonthOptions, ...nonDateScopedOptions];
 });
 
