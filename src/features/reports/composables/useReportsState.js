@@ -127,6 +127,15 @@ export function normalizeRowsForLocal(rows = []) {
       };
     }
 
+    if (row?.type === 'note') {
+      return {
+        rowId,
+        type: 'note',
+        note: typeof row.note === 'string' ? row.note : '',
+        sort: Number.isFinite(row.sort) ? row.sort : index
+      };
+    }
+
     return {
       rowId,
       type: 'manual',
@@ -752,6 +761,15 @@ export function useReportsState() {
     };
   }
 
+  function createDefaultNoteRow(sort = 0) {
+    return {
+      rowId: `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      type: 'note',
+      note: '',
+      sort
+    };
+  }
+
   function resolveGroupForRowContext(groupId) {
     if (!groupId) {
       return null;
@@ -1049,6 +1067,12 @@ export function useReportsState() {
 
     for (const row of normalizedRows) {
       if (row.type === 'manual') {
+        issuesByRowId[row.rowId] = '';
+        nextRows.push(row);
+        continue;
+      }
+
+      if (row.type === 'note') {
         issuesByRowId[row.rowId] = '';
         nextRows.push(row);
         continue;
@@ -1459,6 +1483,19 @@ export function useReportsState() {
     return newRow;
   }
 
+  function addNoteRow(reportId) {
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const newRow = createDefaultNoteRow(report.rows.length);
+    report.rows.push(newRow);
+    report.rows = normalizeRowsForLocal(report.rows);
+    setReportTotal(reportId);
+    state.rowIssuesByKey[buildRowStateKey(reportId, newRow.rowId)] = '';
+
+    return newRow;
+  }
+
   function updateRow(reportId, rowId, updates) {
     const report = findReport(reportId);
     if (!report) return;
@@ -1512,6 +1549,13 @@ export function useReportsState() {
           reportId: typeof updates.reportId === 'string' ? updates.reportId : row.reportId,
           reportName: typeof updates.reportName === 'string' ? updates.reportName : row.reportName,
           savedTotal: Number.isFinite(Number(updates.savedTotal)) ? Number(updates.savedTotal) : row.savedTotal
+        };
+      }
+
+      if (row.type === 'note') {
+        return {
+          ...row,
+          note: typeof updates.note === 'string' ? updates.note : row.note
         };
       }
 
@@ -1698,6 +1742,12 @@ export function useReportsState() {
       return row;
     }
 
+    if (row.type === 'note') {
+      state.rowIssuesByKey[buildRowStateKey(reportId, rowId)] = '';
+      setReportTotal(reportId);
+      return row;
+    }
+
     if (row.type === 'report') {
       const { amount, reportName, issue } = evaluateReportRow(reportId, row);
       report.rows = normalizeRowsForLocal(report.rows.map((item) => {
@@ -1768,6 +1818,7 @@ export function useReportsState() {
     addTabRow,
     addManualRow,
     addReportRow,
+    addNoteRow,
     updateRow,
     removeRow,
     reorderRows,

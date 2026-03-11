@@ -93,10 +93,23 @@ describe('useReportsState helpers', () => {
     const total = calculateReportTotal([
       { rowId: 'tab-row', type: 'tab', savedTotal: 20.5 },
       { rowId: 'report-row', type: 'report', savedTotal: 10 },
+      { rowId: 'note-row', type: 'note', note: '### Heading\nspacer', sort: 2 },
       { rowId: 'manual-row', type: 'manual', amount: -5 }
     ]);
 
     expect(total).toBe(25.5);
+  });
+
+  test('normalizes note rows with markdown text', () => {
+    const normalized = normalizeRowsForLocal([
+      { type: 'note', rowId: 'n1', note: '# Header\n- item', sort: 1 },
+      { type: 'note', rowId: 'n2', sort: 0 }
+    ]);
+
+    expect(normalized).toEqual([
+      { rowId: 'n2', type: 'note', note: '', sort: 0 },
+      { rowId: 'n1', type: 'note', note: '# Header\n- item', sort: 1 }
+    ]);
   });
 
   test('builds stable cache and row state keys', () => {

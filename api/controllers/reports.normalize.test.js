@@ -129,6 +129,35 @@ describe('reports normalize', () => {
     });
   });
 
+  test('normalizes markdown note rows and allows empty spacer notes', () => {
+    const normalized = normalizeReportPayload({
+      name: 'Notes',
+      rows: [
+        {
+          type: 'note',
+          note: '# Header\n- item',
+          sort: 1
+        },
+        {
+          type: 'note',
+          sort: 0
+        }
+      ]
+    });
+
+    expect(normalized.rows).toHaveLength(2);
+    expect(normalized.rows[0]).toMatchObject({
+      type: 'note',
+      note: '',
+      sort: 0
+    });
+    expect(normalized.rows[1]).toMatchObject({
+      type: 'note',
+      note: '# Header\n- item',
+      sort: 1
+    });
+  });
+
   test('throws on invalid tab row date range', () => {
     expect(() =>
       normalizeReportPayload({

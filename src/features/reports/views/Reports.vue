@@ -373,10 +373,8 @@
           >
             <template #item="{ element: row, index }">
               <article
-                class="relative border rounded-xl px-4 py-3 bg-white reports-row-group select-none"
-                :class="[
-                  isRowItemInReorderMode(row.rowId) ? 'border-dashed border-gray-300' : 'border-gray-200'
-                ]"
+                class="relative reports-row-group select-none"
+                :class="reportRowCardClasses(row)"
                 @mousedown="handleReportRowMouseDown($event, row.rowId)"
                 @mousemove="handleReportRowMouseMove"
                 @mouseup="handleReportRowMouseUp"
@@ -398,14 +396,47 @@
                     </button>
 
                     <div class="min-w-0">
-                      <div class="flex items-center gap-2 min-w-0">
+                      <div
+                        class="flex gap-2 min-w-0"
+                        :class="row.type === 'note' ? 'items-start' : 'items-center'"
+                      >
                         <span
                           v-if="showRowReferenceBadges"
                           class="flex-shrink-0 inline-flex items-center rounded-md border border-gray-300 bg-gray-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-gray-600"
                         >
                           r{{ index + 1 }}
                         </span>
-                        <div class="min-w-0 flex items-center gap-1">
+                        <template v-if="row.type === 'note'">
+                          <div
+                            v-if="hasNoteContent(row)"
+                            class="reports-note-markdown text-sm min-w-0 flex-1"
+                            v-html="rowRenderedNote(row)"
+                          />
+
+                          <div class="relative shrink-0" data-dropdown-root>
+                            <button
+                              class="reports-row-menu-trigger p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
+                              :class="{ 'reports-row-menu-trigger-visible': shouldShowReportRowMenu(row.rowId) }"
+                              @click.stop="toggleRowMenu(row.rowId, $event)"
+                            >
+                              <MoreVertical class="w-4 h-4" />
+                            </button>
+
+                            <div
+                              v-if="activeRowMenuId === row.rowId"
+                              data-dropdown-panel
+                              class="bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                              :style="rowMenuPanelStyle || undefined"
+                              @click.stop
+                            >
+                              <button class="menu-item" @click="startRowReorderFromMenu(row.rowId)">Rearrange Row</button>
+                              <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
+                              <button class="menu-item" @click="startRowEdit(row)">Edit</button>
+                              <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
+                            </div>
+                          </div>
+                        </template>
+                        <div v-else class="min-w-0 flex items-center gap-1">
                           <div class="text-lg font-bold text-gray-900 truncate uppercase">
                             {{ rowTitle(row) }}
                           </div>
@@ -414,7 +445,7 @@
                             <button
                               class="reports-row-menu-trigger p-1.5 rounded-lg text-gray-500 hover:bg-gray-100"
                               :class="{ 'reports-row-menu-trigger-visible': shouldShowReportRowMenu(row.rowId) }"
-                              @click.stop="toggleRowMenu(row.rowId)"
+                              @click.stop="toggleRowMenu(row.rowId, $event)"
                             >
                               <MoreVertical class="w-4 h-4" />
                             </button>
@@ -422,7 +453,8 @@
                             <div
                               v-if="activeRowMenuId === row.rowId"
                               data-dropdown-panel
-                              class="absolute left-0 mt-1 w-44 bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                              class="bg-white border border-gray-200 rounded-xl shadow-lg z-20"
+                              :style="rowMenuPanelStyle || undefined"
                               @click.stop
                             >
                               <button class="menu-item" @click="startRowReorderFromMenu(row.rowId)">Rearrange Row</button>
@@ -441,7 +473,7 @@
                           {{ tabRowDateLine(row) }}
                         </p>
                       </template>
-                      <p v-else class="text-sm text-gray-500 mt-1">
+                      <p v-else-if="row.type !== 'note'" class="text-sm text-gray-500 mt-1">
                         {{ rowSubtitle(row) }}
                       </p>
                       <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-black-600 mt-1">
@@ -460,7 +492,11 @@
                       Nevermind
                     </button>
 
-                    <span v-else class="text-xl font-black" :class="fontColor(getRowAmount(selectedReport._id, row.rowId))">
+                    <span
+                      v-else-if="row.type !== 'note'"
+                      class="text-xl font-black"
+                      :class="fontColor(getRowAmount(selectedReport._id, row.rowId))"
+                    >
                       {{ formatRowAmount(selectedReport._id, row, { toFixed: 2 }) }}
                     </span>
                   </div>
@@ -504,6 +540,7 @@
                 Select Existing Row
               </button>
               <button class="menu-item" @click="addAndEditRow('manual')">Manually Enter Amount</button>
+              <button class="menu-item" @click="addAndEditRow('note')">Markdown Note / Spacer</button>
             </div>
           </div>
         </div>
@@ -941,6 +978,25 @@
               </p>
             </template>
 
+            <template v-else-if="rowEditorDraft.type === 'note'">
+              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                Note (Markdown)
+                <textarea
+                  v-model="rowEditorDraft.note"
+                  rows="7"
+                  class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="# Notes&#10;- Bullet item&#10;&#10;Leave blank for a spacer row."
+                />
+              </label>
+
+              <p class="text-xs text-gray-500">
+                Leave this empty to create a blank spacer row.
+              </p>
+              <p v-pre class="text-xs text-gray-500">
+                Supports tokens like <code>{{ r1 }}</code>, <code>{{ report-total }}</code>, and math like <code>{{ (r1+r2)*0.2 }}</code>.
+              </p>
+            </template>
+
             <template v-else>
               <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
                 Title
@@ -1037,6 +1093,8 @@ import {
   normalizeReportDrillPathLabels,
   useReportsState
 } from '@/features/reports/composables/useReportsState.js';
+import { normalizeTemplateToken, renderTemplateWithTokens } from '@/features/dashboard/utils/noteTemplate.js';
+import { renderMarkdown } from '@/shared/utils/markdown.js';
 import { useRemoteSync } from '@/shared/composables/useRemoteSync.js';
 import { usePullToRefresh } from '@/shared/composables/usePullToRefresh.js';
 import { useUtils } from '@/shared/composables/useUtils.js';
@@ -1065,6 +1123,7 @@ const {
   addTabRow,
   addManualRow,
   addReportRow,
+  addNoteRow,
   updateRow,
   removeRow,
   reorderRows,
@@ -1088,6 +1147,7 @@ const isSyncingReportRouteQuery = ref(false);
 const activeReportMenuId = ref('');
 const activeFolderMenuName = ref('');
 const activeRowMenuId = ref('');
+const rowMenuPanelStyle = ref(null);
 const showAddRowPicker = ref(false);
 const isExistingRowPickerModalOpen = ref(false);
 
@@ -1142,6 +1202,8 @@ const isApplyingRemoteReportsSync = ref(false);
 
 const LONG_PRESS_DURATION_MS = 450;
 const LONG_PRESS_MOVE_THRESHOLD_PX = 8;
+const DROPDOWN_PANEL_WIDTH_PX = 176;
+const DROPDOWN_VIEWPORT_PADDING_PX = 8;
 let tabRowCategoryGuideRequestId = 0;
 
 function queryValue(key) {
@@ -1216,6 +1278,7 @@ const isReportReorderActive = computed(() => Boolean(longPressReorderReportKey.v
 const isRowReorderActive = computed(() => Boolean(longPressReorderRowId.value));
 const isManualRowEditor = computed(() =>
   rowEditorDraft.value?.type === 'manual'
+  || rowEditorDraft.value?.type === 'note'
 );
 const showRowReferenceBadges = computed(() =>
   isFormulaEditorModalOpen.value || isManualRowEditor.value
@@ -1224,6 +1287,41 @@ const isRowEditorManualFormula = computed(() =>
   rowEditorDraft.value?.type === 'manual'
   && String(rowEditorDraft.value?.amountInput || '').trim().startsWith('=')
 );
+const noteRowTemplateTokens = computed(() => {
+  const report = selectedReport.value;
+  if (!report?._id) {
+    return {};
+  }
+
+  const rows = [...(Array.isArray(report.rows) ? report.rows : [])]
+    .sort((a, b) => Number(a?.sort || 0) - Number(b?.sort || 0));
+  const tokens = {
+    'report-name': String(report.name || '').trim() || 'Untitled report',
+    'report-total': formatReportTotal(report._id, { toFixed: 2 }),
+    'row-count': String(rows.length)
+  };
+
+  rows.forEach((row, index) => {
+    const rowId = String(row?.rowId || '').trim();
+    if (!rowId) {
+      return;
+    }
+
+    const rowAmount = Number(getRowAmount(report._id, rowId));
+    const safeAmount = Number.isFinite(rowAmount) ? rowAmount : 0;
+    const amountLabel = formatPrice(safeAmount, { toFixed: 2 });
+    const rowRefToken = `r${index + 1}`;
+    tokens[rowRefToken] = amountLabel;
+    tokens[`row-${index + 1}`] = amountLabel;
+
+    const titleToken = normalizeTemplateToken(rowTitle(row));
+    if (titleToken && !Object.prototype.hasOwnProperty.call(tokens, titleToken)) {
+      tokens[titleToken] = amountLabel;
+    }
+  });
+
+  return tokens;
+});
 
 const isTabRowDateRangeValid = computed(() => {
   if (rowEditorDraft.value?.type !== 'tab') {
@@ -2470,7 +2568,60 @@ function tabRowDateLine(row) {
   return `${row?.dateStart || '—'} to ${row?.dateEnd || '—'}`;
 }
 
+function noteRowText(row) {
+  return typeof row?.note === 'string' ? row.note : '';
+}
+
+function renderNoteTemplate(note) {
+  return renderTemplateWithTokens(note, noteRowTemplateTokens.value, {
+    formatExpressionResult: (value) => formatPrice(value, { toFixed: 2 })
+  });
+}
+
+function reportRowCardClasses(row) {
+  if (row?.type === 'note') {
+    return 'px-4 py-3 bg-transparent';
+  }
+
+  if (isRowItemInReorderMode(row?.rowId)) {
+    return 'border border-dashed border-gray-300 rounded-xl px-4 py-3 bg-white';
+  }
+
+  return 'border border-gray-200 rounded-xl px-4 py-3 bg-white';
+}
+
+function hasNoteContent(row) {
+  return Boolean(noteRowText(row).trim());
+}
+
+function notePreviewText(row) {
+  const firstLine = renderNoteTemplate(noteRowText(row))
+    .split('\n')
+    .map(line => line.trim())
+    .find(Boolean);
+
+  if (!firstLine) {
+    return 'Spacer';
+  }
+
+  const withoutMarkdown = firstLine
+    .replace(/^#{1,6}\s+/, '')
+    .replace(/^[-*]\s+/, '')
+    .replace(/[*_`]/g, '')
+    .trim();
+
+  return withoutMarkdown || 'Note';
+}
+
+function rowRenderedNote(row) {
+  return renderMarkdown(renderNoteTemplate(noteRowText(row)));
+}
+
 function rowTitle(row) {
+  if (row.type === 'note') {
+    return hasNoteContent(row) ? 'Note' : 'Spacer';
+  }
+
   if (row.type === 'manual') {
     return row.title || 'Untitled manual row';
   }
@@ -2489,6 +2640,10 @@ function rowTitle(row) {
 }
 
 function rowSubtitle(row) {
+  if (row.type === 'note') {
+    return hasNoteContent(row) ? notePreviewText(row) : 'Spacer row';
+  }
+
   if (row.type === 'manual') {
     return 'Manual row';
   }
@@ -2507,6 +2662,10 @@ function existingRowTypeLabel(row) {
 
   if (row?.type === 'report') {
     return 'Report';
+  }
+
+  if (row?.type === 'note') {
+    return 'Note';
   }
 
   return 'Manual';
@@ -2555,6 +2714,10 @@ function createRowByType(reportId, type) {
     return addReportRow(reportId);
   }
 
+  if (type === 'note') {
+    return addNoteRow(reportId);
+  }
+
   return addManualRow(reportId);
 }
 
@@ -2579,6 +2742,13 @@ function buildRowCopyPayload(row) {
       reportId: row.reportId || '',
       reportName: linkedReport?.name || row.reportName || '',
       savedTotal: Number.isFinite(Number(row.savedTotal)) ? Number(row.savedTotal) : 0
+    };
+  }
+
+  if (row?.type === 'note') {
+    return {
+      type: 'note',
+      note: noteRowText(row)
     };
   }
 
@@ -2618,6 +2788,10 @@ function buildRowEditorDraft(row) {
   if (nextDraft.type === 'report') {
     const linkedReport = state.reports.find(report => report._id === nextDraft.reportId);
     nextDraft.reportName = linkedReport?.name || nextDraft.reportName || '';
+  }
+
+  if (nextDraft.type === 'note') {
+    nextDraft.note = noteRowText(nextDraft);
   }
 
   return nextDraft;
@@ -2841,6 +3015,7 @@ function closeDropdownMenus() {
   activeReportMenuId.value = '';
   activeFolderMenuName.value = '';
   activeRowMenuId.value = '';
+  rowMenuPanelStyle.value = null;
   showDetailReportMenu.value = false;
   showAddRowPicker.value = false;
 
@@ -3008,6 +3183,28 @@ function clearReportRowLongPressTimer() {
   }
 }
 
+function computeClampedDropdownPanelStyleFromEvent(event, panelWidth = DROPDOWN_PANEL_WIDTH_PX) {
+  const trigger = event?.currentTarget;
+  if (!(trigger instanceof Element)) {
+    return null;
+  }
+
+  const rect = trigger.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const safeWidth = Math.max(120, Number(panelWidth) || DROPDOWN_PANEL_WIDTH_PX);
+  const desiredLeft = rect.left + (rect.width / 2) - (safeWidth / 2);
+  const minLeft = DROPDOWN_VIEWPORT_PADDING_PX;
+  const maxLeft = Math.max(minLeft, viewportWidth - safeWidth - DROPDOWN_VIEWPORT_PADDING_PX);
+  const clampedLeft = Math.min(Math.max(desiredLeft, minLeft), maxLeft);
+
+  return {
+    position: 'fixed',
+    top: `${Math.round(rect.bottom + 6)}px`,
+    left: `${Math.round(clampedLeft)}px`,
+    width: `${Math.round(safeWidth)}px`
+  };
+}
+
 function triggerReportRowLongPress(rowId) {
   if (!rowId) {
     return;
@@ -3098,16 +3295,21 @@ function cancelRowReorder() {
 
 function startRowReorderFromMenu(rowId) {
   activeRowMenuId.value = '';
+  rowMenuPanelStyle.value = null;
   triggerReportRowLongPress(rowId);
 }
 
-function toggleRowMenu(rowId) {
+function toggleRowMenu(rowId, event = null) {
   if (isRowReorderActive.value) {
     exitRowReorderMode({ clearVisible: false });
   }
 
   longPressVisibleRowId.value = rowId;
-  activeRowMenuId.value = activeRowMenuId.value === rowId ? '' : rowId;
+  const shouldClose = activeRowMenuId.value === rowId;
+  activeRowMenuId.value = shouldClose ? '' : rowId;
+  rowMenuPanelStyle.value = shouldClose
+    ? null
+    : computeClampedDropdownPanelStyleFromEvent(event, DROPDOWN_PANEL_WIDTH_PX);
 }
 
 async function onRowsDragEnd() {
@@ -3252,6 +3454,7 @@ function startRowEdit(row) {
   editingRowWasNew.value = false;
   isRowEditorOpen.value = true;
   activeRowMenuId.value = '';
+  rowMenuPanelStyle.value = null;
 }
 
 function addAndEditRow(type) {
@@ -3263,6 +3466,8 @@ function addAndEditRow(type) {
     newRow = addTabRow(selectedReport.value._id);
   } else if (type === 'report') {
     newRow = addReportRow(selectedReport.value._id);
+  } else if (type === 'note') {
+    newRow = addNoteRow(selectedReport.value._id);
   } else {
     newRow = addManualRow(selectedReport.value._id);
   }
@@ -3339,6 +3544,10 @@ async function saveRowEditor() {
       delete payload.amountInput;
     }
 
+    if (payload.type === 'note') {
+      payload.note = noteRowText(payload);
+    }
+
     updateRow(reportId, rowId, payload);
     didApplyLocalUpdate = true;
 
@@ -3391,6 +3600,7 @@ async function deleteRowAndSave(rowId) {
   exitRowReorderMode();
   removeRow(selectedReport.value._id, rowId);
   activeRowMenuId.value = '';
+  rowMenuPanelStyle.value = null;
 
   if (!isDraftSelected.value) {
     await saveReport(selectedReport.value._id);
@@ -3643,6 +3853,65 @@ onBeforeUnmount(() => {
   text-transform: uppercase;
   color: #111827;
   white-space: nowrap;
+}
+
+.reports-note-markdown :deep(p) {
+  margin-bottom: 0.5rem;
+  line-height: 1.45;
+}
+
+.reports-note-markdown {
+  color: var(--theme-text);
+}
+
+.reports-note-markdown :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.reports-note-markdown :deep(ul) {
+  margin-bottom: 0.5rem;
+  list-style-type: disc;
+  padding-left: 1.25rem;
+}
+
+.reports-note-markdown :deep(strong) {
+  font-weight: 700;
+  color: var(--theme-text);
+}
+
+.reports-note-markdown :deep(a) {
+  color: var(--theme-text);
+}
+
+.reports-note-markdown :deep(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  font-size: 0.84em;
+  color: var(--theme-text);
+  background: var(--theme-rule-part-bg);
+  border: 1px solid var(--theme-rule-part-border);
+  border-radius: 0.25rem;
+  padding: 0.08rem 0.3rem;
+}
+
+.reports-note-markdown :deep(.markdown-h1),
+.reports-note-markdown :deep(.markdown-h2),
+.reports-note-markdown :deep(.markdown-h3),
+.reports-note-markdown :deep(.markdown-h4),
+.reports-note-markdown :deep(.markdown-h5),
+.reports-note-markdown :deep(.markdown-h6) {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--theme-text);
+}
+
+.reports-note-markdown :deep(.markdown-h1) {
+  font-size: 1rem;
+}
+
+.reports-note-markdown :deep(.markdown-h2) {
+  font-size: 0.95rem;
 }
 
 .themed-footer-border {

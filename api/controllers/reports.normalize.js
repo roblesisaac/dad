@@ -209,6 +209,15 @@ function normalizeReportRow(row, fallbackSort) {
   };
 }
 
+function normalizeNoteRow(row, fallbackSort) {
+  return {
+    rowId: normalizeRowId(row?.rowId),
+    type: 'note',
+    note: typeof row?.note === 'string' ? row.note : '',
+    sort: normalizeSort(row?.sort, fallbackSort)
+  };
+}
+
 function normalizeRows(rows) {
   if (!Array.isArray(rows)) {
     throw makeError('rows must be an array');
@@ -227,6 +236,10 @@ function normalizeRows(rows) {
 
     if (type === 'report') {
       return normalizeReportRow(row, index);
+    }
+
+    if (type === 'note') {
+      return normalizeNoteRow(row, index);
     }
 
     throw makeError(`row type '${type || 'unknown'}' is invalid`);

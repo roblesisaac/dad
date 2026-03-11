@@ -4,7 +4,7 @@ const rowSchema = {
   rowId: String,
   type: {
     type: String,
-    enum: ['tab', 'manual', 'report']
+    enum: ['tab', 'manual', 'report', 'note']
   },
   tabId: String,
   groupId: String,
@@ -19,6 +19,7 @@ const rowSchema = {
   amount: Number,
   amountFormula: String,
   amountDisplayType: String,
+  note: String,
   sort: Number
 };
 
