@@ -40,35 +40,17 @@ export function useGroupsAPI() {
   }
 
   /**
-   * Update a group selection
-   */
-  async function updateGroupSelection(groupId, isSelected) {
-    return await api.put(`groups/${groupId}`, { isSelected });
-  }
-
-  /**
-   * Deselect a group
-   */
-  async function deselectGroup(groupId) {
-    return await api.put(`groups/${groupId}`, { isSelected: false });
-  }
-
-  /**
    * Update a group's sort
    */
   async function updateGroupSort(groupId, sort) {
     return await api.put(`groups/${groupId}`, { sort });
   }
 
-
-
   return {
     fetchGroupsAndAccounts,
     createGroup,
     updateGroup,
     deleteGroup,
-    updateGroupSelection,
-    deselectGroup,
     updateGroupSort
   };
-} 
+}

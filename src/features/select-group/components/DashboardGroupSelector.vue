@@ -1157,10 +1157,6 @@ async function handleAllAccountsRowSelect() {
 
   closeAllMenus();
   writePreferredGroupIdToStorage(ALL_ACCOUNTS_GROUP_ID);
-
-  const selectedGroupIds = state.allUserGroups
-    .filter(group => Boolean(group?.isSelected && group?._id))
-    .map(group => String(group._id));
   state.allUserGroups.forEach((group) => {
     group.isSelected = false;
   });
@@ -1168,10 +1164,6 @@ async function handleAllAccountsRowSelect() {
   const allAccountsGroup = buildAllAccountsSelectionGroup();
   state.selected.groupOverride = allAccountsGroup;
   emit('group-selected', allAccountsGroup);
-
-  if (selectedGroupIds.length) {
-    void Promise.allSettled(selectedGroupIds.map(groupId => groupsAPI.deselectGroup(groupId)));
-  }
 
   try {
     await handleGroupChange();

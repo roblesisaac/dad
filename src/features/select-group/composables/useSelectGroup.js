@@ -247,28 +247,6 @@ export function useSelectGroup() {
     return selectedGroup;
   }
 
-  async function persistSelectedGroupSelection(selectedGroupId, previousSelectedGroupId = '') {
-    const normalizedSelectedGroupId = String(selectedGroupId || '').trim();
-    const normalizedPreviousGroupId = String(previousSelectedGroupId || '').trim();
-    if (!normalizedSelectedGroupId) {
-      return;
-    }
-
-    const selectionUpdates = [];
-
-    if (normalizedPreviousGroupId && normalizedPreviousGroupId !== normalizedSelectedGroupId) {
-      selectionUpdates.push(groupsAPI.deselectGroup(normalizedPreviousGroupId));
-    }
-
-    selectionUpdates.push(groupsAPI.updateGroupSelection(normalizedSelectedGroupId, true));
-
-    if (!selectionUpdates.length) {
-      return;
-    }
-
-    await Promise.allSettled(selectionUpdates);
-  }
-
   /**
    * Select a group and deselect others
    */
@@ -283,7 +261,6 @@ export function useSelectGroup() {
     }
 
     state.selected.groupOverride = null;
-    const previousSelectedGroupId = String(state.selected.group?._id || '').trim();
     const selectedGroup = setSelectedGroupInMemory(groupToSelect, state.allUserGroups);
     if (!selectedGroup) {
       if (showLoading) {
@@ -292,7 +269,6 @@ export function useSelectGroup() {
       return null;
     }
 
-    void persistSelectedGroupSelection(selectedGroup._id, previousSelectedGroupId);
     await handleGroupChange({ preserveSelectedTab, showLoading });
 
     return selectedGroup;
