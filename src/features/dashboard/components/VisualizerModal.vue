@@ -30,7 +30,7 @@
       @touchend="handleTouchEnd"
     >
       <div 
-        class="absolute origin-top-left transition-transform duration-75 ease-out" 
+        class="absolute origin-top-left" 
         :style="viewportStyle"
         ref="wrapperRef"
       >
@@ -65,7 +65,7 @@
                 v-for="(group, i) in col.items" 
                 :key="group.key"
                 :ref="el => setNodeRef(colIndex, i, el)"
-                class="cursor-pointer whitespace-nowrap transition-all duration-300 select-none ease-out"
+                class="cursor-pointer whitespace-nowrap select-none"
                 :class="col.selectedIndex === i ? 'node-active' : 'node-inactive'"
                 @click="selectGroup(col.depth, group.key)"
               >
@@ -81,7 +81,7 @@
                 v-for="(tx, i) in col.items" 
                 :key="'tx-'+i"
                 :ref="el => setNodeRef(colIndex, i, el)"
-                class="cursor-pointer whitespace-nowrap transition-all duration-300 select-none ease-out"
+                class="cursor-pointer whitespace-nowrap select-none"
                 :class="activeTransactionIndex === i ? 'node-active' : 'node-inactive'"
                 @click="selectTransaction(i)"
               >
@@ -262,7 +262,7 @@ function handleWheel(e) {
     translateX.value -= e.deltaX;
     translateY.value -= e.deltaY;
   }
-  updatePaths();
+  updatePaths(true);
 }
 
 let lastMousePos = null;
@@ -284,7 +284,7 @@ function handleMouseMove(e) {
   translateY.value += dy;
   
   lastMousePos = { x: e.clientX, y: e.clientY };
-  updatePaths();
+  updatePaths(true);
 }
 
 function handleMouseUp() {
@@ -356,7 +356,7 @@ function handleTouchMove(e) {
     lastDist = d;
     lastTouchPos = { x: midX, y: midY };
   }
-  updatePaths();
+  updatePaths(true);
 }
 
 function handleTouchEnd() {
@@ -416,11 +416,10 @@ function getPath(startEl, endEl, wrapperEl) {
   return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
 }
 
-const updatePaths = () => {
-  paths.value = [];
-  nextTick(() => {
+const updatePaths = (immediate = false) => {
+  const calculate = () => {
     if (!wrapperRef.value) return;
-
+    const newPaths = [];
     for (let c = 0; c < columns.value.length; c++) {
       const col = columns.value[c];
       let startEl;
@@ -445,22 +444,29 @@ const updatePaths = () => {
       }
       
       if (startEl && endEl) {
-         paths.value.push(getPath(startEl, endEl, wrapperRef.value));
+         newPaths.push(getPath(startEl, endEl, wrapperRef.value));
       }
     }
-  });
+    paths.value = newPaths;
+  };
+
+  if (immediate) {
+    calculate();
+  } else {
+    nextTick(calculate);
+  }
 };
 
 function selectGroup(depth, key) {
   localDrillExtensions.value = localDrillExtensions.value.slice(0, depth);
   localDrillExtensions.value[depth] = key;
   activeTransactionIndex.value = 0;
-  nextTick(() => setTimeout(updatePaths, 50));
+  updatePaths();
 }
 
 function selectTransaction(index) {
   activeTransactionIndex.value = index;
-  nextTick(() => setTimeout(updatePaths, 50));
+  updatePaths();
 }
 
 onMounted(() => {
