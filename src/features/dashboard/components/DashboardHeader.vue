@@ -209,7 +209,7 @@
               <button
                 type="button"
                 class="header-action-button px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-opacity hover:opacity-70 focus:outline-none flex items-center gap-1"
-                @click="toggleEditTabDropdown"
+                @click="toggleEditTabDropdown($event)"
               >
                 <EllipsisVertical class="w-4 h-4" />
               </button>
@@ -424,6 +424,17 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Visualizer Modal -->
+    <Teleport to="body">
+      <VisualizerModal
+        v-if="isVisualizerModalOpen"
+        :drill-groups="drillGroups"
+        :transactions="state.selected.allGroupTransactions"
+        :is-leaf="isDrillLeaf"
+        @close="closeVisualizerModal"
+      />
+    </Teleport>
   </div>
 </template>
 
@@ -440,6 +451,7 @@ import {
   renderTemplateWithTokens
 } from '@/features/dashboard/utils/noteTemplate.js';
 import { levelRulesForDepth, normalizeDrillPath } from '@/features/tabs/utils/drillSchema.js';
+import VisualizerModal from './VisualizerModal.vue';
 
 const props = defineProps({
   view: {
@@ -713,6 +725,12 @@ const currentBreadcrumbMenuRef = ref(null);
 
 const isEditTabDropdownOpen = ref(false);
 const editTabDropdownRef = ref(null);
+const showVisualizerOption = ref(false);
+const isVisualizerModalOpen = ref(false);
+
+function closeVisualizerModal() {
+  isVisualizerModalOpen.value = false;
+}
 
 const EDIT_TAB_OPTION_DEFINITIONS = [
   { id: 'groupBy', label: 'Group By' },
@@ -825,24 +843,45 @@ const editTabRuleCounts = computed(() => {
   };
 });
 
-const editTabOptions = computed(() =>
-  EDIT_TAB_OPTION_DEFINITIONS.map(option => ({
+const editTabOptions = computed(() => {
+  const options = EDIT_TAB_OPTION_DEFINITIONS.map(option => ({
     ...option,
     count: Number(editTabRuleCounts.value[option.id] || 0)
-  }))
-);
+  }));
+  
+  if (showVisualizerOption.value) {
+    options.push({
+      id: 'visualizer',
+      label: 'Visualizer',
+      count: 0
+    });
+  }
+  
+  return options;
+});
 
-function toggleEditTabDropdown() {
+function toggleEditTabDropdown(event) {
   closeHomeSwitcher();
   closeCurrentBreadcrumbMenu();
   isEditTabDropdownOpen.value = !isEditTabDropdownOpen.value;
+  if (isEditTabDropdownOpen.value) {
+    showVisualizerOption.value = !!(event?.metaKey || event?.ctrlKey);
+  } else {
+    showVisualizerOption.value = false;
+  }
 }
 
 function closeEditTabDropdown() {
   isEditTabDropdownOpen.value = false;
+  showVisualizerOption.value = false;
 }
 
 function handleEditTabOption(sectionId) {
+  if (sectionId === 'visualizer') {
+    isVisualizerModalOpen.value = true;
+    closeEditTabDropdown();
+    return;
+  }
   emit('edit-tab', sectionId);
   closeEditTabDropdown();
 }
@@ -1296,6 +1335,9 @@ function onWindowKeydown(event) {
     }
     if (isEditTabDropdownOpen.value) {
       closeEditTabDropdown();
+    }
+    if (isVisualizerModalOpen.value) {
+      closeVisualizerModal();
     }
     if (isHeaderInfoMenuOpen.value) {
       closeHeaderInfoMenu();
