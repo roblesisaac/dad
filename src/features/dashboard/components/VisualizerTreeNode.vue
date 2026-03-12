@@ -1,16 +1,16 @@
 <template>
-  <div v-if="node?.type === 'leaf'" :id="node.id" class="flex flex-col gap-2 p-4 rounded-xl border z-10 w-64 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar bg-[var(--theme-browser-chrome)]" :class="isNodeActive(node.drillPath) ? 'border-[var(--theme-text)] shadow-sm' : 'border-[var(--theme-border)] opacity-60'">
+  <div v-if="node?.type === 'leaf'" :id="node.id" class="flex flex-col gap-2 p-4 rounded-xl border z-10 w-64 max-h-[400px] overflow-y-auto overflow-x-hidden custom-scrollbar bg-[var(--theme-browser-chrome)] cursor-pointer" :class="isNodeActive(node.drillPath) ? 'border-[var(--theme-text)] shadow-sm' : 'border-[var(--theme-border)] opacity-60'" @click.stop="$emit('select', node.drillPath)">
      <div v-for="(tx, i) in node.transactions" :key="i" class="flex justify-between items-center gap-4 text-xs">
          <span class="truncate font-medium text-[var(--theme-text)]">{{ tx.name || 'Unknown' }}</span>
          <span class="opacity-70 text-[var(--theme-text-soft)]">{{ formatPrice(tx.amount || tx.amount_expected || 0) }}</span>
      </div>
   </div>
 
-  <div v-else-if="node?.type === 'groups'" class="flex gap-12 justify-center">
+  <div v-else-if="node?.type === 'groups'" class="flex gap-12 justify-start items-start">
     <div 
       v-for="grp in node.groups"
       :key="grp.key"
-      class="flex flex-col items-center gap-20"
+      class="flex flex-col items-start gap-20"
     >
       <VisualizerTreeNode 
         v-if="grp.childNode && direction === 'up'" 
@@ -22,7 +22,7 @@
       
       <div 
         :id="grp.id"
-        class="flex-shrink-0 cursor-pointer whitespace-nowrap select-none node-base text-center"
+        class="flex-shrink-0 cursor-pointer whitespace-nowrap select-none node-base text-left"
         :class="isNodeActive(grp.drillPath) ? 'node-active' : 'node-inactive'"
         @click.stop="$emit('select', grp.drillPath)"
       >

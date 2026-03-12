@@ -42,24 +42,21 @@
               <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
                 <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-text)" opacity="1" />
               </marker>
-              <marker id="arrow-inactive" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
-                <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-border)" opacity="0.6" />
-              </marker>
             </defs>
             <path 
               v-for="(p, i) in paths" 
               :key="i" 
               :d="p.d" 
               fill="none" 
-              :stroke="p.active ? 'var(--theme-text)' : 'var(--theme-border)'" 
-              :stroke-width="p.active ? '2' : '1.5'" 
-              :stroke-opacity="p.active ? '1' : '0.6'" 
-              :marker-end="p.active ? 'url(#arrow-active)' : 'url(#arrow-inactive)'"
+              stroke="var(--theme-text)" 
+              stroke-width="2" 
+              stroke-opacity="1" 
+              marker-end="url(#arrow-active)"
             />
           </svg>
 
         <!-- Nodes container -->
-        <div class="relative z-10 flex flex-col items-center justify-center gap-20 focus:outline-none p-24 min-h-[500px]">
+        <div class="relative z-10 flex flex-col items-start gap-20 focus:outline-none p-24 min-h-[500px]">
            <VisualizerTreeNode 
              v-if="treeDataUp"
              :node="treeDataUp"
@@ -70,7 +67,7 @@
 
            <div 
              id="node-root"
-             class="cursor-pointer whitespace-nowrap select-none node-base flex-shrink-0 text-center"
+             class="cursor-pointer whitespace-nowrap select-none node-base flex-shrink-0 text-left"
              :class="activeDrillPath.length === 0 ? 'node-active' : 'node-inactive'"
              @click="selectPath([])"
            >
@@ -403,12 +400,13 @@ const updatePaths = (immediate = false) => {
     const newPaths = [];
     
     for (const edge of allEdges.value) {
+      if (!isEdgeActive(edge.drillPath)) continue;
+
       const startEl = document.getElementById(edge.startId);
       const endEl = document.getElementById(edge.endId);
       if (startEl && endEl) {
          newPaths.push({
-           d: getPath(startEl, endEl, wrapperRef.value),
-           active: isEdgeActive(edge.drillPath)
+           d: getPath(startEl, endEl, wrapperRef.value)
          });
       }
     }
