@@ -36,86 +36,59 @@
       >
         <div class="px-12 py-12 md:px-32 md:py-32 relative" style="min-width: max-content; min-height: max-content;">
         
-          <!-- SVG Connections - Now part of the scaled container -->
+          <!-- SVG Connections -->
           <svg class="absolute inset-0 pointer-events-none z-0 w-full h-full">
             <defs>
-              <marker id="arrow" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+              <marker id="arrow-active" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-text)" opacity="1" />
+              </marker>
+              <marker id="arrow-inactive" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
                 <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-border)" opacity="0.6" />
               </marker>
             </defs>
             <path 
               v-for="(p, i) in paths" 
               :key="i" 
-              :d="p" 
+              :d="p.d" 
               fill="none" 
-              stroke="var(--theme-border)" 
-              stroke-width="1.5" 
-              stroke-opacity="0.6" 
-              marker-end="url(#arrow)"
+              :stroke="p.active ? 'var(--theme-text)' : 'var(--theme-border)'" 
+              :stroke-width="p.active ? '2' : '1.5'" 
+              :stroke-opacity="p.active ? '1' : '0.6'" 
+              :marker-end="p.active ? 'url(#arrow-active)' : 'url(#arrow-inactive)'"
             />
           </svg>
 
         <!-- Nodes container -->
-        <div class="relative z-10 flex flex-col gap-24 items-start focus:outline-none">
-          
-          <div v-for="(col, colIndex) in columns" :key="'col-'+colIndex" class="flex gap-8 items-center flex-nowrap">
-            
-            <template v-if="col.type === 'groups'">
-              <div 
-                v-for="(group, i) in col.items" 
-                :key="group.key"
-                :ref="el => setNodeRef(colIndex, i, el)"
-                class="cursor-pointer whitespace-nowrap select-none"
-                :class="col.selectedIndex === i ? 'node-active' : 'node-inactive'"
-                @click="selectGroup(col.depth, group.key)"
-              >
-                <span class="text-base font-medium">{{ group.label }}</span>
-                <div :class="col.selectedIndex === i ? 'text-[var(--theme-text-soft)]' : 'opacity-70'" class="text-sm mt-1">
-                  {{ formatPrice(group.total) }} <span class="text-xs ml-1 opacity-50">({{ group.count }})</span>
-                </div>
-              </div>
-            </template>
-            
-            <template v-else-if="col.type === 'transactions'">
-              <div 
-                v-for="(tx, i) in col.items" 
-                :key="'tx-'+i"
-                :ref="el => setNodeRef(colIndex, i, el)"
-                class="cursor-pointer whitespace-nowrap select-none"
-                :class="activeTransactionIndex === i ? 'node-active' : 'node-inactive'"
-                @click="selectTransaction(i)"
-              >
-                <span class="text-base font-medium">{{ tx.name || 'Unknown' }}</span>
-                <div :class="activeTransactionIndex === i ? 'text-[var(--theme-text-soft)]' : 'opacity-70'" class="text-sm mt-1">
-                  {{ formatPrice(tx.amount) }}
-                </div>
-              </div>
-            </template>
+        <div class="relative z-10 flex flex-col items-center justify-center gap-20 focus:outline-none p-24 min-h-[500px]">
+           <VisualizerTreeNode 
+             v-if="treeDataUp"
+             :node="treeDataUp"
+             :active-path="activeDrillPath"
+             direction="up"
+             @select="selectPath"
+           />
 
-          </div>
-
-          <!-- Transaction Details -->
-          <div v-if="activeTransaction" class="flex gap-8 items-center mt-4">
-            <div 
-              ref="detailsRef" 
-              class="font-bold tracking-tight text-[var(--theme-text)] node-details"
-            >
-               <span class="text-2xl">{{ formatPrice(activeTransaction.amount) }}</span> 
-               <span class="font-normal text-[var(--theme-text-soft)] mx-2">at</span> 
-               <span class="text-2xl">{{ activeTransaction.name || 'Unknown' }}</span>
-               
-               <div class="flex flex-col gap-1 mt-6 border-t border-[var(--theme-border)] pt-4">
-                 <div class="text-sm font-medium text-[var(--theme-text-soft)] uppercase tracking-widest text-[10px]">
-                   Date
-                 </div>
-                 <div class="text-base text-[var(--theme-text)]">
-                   {{ formatDate(activeTransaction.date || activeTransaction.authorized_date) }}
-                 </div>
-               </div>
-            </div>
-          </div>
-
+           <div 
+             id="node-root"
+             class="cursor-pointer whitespace-nowrap select-none node-base flex-shrink-0 text-center"
+             :class="activeDrillPath.length === 0 ? 'node-active' : 'node-inactive'"
+             @click="selectPath([])"
+           >
+             <div class="text-base font-medium">All Transactions</div>
+             <div class="text-sm mt-1" :class="activeDrillPath.length === 0 ? 'text-[var(--theme-text-soft)]' : 'opacity-70'">
+                {{ formatPrice(rootTotal) }}
+             </div>
+           </div>
+           
+           <VisualizerTreeNode 
+             v-if="treeDataDown"
+             :node="treeDataDown"
+             :active-path="activeDrillPath"
+             direction="down"
+             @select="selectPath"
+           />
         </div>
+
         </div>
       </div>
 
@@ -133,11 +106,12 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted, onBeforeUnmount, onBeforeUpdate, watch } from 'vue';
+import { ref, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { X } from 'lucide-vue-next';
 import { useUtils } from '@/shared/composables/useUtils.js';
 import { resolveDrillState } from '@/features/tabs/utils/drillEvaluator.js';
 import { useDashboardState } from '@/features/dashboard/composables/useDashboardState.js';
+import VisualizerTreeNode from './VisualizerTreeNode.vue';
 
 // Define props to avoid Vue warnings, even though we use state internally.
 const props = defineProps({
@@ -151,77 +125,11 @@ const emit = defineEmits(['close']);
 const { formatPrice } = useUtils();
 const { state } = useDashboardState();
 
-// selected paths starting from depth 0
-const localDrillExtensions = ref([]);
-const activeTransactionIndex = ref(0);
-
-// compute the columns dynamically
-const columns = computed(() => {
-  const cols = [];
-  const baseDrillPath = state.selected.drillPath || [];
-  let pathSoFar = [...baseDrillPath];
-  
-  let colState = resolveDrillState({
-    tab: state.selected.tab,
-    transactions: state.selected.allGroupTransactions,
-    allRules: state.allUserRules,
-    drillPath: pathSoFar
-  });
-  
-  let currentDepth = 0;
-  // To avoid infinite loops, max depth constraint:
-  while (currentDepth < 10) {
-    if (colState.isLeaf || !colState.groups || colState.groups.length === 0) {
-      cols.push({
-        type: 'transactions',
-        depth: currentDepth,
-        items: colState.transactions || []
-      });
-      break;
-    } else {
-      let selectedKey = localDrillExtensions.value[currentDepth];
-      let selectedIndex = colState.groups.findIndex(g => g.key === selectedKey);
-      
-      if (selectedIndex === -1) {
-        selectedIndex = 0;
-        selectedKey = colState.groups[0].key;
-      }
-      
-      cols.push({
-        type: 'groups',
-        depth: currentDepth,
-        items: colState.groups,
-        selectedIndex,
-        selectedKey
-      });
-      
-      pathSoFar.push(selectedKey);
-      colState = resolveDrillState({
-        tab: state.selected.tab,
-        transactions: state.selected.allGroupTransactions,
-        allRules: state.allUserRules,
-        drillPath: pathSoFar
-      });
-      
-      currentDepth++;
-    }
-  }
-  
-  return cols;
-});
-
-const activeTransaction = computed(() => {
-  const lastCol = columns.value[columns.value.length - 1];
-  if (lastCol && lastCol.type === 'transactions' && lastCol.items.length > 0) {
-    return lastCol.items[activeTransactionIndex.value];
-  }
-  return null;
-});
+const activeDrillPath = ref([...(state.selected.drillPath || [])]);
 
 // Viewport State
 const viewboxRef = ref(null);
 const wrapperRef = ref(null);
-const detailsRef = ref(null);
 
 const scale = ref(1);
 const translateX = ref(0);
@@ -233,18 +141,102 @@ const viewportStyle = computed(() => ({
   cursor: isPanning.value ? 'grabbing' : 'auto'
 }));
 
+
+// Build Tree Algorithm
+const treeResult = computed(() => {
+  const edgesData = [];
+
+  function buildTreeRecursive(drillPath, parentId, currentDepth) {
+    if (currentDepth > 10) return null; // safety
+    
+    let colState;
+    try {
+      colState = resolveDrillState({
+        tab: state.selected.tab,
+        transactions: state.selected.allGroupTransactions,
+        allRules: state.allUserRules,
+        drillPath
+      });
+    } catch(e) {
+      return null;
+    }
+
+    if (colState.isLeaf || !colState.groups || colState.groups.length === 0) {
+       const id = 'node-leaf-' + (drillPath.join('-') || 'root');
+       edgesData.push({ startId: parentId, endId: id, drillPath });
+       return { 
+          type: 'leaf', 
+          id,
+          drillPath, 
+          transactions: [...(colState.transactions || [])].sort((a,b) => b.amount - a.amount) 
+       };
+    } else {
+       // Sort: positive > 0 goes up, < 0 goes down -> Large numbers at top.
+       const sortedGroups = [...colState.groups].sort((a, b) => b.total - a.total);
+       
+       const groups = sortedGroups.map(g => {
+          const id = 'node-group-' + [...drillPath, g.key].join('-');
+          const childDrillPath = [...drillPath, g.key];
+          
+          edgesData.push({ startId: parentId, endId: id, drillPath: childDrillPath });
+          
+          return {
+             ...g,
+             id,
+             drillPath: childDrillPath,
+             childNode: buildTreeRecursive(childDrillPath, id, currentDepth + 1)
+          };
+       });
+       
+       return { type: 'groups', drillPath, groups };
+    }
+  }
+
+  const rootData = buildTreeRecursive([], 'node-root', 0);
+  return { rootData, edgesData };
+});
+
+const treeData = computed(() => treeResult.value.rootData);
+const allEdges = computed(() => treeResult.value.edgesData);
+
+const treeDataUp = computed(() => {
+  if (!treeData.value || treeData.value.type === 'leaf') return null;
+  const groups = treeData.value.groups.filter(g => g.total > 0);
+  if (groups.length === 0) return null;
+  return { ...treeData.value, groups };
+});
+
+const treeDataDown = computed(() => {
+  if (!treeData.value || treeData.value.type === 'leaf') return null;
+  const groups = treeData.value.groups.filter(g => g.total <= 0);
+  if (groups.length === 0) return null;
+  return { ...treeData.value, groups };
+});
+
+const rootTotal = computed(() => {
+  if (!treeData.value) return 0;
+  if (treeData.value.type === 'leaf') {
+    return treeData.value.transactions.reduce((sum, tx) => sum + (tx.amount || 0), 0);
+  }
+  return treeData.value.groups.reduce((sum, g) => sum + g.total, 0);
+});
+
+// Navigation
+function selectPath(path) {
+  activeDrillPath.value = path;
+  updatePaths(true);
+}
+
 // Touch handling variables
 let lastTouchPos = null;
 let lastDist = 0;
 
 function handleWheel(e) {
-  // Check for pinch (ctrlKey)
   if (e.ctrlKey) {
-    e.preventDefault(); // Prevent browser zoom
+    e.preventDefault(); 
     const delta = -e.deltaY * 0.01;
-    const newScale = Math.min(Math.max(0.2, scale.value + delta), 3);
+    const newScale = Math.min(Math.max(0.1, scale.value + delta), 3);
     
-    // Zoom towards cursor
     if (viewboxRef.value) {
       const rect = viewboxRef.value.getBoundingClientRect();
       const mouseX = e.clientX - rect.left;
@@ -258,7 +250,6 @@ function handleWheel(e) {
       scale.value = newScale;
     }
   } else {
-    // Normal scroll = pan
     translateX.value -= e.deltaX;
     translateY.value -= e.deltaY;
   }
@@ -268,7 +259,7 @@ function handleWheel(e) {
 let lastMousePos = null;
 
 function handleMouseDown(e) {
-  if (e.button === 0) { // Left click
+  if (e.button === 0) { 
     isPanning.value = true;
     lastMousePos = { x: e.clientX, y: e.clientY };
   }
@@ -303,8 +294,6 @@ function handleTouchStart(e) {
       e.touches[0].clientY - e.touches[1].clientY
     );
     lastDist = d;
-    
-    // Midpoint for zoom
     const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
     const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
     lastTouchPos = { x: midX, y: midY };
@@ -316,14 +305,12 @@ function handleTouchMove(e) {
   e.preventDefault();
 
   if (e.touches.length === 1) {
-    // Pan
     const dx = e.touches[0].clientX - lastTouchPos.x;
     const dy = e.touches[0].clientY - lastTouchPos.y;
     translateX.value += dx;
     translateY.value += dy;
     lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   } else if (e.touches.length === 2) {
-    // Pinch Zoom
     const d = Math.hypot(
       e.touches[0].clientX - e.touches[1].clientX,
       e.touches[0].clientY - e.touches[1].clientY
@@ -332,7 +319,7 @@ function handleTouchMove(e) {
     const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
     
     const delta = (d - lastDist) * 0.01;
-    const newScale = Math.min(Math.max(0.2, scale.value + delta), 3);
+    const newScale = Math.min(Math.max(0.1, scale.value + delta), 3);
     
     if (viewboxRef.value) {
       const rect = viewboxRef.value.getBoundingClientRect();
@@ -347,7 +334,6 @@ function handleTouchMove(e) {
       scale.value = newScale;
     }
     
-    // Also follow the midpoint movement
     const dx = midX - lastTouchPos.x;
     const dy = midY - lastTouchPos.y;
     translateX.value += dx;
@@ -372,79 +358,58 @@ function resetViewport() {
   updatePaths();
 }
 
-let nodeMap = {};
-
-onBeforeUpdate(() => {
-  nodeMap = {};
-});
-
-function setNodeRef(colIndex, itemIndex, el) {
-  if (el) {
-    nodeMap[`${colIndex}-${itemIndex}`] = el;
-  }
-}
-
 const paths = ref([]);
-
-function formatDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    return new Date(d.getTime() + d.getTimezoneOffset() * 60000)
-             .toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  } catch (e) {
-    return dateStr;
-  }
-}
 
 function getPath(startEl, endEl, wrapperEl) {
   if (!startEl || !endEl || !wrapperEl) return '';
-  
   const startRect = startEl.getBoundingClientRect();
   const endRect = endEl.getBoundingClientRect();
   const wrapperRect = wrapperEl.getBoundingClientRect();
 
-  // Calculate coordinates relative to the wrapper, accounting for current scale
-  const startX = (startRect.left - wrapperRect.left) / scale.value + (startRect.width / 2) / scale.value;
-  const startY = (startRect.bottom - wrapperRect.top) / scale.value + 5; 
+  const startX = (startRect.left + startRect.width / 2 - wrapperRect.left) / scale.value;
+  const endX = (endRect.left + endRect.width / 2 - wrapperRect.left) / scale.value;
+
+  // Detect vertical direction
+  const startIsAbove = startRect.bottom < endRect.top + endRect.height / 2;
   
-  const endX = (endRect.left - wrapperRect.left) / scale.value + (endRect.width / 2) / scale.value;
-  const endY = (endRect.top - wrapperRect.top) / scale.value - 8;
+  let startY, endY;
+  
+  if (startIsAbove) {
+     // flowing DOWN
+     startY = (startRect.bottom - wrapperRect.top) / scale.value + 4;
+     endY = (endRect.top - wrapperRect.top) / scale.value - 12;
+  } else {
+     // flowing UP
+     startY = (startRect.top - wrapperRect.top) / scale.value - 4;
+     endY = (endRect.bottom - wrapperRect.top) / scale.value + 12;
+  }
 
   const midY = startY + (endY - startY) / 2;
   
   return `M ${startX} ${startY} C ${startX} ${midY}, ${endX} ${midY}, ${endX} ${endY}`;
 }
 
+function isEdgeActive(edgeDrillPath) {
+  if (edgeDrillPath.length > activeDrillPath.value.length) return false;
+  for (let i = 0; i < edgeDrillPath.length; i++) {
+    if (edgeDrillPath[i] !== activeDrillPath.value[i]) return false;
+  }
+  return true;
+}
+
 const updatePaths = (immediate = false) => {
   const calculate = () => {
     if (!wrapperRef.value) return;
     const newPaths = [];
-    for (let c = 0; c < columns.value.length; c++) {
-      const col = columns.value[c];
-      let startEl;
-      if (col.type === 'groups') {
-        startEl = nodeMap[`${c}-${col.selectedIndex}`];
-      } else if (col.type === 'transactions') {
-        startEl = nodeMap[`${c}-${activeTransactionIndex.value}`];
-      }
-      
-      let endEl;
-      if (c + 1 < columns.value.length) {
-         const nextCol = columns.value[c + 1];
-         if (nextCol.type === 'groups') {
-            endEl = nodeMap[`${c + 1}-${nextCol.selectedIndex}`];
-         } else if (nextCol.type === 'transactions') {
-            endEl = nodeMap[`${c + 1}-${activeTransactionIndex.value}`];
-         }
-      } else {
-         if (activeTransaction.value) {
-            endEl = detailsRef.value;
-         }
-      }
-      
+    
+    for (const edge of allEdges.value) {
+      const startEl = document.getElementById(edge.startId);
+      const endEl = document.getElementById(edge.endId);
       if (startEl && endEl) {
-         newPaths.push(getPath(startEl, endEl, wrapperRef.value));
+         newPaths.push({
+           d: getPath(startEl, endEl, wrapperRef.value),
+           active: isEdgeActive(edge.drillPath)
+         });
       }
     }
     paths.value = newPaths;
@@ -457,55 +422,48 @@ const updatePaths = (immediate = false) => {
   }
 };
 
-function selectGroup(depth, key) {
-  localDrillExtensions.value = localDrillExtensions.value.slice(0, depth);
-  localDrillExtensions.value[depth] = key;
-  activeTransactionIndex.value = 0;
-  updatePaths();
-}
-
-function selectTransaction(index) {
-  activeTransactionIndex.value = index;
-  updatePaths();
-}
+watch(treeData, () => {
+  nextTick(() => updatePaths());
+}, { immediate: true });
 
 onMounted(() => {
-  setTimeout(updatePaths, 100);
   window.addEventListener('resize', updatePaths);
+  // Center roughly
+  if (viewboxRef.value) {
+     const rect = viewboxRef.value.getBoundingClientRect();
+     translateY.value = rect.height / 2 - 200;
+     translateX.value = 100;
+  }
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('resize', updatePaths);
 });
-
 </script>
 
 <style scoped>
-.node-active {
-  background-color: var(--theme-browser-chrome);
-  border: 1px solid var(--theme-border);
+.node-base {
   border-radius: 12px;
   padding: 16px 28px;
+  transition: opacity 0.2s ease, transform 0.1s ease;
+}
+
+.node-active {
+  background-color: var(--theme-browser-chrome);
+  border: 1px solid var(--theme-text);
   color: var(--theme-text);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.04);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
 .node-inactive {
   background-color: transparent;
   border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 16px 28px;
   color: var(--theme-text-soft);
-  opacity: 0.4;
+  opacity: 0.5;
 }
 
 .node-inactive:hover {
   opacity: 0.8;
-}
-
-.node-details {
-  background-color: transparent;
-  padding: 16px 28px;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
