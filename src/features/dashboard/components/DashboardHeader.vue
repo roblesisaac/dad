@@ -428,7 +428,7 @@
     <!-- Visualizer Modal -->
     <Teleport to="body">
       <VisualizerModal
-        v-if="isVisualizerModalOpen"
+        v-if="state.isVisualizerOpen"
         :drill-groups="drillGroups"
         :transactions="state.selected.allGroupTransactions"
         :is-leaf="isDrillLeaf"
@@ -726,10 +726,9 @@ const currentBreadcrumbMenuRef = ref(null);
 const isEditTabDropdownOpen = ref(false);
 const editTabDropdownRef = ref(null);
 const showVisualizerOption = ref(false);
-const isVisualizerModalOpen = ref(false);
 
 function closeVisualizerModal() {
-  isVisualizerModalOpen.value = false;
+  state.isVisualizerOpen = false;
 }
 
 const EDIT_TAB_OPTION_DEFINITIONS = [
@@ -878,7 +877,7 @@ function closeEditTabDropdown() {
 
 function handleEditTabOption(sectionId) {
   if (sectionId === 'visualizer') {
-    isVisualizerModalOpen.value = true;
+    state.isVisualizerOpen = true;
     closeEditTabDropdown();
     return;
   }

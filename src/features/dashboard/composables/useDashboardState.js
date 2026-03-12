@@ -20,6 +20,7 @@ const state = reactive({
   blueBar: { message: false, loading: false },
   date: { start: 'firstOfMonth', end: 'today' },
   isLoading: true,
+  isVisualizerOpen: false,
   reportRowTotalOverride: null,
 
   selected: {

@@ -461,7 +461,7 @@ const {
   onRefresh: async () => {
     await applyRemoteDashboardSyncRefresh({ runPlaidSync: false });
   },
-  canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value && !state.isOnboarding
+  canStart: () => !state.isLoading && !showRuleManagerModal.value && !isAccountModalOpen.value && !state.isOnboarding && !state.isVisualizerOpen
 });
 
 async function handleOnboardingComplete() {

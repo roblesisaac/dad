@@ -16,22 +16,47 @@
       </button>
     </div>
 
-    <!-- Scrollable Canvas -->
-    <div class="flex-1 overflow-auto custom-scrollbar bg-[var(--theme-bg)]">
-      <div class="relative min-w-max min-h-max p-12 md:p-32" ref="wrapperRef">
+    <!-- Scopes Canvas Area -->
+    <div 
+      class="flex-1 overflow-hidden bg-[var(--theme-bg)] relative touch-none select-none"
+      ref="viewboxRef"
+      @wheel="handleWheel"
+      @mousedown="handleMouseDown"
+      @mousemove="handleMouseMove"
+      @mouseup="handleMouseUp"
+      @mouseleave="handleMouseUp"
+      @touchstart="handleTouchStart"
+      @touchmove="handleTouchMove"
+      @touchend="handleTouchEnd"
+    >
+      <div 
+        class="absolute origin-top-left transition-transform duration-75 ease-out" 
+        :style="viewportStyle"
+        ref="wrapperRef"
+      >
+        <div class="px-12 py-12 md:px-32 md:py-32 relative" style="min-width: max-content; min-height: max-content;">
         
-        <!-- SVG Connections -->
-        <svg class="absolute top-0 left-0 w-full h-full pointer-events-none z-0">
-          <defs>
-            <marker id="arrow" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
-              <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-border)" opacity="0.6" />
-            </marker>
-          </defs>
-          <path v-for="(p, i) in paths" :key="i" :d="p" fill="none" stroke="var(--theme-border)" stroke-width="1.5" stroke-opacity="0.6" marker-end="url(#arrow)" />
-        </svg>
+          <!-- SVG Connections - Now part of the scaled container -->
+          <svg class="absolute inset-0 pointer-events-none z-0 w-full h-full">
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="5" refY="4" orient="auto">
+                <path d="M 0 0 L 8 4 L 0 8 z" fill="var(--theme-border)" opacity="0.6" />
+              </marker>
+            </defs>
+            <path 
+              v-for="(p, i) in paths" 
+              :key="i" 
+              :d="p" 
+              fill="none" 
+              stroke="var(--theme-border)" 
+              stroke-width="1.5" 
+              stroke-opacity="0.6" 
+              marker-end="url(#arrow)"
+            />
+          </svg>
 
         <!-- Nodes container -->
-        <div class="relative z-10 flex flex-col gap-24 items-start">
+        <div class="relative z-10 flex flex-col gap-24 items-start focus:outline-none">
           
           <div v-for="(col, colIndex) in columns" :key="'col-'+colIndex" class="flex gap-8 items-center flex-nowrap">
             
@@ -91,6 +116,17 @@
           </div>
 
         </div>
+        </div>
+      </div>
+
+      <!-- Controls -->
+      <div class="absolute bottom-10 right-10 z-30 flex flex-col gap-2">
+        <button 
+          @click="resetViewport"
+          class="bg-[var(--theme-browser-chrome)] border border-[var(--theme-border)] text-[var(--theme-text-soft)] px-3 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:text-[var(--theme-text)] transition-all active:scale-95 shadow-sm"
+        >
+          Reset View
+        </button>
       </div>
     </div>
   </div>
@@ -182,9 +218,160 @@ const activeTransaction = computed(() => {
   return null;
 });
 
-// Element Refs
+// Viewport State
+const viewboxRef = ref(null);
 const wrapperRef = ref(null);
 const detailsRef = ref(null);
+
+const scale = ref(1);
+const translateX = ref(0);
+const translateY = ref(0);
+const isPanning = ref(false);
+
+const viewportStyle = computed(() => ({
+  transform: `translate(${translateX.value}px, ${translateY.value}px) scale(${scale.value})`,
+  cursor: isPanning.value ? 'grabbing' : 'auto'
+}));
+
+// Touch handling variables
+let lastTouchPos = null;
+let lastDist = 0;
+
+function handleWheel(e) {
+  // Check for pinch (ctrlKey)
+  if (e.ctrlKey) {
+    e.preventDefault(); // Prevent browser zoom
+    const delta = -e.deltaY * 0.01;
+    const newScale = Math.min(Math.max(0.2, scale.value + delta), 3);
+    
+    // Zoom towards cursor
+    if (viewboxRef.value) {
+      const rect = viewboxRef.value.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+      
+      const worldX = (mouseX - translateX.value) / scale.value;
+      const worldY = (mouseY - translateY.value) / scale.value;
+      
+      translateX.value = mouseX - worldX * newScale;
+      translateY.value = mouseY - worldY * newScale;
+      scale.value = newScale;
+    }
+  } else {
+    // Normal scroll = pan
+    translateX.value -= e.deltaX;
+    translateY.value -= e.deltaY;
+  }
+  updatePaths();
+}
+
+let lastMousePos = null;
+
+function handleMouseDown(e) {
+  if (e.button === 0) { // Left click
+    isPanning.value = true;
+    lastMousePos = { x: e.clientX, y: e.clientY };
+  }
+}
+
+function handleMouseMove(e) {
+  if (!isPanning.value || !lastMousePos) return;
+  
+  const dx = e.clientX - lastMousePos.x;
+  const dy = e.clientY - lastMousePos.y;
+  
+  translateX.value += dx;
+  translateY.value += dy;
+  
+  lastMousePos = { x: e.clientX, y: e.clientY };
+  updatePaths();
+}
+
+function handleMouseUp() {
+  isPanning.value = false;
+  lastMousePos = null;
+}
+
+function handleTouchStart(e) {
+  if (e.touches.length === 1) {
+    isPanning.value = true;
+    lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  } else if (e.touches.length === 2) {
+    isPanning.value = true;
+    const d = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    lastDist = d;
+    
+    // Midpoint for zoom
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    lastTouchPos = { x: midX, y: midY };
+  }
+}
+
+function handleTouchMove(e) {
+  if (!lastTouchPos) return;
+  e.preventDefault();
+
+  if (e.touches.length === 1) {
+    // Pan
+    const dx = e.touches[0].clientX - lastTouchPos.x;
+    const dy = e.touches[0].clientY - lastTouchPos.y;
+    translateX.value += dx;
+    translateY.value += dy;
+    lastTouchPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  } else if (e.touches.length === 2) {
+    // Pinch Zoom
+    const d = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+    const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+    
+    const delta = (d - lastDist) * 0.01;
+    const newScale = Math.min(Math.max(0.2, scale.value + delta), 3);
+    
+    if (viewboxRef.value) {
+      const rect = viewboxRef.value.getBoundingClientRect();
+      const focusX = midX - rect.left;
+      const focusY = midY - rect.top;
+      
+      const worldX = (focusX - translateX.value) / scale.value;
+      const worldY = (focusY - translateY.value) / scale.value;
+      
+      translateX.value = focusX - worldX * newScale;
+      translateY.value = focusY - worldY * newScale;
+      scale.value = newScale;
+    }
+    
+    // Also follow the midpoint movement
+    const dx = midX - lastTouchPos.x;
+    const dy = midY - lastTouchPos.y;
+    translateX.value += dx;
+    translateY.value += dy;
+
+    lastDist = d;
+    lastTouchPos = { x: midX, y: midY };
+  }
+  updatePaths();
+}
+
+function handleTouchEnd() {
+  lastTouchPos = null;
+  lastDist = 0;
+  isPanning.value = false;
+}
+
+function resetViewport() {
+  scale.value = 1;
+  translateX.value = 0;
+  translateY.value = 0;
+  updatePaths();
+}
+
 let nodeMap = {};
 
 onBeforeUpdate(() => {
@@ -217,11 +404,12 @@ function getPath(startEl, endEl, wrapperEl) {
   const endRect = endEl.getBoundingClientRect();
   const wrapperRect = wrapperEl.getBoundingClientRect();
 
-  const startX = startRect.left - wrapperRect.left + startRect.width / 2;
-  const startY = startRect.bottom - wrapperRect.top + 5; 
+  // Calculate coordinates relative to the wrapper, accounting for current scale
+  const startX = (startRect.left - wrapperRect.left) / scale.value + (startRect.width / 2) / scale.value;
+  const startY = (startRect.bottom - wrapperRect.top) / scale.value + 5; 
   
-  const endX = endRect.left - wrapperRect.left + endRect.width / 2;
-  const endY = endRect.top - wrapperRect.top - 8;
+  const endX = (endRect.left - wrapperRect.left) / scale.value + (endRect.width / 2) / scale.value;
+  const endY = (endRect.top - wrapperRect.top) / scale.value - 8;
 
   const midY = startY + (endY - startY) / 2;
   
