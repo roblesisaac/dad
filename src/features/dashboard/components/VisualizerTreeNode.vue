@@ -13,10 +13,9 @@
       class="flex flex-col items-start gap-20"
     >
       <VisualizerTreeNode 
-        v-if="grp.childNode && direction === 'up'" 
-        :node="grp.childNode"
+        v-if="grp.childNodeUp" 
+        :node="grp.childNodeUp"
         :active-path="activePath"
-        :direction="direction"
         @select="$emit('select', $event)"
       />
       
@@ -33,10 +32,9 @@
       </div>
       
       <VisualizerTreeNode 
-        v-if="grp.childNode && direction === 'down'" 
-        :node="grp.childNode"
+        v-if="grp.childNodeDown" 
+        :node="grp.childNodeDown"
         :active-path="activePath"
-        :direction="direction"
         @select="$emit('select', $event)"
       />
     </div>
@@ -48,8 +46,7 @@ import { useUtils } from '@/shared/composables/useUtils.js';
 
 const props = defineProps({
   node: { type: Object, required: true },
-  activePath: { type: Array, required: true },
-  direction: { type: String, default: 'down' }
+  activePath: { type: Array, required: true }
 });
 
 defineEmits(['select']);
