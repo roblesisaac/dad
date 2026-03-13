@@ -141,13 +141,6 @@ const viewportStyle = computed(() => ({
 const treeResult = computed(() => {
   const edgesData = [];
 
-  function isGroupPurePositive(grp) {
-    if (!grp || !grp.originalItems) return grp && grp.total > 0;
-    const hasPositive = grp.originalItems.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
-    const hasNegative = grp.originalItems.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
-    return hasPositive && !hasNegative;
-  }
-
   function buildTreeRecursive(drillPath, parentId, currentDepth) {
     if (currentDepth > 10) return null; // safety
     
@@ -185,19 +178,28 @@ const treeResult = computed(() => {
           const childNodeRaw = buildTreeRecursive(childDrillPath, id, currentDepth + 1);
           let childNodeUp = null;
           let childNodeDown = null;
+          let hasDownBranch = false;
 
           if (childNodeRaw) {
              if (childNodeRaw.type === 'leaf') {
-                const hasPos = childNodeRaw.transactions.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
-                const hasNeg = childNodeRaw.transactions.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
-                if (hasPos && !hasNeg) childNodeUp = childNodeRaw;
-                else childNodeDown = childNodeRaw;
+                if (g.total > 0) {
+                   childNodeUp = childNodeRaw;
+                } else {
+                   childNodeDown = childNodeRaw;
+                   hasDownBranch = true;
+                }
              } else {
-                const upGroups = childNodeRaw.groups.filter(cg => isGroupPurePositive(cg));
-                const downGroups = childNodeRaw.groups.filter(cg => !isGroupPurePositive(cg));
+                const upGroups = childNodeRaw.groups.filter(cg => cg.total > 0 && !cg.hasDownBranch);
+                const downGroups = childNodeRaw.groups.filter(cg => !(cg.total > 0 && !cg.hasDownBranch));
+                
                 if (upGroups.length > 0) childNodeUp = { ...childNodeRaw, groups: upGroups };
-                if (downGroups.length > 0) childNodeDown = { ...childNodeRaw, groups: downGroups };
+                if (downGroups.length > 0) {
+                   childNodeDown = { ...childNodeRaw, groups: downGroups };
+                   hasDownBranch = true;
+                }
              }
+          } else {
+             if (g.total <= 0) hasDownBranch = true;
           }
 
           return {
@@ -205,7 +207,8 @@ const treeResult = computed(() => {
              id,
              drillPath: childDrillPath,
              childNodeUp,
-             childNodeDown
+             childNodeDown,
+             hasDownBranch
           };
        });
        
@@ -218,14 +221,13 @@ const treeResult = computed(() => {
   let childNodeUp = null;
   let childNodeDown = null;
   if (rootData && rootData.type === 'groups') {
-     const upGroups = rootData.groups.filter(cg => isGroupPurePositive(cg));
-     const downGroups = rootData.groups.filter(cg => !isGroupPurePositive(cg));
+     const upGroups = rootData.groups.filter(cg => cg.total > 0 && !cg.hasDownBranch);
+     const downGroups = rootData.groups.filter(cg => !(cg.total > 0 && !cg.hasDownBranch));
      if (upGroups.length > 0) childNodeUp = { ...rootData, groups: upGroups };
      if (downGroups.length > 0) childNodeDown = { ...rootData, groups: downGroups };
   } else if (rootData && rootData.type === 'leaf') {
-     const hasPos = rootData.transactions.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
-     const hasNeg = rootData.transactions.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
-     if (hasPos && !hasNeg) childNodeUp = rootData;
+     const sum = rootData.transactions.reduce((s, tx) => s + (tx.amount || 0), 0);
+     if (sum > 0) childNodeUp = rootData;
      else childNodeDown = rootData;
   }
 
