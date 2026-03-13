@@ -16,6 +16,7 @@
                 class="text-black hover:opacity-70 transition-opacity focus:outline-none"
                 type="button"
                 aria-label="Home"
+                title="Cmd/Ctrl+Click to view schema"
                 :aria-expanded="canShowHomeSwitcher ? isHomeSwitcherOpen : undefined"
                 :aria-haspopup="canShowHomeSwitcher ? 'menu' : undefined"
               >
@@ -67,7 +68,12 @@
                   v-if="segment.type === 'current'"
                   class="relative flex min-w-0 items-center gap-1 breadcrumb-current-group"
                 >
-                  <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                  <span
+                    class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+                    :class="(segment.id === 'account' || segment.id === 'tab') ? 'cursor-pointer' : ''"
+                    @click="handleSegmentMetaClick($event, segment)"
+                    :title="(segment.id === 'account' || segment.id === 'tab') ? 'Cmd/Ctrl+Click to view schema' : undefined"
+                  >
                     {{ segment.label }}
                   </span>
 
@@ -109,9 +115,10 @@
                 </div>
                 <button
                   v-else
-                  @click="segment.action"
+                  @click="segment.action($event)"
                   class="clickable-underline text-left font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate hover:opacity-70 transition-opacity focus:outline-none"
                   type="button"
+                  :title="(segment.id === 'account' || segment.id === 'tab') ? 'Cmd/Ctrl+Click to view schema' : undefined"
                 >
                   {{ segment.label }}
                 </button>
@@ -153,7 +160,12 @@
               <span class="text-black font-black text-xs sm:text-sm flex-shrink-0">/</span>
               
               <div class="relative flex min-w-0 items-center gap-1 breadcrumb-current-group">
-                <span class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate">
+                <span
+                  class="font-black text-black text-xs sm:text-sm uppercase tracking-[0.2em] truncate"
+                  :class="(breadcrumbSegments[breadcrumbSegments.length - 1].id === 'account' || breadcrumbSegments[breadcrumbSegments.length - 1].id === 'tab') ? 'cursor-pointer' : ''"
+                  @click="handleSegmentMetaClick($event, breadcrumbSegments[breadcrumbSegments.length - 1])"
+                  :title="(breadcrumbSegments[breadcrumbSegments.length - 1].id === 'account' || breadcrumbSegments[breadcrumbSegments.length - 1].id === 'tab') ? 'Cmd/Ctrl+Click to view schema' : undefined"
+                >
                   {{ breadcrumbSegments[breadcrumbSegments.length - 1].label }}
                 </span>
                 <div
@@ -434,6 +446,12 @@
         :is-leaf="isDrillLeaf"
         @close="closeVisualizerModal"
       />
+      
+      <TabSchemaTreeModal
+        v-if="isTabSchemaTreeOpen"
+        :is-open="isTabSchemaTreeOpen"
+        @close="closeTabSchemaTree"
+      />
     </Teleport>
   </div>
 </template>
@@ -452,6 +470,7 @@ import {
 } from '@/features/dashboard/utils/noteTemplate.js';
 import { levelRulesForDepth, normalizeDrillPath } from '@/features/tabs/utils/drillSchema.js';
 import VisualizerModal from './VisualizerModal.vue';
+import TabSchemaTreeModal from './TabSchemaTreeModal.vue';
 
 const props = defineProps({
   view: {
@@ -727,8 +746,24 @@ const isEditTabDropdownOpen = ref(false);
 const editTabDropdownRef = ref(null);
 const showVisualizerOption = ref(false);
 
+const isTabSchemaTreeOpen = ref(false);
+
 function closeVisualizerModal() {
   state.isVisualizerOpen = false;
+}
+
+function closeTabSchemaTree() {
+  isTabSchemaTreeOpen.value = false;
+}
+
+function handleSegmentMetaClick(event, segment) {
+  if (event?.metaKey || event?.ctrlKey) {
+    if (segment.id === 'account' || segment.id === 'tab') {
+      if (state.selected.tab) {
+        isTabSchemaTreeOpen.value = true;
+      }
+    }
+  }
 }
 
 const EDIT_TAB_OPTION_DEFINITIONS = [
@@ -743,7 +778,14 @@ function closeHomeSwitcher() {
   isHomeSwitcherOpen.value = false;
 }
 
-function handleHomeTriggerClick() {
+function handleHomeTriggerClick(event) {
+  if (event?.metaKey || event?.ctrlKey) {
+    if (state.selected.tab) {
+      isTabSchemaTreeOpen.value = true;
+    }
+    return;
+  }
+
   closeCurrentBreadcrumbMenu();
   closeBreadcrumbDropdown();
   closeEditTabDropdown();
@@ -1067,7 +1109,15 @@ const breadcrumbSegments = computed(() => {
       id: 'account',
       type: (isTabSelectorView.value || isSingleTabDrillRoot) ? 'current' : 'link',
       label: selectedGroupLabel.value,
-      action: () => handleGroupSegmentNavigation()
+      action: (event) => {
+        if (event?.metaKey || event?.ctrlKey) {
+          if (state.selected.tab) {
+            isTabSchemaTreeOpen.value = true;
+          }
+          return;
+        }
+        handleGroupSegmentNavigation();
+      }
     });
   }
 
@@ -1076,7 +1126,15 @@ const breadcrumbSegments = computed(() => {
       id: 'tab',
       type: drillBreadcrumbs.value.length === 0 ? 'current' : 'link',
       label: selectedTabLabel.value,
-      action: () => emit('navigate-category')
+      action: (event) => {
+        if (event?.metaKey || event?.ctrlKey) {
+          if (state.selected.tab) {
+            isTabSchemaTreeOpen.value = true;
+          }
+          return;
+        }
+        emit('navigate-category');
+      }
     });
   }
 
@@ -1337,6 +1395,9 @@ function onWindowKeydown(event) {
     }
     if (isVisualizerModalOpen.value) {
       closeVisualizerModal();
+    }
+    if (isTabSchemaTreeOpen.value) {
+      closeTabSchemaTree();
     }
     if (isHeaderInfoMenuOpen.value) {
       closeHeaderInfoMenu();
