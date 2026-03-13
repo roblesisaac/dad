@@ -78,7 +78,7 @@
                   </span>
 
                   <div
-                    v-if="showCurrentBreadcrumbCopyAction"
+                    v-if="showCurrentBreadcrumbMenu"
                     ref="currentBreadcrumbMenuRef"
                     class="relative flex-shrink-0"
                   >
@@ -99,11 +99,20 @@
                       <button
                         type="button"
                         class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                        @click="() => { isTabSchemaTreeOpen = true; closeCurrentBreadcrumbMenu(); }"
+                      >
+                        Show tree view
+                      </button>
+                      <button
+                        v-if="canCopyCurrentRows"
+                        type="button"
+                        class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
                         @click="handleCopyCurrentRows"
                       >
                         Copy rows
                       </button>
                       <button
+                        v-if="canCopyCurrentRows"
                         type="button"
                         class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
                         @click="handleOpenExportRowsModal"
@@ -169,7 +178,7 @@
                   {{ breadcrumbSegments[breadcrumbSegments.length - 1].label }}
                 </span>
                 <div
-                  v-if="showCurrentBreadcrumbCopyAction"
+                  v-if="showCurrentBreadcrumbMenu"
                   ref="currentBreadcrumbMenuRef"
                   class="relative flex-shrink-0"
                 >
@@ -190,11 +199,20 @@
                     <button
                       type="button"
                       class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
+                      @click="() => { isTabSchemaTreeOpen = true; closeCurrentBreadcrumbMenu(); }"
+                    >
+                      Show tree view
+                    </button>
+                    <button
+                      v-if="canCopyCurrentRows"
+                      type="button"
+                      class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
                       @click="handleCopyCurrentRows"
                     >
                       Copy rows
                     </button>
                     <button
+                      v-if="canCopyCurrentRows"
                       type="button"
                       class="w-full px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.2em] text-[var(--theme-text)] transition-colors hover:bg-[var(--theme-overlay-5)] focus:bg-[var(--theme-overlay-10)] focus:outline-none"
                       @click="handleOpenExportRowsModal"
@@ -606,9 +624,8 @@ const showViewNoteActions = computed(() => (
   isDrillView.value
   && Boolean(state.selected.tab)
 ));
-const showCurrentBreadcrumbCopyAction = computed(() => (
+const showCurrentBreadcrumbMenu = computed(() => (
   isDrillView.value
-  && Boolean(props.canCopyCurrentRows)
 ));
 const hasViewNote = computed(() => Boolean(viewNoteTemplate.value.trim()));
 const isHeaderInfoMenuOpen = ref(false);
@@ -956,7 +973,7 @@ function handleGroupSegmentNavigation() {
 }
 
 function toggleCurrentBreadcrumbMenu() {
-  if (!showCurrentBreadcrumbCopyAction.value) {
+  if (!showCurrentBreadcrumbMenu.value) {
     return;
   }
 
@@ -1073,9 +1090,9 @@ watch(
 );
 
 watch(
-  () => showCurrentBreadcrumbCopyAction.value,
-  (canShowCopyAction) => {
-    if (!canShowCopyAction) {
+  () => showCurrentBreadcrumbMenu.value,
+  (canShowMenu) => {
+    if (!canShowMenu) {
       closeCurrentBreadcrumbMenu();
     }
   }
