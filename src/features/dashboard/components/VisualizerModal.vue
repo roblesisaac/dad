@@ -58,10 +58,9 @@
         <!-- Nodes container -->
         <div class="relative z-10 flex flex-col items-start gap-20 focus:outline-none p-24 min-h-[500px]">
            <VisualizerTreeNode 
-             v-if="treeDataUp"
-             :node="treeDataUp"
+             v-if="treeResult.childNodeUp"
+             :node="treeResult.childNodeUp"
              :active-path="activeDrillPath"
-             direction="up"
              @select="selectPath"
            />
 
@@ -78,10 +77,9 @@
            </div>
            
            <VisualizerTreeNode 
-             v-if="treeDataDown"
-             :node="treeDataDown"
+             v-if="treeResult.childNodeDown"
+             :node="treeResult.childNodeDown"
              :active-path="activeDrillPath"
-             direction="down"
              @select="selectPath"
            />
         </div>
@@ -143,6 +141,13 @@ const viewportStyle = computed(() => ({
 const treeResult = computed(() => {
   const edgesData = [];
 
+  function isGroupPurePositive(grp) {
+    if (!grp || !grp.originalItems) return grp && grp.total > 0;
+    const hasPositive = grp.originalItems.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
+    const hasNegative = grp.originalItems.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
+    return hasPositive && !hasNegative;
+  }
+
   function buildTreeRecursive(drillPath, parentId, currentDepth) {
     if (currentDepth > 10) return null; // safety
     
@@ -168,8 +173,8 @@ const treeResult = computed(() => {
           transactions: [...(colState.transactions || [])].sort((a,b) => b.amount - a.amount) 
        };
     } else {
-       // Sort: positive > 0 goes up, < 0 goes down -> Large numbers at top.
-       const sortedGroups = [...colState.groups].sort((a, b) => b.total - a.total);
+       // Sort: descending by absolute total so larger values stick to left
+       const sortedGroups = [...colState.groups].sort((a, b) => Math.abs(b.total) - Math.abs(a.total));
        
        const groups = sortedGroups.map(g => {
           const id = 'node-group-' + [...drillPath, g.key].join('-');
@@ -177,11 +182,30 @@ const treeResult = computed(() => {
           
           edgesData.push({ startId: parentId, endId: id, drillPath: childDrillPath });
           
+          const childNodeRaw = buildTreeRecursive(childDrillPath, id, currentDepth + 1);
+          let childNodeUp = null;
+          let childNodeDown = null;
+
+          if (childNodeRaw) {
+             if (childNodeRaw.type === 'leaf') {
+                const hasPos = childNodeRaw.transactions.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
+                const hasNeg = childNodeRaw.transactions.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
+                if (hasPos && !hasNeg) childNodeUp = childNodeRaw;
+                else childNodeDown = childNodeRaw;
+             } else {
+                const upGroups = childNodeRaw.groups.filter(cg => isGroupPurePositive(cg));
+                const downGroups = childNodeRaw.groups.filter(cg => !isGroupPurePositive(cg));
+                if (upGroups.length > 0) childNodeUp = { ...childNodeRaw, groups: upGroups };
+                if (downGroups.length > 0) childNodeDown = { ...childNodeRaw, groups: downGroups };
+             }
+          }
+
           return {
              ...g,
              id,
              drillPath: childDrillPath,
-             childNode: buildTreeRecursive(childDrillPath, id, currentDepth + 1)
+             childNodeUp,
+             childNodeDown
           };
        });
        
@@ -190,25 +214,26 @@ const treeResult = computed(() => {
   }
 
   const rootData = buildTreeRecursive([], 'node-root', 0);
-  return { rootData, edgesData };
+  
+  let childNodeUp = null;
+  let childNodeDown = null;
+  if (rootData && rootData.type === 'groups') {
+     const upGroups = rootData.groups.filter(cg => isGroupPurePositive(cg));
+     const downGroups = rootData.groups.filter(cg => !isGroupPurePositive(cg));
+     if (upGroups.length > 0) childNodeUp = { ...rootData, groups: upGroups };
+     if (downGroups.length > 0) childNodeDown = { ...rootData, groups: downGroups };
+  } else if (rootData && rootData.type === 'leaf') {
+     const hasPos = rootData.transactions.some(tx => (tx.amount || tx.amount_expected || 0) > 0);
+     const hasNeg = rootData.transactions.some(tx => (tx.amount || tx.amount_expected || 0) < 0);
+     if (hasPos && !hasNeg) childNodeUp = rootData;
+     else childNodeDown = rootData;
+  }
+
+  return { rootData, edgesData, childNodeUp, childNodeDown };
 });
 
 const treeData = computed(() => treeResult.value.rootData);
 const allEdges = computed(() => treeResult.value.edgesData);
-
-const treeDataUp = computed(() => {
-  if (!treeData.value || treeData.value.type === 'leaf') return null;
-  const groups = treeData.value.groups.filter(g => g.total > 0);
-  if (groups.length === 0) return null;
-  return { ...treeData.value, groups };
-});
-
-const treeDataDown = computed(() => {
-  if (!treeData.value || treeData.value.type === 'leaf') return null;
-  const groups = treeData.value.groups.filter(g => g.total <= 0);
-  if (groups.length === 0) return null;
-  return { ...treeData.value, groups };
-});
 
 const rootTotal = computed(() => {
   if (!treeData.value) return 0;
