@@ -440,6 +440,7 @@
                               <button class="menu-item" @click="startRowReorderFromMenu(row.rowId)">Rearrange Row</button>
                               <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
                               <button class="menu-item" @click="startRowEdit(row)">Edit</button>
+                              <button class="menu-item" @click="duplicateRowAndSave(row)">Duplicate Row</button>
                               <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
                             </div>
                           </div>
@@ -468,6 +469,7 @@
                               <button class="menu-item" @click="startRowReorderFromMenu(row.rowId)">Rearrange Row</button>
                               <button v-if="row.type === 'tab'" class="menu-item" @click="openDashboardFromRow(row)">View In Dashboard</button>
                               <button class="menu-item" @click="startRowEdit(row)">Edit</button>
+                              <button class="menu-item" @click="duplicateRowAndSave(row)">Duplicate Row</button>
                               <button class="menu-item" @click="deleteRowAndSave(row.rowId)">Delete</button>
                             </div>
                           </div>
@@ -1174,6 +1176,7 @@ const {
   addReportRow,
   addNoteRow,
   updateRow,
+  duplicateRow,
   removeRow,
   reorderRows,
   reorderReports,
@@ -3645,6 +3648,27 @@ async function copyReport(reportId) {
 async function refreshReportFromList(reportId) {
   activeReportMenuId.value = '';
   await refreshReportTotals(reportId);
+}
+
+async function duplicateRowAndSave(row) {
+  if (!selectedReport.value) return;
+
+  const cloned = duplicateRow(selectedReport.value._id, row.rowId);
+  activeRowMenuId.value = '';
+  rowMenuPanelStyle.value = null;
+
+  if (!cloned) return;
+
+  const copyName = `Copy of ${rowTitle(row)}`;
+  if (cloned.type === 'tab') {
+    updateRow(selectedReport.value._id, cloned.rowId, { customName: copyName });
+  } else if (cloned.type === 'manual') {
+    updateRow(selectedReport.value._id, cloned.rowId, { title: copyName });
+  }
+
+  if (!isDraftSelected.value) {
+    await saveReport(selectedReport.value._id);
+  }
 }
 
 async function deleteRowAndSave(rowId) {

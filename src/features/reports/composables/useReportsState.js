@@ -1598,6 +1598,32 @@ export function useReportsState() {
     }
   }
 
+  function duplicateRow(reportId, rowId) {
+    const report = findReport(reportId);
+    if (!report) return null;
+
+    const sourceRow = report.rows.find(row => row.rowId === rowId);
+    if (!sourceRow) return null;
+
+    const newRowId = `row_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    const sourceIndex = report.rows.indexOf(sourceRow);
+
+    const cloned = {
+      ...sourceRow,
+      rowId: newRowId,
+      sort: sourceRow.sort + 1
+    };
+
+    report.rows.splice(sourceIndex + 1, 0, cloned);
+    report.rows = normalizeRowsForLocal(report.rows);
+    setReportTotal(reportId);
+    state.rowAmountsByKey[buildRowStateKey(reportId, newRowId)] =
+      state.rowAmountsByKey[buildRowStateKey(reportId, rowId)] ?? 0;
+    state.rowIssuesByKey[buildRowStateKey(reportId, newRowId)] = '';
+
+    return report.rows.find(row => row.rowId === newRowId) || null;
+  }
+
   function removeRow(reportId, rowId) {
     const report = findReport(reportId);
     if (!report) return;
@@ -1848,6 +1874,7 @@ export function useReportsState() {
     addReportRow,
     addNoteRow,
     updateRow,
+    duplicateRow,
     removeRow,
     reorderRows,
     reorderReports,
