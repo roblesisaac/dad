@@ -418,6 +418,7 @@
                           <div
                             v-if="hasNoteContent(row)"
                             class="reports-note-markdown text-sm min-w-0 flex-1"
+                            :class="{ 'print-hide-notes': !printOptions.notes }"
                             v-html="rowRenderedNote(row)"
                           />
 
@@ -475,15 +476,18 @@
                           </div>
                         </div>
                       </div>
+                      <!-- Tab Details -->
                       <template v-if="row.type === 'tab'">
-                        <p class="text-sm text-gray-500 mt-1">
-                          {{ tabRowScopeLine(row) }}
-                        </p>
-                        <p class="text-xs text-gray-400 mt-0.5">
-                          {{ tabRowDateLine(row) }}
-                        </p>
+                        <div :class="{ 'print-hide-tab-details': !printOptions.tabDetails }">
+                          <p class="text-sm text-gray-500 mt-1">
+                            {{ tabRowScopeLine(row) }}
+                          </p>
+                          <p class="text-xs text-gray-400 mt-0.5">
+                            {{ tabRowDateLine(row) }}
+                          </p>
+                        </div>
                       </template>
-                      <p v-else-if="row.type !== 'note'" class="text-sm text-gray-500 mt-1">
+                      <p v-else-if="row.type !== 'note'" class="text-sm text-gray-500 mt-1" :class="{ 'print-hide-subtitles': !printOptions.rowSubtitles }">
                         {{ rowSubtitle(row) }}
                       </p>
                       <p v-if="getRowIssue(selectedReport._id, row.rowId)" class="text-xs text-black-600 mt-1">
@@ -505,7 +509,7 @@
                     <span
                       v-else-if="row.type !== 'note'"
                       class="text-xl font-black"
-                      :class="fontColor(getRowAmount(selectedReport._id, row.rowId))"
+                      :class="[fontColor(getRowAmount(selectedReport._id, row.rowId)), { 'print-hide-amounts': !printOptions.amounts }]"
                     >
                       {{ formatRowAmount(selectedReport._id, row, { toFixed: 2 }) }}
                     </span>
@@ -1105,11 +1109,51 @@
       </div>
     </section>
     </div>
+
+    <!-- Print Options Modal -->
+    <div
+      v-if="isPrintOptionsOpen"
+      class="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4"
+      @click.self="isPrintOptionsOpen = false"
+    >
+      <div class="w-full max-w-sm bg-white rounded-2xl border border-gray-200 shadow-2xl p-5">
+        <h2 class="text-lg font-black text-gray-900">Print Options</h2>
+        <p class="text-xs text-gray-500 mt-1">Select what to include in the printout.</p>
+
+        <div class="mt-4 space-y-3">
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="printOptions.tabDetails" type="checkbox" class="w-4 h-4 rounded border-gray-300 accent-black" />
+            <span class="text-sm font-bold text-gray-800">Tab Details</span>
+            <span class="text-xs text-gray-400 ml-auto">Account, dates</span>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="printOptions.rowSubtitles" type="checkbox" class="w-4 h-4 rounded border-gray-300 accent-black" />
+            <span class="text-sm font-bold text-gray-800">Row Subtitles</span>
+            <span class="text-xs text-gray-400 ml-auto">Manual, report type</span>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="printOptions.amounts" type="checkbox" class="w-4 h-4 rounded border-gray-300 accent-black" />
+            <span class="text-sm font-bold text-gray-800">Amounts</span>
+            <span class="text-xs text-gray-400 ml-auto">Per-row values</span>
+          </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="printOptions.notes" type="checkbox" class="w-4 h-4 rounded border-gray-300 accent-black" />
+            <span class="text-sm font-bold text-gray-800">Notes</span>
+            <span class="text-xs text-gray-400 ml-auto">Note row content</span>
+          </label>
+        </div>
+
+        <div class="mt-5 flex items-center justify-end gap-2">
+          <button class="btn-secondary" @click="isPrintOptionsOpen = false">Cancel</button>
+          <button class="btn-primary" @click="confirmPrint">Print</button>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import {
   addMonths,
   addYears,
@@ -1204,6 +1248,13 @@ const showAddRowPicker = ref(false);
 const isExistingRowPickerModalOpen = ref(false);
 
 const showDetailReportMenu = ref(false);
+const isPrintOptionsOpen = ref(false);
+const printOptions = ref({
+  tabDetails: true,
+  rowSubtitles: true,
+  amounts: true,
+  notes: true,
+});
 const isEditingReportName = ref(false);
 const reportNameDraft = ref('');
 const totalFormulaDraft = ref('');
@@ -3685,7 +3736,12 @@ async function deleteRowAndSave(rowId) {
 }
 
 function printReport() {
-  window.print();
+  isPrintOptionsOpen.value = true;
+}
+
+function confirmPrint() {
+  isPrintOptionsOpen.value = false;
+  nextTick(() => window.print());
 }
 
 async function confirmDeleteReport(reportId) {
@@ -4046,14 +4102,27 @@ onBeforeUnmount(() => {
     color: #000 !important;
   }
 
-  /* Row cards — clean borders, no hover effects */
+  /* Rows — line separators instead of cards */
   .reports-row-group {
     break-inside: avoid;
-    border: 1px solid #e5e7eb !important;
-    border-radius: 0.75rem !important;
-    padding: 0.75rem 1rem !important;
-    margin-bottom: 0.5rem !important;
-    background: white !important;
+    border: none !important;
+    border-bottom: 1px solid #d1d5db !important;
+    border-radius: 0 !important;
+    padding: 0.6rem 0 !important;
+    margin-bottom: 0 !important;
+    background: transparent !important;
+  }
+
+  .reports-row-group:last-of-type {
+    border-bottom: none !important;
+  }
+
+  /* Conditional print visibility */
+  .print-hide-tab-details,
+  .print-hide-subtitles,
+  .print-hide-amounts,
+  .print-hide-notes {
+    display: none !important;
   }
 
   /* Ensure text prints in correct colors */
