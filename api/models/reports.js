@@ -6,6 +6,8 @@ const rowSchema = {
     type: String,
     enum: ['tab', 'manual', 'report', 'note']
   },
+  customName: String,
+  amountAdjustment: Number,
   tabId: String,
   groupId: String,
   dateStart: String,

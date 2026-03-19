@@ -165,6 +165,8 @@ function normalizeTabRow(row, fallbackSort) {
   const normalized = {
     rowId: normalizeRowId(row?.rowId),
     type: 'tab',
+    customName: optionalString(row?.customName),
+    amountAdjustment: parseOptionalNumber(row?.amountAdjustment, 'tab row amountAdjustment', 0),
     tabId: nonEmptyString(row?.tabId, 'tab row tabId'),
     groupId: nonEmptyString(row?.groupId, 'tab row groupId'),
     dateStart: normalizeDate(row?.dateStart, 'tab row dateStart'),

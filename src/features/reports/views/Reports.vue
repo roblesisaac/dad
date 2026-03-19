@@ -984,6 +984,27 @@
                   Preview total: {{ formatPrice(rowEditorDraft.drillPath?.length ? tabRowCategoryGuideState.selectedTotal : tabRowCategoryGuideState.tabTotal) }}
                 </p>
               </div>
+
+              <details class="rounded-xl border border-gray-200 p-3" :open="!!rowEditorDraft.amountAdjustment">
+                <summary class="text-[10px] font-black tracking-widest text-gray-400 uppercase cursor-pointer select-none">
+                  Amount Adjustment (optional)
+                </summary>
+                <div class="mt-3 space-y-2">
+                  <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                    Adjustment
+                    <input
+                      v-model.number="rowEditorDraft.amountAdjustment"
+                      type="number"
+                      step="0.01"
+                      class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                      placeholder="e.g. 100 or -100"
+                    />
+                  </label>
+                  <p class="text-xs text-gray-500">
+                    This amount is added to the tab total. Use a negative number to subtract.
+                  </p>
+                </div>
+              </details>
             </template>
 
             <template v-else-if="rowEditorDraft.type === 'report'">

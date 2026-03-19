@@ -106,6 +106,7 @@ export function normalizeRowsForLocal(rows = []) {
         rowId,
         type: 'tab',
         customName: typeof row.customName === 'string' ? row.customName : '',
+        amountAdjustment: Number.isFinite(Number(row.amountAdjustment)) ? Number(row.amountAdjustment) : 0,
         tabId: typeof row.tabId === 'string' ? row.tabId : '',
         groupId: typeof row.groupId === 'string' ? row.groupId : '',
         dateStart: typeof row.dateStart === 'string' ? row.dateStart : '',
@@ -172,7 +173,8 @@ function mergeLocalRowFields(apiRows, localRows) {
     if (!local || row.type !== 'tab') return row;
     return {
       ...row,
-      customName: row.customName || local.customName || ''
+      customName: row.customName || local.customName || '',
+      amountAdjustment: Number.isFinite(Number(row.amountAdjustment)) ? Number(row.amountAdjustment) : (local.amountAdjustment || 0)
     };
   });
 }
@@ -902,9 +904,14 @@ export function useReportsState() {
       const tabTotal = Number.isFinite(Number(drillResult.tabTotal))
         ? Number(drillResult.tabTotal)
         : 0;
-      const safeAmount = hasSpecificSelection
+      let safeAmount = hasSpecificSelection
         ? (selectedPathMatches ? selectedTotal : 0)
         : tabTotal;
+
+      const adjustment = Number(row.amountAdjustment);
+      if (Number.isFinite(adjustment) && adjustment !== 0) {
+        safeAmount += adjustment;
+      }
 
       return { amount: safeAmount, issue: '' };
     } catch (error) {
@@ -1528,6 +1535,7 @@ export function useReportsState() {
         return {
           ...row,
           customName: typeof updates.customName === 'string' ? updates.customName : row.customName,
+          amountAdjustment: Number.isFinite(Number(updates.amountAdjustment)) ? Number(updates.amountAdjustment) : row.amountAdjustment,
           tabId: typeof updates.tabId === 'string' ? updates.tabId : row.tabId,
           groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
           dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,
