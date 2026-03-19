@@ -325,7 +325,7 @@
               </div>
               <template v-else>
                 <h1 class="text-3xl font-black uppercase tracking-tight text-gray-900 truncate">{{ selectedReport.name }}</h1>
-                <p v-if="selectedReportFolderName" class="text-[10px] text-gray-500 mt-2 font-black uppercase tracking-[0.18em]">
+                <p v-if="selectedReportFolderName" class="text-sm text-gray-500 mt-2 font-black uppercase tracking-[0.18em]">
                   <span class="text-gray-700">{{ selectedReportFolderName }}</span>
                 </p>
                 <p class="text-xs text-gray-500 mt-1">
