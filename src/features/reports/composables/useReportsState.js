@@ -159,6 +159,24 @@ export function normalizeRowsForLocal(rows = []) {
     .map((row, index) => ({ ...row, sort: index }));
 }
 
+function mergeLocalRowFields(apiRows, localRows) {
+  if (!Array.isArray(localRows) || !localRows.length) return apiRows;
+
+  const localByRowId = {};
+  for (const row of localRows) {
+    if (row.rowId) localByRowId[row.rowId] = row;
+  }
+
+  return apiRows.map((row) => {
+    const local = localByRowId[row.rowId];
+    if (!local || row.type !== 'tab') return row;
+    return {
+      ...row,
+      customName: row.customName || local.customName || ''
+    };
+  });
+}
+
 export function normalizeReportsForLocal(reports = []) {
   if (!Array.isArray(reports)) {
     return [];
@@ -1157,7 +1175,7 @@ export function useReportsState() {
 
         const normalizedCreated = {
           ...created,
-          rows: normalizeRowsForLocal(created.rows)
+          rows: normalizeRowsForLocal(mergeLocalRowFields(created.rows, rows))
         };
 
         const reportIndex = state.reports.findIndex(item => item._id === reportId);
@@ -1192,7 +1210,7 @@ export function useReportsState() {
       if (reportIndex !== -1) {
         state.reports[reportIndex] = {
           ...updated,
-          rows: normalizeRowsForLocal(updated.rows)
+          rows: normalizeRowsForLocal(mergeLocalRowFields(updated.rows, rows))
         };
       }
 
@@ -1631,7 +1649,7 @@ export function useReportsState() {
       if (reportIndex !== -1) {
         state.reports[reportIndex] = {
           ...updated,
-          rows: normalizeRowsForLocal(updated.rows)
+          rows: normalizeRowsForLocal(mergeLocalRowFields(updated.rows, report.rows))
         };
       }
 
