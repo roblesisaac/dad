@@ -105,6 +105,7 @@ export function normalizeRowsForLocal(rows = []) {
       return {
         rowId,
         type: 'tab',
+        customName: typeof row.customName === 'string' ? row.customName : '',
         tabId: typeof row.tabId === 'string' ? row.tabId : '',
         groupId: typeof row.groupId === 'string' ? row.groupId : '',
         dateStart: typeof row.dateStart === 'string' ? row.dateStart : '',
@@ -1508,6 +1509,7 @@ export function useReportsState() {
       if (row.type === 'tab') {
         return {
           ...row,
+          customName: typeof updates.customName === 'string' ? updates.customName : row.customName,
           tabId: typeof updates.tabId === 'string' ? updates.tabId : row.tabId,
           groupId: typeof updates.groupId === 'string' ? updates.groupId : row.groupId,
           dateStart: typeof updates.dateStart === 'string' ? updates.dateStart : row.dateStart,

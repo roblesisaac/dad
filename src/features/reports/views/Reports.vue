@@ -342,6 +342,14 @@
               <button class="btn-primary" @click="saveDraftReport">Save</button>
             </template>
 
+            <button
+              class="print-button p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+              title="Print report"
+              @click="printReport"
+            >
+              <Printer class="w-5 h-5" />
+            </button>
+
             <div class="relative" data-dropdown-root>
               <button class="p-2 rounded-lg text-gray-500 hover:bg-gray-100" @click="showDetailReportMenu = !showDetailReportMenu">
                 <MoreVertical class="w-5 h-5" />
@@ -507,6 +515,16 @@
 
           <div v-if="!selectedReport.rows.length" class="text-center text-sm text-gray-500 italic py-10">
             No rows yet. Add a row below.
+          </div>
+
+          <!-- Print-only total (the fixed footer is hidden in print) -->
+          <div class="print-total hidden">
+            <div class="flex items-center justify-between border-t-2 border-black pt-3 mt-4">
+              <span class="text-sm font-black uppercase tracking-[0.2em] text-gray-600">Total</span>
+              <span class="text-2xl font-black" :class="fontColor(getReportTotal(selectedReport._id))">
+                {{ formatReportTotal(selectedReport._id, { toFixed: 2 }) }}
+              </span>
+            </div>
           </div>
 
           <div class="pt-2 relative" data-dropdown-root>
@@ -822,12 +840,22 @@
         <div
           :class="isManualRowEditor
             ? 'pointer-events-auto w-full bg-white rounded-t-[1.75rem] border border-gray-200 border-b-0 shadow-2xl px-5 py-6 md:px-8 md:py-8 max-h-[75vh] overflow-y-auto'
-            : 'w-full max-w-lg bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 md:p-6'"
+            : 'w-full max-w-lg max-h-[85vh] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-2xl p-4 md:p-6'"
         >
           <h2 class="text-xl font-black text-gray-900">Edit Row</h2>
 
           <div class="mt-4 space-y-4">
             <template v-if="rowEditorDraft.type === 'tab'">
+              <label class="block text-xs font-black uppercase tracking-wider text-gray-500">
+                Custom Name
+                <input
+                  v-model="rowEditorDraft.customName"
+                  type="text"
+                  class="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  placeholder="Optional — overrides the default row name"
+                />
+              </label>
+
               <div class="rounded-xl border border-gray-200 p-3 space-y-3">
                 <div class="text-[10px] font-black tracking-widest text-gray-400 uppercase">Step 1 · Select Account</div>
 
@@ -1075,7 +1103,7 @@ import {
   subMonths,
   subYears
 } from 'date-fns';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, Loader2, MoreVertical } from 'lucide-vue-next';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GripVertical, Loader2, MoreVertical, Printer } from 'lucide-vue-next';
 import draggable from 'vuedraggable';
 import { useRoute, useRouter } from 'vue-router';
 import LoadingDots from '@/shared/components/LoadingDots.vue';
@@ -2631,6 +2659,10 @@ function rowTitle(row) {
     return linkedReport?.name || row.reportName || 'Report not found';
   }
 
+  if (row.customName) {
+    return row.customName;
+  }
+
   const pathLabels = tabRowPathLabels(row);
   if (pathLabels.length) {
     return pathLabels[pathLabels.length - 1];
@@ -3607,6 +3639,10 @@ async function deleteRowAndSave(rowId) {
   }
 }
 
+function printReport() {
+  window.print();
+}
+
 async function confirmDeleteReport(reportId) {
   const shouldDelete = confirm('Delete this report?');
   if (!shouldDelete) {
@@ -3918,4 +3954,84 @@ onBeforeUnmount(() => {
   border-top: 1px solid var(--theme-footer-border);
 }
 
+/* ── Print styles ── */
+@media print {
+  /* Reset page */
+  main {
+    min-height: auto !important;
+    background: white !important;
+    padding: 0 !important;
+  }
+
+  /* Hide non-content UI */
+  .sticky,
+  .print-button,
+  .reports-row-menu-trigger,
+  .drag-handle,
+  [data-dropdown-root] > button,
+  [data-dropdown-panel],
+  .pull-refresh-indicator {
+    display: none !important;
+  }
+
+  /* Hide footer, modals, add-row button */
+  .fixed {
+    display: none !important;
+  }
+
+  /* Remove bottom padding reserved for footer */
+  .pb-20 {
+    padding-bottom: 0 !important;
+  }
+
+  /* Let content flow naturally */
+  .max-w-5xl {
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* Report header visible */
+  header {
+    margin-bottom: 1.5rem !important;
+    break-after: avoid;
+  }
+
+  header h1 {
+    font-size: 1.6rem !important;
+    color: #000 !important;
+  }
+
+  /* Row cards — clean borders, no hover effects */
+  .reports-row-group {
+    break-inside: avoid;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 0.75rem !important;
+    padding: 0.75rem 1rem !important;
+    margin-bottom: 0.5rem !important;
+    background: white !important;
+  }
+
+  /* Ensure text prints in correct colors */
+  .text-green-600, .text-green-700 {
+    color: #059669 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .text-red-600, .text-red-700 {
+    color: #dc2626 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Show print-only total */
+  .print-total {
+    display: block !important;
+  }
+
+  /* Hide add-row section */
+  [data-dropdown-root] {
+    display: none !important;
+  }
+}
 </style>
