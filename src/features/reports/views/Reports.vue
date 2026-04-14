@@ -1,5 +1,5 @@
 <template>
-  <main :class="['min-h-screen bg-white pull-refresh-root', footerPaddingClass]">
+  <main :class="['min-h-screen bg-white pull-refresh-root', footerPaddingClass, { 'reports-print-hide-lines': !printOptions.lines }]">
     <div
       class="pull-refresh-indicator"
       :style="pullToRefreshIndicatorStyle"
@@ -1141,6 +1141,11 @@
             <span class="text-sm font-bold text-gray-800">Notes</span>
             <span class="text-xs text-gray-400 ml-auto">Note row content</span>
           </label>
+          <label class="flex items-center gap-3 cursor-pointer">
+            <input v-model="printOptions.lines" type="checkbox" class="w-4 h-4 rounded border-gray-300 accent-black" />
+            <span class="text-sm font-bold text-gray-800">Divider Lines</span>
+            <span class="text-xs text-gray-400 ml-auto">Row separators</span>
+          </label>
         </div>
 
         <div class="mt-5 flex items-center justify-end gap-2">
@@ -1254,6 +1259,7 @@ const printOptions = ref({
   rowSubtitles: true,
   amounts: true,
   notes: true,
+  lines: true,
 });
 const isEditingReportName = ref(false);
 const reportNameDraft = ref('');
@@ -4114,6 +4120,10 @@ onBeforeUnmount(() => {
   }
 
   .reports-row-group:last-of-type {
+    border-bottom: none !important;
+  }
+
+  .reports-print-hide-lines .reports-row-group {
     border-bottom: none !important;
   }
 
