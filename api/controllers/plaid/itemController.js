@@ -196,14 +196,22 @@ export default {
           transactionsStart: req.query.transactionsStart,
           accountsStart: req.query.accountsStart,
           accountGroupsStart: req.query.accountGroupsStart,
-          syncSessionsStart: req.query.syncSessionsStart
+          syncSessionsStart: req.query.syncSessionsStart,
+          customizationsStart: req.query.customizationsStart,
+          tabsStart: req.query.tabsStart,
+          rulesStart: req.query.rulesStart,
+          reportsStart: req.query.reportsStart
         },
         includes: {
           items: parseBooleanFlag(req.query.includeItems, true),
           transactions: parseBooleanFlag(req.query.includeTransactions, true),
           accounts: parseBooleanFlag(req.query.includeAccounts, true),
           accountGroups: parseBooleanFlag(req.query.includeAccountGroups, true),
-          syncSessions: parseBooleanFlag(req.query.includeSyncSessions, true)
+          syncSessions: parseBooleanFlag(req.query.includeSyncSessions, true),
+          transactionCustomizations: parseBooleanFlag(req.query.includeTransactionCustomizations, false),
+          tabs: parseBooleanFlag(req.query.includeTabs, false),
+          rules: parseBooleanFlag(req.query.includeRules, false),
+          reports: parseBooleanFlag(req.query.includeReports, false)
         }
       });
 
