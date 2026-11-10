@@ -20,6 +20,7 @@ const mocks = vi.hoisted(() => {
     itemController: {
       getUserItems: vi.fn(),
       deleteItemAndRelatedData: vi.fn(),
+      disconnectItem: vi.fn(),
       updateItem: vi.fn(),
       encryptItemAccessToken: vi.fn(),
       resetItemCursor: vi.fn(),
@@ -59,6 +60,14 @@ import plaidRoutes from '../plaid.js';
 describe('plaid routes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  test('registers authenticated Item disconnect route', () => {
+    plaidRoutes({}, '/api');
+    expect(mocks.member.post).toHaveBeenCalledWith(
+      '/plaid/items/:_id/disconnect',
+      mocks.itemController.disconnectItem
+    );
   });
 
   test('registers sync accounts-and-groups route with conditional cache bypass', () => {
