@@ -9,36 +9,39 @@ class PlaidAccountService extends PlaidBaseService {
     this.validateUser(user);
 
     try {
-      // Get the user's items
+      // Always retain access to the local archive, even if every Plaid Item
+      // has been disconnected (or an institution is unavailable).
       const userItems = (await itemService.getUserItems(user._id))
         .filter(item => !item.disconnectedAt && item.status !== 'disconnected');
+
+      const readLocalRecords = async () => {
+        const [accounts, groups] = await Promise.all([
+          this.fetchUserAccounts(user._id),
+          plaidGroups.findAll({ userId: user._id, name: '*' })
+        ]);
+        return { accounts: accounts.filter(Boolean), groups: groups.filter(Boolean) };
+      };
+
+      const local = await readLocalRecords();
       if (!userItems.length) {
-        return null;
+        return { ...local, itemsNeedingReauth: [] };
       }
 
-      // Fetch the accounts from Plaid
       let fetchedAccounts = [];
-      const itemsNeedingReauth = []; // Track items that need re-authentication
+      const itemsNeedingReauth = [];
 
       for (const item of userItems) {
         try {
-          const accounts = await plaidService.fetchAccountsFromPlaid(
-            item, user
-          );
-          fetchedAccounts = [...fetchedAccounts, ...accounts];
+          const accounts = await plaidService.fetchAccountsFromPlaid(item, user);
+          fetchedAccounts.push(...accounts);
         } catch (error) {
           console.error(`Error retrieving accounts for item ${item._id}:`, error);
-
-          // Check if this is a decryption or authentication error
           const errorMessage = error.message || '';
           const isDecryptError = errorMessage.includes('DECRYPT_ERROR');
           const isLoginRequired = error.error_code === 'ITEM_LOGIN_REQUIRED' ||
             errorMessage.includes('ITEM_LOGIN_REQUIRED');
 
           if (isDecryptError || isLoginRequired) {
-            // Track this item as needing re-authentication
-            // We DON'T delete the item here because it has transaction history
-            // The cleanup will happen after the user reconnects successfully
             itemsNeedingReauth.push({
               itemId: item.itemId,
               _id: item._id,
@@ -49,47 +52,29 @@ class PlaidAccountService extends PlaidBaseService {
                 : 'Please log in again to this account'
             });
           }
-          // Continue with other items even if one fails
         }
       }
 
-      // If no accounts were retrieved but we have items needing reauth,
-      // return the reauth info instead of throwing an error
-      if (!fetchedAccounts.length) {
-        if (itemsNeedingReauth.length > 0) {
-          return {
-            accounts: [],
-            groups: [],
-            itemsNeedingReauth
-          };
-        }
-        throw new Error('NO_ACCOUNTS: Failed to retrieve any accounts from Plaid');
+      if (fetchedAccounts.length) {
+        await this.saveAccountsAndGroups(
+          fetchedAccounts,
+          local.accounts,
+          local.groups,
+          user
+        );
+        // Include disconnected accounts in All Accounts / reports, not only
+        // active ones returned by Plaid's latest accountsGet.
+        const updated = await readLocalRecords();
+        return { ...updated, itemsNeedingReauth };
       }
 
-      // Fetch the user's existing accounts and groups
-      const existingUserAccounts = await this.fetchUserAccounts(user._id);
-      const existingGroups = await plaidGroups.findAll({ userId: user._id, name: '*' });
-
-      // Sync the accounts and groups
-      const saved = await this.saveAccountsAndGroups(
-        fetchedAccounts,
-        existingUserAccounts,
-        existingGroups,
-        user
-      );
-
-      // Include items needing reauth in the response if any
-      if (itemsNeedingReauth.length > 0) {
-        saved.itemsNeedingReauth = itemsNeedingReauth;
-      }
-
-      return saved;
+      // Do not hide archived accounts or enter onboarding just because no
+      // current Plaid account response succeeded.
+      return { ...local, itemsNeedingReauth };
     } catch (error) {
-      // Ensure error is properly formatted
-      const formattedError = new Error(
+      throw new Error(
         error.message.includes(':') ? error.message : `SYNC_ERROR: ${error.message}`
       );
-      throw formattedError;
     }
   }
 
@@ -127,11 +112,7 @@ class PlaidAccountService extends PlaidBaseService {
   }
 
   async fetchUserAccounts(userId) {
-    const { items } = await plaidAccounts.find({
-      account_id: `*`,
-      userId
-    });
-    return items;
+    return await plaidAccounts.findAll({ account_id: '*', userId });
   }
 
   async updateAccount(userId, retrievedAccount) {
