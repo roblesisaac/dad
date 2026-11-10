@@ -43,7 +43,9 @@
           </button>
           
           <!-- Reconnect bank button -->
-          <button 
+          <button
+            v-if="!isDisconnected"
+
             @click="reconnectBank" 
             class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             :disabled="isReconnecting"
@@ -52,6 +54,10 @@
             <Loader v-else class="h-4 w-4 mr-2 animate-spin" />
             {{ isReconnecting ? 'Reconnecting...' : 'Reconnect Bank' }}
           </button>
+
+          <div v-if="isDisconnected" class="text-sm text-gray-600 p-3 border border-gray-300 rounded-md">
+            This bank is disconnected from Plaid. Historical transactions and accounts are preserved. Use Add Bank to establish a new connection.
+          </div>
 
           <!-- Download all data button -->
           <button
@@ -288,13 +294,25 @@
             <pre class="whitespace-pre-wrap break-words">{{ plaidItemJson }}</pre>
           </div>
           
-          <!-- Disconnect bank button - commented out for future implementation -->
-          <!-- <button 
-            @click="disconnectBank" 
-            class="w-full px-4 py-2 border border-red-300 rounded-md text-black-700 bg-white hover:bg-red-50 focus:outline-none"
-          >
-            Disconnect Bank
-          </button> -->
+          <div v-if="!isDisconnected" class="w-full border border-gray-300 rounded-md p-3 space-y-3">
+            <button
+              @click="showDisconnectConfirm = !showDisconnectConfirm"
+              :disabled="isDisconnecting"
+              class="w-full px-4 py-2 border border-gray-400 rounded-md text-gray-800 bg-white hover:bg-gray-50"
+            >
+              {{ isDisconnecting ? 'Disconnecting...' : 'Disconnect Bank' }}
+            </button>
+            <div v-if="showDisconnectConfirm" class="space-y-3 text-sm text-gray-700">
+              <p>Disconnecting revokes access at Plaid and stops future automatic syncing. Your accounts and transaction history stay in this app. This cannot be undone; connecting again requires Add Bank.</p>
+              <button
+                @click="disconnectBank"
+                :disabled="isDisconnecting"
+                class="w-full px-4 py-2 bg-black text-white rounded-md disabled:opacity-50"
+              >
+                {{ isDisconnecting ? 'Disconnecting...' : 'Confirm Disconnect' }}
+              </button>
+            </div>
+          </div>
           
           <!-- Cancel button -->
           <button 
@@ -328,6 +346,10 @@ const props = defineProps({
     default: false
   },
   isReconnecting: {
+    type: Boolean,
+    default: false
+  },
+  isDisconnecting: {
     type: Boolean,
     default: false
   },
@@ -377,7 +399,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'delete-bank', 'reset-cursor', 'encrypt-access-token']);
+const emit = defineEmits(['close', 'save', 'reconnect', 'download-all-data', 'delete-selected-data', 'delete-bank', 'disconnect', 'reset-cursor', 'encrypt-access-token']);
 
 const bankName = ref('');
 const showDownloadOptions = ref(false);
@@ -397,6 +419,8 @@ const deleteSelection = ref({
   syncSessions: false
 });
 const showDeleteBankOptions = ref(false);
+const showDisconnectConfirm = ref(false);
+const isDisconnected = computed(() => Boolean(props.bank?.disconnectedAt || props.bank?.status === 'disconnected'));
 const deleteBankConfirmation = ref('');
 const showPlaidItemJson = ref(false);
 const isResetCursorConfirming = ref(false);
@@ -462,6 +486,7 @@ watch(() => props.isOpen, (isOpen) => {
       syncSessions: false
     };
     showDeleteBankOptions.value = false;
+    showDisconnectConfirm.value = false;
     deleteBankConfirmation.value = '';
     showPlaidItemJson.value = false;
     clearResetCursorConfirmation();
@@ -551,10 +576,9 @@ onUnmounted(() => {
   clearResetCursorConfirmation();
 });
 
-// Placeholder for future implementation
-// const disconnectBank = () => {
-//   if (props.bank?.itemId) {
-//     emit('disconnect', props.bank);
-//   }
-// };
+const disconnectBank = () => {
+  if (props.bank?.itemId && !props.isDisconnecting && !isDisconnected.value) {
+    emit('disconnect', props.bank);
+  }
+};
 </script> 
