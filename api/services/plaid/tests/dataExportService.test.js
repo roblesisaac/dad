@@ -95,4 +95,27 @@ describe('dataExportService.getUserPlaidDataBatch', () => {
     );
     expect(mocks.items.find).not.toHaveBeenCalled();
   });
+
+  test('serializes and restores object-based pagination cursors', async () => {
+    const includes = {
+      items: false, transactions: false, accounts: false, accountGroups: false,
+      syncSessions: false, transactionCustomizations: false,
+      tabs: true, rules: false, reports: false
+    };
+    const cursorObject = { lastEvaluatedKey: 'tab-1' };
+    mocks.tabs.find
+      .mockResolvedValueOnce({ items: [{ _id: 'tab-1' }], lastKey: cursorObject })
+      .mockResolvedValueOnce({ items: [{ _id: 'tab-2' }], lastKey: null });
+
+    const first = await dataExportService.getUserPlaidDataBatch('user:one', { includes });
+    expect(first.pagination.tabsStart).toMatch(/^__json_cursor__/);
+
+    const second = await dataExportService.getUserPlaidDataBatch('user:one', {
+      includes, cursors: { tabsStart: first.pagination.tabsStart }
+    });
+    expect(second.pagination.hasMore).toBe(false);
+    expect(mocks.tabs.find).toHaveBeenNthCalledWith(
+      2, 'tabs-user-one:*', { limit: 500, start: cursorObject }
+    );
+  });
 });
