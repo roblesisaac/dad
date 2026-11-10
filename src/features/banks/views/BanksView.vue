@@ -48,6 +48,7 @@
       :bank="bankToEdit"
       :is-saving="loading.editBankName"
       :is-reconnecting="loading.reconnectBank"
+      :is-disconnecting="loading.disconnectBank"
       :is-encrypting="loading.encryptAccessToken"
       :is-downloading="loading.downloadAllData"
       :download-status="downloadStatus"
@@ -66,6 +67,7 @@
       @download-all-data="downloadAllData"
       @delete-selected-data="deleteSelectedData"
       @delete-bank="deleteBank"
+      @disconnect="disconnectBank"
       @reset-cursor="resetCursor"
     />
     
@@ -152,6 +154,7 @@ loading.value = {
   downloadAllData: false,
   deleteSelectedData: false,
   deleteBank: false,
+  disconnectBank: false,
   resetCursor: false
 };
 
@@ -164,6 +167,7 @@ error.value = {
   downloadAllData: null,
   deleteSelectedData: null,
   deleteBank: null,
+  disconnectBank: null,
   resetCursor: null
 };
 
@@ -317,6 +321,10 @@ const saveBankName = async (bank) => {
 };
 
 const reconnectBank = async (bank) => {
+  if (bank?.disconnectedAt || bank?.status === 'disconnected') {
+    showNotification('This connection was removed. Use Add Bank to connect again.', 'error');
+    return;
+  }
   if (!bank?.itemId) return;
   
   try {
@@ -686,6 +694,25 @@ const deleteSelectedData = async (selectedData) => {
   } finally {
     loading.value.deleteSelectedData = false;
     deleteStatus.value = '';
+  }
+};
+
+const disconnectBank = async (bank) => {
+  if (!bank?.itemId || loading.value.disconnectBank) return;
+
+  try {
+    loading.value.disconnectBank = true;
+    error.value.disconnectBank = null;
+    const result = await api.post(`plaid/items/${bank.itemId}/disconnect`);
+    await fetchBanks();
+    closeEditBankNameModal();
+    emit('banks-data-changed', result);
+    showNotification('Bank disconnected from Plaid. Your financial history was preserved.');
+  } catch (err) {
+    error.value.disconnectBank = err.message || 'Failed to disconnect bank';
+    showNotification(`Bank not disconnected: ${error.value.disconnectBank}`, 'error');
+  } finally {
+    loading.value.disconnectBank = false;
   }
 };
 
