@@ -4,6 +4,7 @@ import accountService from '../../services/plaid/accountService.js';
 import dataExportService from '../../services/plaid/dataExportService.js';
 import dataDeletionService from '../../services/plaid/dataDeletionService.js';
 import itemDeletionService from '../../services/plaid/itemDeletionService.js';
+import itemDisconnectService from '../../services/plaid/itemDisconnectService.js';
 import scrub from '../../utils/scrub';
 import { getRequestClientId } from '../../utils/clientIdentity.js';
 import { markResourceUpdated } from '../../services/syncMetaService.js';
@@ -46,7 +47,7 @@ export default {
       const userItems = await itemService.getUserItems(req.user._id);
       const syncedItems = [];
 
-      for (const item of userItems) {
+      for (const item of userItems.filter(item => !item.disconnectedAt && item.status !== 'disconnected')) {
         const plaidItem = await plaidService.syncItemFromPlaid(item, req.user);
         syncedItems.push(plaidItem);
       }
@@ -130,6 +131,23 @@ export default {
         error: errorCode,
         message: errorMessage
       });
+    }
+  },
+
+  async disconnectItem(req, res) {
+    try {
+      const { _id: itemId } = req.params;
+      if (!itemId) {
+        return res.status(400).json({ error: 'INVALID_PARAMS', message: 'Item ID is required' });
+      }
+      const result = await itemDisconnectService.disconnectItem(itemId, req.user);
+      return res.status(200).json(result);
+    } catch (error) {
+      const [errorCode = 'ITEM_DISCONNECT_ERROR', errorMessage = error.message] =
+        error.message.split(': ');
+      const status = errorCode === 'ITEM_NOT_FOUND' ? 404
+        : errorCode === 'PLAID_REVOKE_FAILED' ? 502 : 500;
+      return res.status(status).json({ error: errorCode, message: errorMessage });
     }
   },
 
