@@ -12,6 +12,7 @@ import scrub from '../../utils/scrub.js';
 const DEFAULT_BATCH_SIZE = 500;
 const MAX_BATCH_SIZE = 1000;
 const COMPLETE_CURSOR = '__complete__';
+const OBJECT_CURSOR_PREFIX = '__json_cursor__';
 
 // These are account-scoped financial records. Authentication secrets, Plaid
 // access tokens and unrelated storefront data must not be in a user backup.
@@ -39,11 +40,18 @@ class PlaidDataExportService {
       return { items: [], nextStart: COMPLETE_CURSOR };
     }
     const options = { limit: batchSize };
-    if (start) options.start = start;
+    if (start) {
+      options.start = typeof start === 'string' && start.startsWith(OBJECT_CURSOR_PREFIX)
+        ? JSON.parse(start.slice(OBJECT_CURSOR_PREFIX.length))
+        : start;
+    }
     const response = await model.find(filter, options);
+    const rawCursor = response?.lastKey;
     return {
       items: Array.isArray(response?.items) ? response.items.filter(Boolean) : [],
-      nextStart: response?.lastKey || COMPLETE_CURSOR
+      nextStart: rawCursor
+        ? (typeof rawCursor === 'string' ? rawCursor : OBJECT_CURSOR_PREFIX + JSON.stringify(rawCursor))
+        : COMPLETE_CURSOR
     };
   }
 
