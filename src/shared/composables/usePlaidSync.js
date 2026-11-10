@@ -239,7 +239,9 @@ export function usePlaidSync() {
       currentBankIndex.value = 0;
 
       // Fetch all connected banks
-      const banks = await api.get('plaid/items');
+      const banks = (await api.get('plaid/items') || []).filter(bank =>
+        !bank.disconnectedAt && bank.status !== 'disconnected'
+      );
 
       if (!banks || banks.length === 0) {
         updateStatusBar('No connected accounts found', false);
