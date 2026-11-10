@@ -38,6 +38,7 @@ const itemSchema = {
   sync_id: String,
   syncTag: String,
   status: String,
+  disconnectedAt: Number,
 
   syncData,
   
