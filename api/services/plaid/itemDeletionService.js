@@ -214,17 +214,15 @@ class ItemDeletionService {
         };
       }
 
-      if (revokeAtPlaid) {
+      if (revokeAtPlaid && !item.disconnectedAt && item.status !== 'disconnected') {
         response.plaidRevoke.attempted = true;
-
         try {
           const accessToken = itemService.decryptAccessToken(item, user);
           await plaidService.removeItem(accessToken);
           response.plaidRevoke.succeeded = true;
         } catch (error) {
-          const errorMessage = this.getErrorMessage(error);
-          response.plaidRevoke.error = errorMessage;
-          response.warnings.push(`Plaid item revoke failed: ${errorMessage}`);
+          // Preserve the Item if it may still incur Plaid charges.
+          throw new Error(`PLAID_REVOKE_FAILED: ${this.getErrorMessage(error)}`);
         }
       }
 
