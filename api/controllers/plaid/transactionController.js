@@ -93,6 +93,13 @@ export default {
         });
       }
 
+      if (item.disconnectedAt || item.status === 'disconnected') {
+        return res.status(409).json({
+          error: 'ITEM_DISCONNECTED',
+          message: 'This bank was disconnected from Plaid'
+        });
+      }
+
       const syncResult = await transactionSyncService.syncTransactions(item, user);
 
       const batchResults = {
