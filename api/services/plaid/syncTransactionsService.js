@@ -350,6 +350,9 @@ class TransactionSyncService {
     if (!itemData) {
       throw new CustomError('ITEM_NOT_FOUND', 'Item not found');
     }
+    if (itemData.disconnectedAt || itemData.status === 'disconnected') {
+      throw new CustomError('ITEM_DISCONNECTED', 'Bank has been disconnected from Plaid');
+    }
 
     // Check for existing sync in progress by looking at item status
     if (itemData.status === 'in_progress' && await syncSessionService.isSyncRecent(itemData, user)) {
