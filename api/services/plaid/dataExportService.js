@@ -3,139 +3,106 @@ import plaidTransactions from '../../models/plaidTransactions.js';
 import plaidAccounts from '../../models/plaidAccounts.js';
 import plaidGroups from '../../models/plaidGroups.js';
 import syncSessions from '../../models/syncSession.js';
+import transactionCustomizations from '../../models/transactionCustomizations.js';
+import tabs from '../../models/tabs.js';
+import rules from '../../models/rules.js';
+import reports from '../../models/reports.js';
 import scrub from '../../utils/scrub.js';
 
 const DEFAULT_BATCH_SIZE = 500;
 const MAX_BATCH_SIZE = 1000;
 const COMPLETE_CURSOR = '__complete__';
 
+// These are account-scoped financial records. Authentication secrets, Plaid
+// access tokens and unrelated storefront data must not be in a user backup.
+const COLLECTIONS = [
+  { key: 'items', model: plaidItems, prefix: 'plaiditems', cursor: 'itemsStart' },
+  { key: 'transactions', model: plaidTransactions, prefix: 'plaidtransactions', cursor: 'transactionsStart' },
+  { key: 'accounts', model: plaidAccounts, prefix: 'plaidaccounts', cursor: 'accountsStart' },
+  { key: 'accountGroups', model: plaidGroups, prefix: 'plaidgroups', cursor: 'accountGroupsStart' },
+  { key: 'syncSessions', model: syncSessions, prefix: 'syncsession', cursor: 'syncSessionsStart' },
+  { key: 'transactionCustomizations', model: transactionCustomizations, prefix: 'tcustomizations', cursor: 'customizationsStart' },
+  { key: 'tabs', model: tabs, prefix: 'tabs', cursor: 'tabsStart' },
+  { key: 'rules', model: rules, prefix: 'rules', cursor: 'rulesStart' },
+  { key: 'reports', model: reports, prefix: 'reports', cursor: 'reportsStart' }
+];
+
 class PlaidDataExportService {
   normalizeBatchSize(batchSize) {
     const parsed = Number.parseInt(batchSize, 10);
-    if (Number.isNaN(parsed) || parsed <= 0) {
-      return DEFAULT_BATCH_SIZE;
-    }
-
+    if (Number.isNaN(parsed) || parsed <= 0) return DEFAULT_BATCH_SIZE;
     return Math.min(parsed, MAX_BATCH_SIZE);
   }
 
   async fetchBatch(model, filter, start, batchSize) {
-    if (!model || !filter) {
-      return {
-        items: [],
-        nextStart: COMPLETE_CURSOR
-      };
-    }
-
     if (start === COMPLETE_CURSOR) {
-      return {
-        items: [],
-        nextStart: COMPLETE_CURSOR
-      };
+      return { items: [], nextStart: COMPLETE_CURSOR };
     }
-
     const options = { limit: batchSize };
-
-    if (start) {
-      options.start = start;
-    }
-
+    if (start) options.start = start;
     const response = await model.find(filter, options);
-    const items = Array.isArray(response?.items) ? response.items.filter(Boolean) : [];
-
     return {
-      items,
+      items: Array.isArray(response?.items) ? response.items.filter(Boolean) : [],
       nextStart: response?.lastKey || COMPLETE_CURSOR
     };
   }
 
   normalizeIncludes(includes = {}) {
+    // Keep the original five flags' default values for older clients.
+    // The additional record types are opt-in via the full-backup button.
     const defaults = {
-      items: true,
-      transactions: true,
-      accounts: true,
-      accountGroups: true,
-      syncSessions: true
+      items: true, transactions: true, accounts: true,
+      accountGroups: true, syncSessions: true,
+      transactionCustomizations: false, tabs: false, rules: false, reports: false
     };
-
-    if (!includes || Object.keys(includes).length === 0) {
-      return defaults;
-    }
-
-    return {
-      items: includes.items === undefined ? defaults.items : Boolean(includes.items),
-      transactions: includes.transactions === undefined ? defaults.transactions : Boolean(includes.transactions),
-      accounts: includes.accounts === undefined ? defaults.accounts : Boolean(includes.accounts),
-      accountGroups: includes.accountGroups === undefined ? defaults.accountGroups : Boolean(includes.accountGroups),
-      syncSessions: includes.syncSessions === undefined ? defaults.syncSessions : Boolean(includes.syncSessions)
-    };
+    return Object.fromEntries(
+      Object.entries(defaults).map(([key, defaultValue]) => [
+        key, includes?.[key] === undefined ? defaultValue : Boolean(includes[key])
+      ])
+    );
   }
 
   async getUserPlaidDataBatch(userId, options = {}) {
-    if (!userId) {
-      throw new Error('INVALID_USER: User ID is required');
-    }
+    if (!userId) throw new Error('INVALID_USER: User ID is required');
 
     try {
       const batchSize = this.normalizeBatchSize(options.batchSize);
       const cursors = options.cursors || {};
       const includes = this.normalizeIncludes(options.includes);
       const safeUserId = String(userId).replaceAll(':', '-');
-      const [itemsBatch, transactionsBatch, accountsBatch, accountGroupsBatch, syncSessionsBatch] = await Promise.all([
-        includes.items
-          ? this.fetchBatch(plaidItems, `plaiditems-${safeUserId}:*`, cursors.itemsStart, batchSize)
-          : Promise.resolve({ items: [], nextStart: COMPLETE_CURSOR }),
-        includes.transactions
-          ? this.fetchBatch(plaidTransactions, `plaidtransactions-${safeUserId}:*`, cursors.transactionsStart, batchSize)
-          : Promise.resolve({ items: [], nextStart: COMPLETE_CURSOR }),
-        includes.accounts
-          ? this.fetchBatch(plaidAccounts, `plaidaccounts-${safeUserId}:*`, cursors.accountsStart, batchSize)
-          : Promise.resolve({ items: [], nextStart: COMPLETE_CURSOR }),
-        includes.accountGroups
-          ? this.fetchBatch(plaidGroups, `plaidgroups-${safeUserId}:*`, cursors.accountGroupsStart, batchSize)
-          : Promise.resolve({ items: [], nextStart: COMPLETE_CURSOR }),
-        includes.syncSessions
-          ? this.fetchBatch(syncSessions, `syncsession-${safeUserId}:*`, cursors.syncSessionsStart, batchSize)
-          : Promise.resolve({ items: [], nextStart: COMPLETE_CURSOR })
-      ]);
+      const batches = await Promise.all(COLLECTIONS.map(async ({ key, model, prefix, cursor }) => {
+        if (!includes[key]) {
+          return { key, cursor, items: [], nextStart: COMPLETE_CURSOR };
+        }
+        const result = await this.fetchBatch(
+          model, `${prefix}-${safeUserId}:*`, cursors[cursor], batchSize
+        );
+        return { key, cursor, ...result };
+      }));
 
-      const safeItems = itemsBatch.items;
-      const safeTransactions = transactionsBatch.items;
-      const safeAccounts = accountsBatch.items;
-      const safeAccountGroups = accountGroupsBatch.items;
-      const safeSyncSessions = syncSessionsBatch.items;
-      const sanitizedItems = scrub(safeItems, 'accessToken');
+      const counts = {};
+      const exported = {};
+      const next = {};
 
-      const next = {
-        itemsStart: itemsBatch.nextStart,
-        transactionsStart: transactionsBatch.nextStart,
-        accountsStart: accountsBatch.nextStart,
-        accountGroupsStart: accountGroupsBatch.nextStart,
-        syncSessionsStart: syncSessionsBatch.nextStart
-      };
-
-      const hasMoreBatches = Object.values(next).some(cursor => cursor !== COMPLETE_CURSOR);
+      for (const batch of batches) {
+        const records = batch.key === 'items'
+          ? scrub(batch.items, 'accessToken')
+          : batch.items;
+        exported[batch.key] = records;
+        counts[batch.key] = records.length;
+        next[batch.cursor] = batch.nextStart;
+      }
 
       return {
         generatedAt: new Date().toISOString(),
         userId,
         batchSize,
         includes,
-        counts: {
-          items: sanitizedItems.length,
-          transactions: safeTransactions.length,
-          accounts: safeAccounts.length,
-          accountGroups: safeAccountGroups.length,
-          syncSessions: safeSyncSessions.length
-        },
-        items: sanitizedItems,
-        transactions: safeTransactions,
-        accounts: safeAccounts,
-        accountGroups: safeAccountGroups,
-        syncSessions: safeSyncSessions,
+        counts,
+        ...exported,
         pagination: {
           ...next,
-          hasMore: hasMoreBatches
+          hasMore: Object.values(next).some(cursor => cursor !== COMPLETE_CURSOR)
         }
       };
     } catch (error) {
