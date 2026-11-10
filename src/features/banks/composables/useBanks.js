@@ -119,8 +119,8 @@ export function useBanks() {
    * Sync transactions for a selected bank
    */
   const syncSelectedBank = async () => {
-    if (!selectedBank.value?.itemId) {
-      error.value.sync = 'No bank selected';
+    if (!selectedBank.value?.itemId || selectedBank.value.disconnectedAt || selectedBank.value.status === 'disconnected') {
+      error.value.sync = 'No connected bank selected';
       return null;
     }
 
@@ -212,6 +212,7 @@ export function useBanks() {
    */
   const getBankStatusClass = (bank) => {
     if (!bank) return 'bg-gray-200';
+    if (bank.disconnectedAt || bank.status === 'disconnected') return 'bg-gray-400';
 
     switch (bank.status) {
       case 'error':
@@ -232,6 +233,7 @@ export function useBanks() {
    */
   const getBankStatusText = (bank) => {
     if (!bank) return 'Unknown';
+    if (bank.disconnectedAt || bank.status === 'disconnected') return 'Disconnected';
 
     switch (bank.status) {
       case 'error':
