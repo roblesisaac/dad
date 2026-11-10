@@ -78,7 +78,7 @@ class ItemService extends PlaidBaseService {
   }
 
   async hydrateInstitutionMetadata(item, user) {
-    if (!item || !user?._id || !user?.encryptedKey || !item.itemId) {
+    if (!item || !user?._id || !user?.encryptedKey || !item.itemId || item.disconnectedAt || item.status === 'disconnected') {
       return item;
     }
 
@@ -275,6 +275,8 @@ class ItemService extends PlaidBaseService {
         const encryptedAccessToken = this.encryptAccessToken(access_token, user);
         const updateData = {
           accessToken: encryptedAccessToken,
+          disconnectedAt: null,
+          status: 'complete',
           ...(metadata.institutionId ? { institutionId: metadata.institutionId } : {}),
           ...(metadata.institutionName ? { institutionName: metadata.institutionName } : {})
         };
@@ -558,7 +560,10 @@ class ItemService extends PlaidBaseService {
       const allItems = await this.getUserItems(userId);
 
       // Filter out the new item to get old items
-      const oldItems = allItems.filter(item => item.itemId !== newItemId);
+      // Keep disconnected Items and their transaction history intact.
+      const oldItems = allItems.filter(item =>
+        item.itemId !== newItemId && !item.disconnectedAt && item.status !== 'disconnected'
+      );
 
       if (oldItems.length === 0) {
         console.log('No old items to migrate');
