@@ -12,9 +12,25 @@ class PlaidService extends PlaidBaseService {
       throw new Error('INVALID_ACCESS_TOKEN: Missing access token');
     }
 
-    return await this.handleResponse(
-      this.client.itemRemove({ access_token })
-    );
+    try {
+      const response = await this.client.itemRemove({ access_token });
+      return response.data;
+    } catch (error) {
+      const code = error?.error_code || error?.response?.data?.error_code;
+      // Plaid documents ITEM_NOT_FOUND as an Item already removed or
+      // depermissioned. Treat this as idempotent success so local cleanup can
+      // recover when the prior remove succeeded but a DB write failed.
+      // Do NOT treat INVALID_ACCESS_TOKEN as success; it can indicate a
+      // wrong environment or developer account.
+      if (code === 'ITEM_NOT_FOUND') {
+        return { alreadyRemoved: true };
+      }
+      this.handlePlaidError({
+        error_code: code,
+        error_message: error?.error_message || error?.response?.data?.error_message,
+        message: error?.message
+      });
+    }
   }
 
   /**
