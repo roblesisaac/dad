@@ -32,6 +32,9 @@ class PlaidLinkService extends PlaidBaseService {
         if (!item) {
           throw new Error('Item not found');
         }
+        if (item.disconnectedAt || item.status === 'disconnected') {
+          throw new Error('This Item was disconnected. Use Add Bank to connect again');
+        }
         const access_token = itemService.decryptAccessToken(item, user);
         delete request.products;
         request.access_token = access_token;
