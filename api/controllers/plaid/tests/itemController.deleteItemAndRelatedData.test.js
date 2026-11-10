@@ -20,6 +20,10 @@ vi.mock('../../../services/plaid/dataDeletionService.js', () => ({
   default: {}
 }));
 
+vi.mock('../../../services/plaid/itemDisconnectService.js', () => ({
+  default: { disconnectItem: vi.fn() }
+}));
+
 vi.mock('../../../services/plaid/itemDeletionService.js', () => ({
   default: {
     deleteItemAndRelatedData: vi.fn()
@@ -31,6 +35,7 @@ vi.mock('../../../utils/scrub', () => ({
 }));
 
 import itemDeletionService from '../../../services/plaid/itemDeletionService.js';
+import itemDisconnectService from '../../../services/plaid/itemDisconnectService.js';
 import itemController from '../itemController.js';
 
 describe('itemController.deleteItemAndRelatedData', () => {
@@ -147,6 +152,35 @@ describe('itemController.deleteItemAndRelatedData', () => {
     expect(res.json).toHaveBeenCalledWith({
       error: 'ITEM_DELETE_ERROR',
       message: 'Something failed'
+    });
+  });
+});
+
+describe('itemController.disconnectItem', () => {
+  const req = { params: { _id: 'item-1' }, user: { _id: 'user-1' } };
+  const response = () => ({ status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() });
+
+  beforeEach(() => vi.clearAllMocks());
+
+  test('returns confirmed disconnection', async () => {
+    const res = response();
+    itemDisconnectService.disconnectItem.mockResolvedValue({ disconnected: true });
+    await itemController.disconnectItem(req, res);
+    expect(itemDisconnectService.disconnectItem).toHaveBeenCalledWith('item-1', req.user);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ disconnected: true });
+  });
+
+  test('returns 502 rather than a false success on revoke failure', async () => {
+    const res = response();
+    itemDisconnectService.disconnectItem.mockRejectedValue(
+      new Error('PLAID_REVOKE_FAILED: Plaid unavailable')
+    );
+    await itemController.disconnectItem(req, res);
+    expect(res.status).toHaveBeenCalledWith(502);
+    expect(res.json).toHaveBeenCalledWith({
+      error: 'PLAID_REVOKE_FAILED',
+      message: 'Plaid unavailable'
     });
   });
 });
