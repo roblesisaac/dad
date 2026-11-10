@@ -35,8 +35,15 @@
       <p v-if="loading.downloadAllData" class="text-xs text-[var(--theme-text-soft)] mt-2">
         {{ downloadStatus }}
       </p>
+      <p class="text-xs text-[var(--theme-text-soft)] mt-2">
+        Active Plaid connections for this user:
+        {{ banks.filter(bank => !bank.disconnectedAt && bank.status !== 'disconnected').length }}
+      </p>
       <p v-if="downloadSummary?.fileName" class="text-xs text-[var(--theme-text-soft)] mt-2">
-        Last download: {{ downloadSummary.fileName }}
+        Last backup: {{ downloadSummary.fileName }}
+        ({{ downloadSummary.counts?.items || 0 }} items,
+        {{ downloadSummary.counts?.accounts || 0 }} accounts,
+        {{ downloadSummary.counts?.transactions || 0 }} transactions)
       </p>
     </div>
 
