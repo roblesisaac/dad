@@ -17,6 +17,29 @@
       />
     </div>
     
+    <!-- Available even after the last Plaid Item is disconnected. -->
+    <div class="p-6 bg-[var(--theme-browser-chrome)] border-t border-[var(--theme-border)]">
+      <p class="text-xs text-[var(--theme-text-soft)] mb-3">
+        Before taking the app offline, save a financial backup for this signed-in user.
+        Sign in to each of your two user accounts and download one backup per user.
+        This includes transactions, accounts, groups, customizations, tabs, rules and reports.
+        Store the JSON file somewhere secure and verify it before disconnecting any banks.
+      </p>
+      <button
+        @click="downloadAllData(COMPLETE_FINANCE_BACKUP_SELECTION)"
+        :disabled="loading.downloadAllData"
+        class="w-full py-3 bg-[var(--theme-text)] text-[var(--theme-browser-chrome)] text-xs font-black uppercase tracking-widest rounded-xl disabled:opacity-50"
+      >
+        {{ loading.downloadAllData ? 'Preparing Backup...' : 'Download Complete Financial Backup' }}
+      </button>
+      <p v-if="loading.downloadAllData" class="text-xs text-[var(--theme-text-soft)] mt-2">
+        {{ downloadStatus }}
+      </p>
+      <p v-if="downloadSummary?.fileName" class="text-xs text-[var(--theme-text-soft)] mt-2">
+        Last download: {{ downloadSummary.fileName }}
+      </p>
+    </div>
+
     <!-- Connect bank button -->
     <div class="p-6 bg-[var(--theme-browser-chrome)] border-t-1 border-[var(--theme-border)] mt-auto">
       <button 
@@ -422,58 +445,95 @@ const encryptBankAccessToken = async (bank) => {
 
 const DOWNLOAD_BATCH_SIZE = 1000;
 const MAX_DOWNLOAD_BATCH_REQUESTS = 2000;
+const DOWNLOAD_COLLECTIONS = [
+  {
+    "key": "items",
+    "flag": "includeItems",
+    "cursor": "itemsStart"
+  },
+  {
+    "key": "transactions",
+    "flag": "includeTransactions",
+    "cursor": "transactionsStart"
+  },
+  {
+    "key": "accounts",
+    "flag": "includeAccounts",
+    "cursor": "accountsStart"
+  },
+  {
+    "key": "accountGroups",
+    "flag": "includeAccountGroups",
+    "cursor": "accountGroupsStart"
+  },
+  {
+    "key": "syncSessions",
+    "flag": "includeSyncSessions",
+    "cursor": "syncSessionsStart"
+  },
+  {
+    "key": "transactionCustomizations",
+    "flag": "includeTransactionCustomizations",
+    "cursor": "customizationsStart"
+  },
+  {
+    "key": "tabs",
+    "flag": "includeTabs",
+    "cursor": "tabsStart"
+  },
+  {
+    "key": "rules",
+    "flag": "includeRules",
+    "cursor": "rulesStart"
+  },
+  {
+    "key": "reports",
+    "flag": "includeReports",
+    "cursor": "reportsStart"
+  }
+];
 
-const buildDownloadSelection = (selectedData = {}) => ({
-  transactions: selectedData.transactions !== undefined ? Boolean(selectedData.transactions) : true,
-  items: selectedData.items !== undefined ? Boolean(selectedData.items) : false,
-  accounts: selectedData.accounts !== undefined ? Boolean(selectedData.accounts) : false,
-  accountGroups: selectedData.accountGroups !== undefined ? Boolean(selectedData.accountGroups) : false,
-  syncSessions: selectedData.syncSessions !== undefined ? Boolean(selectedData.syncSessions) : false
-});
+// The full backup includes all signed-in user's finance-owned records.
+// The existing selective bank-modal export retains its previous defaults.
+const COMPLETE_FINANCE_BACKUP_SELECTION = Object.fromEntries(
+  DOWNLOAD_COLLECTIONS.map(({ key }) => [key, true])
+);
 
-const downloadAllData = async (selectedData) => {
+const buildDownloadSelection = (selectedData = {}) => Object.fromEntries(
+  DOWNLOAD_COLLECTIONS.map(({ key }) => [
+    key, selectedData[key] === undefined ? key === 'transactions' : Boolean(selectedData[key])
+  ])
+);
+
+const downloadAllData = async (selectedData = {}) => {
+  if (loading.value.downloadAllData) return;
+
+  const downloadSelection = buildDownloadSelection(selectedData);
+  const selectedTypes = DOWNLOAD_COLLECTIONS
+    .filter(({ key }) => downloadSelection[key])
+    .map(({ key }) => key);
+
+  if (!selectedTypes.length) {
+    showNotification('Select at least one data type to download.', 'error');
+    return;
+  }
+
   try {
-    const downloadSelection = buildDownloadSelection(selectedData);
-    const selectedTypes = Object.entries(downloadSelection)
-      .filter(([, isSelected]) => isSelected)
-      .map(([key]) => key);
-
-    if (selectedTypes.length === 0) {
-      showNotification('Select at least one data type to download.', 'error');
-      return;
-    }
-
     loading.value.downloadAllData = true;
     error.value.downloadAllData = null;
-    downloadStatus.value = 'Preparing export...';
+    downloadStatus.value = 'Preparing backup for the signed-in user...';
     downloadSummary.value = null;
 
     const exportData = {
       generatedAt: new Date().toISOString(),
+      format: 'dad-finance-backup-v1',
       userId: null,
       includes: downloadSelection,
-      counts: {
-        items: 0,
-        transactions: 0,
-        accounts: 0,
-        accountGroups: 0,
-        syncSessions: 0
-      },
-      items: [],
-      transactions: [],
-      accounts: [],
-      accountGroups: [],
-      syncSessions: []
+      counts: {},
+      ...Object.fromEntries(DOWNLOAD_COLLECTIONS.map(({ key }) => [key, []]))
     };
 
-    let pagination = {
-      itemsStart: null,
-      transactionsStart: null,
-      accountsStart: null,
-      accountGroupsStart: null,
-      syncSessionsStart: null,
-      hasMore: true
-    };
+    let pagination = { hasMore: true };
     let batchRequests = 0;
     let lastCursorSignature = null;
 
@@ -482,102 +542,61 @@ const downloadAllData = async (selectedData) => {
         throw new Error('Exceeded maximum batch requests while downloading data');
       }
 
-      const queryParams = new URLSearchParams({
-        batchSize: String(DOWNLOAD_BATCH_SIZE),
-        includeItems: String(downloadSelection.items),
-        includeTransactions: String(downloadSelection.transactions),
-        includeAccounts: String(downloadSelection.accounts),
-        includeAccountGroups: String(downloadSelection.accountGroups),
-        includeSyncSessions: String(downloadSelection.syncSessions)
+      const queryParams = new URLSearchParams({ batchSize: String(DOWNLOAD_BATCH_SIZE) });
+      DOWNLOAD_COLLECTIONS.forEach(({ key, flag, cursor }) => {
+        queryParams.set(flag, String(downloadSelection[key]));
+        if (pagination[cursor] && pagination[cursor] !== '__complete__') {
+          queryParams.set(cursor, pagination[cursor]);
+        }
       });
 
-      if (pagination.itemsStart) {
-        queryParams.set('itemsStart', pagination.itemsStart);
+      downloadStatus.value = `Downloading backup batch ${batchRequests + 1}...`;
+      const response = await api.get(`plaid/download/all-data?${queryParams.toString()}`);
+      if (!response || !response.pagination || typeof response.pagination.hasMore !== 'boolean' || !response.userId) {
+        throw new Error('Server returned an incomplete backup response; no download was saved');
       }
-      if (pagination.transactionsStart) {
-        queryParams.set('transactionsStart', pagination.transactionsStart);
+      if (exportData.userId && exportData.userId !== response.userId) {
+        throw new Error('Backup user changed during export; no download was saved');
       }
-      if (pagination.accountsStart) {
-        queryParams.set('accountsStart', pagination.accountsStart);
-      }
-      if (pagination.accountGroupsStart) {
-        queryParams.set('accountGroupsStart', pagination.accountGroupsStart);
-      }
-      if (pagination.syncSessionsStart) {
-        queryParams.set('syncSessionsStart', pagination.syncSessionsStart);
+      exportData.userId = response.userId;
+
+      for (const { key } of DOWNLOAD_COLLECTIONS) {
+        if (!downloadSelection[key]) continue;
+        if (!Array.isArray(response[key])) {
+          throw new Error(`Backup batch is missing ${key}; no download was saved`);
+        }
+        exportData[key].push(...response[key]);
       }
 
-      downloadStatus.value = `Downloading batch ${batchRequests + 1} for ${selectedTypes.join(', ')}...`;
-      const batchResponse = await api.get(`plaid/download/all-data?${queryParams.toString()}`);
-
-      if (!exportData.userId && batchResponse?.userId) {
-        exportData.userId = batchResponse.userId;
+      pagination = response.pagination;
+      const cursorSignature = JSON.stringify(
+        DOWNLOAD_COLLECTIONS.map(({ cursor }) => pagination[cursor])
+      );
+      if (pagination.hasMore && cursorSignature === lastCursorSignature) {
+        throw new Error('Backup pagination stalled; no download was saved');
       }
-
-      if (downloadSelection.items && Array.isArray(batchResponse?.items)) {
-        exportData.items.push(...batchResponse.items);
-      }
-      if (downloadSelection.transactions && Array.isArray(batchResponse?.transactions)) {
-        exportData.transactions.push(...batchResponse.transactions);
-      }
-      if (downloadSelection.accounts && Array.isArray(batchResponse?.accounts)) {
-        exportData.accounts.push(...batchResponse.accounts);
-      }
-      if (downloadSelection.accountGroups && Array.isArray(batchResponse?.accountGroups)) {
-        exportData.accountGroups.push(...batchResponse.accountGroups);
-      }
-      if (downloadSelection.syncSessions && Array.isArray(batchResponse?.syncSessions)) {
-        exportData.syncSessions.push(...batchResponse.syncSessions);
-      }
-
-      pagination = {
-        itemsStart: batchResponse?.pagination?.itemsStart || null,
-        transactionsStart: batchResponse?.pagination?.transactionsStart || null,
-        accountsStart: batchResponse?.pagination?.accountsStart || null,
-        accountGroupsStart: batchResponse?.pagination?.accountGroupsStart || null,
-        syncSessionsStart: batchResponse?.pagination?.syncSessionsStart || null,
-        hasMore: Boolean(batchResponse?.pagination?.hasMore)
-      };
-
-      const currentCursorSignature = JSON.stringify({
-        itemsStart: pagination.itemsStart,
-        transactionsStart: pagination.transactionsStart,
-        accountsStart: pagination.accountsStart,
-        accountGroupsStart: pagination.accountGroupsStart,
-        syncSessionsStart: pagination.syncSessionsStart
-      });
-
-      if (pagination.hasMore && currentCursorSignature === lastCursorSignature) {
-        throw new Error('Export pagination stalled. Please try again.');
-      }
-      lastCursorSignature = currentCursorSignature;
-
-      batchRequests++;
-      downloadStatus.value = `Downloaded ${batchRequests} batches (${exportData.items.length} items, ${exportData.transactions.length} transactions, ${exportData.accounts.length} accounts, ${exportData.accountGroups.length} groups, ${exportData.syncSessions.length} sync sessions)...`;
+      lastCursorSignature = cursorSignature;
+      batchRequests += 1;
+      downloadStatus.value = `Downloaded ${batchRequests} backup batches...`;
     }
 
-    exportData.counts = {
-      items: exportData.items.length,
-      transactions: exportData.transactions.length,
-      accounts: exportData.accounts.length,
-      accountGroups: exportData.accountGroups.length,
-      syncSessions: exportData.syncSessions.length
-    };
+    for (const { key } of DOWNLOAD_COLLECTIONS) {
+      exportData.counts[key] = exportData[key].length;
+    }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const fileName = `plaid-data-${timestamp}.json`;
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: 'application/json'
-    });
+    const safeUserId = String(exportData.userId).replace(/[^a-zA-Z0-9_-]/g, '-');
+    const fileName = `dad-finance-backup-${safeUserId}-${timestamp}.json`;
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const downloadUrl = window.URL.createObjectURL(blob);
     const anchor = document.createElement('a');
-
     anchor.href = downloadUrl;
     anchor.download = fileName;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
-    window.URL.revokeObjectURL(downloadUrl);
+    // Defer revocation so the browser can finish resolving the download.
+    setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 60000);
 
     downloadSummary.value = {
       completedAt: new Date().toISOString(),
@@ -586,12 +605,11 @@ const downloadAllData = async (selectedData) => {
       batches: batchRequests,
       fileName
     };
-
-    showNotification('Downloaded all Plaid data successfully.');
+    showNotification('Financial backup downloaded. Verify the file before disconnecting banks.');
   } catch (err) {
-    console.error('Error downloading all Plaid data:', err);
-    error.value.downloadAllData = err.message || 'Failed to download all data';
-    showNotification(`Error downloading data: ${error.value.downloadAllData}`, 'error');
+    console.error('Error downloading financial backup:', err);
+    error.value.downloadAllData = err.message || 'Failed to download data';
+    showNotification(`Backup failed: ${error.value.downloadAllData}`, 'error');
   } finally {
     loading.value.downloadAllData = false;
     downloadStatus.value = '';
