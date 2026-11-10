@@ -25,21 +25,9 @@ export default {
       // 2. Save or update the Plaid item
       const plaidItem = await itemService.savePlaidAccessData(accessData, req.user);
 
-      // 3. Migrate transactions from old items to this new item and clean up
-      // This handles the case where a user is reconnecting after credentials expired
-      let migrationResult = null;
-      try {
-        migrationResult = await itemService.migrateAndCleanupOldItems(
-          plaidItem.itemId,
-          req.user._id
-        );
-        if (migrationResult.migrated > 0) {
-          console.log(`Migration completed: ${migrationResult.message}`);
-        }
-      } catch (migrationError) {
-        // Log but don't fail the request - the item was still connected successfully
-        console.error('Migration warning:', migrationError.message);
-      }
+      // Never auto-migrate other Plaid Items on Add Bank. The old behavior
+      // could reassign transactions and delete an unrelated connection.
+      // Reconnecting archived Items would require explicit reconciliation.
 
       res.json({
         status: 'success',
@@ -47,7 +35,7 @@ export default {
           itemId: plaidItem.itemId,
           status: 'pending',
           message: 'Item connected successfully',
-          migration: migrationResult
+          migration: null
         }
       });
     } catch (error) {
