@@ -201,22 +201,31 @@ describe('itemDeletionService.deleteItemAndRelatedData', () => {
     expect(plaidItems.erase).toHaveBeenCalledWith('plaiditems-user-1:item-1');
   });
 
-  test('continues local deletion when Plaid revoke fails', async () => {
+  test('preserves local Item when Plaid revoke fails', async () => {
     plaidService.removeItem.mockRejectedValue(new Error('Revoke failed'));
 
-    const result = await itemDeletionService.deleteItemAndRelatedData({
+    await expect(itemDeletionService.deleteItemAndRelatedData({
       itemId: 'item-1',
       user,
       revokeAtPlaid: true
+    })).rejects.toThrow('PLAID_REVOKE_FAILED: Revoke failed');
+
+    expect(plaidItems.erase).not.toHaveBeenCalled();
+    expect(plaidTransactions.erase).not.toHaveBeenCalled();
+  });
+
+  test('deletes disconnected Item history without trying to revoke again', async () => {
+    itemService.getItem.mockResolvedValue({
+      _id: 'item-db-id', itemId: 'item-1', status: 'disconnected', disconnectedAt: 123
+    });
+
+    const result = await itemDeletionService.deleteItemAndRelatedData({
+      itemId: 'item-1', user, revokeAtPlaid: true
     });
 
     expect(result.deleted).toBe(true);
-    expect(result.counts.items).toBe(1);
-    expect(result.plaidRevoke.attempted).toBe(true);
-    expect(result.plaidRevoke.succeeded).toBe(false);
-    expect(result.plaidRevoke.error).toBe('Revoke failed');
-    expect(result.warnings[0]).toContain('Plaid item revoke failed');
-    expect(plaidItems.erase).toHaveBeenCalledWith('plaiditems-user-1:item-1');
+    expect(plaidService.removeItem).not.toHaveBeenCalled();
+    expect(plaidItems.erase).toHaveBeenCalledWith('item-db-id');
   });
 
   test('returns idempotent response when item is already missing', async () => {
