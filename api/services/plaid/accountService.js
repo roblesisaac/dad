@@ -10,8 +10,9 @@ class PlaidAccountService extends PlaidBaseService {
 
     try {
       // Get the user's items
-      const userItems = await itemService.getUserItems(user._id);
-      if (!userItems?.length) {
+      const userItems = (await itemService.getUserItems(user._id))
+        .filter(item => !item.disconnectedAt && item.status !== 'disconnected');
+      if (!userItems.length) {
         return null;
       }
 
